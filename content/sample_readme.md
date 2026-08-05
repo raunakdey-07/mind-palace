@@ -2,6 +2,7 @@
 title: "Mind Palace — Project README"
 date: 2024-01-10
 tags: ["ai", "rag", "research", "portfolio"]
+document_type: "note"
 status: In Progress
 git_repo: "https://github.com/raunakdey-07/mind-palace"
 summary: "AI-native research operating system that turns portfolio content into a searchable, interactive knowledge base"

@@ -1,0 +1,44 @@
+# Retrieval Evaluation Dataset
+
+# Each entry has a query and expected document titles that should appear in top-k results
+# Run evaluation with: `mindpalace eval retrieval`
+
+- query: "feature leakage"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+
+- query: "Altman Z score"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+
+- query: "CNN transformer attention"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+
+- query: "technical indicators SMA EMA RSI"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+
+- query: "ensemble weighted averaging"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+
+- query: "portfolio tracker Sharpe ratio"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+
+- query: "test-time augmentation"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+
+- query: "backtesting engine"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+
+- query: "Mind Palace RAG"
+  expected:
+    - "Mind Palace — Project README"
+
+- query: "vector database pgvector"
+  expected:
+    - "Mind Palace — Project README"

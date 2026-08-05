@@ -2,6 +2,7 @@
 title: "Finalysis: Financial Analysis Platform"
 date: 2023-09-01
 tags: ["python", "finance", "streamlit", "data-science"]
+document_type: "project"
 status: Completed
 git_repo: "https://github.com/raunakdey-07/finalysis"
 summary: "A Streamlit-based financial analysis tool with real-time stock data and technical indicators"

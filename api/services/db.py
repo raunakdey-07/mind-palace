@@ -32,10 +32,10 @@ async def init_db() -> None:
         await conn.execute(
             text("""
             CREATE TABLE IF NOT EXISTS documents (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id CHAR(64) PRIMARY KEY,
                 title TEXT,
                 path TEXT UNIQUE,
-                type TEXT DEFAULT 'markdown',
+                document_type TEXT DEFAULT 'note',
                 date DATE,
                 summary TEXT,
                 tags TEXT[] DEFAULT '{}',
@@ -52,13 +52,33 @@ async def init_db() -> None:
             text("""
             CREATE TABLE IF NOT EXISTS chunks (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                doc_id UUID REFERENCES documents(id) ON DELETE CASCADE,
+                doc_id CHAR(64) REFERENCES documents(id) ON DELETE CASCADE,
                 order_index INT,
                 text TEXT NOT NULL,
-                section TEXT,
+                heading_path TEXT,
+                document_type TEXT,
+                source_url TEXT,
+                tags TEXT[] DEFAULT '{}',
+                language TEXT DEFAULT 'en',
+                token_count INT,
                 embedding vector(384),
+                embedding_model TEXT,
+                embedding_dimension INT,
+                embedding_version TEXT,
                 metadata JSONB DEFAULT '{}',
-                created_at TIMESTAMP DEFAULT now()
+                created_at TIMESTAMP DEFAULT now(),
+                updated_at TIMESTAMP DEFAULT now()
+            )
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE TABLE IF NOT EXISTS ingestion_manifest (
+                path TEXT PRIMARY KEY,
+                content_hash TEXT NOT NULL,
+                doc_id CHAR(64),
+                chunk_count INT DEFAULT 0,
+                last_ingested TIMESTAMP DEFAULT now()
             )
         """)
         )
@@ -72,6 +92,30 @@ async def init_db() -> None:
             text("""
             CREATE INDEX IF NOT EXISTS idx_chunks_doc_id
             ON chunks (doc_id)
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_chunks_document_type
+            ON chunks (document_type)
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_documents_type
+            ON documents (document_type)
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_documents_updated_at
+            ON documents (updated_at)
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_chunks_heading_path
+            ON chunks (heading_path)
         """)
         )
 

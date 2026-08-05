@@ -48,6 +48,8 @@ class SearchResult(BaseModel):
     source_title: Optional[str] = None
     source_id: Optional[str] = None
     score: float = 0.0
+    heading_path: Optional[str] = None
+    document_type: Optional[str] = None
 
 
 class SearchResponse(BaseModel):
@@ -58,7 +60,67 @@ class SearchResponse(BaseModel):
     total: int
 
 
-# --- RAG Query ---
+# --- RAG Query (Intent-Specific) ---
+
+
+class AskRequest(BaseModel):
+    """Request body for POST /api/ask - general Q&A."""
+
+    question: str = Field(..., description="The user's question")
+    k: int = Field(5, ge=1, le=20, description="Number of retrieved chunks")
+    document_type: Optional[str] = Field(None, description="Filter by document type")
+    tags: Optional[List[str]] = Field(None, description="Filter by tags")
+
+
+class SummarizeRequest(BaseModel):
+    """Request body for POST /api/summarize - document summarization."""
+
+    document_id: str = Field(..., description="Document ID to summarize")
+    max_length: int = Field(500, ge=100, le=2000, description="Max summary length")
+
+
+class InterviewRequest(BaseModel):
+    """Request body for POST /api/interview - interview question generation."""
+
+    document_id: str = Field(..., description="Document ID to generate questions from")
+    num_questions: int = Field(5, ge=1, le=15, description="Number of questions")
+    difficulty: str = Field("medium", pattern=r"^(easy|medium|hard)$")
+
+
+class RelatedRequest(BaseModel):
+    """Request body for POST /api/related - find related documents."""
+
+    document_id: str = Field(..., description="Document ID to find related docs for")
+    k: int = Field(5, ge=1, le=20, description="Number of related documents")
+
+
+class TimelineRequest(BaseModel):
+    """Request body for GET /api/timeline - chronological document view."""
+
+    document_type: Optional[str] = Field(None, description="Filter by document type")
+    start_date: Optional[str] = Field(None, description="Start date (YYYY-MM-DD)")
+    end_date: Optional[str] = Field(None, description="End date (YYYY-MM-DD)")
+    limit: int = Field(50, ge=1, le=200)
+
+
+class StructuredResponse(BaseModel):
+    """Structured response with metadata for all intent endpoints."""
+
+    answer: str = Field(..., description="Generated answer or result")
+    sources: List[str] = Field(
+        default_factory=list, description="Source document IDs or URLs"
+    )
+    snippets: List[str] = Field(
+        default_factory=list, description="Retrieved context snippets"
+    )
+    latency_ms: int = Field(0, description="Total response latency in milliseconds")
+    retrieved_chunks: int = Field(0, description="Number of chunks retrieved")
+    intent: str = Field(
+        ..., description="Intent type: ask, summarize, interview, related, timeline"
+    )
+
+
+# --- Legacy (for backward compatibility) ---
 
 
 class InsightQuery(BaseModel):

@@ -2,6 +2,7 @@
 title: "BirdCLEF 2023: Audio Classification"
 date: 2023-07-15
 tags: ["kaggle", "audio-classification", "ensemble"]
+document_type: "kaggle"
 competition: "BirdCLEF 2023"
 status: Completed
 git_repo: "https://github.com/raunakdey-07/birdclef"

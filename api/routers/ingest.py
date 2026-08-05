@@ -4,17 +4,24 @@ from __future__ import annotations
 
 from typing import List
 
+from fastapi import APIRouter, HTTPException
+
 from api.models.schemas import IngestFileRequest, IngestRepoRequest, IngestResponse
 from api.services.chunker import chunk_document
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
-from api.services.parser import parse_markdown
+from api.services.parser import (
+    FrontmatterSchema,
+    chunk_with_heading_paths,
+    parse_markdown,
+)
 from api.services.repository import (
+    check_manifest,
     delete_chunks_for_doc,
     insert_chunks,
+    update_manifest,
     upsert_document,
 )
-from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
 embedder = Embedder()
@@ -24,13 +31,29 @@ embedder = Embedder()
 async def ingest_file(request: IngestFileRequest) -> IngestResponse:
     """Ingest a single Markdown file (body with frontmatter)."""
     try:
-        metadata, body = parse_markdown(request.content)
-        title = metadata.get("title", request.path or "Untitled")
+        frontmatter_obj, body, sections = parse_markdown(request.content)
         path = request.path or "unknown"
 
         async for db in [get_async_db()]:
             async with db:
-                doc_id = await upsert_document(db, title, path, body, metadata)
+                # Check manifest for incremental ingestion
+                body_hash = embedder.embed_single(
+                    body
+                )  # Reuse embedder for hash? No, use content_hash
+                from api.services.repository import content_hash
+
+                doc_hash = content_hash(body)
+
+                if await check_manifest(db, path, doc_hash):
+                    return IngestResponse(
+                        success=True,
+                        chunk_count=0,
+                        message="Document unchanged (manifest), skipped",
+                    )
+
+                doc_id = await upsert_document(
+                    db, frontmatter_obj.title, path, body, frontmatter_obj.model_dump()
+                )
                 if not doc_id:
                     return IngestResponse(
                         success=True,
@@ -41,20 +64,33 @@ async def ingest_file(request: IngestFileRequest) -> IngestResponse:
                 # Delete old chunks for this doc
                 await delete_chunks_for_doc(db, doc_id)
 
-                # Chunk and embed
-                chunks_text = chunk_document(body)
-                embeddings = embedder.embed(chunks_text)
+                # Chunk with heading paths and embed
+                chunks = chunk_with_heading_paths(sections)
+                chunk_texts = [c["text"] for c in chunks]
+                embeddings = embedder.embed(chunk_texts)
 
                 chunk_records = [
                     {
-                        "text": ct,
+                        "text": c["text"],
                         "order_index": i,
-                        "section": metadata.get("title", ""),
+                        "heading_path": c["heading_path"],
+                        "token_count": c["token_count"],
                         "embedding": emb,
                     }
-                    for i, (ct, emb) in enumerate(zip(chunks_text, embeddings))
+                    for i, (c, emb) in enumerate(zip(chunks, embeddings))
                 ]
-                count = await insert_chunks(db, doc_id, chunk_records)
+                count = await insert_chunks(
+                    db,
+                    doc_id,
+                    frontmatter_obj.document_type,
+                    frontmatter_obj.tags,
+                    chunk_records,
+                    embedder._model.__class__.__name__,
+                    embedder.dimension,
+                    "1.0",
+                )
+
+                await update_manifest(db, path, doc_hash, doc_id, count)
 
                 return IngestResponse(
                     success=True,
@@ -62,6 +98,8 @@ async def ingest_file(request: IngestFileRequest) -> IngestResponse:
                     chunk_count=count,
                     message=f"Ingested {count} chunks",
                 )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -69,7 +107,6 @@ async def ingest_file(request: IngestFileRequest) -> IngestResponse:
 @router.post("/repo", response_model=IngestResponse)
 async def ingest_repo(request: IngestRepoRequest) -> IngestResponse:
     """Batch ingest all Markdown files from a local repo path."""
-    import os
     from pathlib import Path
 
     repo_path = Path(request.repo_path)
@@ -85,29 +122,60 @@ async def ingest_repo(request: IngestRepoRequest) -> IngestResponse:
         try:
             content = md_file.read_text(encoding="utf-8")
             rel_path = str(md_file.relative_to(repo_path))
-            metadata, body = parse_markdown(content)
-            title = metadata.get("title", md_file.stem)
+
+            frontmatter_obj, body, sections = parse_markdown(content)
 
             async for db in [get_async_db()]:
                 async with db:
-                    doc_id = await upsert_document(db, title, rel_path, body, metadata)
+                    from api.services.repository import content_hash
+
+                    doc_hash = content_hash(body)
+
+                    if await check_manifest(db, rel_path, doc_hash):
+                        continue
+
+                    doc_id = await upsert_document(
+                        db,
+                        frontmatter_obj.title,
+                        rel_path,
+                        body,
+                        frontmatter_obj.model_dump(),
+                    )
                     if not doc_id:
                         continue
+
                     await delete_chunks_for_doc(db, doc_id)
-                    chunks_text = chunk_document(body)
-                    embeddings = embedder.embed(chunks_text)
+
+                    chunks = chunk_with_heading_paths(sections)
+                    chunk_texts = [c["text"] for c in chunks]
+                    embeddings = embedder.embed(chunk_texts)
+
                     chunk_records = [
                         {
-                            "text": ct,
+                            "text": c["text"],
                             "order_index": i,
-                            "section": title,
+                            "heading_path": c["heading_path"],
+                            "token_count": c["token_count"],
                             "embedding": emb,
                         }
-                        for i, (ct, emb) in enumerate(zip(chunks_text, embeddings))
+                        for i, (c, emb) in enumerate(zip(chunks, embeddings))
                     ]
-                    total_chunks += await insert_chunks(db, doc_id, chunk_records)
+                    count = await insert_chunks(
+                        db,
+                        doc_id,
+                        frontmatter_obj.document_type,
+                        frontmatter_obj.tags,
+                        chunk_records,
+                        embedder._model.__class__.__name__,
+                        embedder.dimension,
+                        "1.0",
+                    )
+
+                    await update_manifest(db, rel_path, doc_hash, doc_id, count)
+                    total_chunks += count
+        except ValueError as e:
+            print(f"[ingest] Validation error for {md_file}: {e}")
         except Exception as e:
-            # Log and continue with next file
             print(f"[ingest] Error processing {md_file}: {e}")
 
     return IngestResponse(

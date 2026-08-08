@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 """Retrieval service abstraction for hybrid search and reranking."""
 
 from __future__ import annotations
@@ -23,6 +26,9 @@ class RetrievalResult:
     source_document_type: str
     score: float
     doc_id: str
+    vector_score: Optional[float] = None
+    keyword_score: Optional[float] = None
+    rrf_score: Optional[float] = None
 
 
 class RetrievalService:
@@ -31,6 +37,7 @@ class RetrievalService:
     Supports:
     - Pure vector search (cosine similarity)
     - Hybrid search (vector + keyword/pg_trgm)
+    - Reciprocal Rank Fusion (RRF)
     - Metadata filtering
     - Future: cross-encoder reranking
     """
@@ -46,10 +53,12 @@ class RetrievalService:
         tags: Optional[List[str]] = None,
         hybrid: bool = False,
         query_text: Optional[str] = None,
+        rrf: bool = True,
+        debug: bool = False,
     ) -> List[RetrievalResult]:
-        """Search with optional hybrid (vector + keyword) mode."""
+        """Search with optional hybrid (vector + keyword) mode and RRF."""
         where_clauses = ["c.embedding IS NOT NULL"]
-        params = {"query": query_vector, "k": k}
+        params = {"query": query_vector, "k": k * 3 if rrf else k}  # Fetch more for RRF
 
         if document_type:
             where_clauses.append("c.document_type = :doc_type")
@@ -65,18 +74,50 @@ class RetrievalService:
             # Hybrid: combine vector similarity with pg_trgm keyword search
             # Requires pg_trgm extension: CREATE EXTENSION pg_trgm;
             params["query_text"] = query_text
-            sql = f"""
-                SELECT c.text, c.heading_path, c.document_type, c.source_url, c.tags,
-                       d.title, d.path, d.document_type as doc_type, d.id as doc_id,
-                       1 - (c.embedding <=> :query::vector) AS vector_score,
-                       similarity(c.text, :query_text) AS keyword_score,
-                       (0.7 * (1 - (c.embedding <=> :query::vector)) + 0.3 * similarity(c.text, :query_text)) AS combined_score
-                FROM chunks c
-                JOIN documents d ON c.doc_id = d.id
-                WHERE {where_sql}
-                ORDER BY combined_score DESC
-                LIMIT :k
-            """
+            if rrf:
+                # RRF: fetch separate rankings and fuse
+                sql = f"""
+                    WITH vector_rank AS (
+                        SELECT c.id as chunk_id, c.text, c.heading_path, c.document_type, c.source_url, c.tags,
+                               d.title, d.path, d.document_type as doc_type, d.id as doc_id,
+                               1 - (c.embedding <=> :query::vector) AS vector_score,
+                               ROW_NUMBER() OVER (ORDER BY c.embedding <=> :query::vector) as vector_rank
+                        FROM chunks c
+                        JOIN documents d ON c.doc_id = d.id
+                        WHERE {where_sql}
+                    ),
+                    keyword_rank AS (
+                        SELECT c.id as chunk_id,
+                               similarity(c.text, :query_text) AS keyword_score,
+                               ROW_NUMBER() OVER (ORDER BY similarity(c.text, :query_text) DESC) as keyword_rank
+                        FROM chunks c
+                        JOIN documents d ON c.doc_id = d.id
+                        WHERE {where_sql}
+                    )
+                    SELECT vr.chunk_id, vr.text, vr.heading_path, vr.document_type, vr.source_url, vr.tags,
+                           vr.title, vr.path, vr.doc_type, vr.doc_id,
+                           vr.vector_score, kr.keyword_score,
+                           vr.vector_rank, kr.keyword_rank,
+                           (1.0 / (60 + vr.vector_rank) + 1.0 / (60 + kr.keyword_rank)) as rrf_score
+                    FROM vector_rank vr
+                    JOIN keyword_rank kr ON vr.chunk_id = kr.chunk_id
+                    ORDER BY rrf_score DESC
+                    LIMIT :k
+                """
+            else:
+                # Simple weighted average (legacy)
+                sql = f"""
+                    SELECT c.text, c.heading_path, c.document_type, c.source_url, c.tags,
+                           d.title, d.path, d.document_type as doc_type, d.id as doc_id,
+                           1 - (c.embedding <=> :query::vector) AS vector_score,
+                           similarity(c.text, :query_text) AS keyword_score,
+                           (0.7 * (1 - (c.embedding <=> :query::vector)) + 0.3 * similarity(c.text, :query_text)) AS combined_score
+                    FROM chunks c
+                    JOIN documents d ON c.doc_id = d.id
+                    WHERE {where_sql}
+                    ORDER BY combined_score DESC
+                    LIMIT :k
+                """
         else:
             # Pure vector search
             sql = f"""
@@ -93,7 +134,26 @@ class RetrievalService:
         result = await self.db.execute(text(sql), params)
         rows = result.fetchall()
 
-        if hybrid and query_text:
+        if hybrid and query_text and rrf:
+            return [
+                RetrievalResult(
+                    text=row[1],
+                    heading_path=row[2],
+                    document_type=row[3],
+                    source_url=row[4],
+                    tags=row[5] or [],
+                    source_title=row[6],
+                    source_path=row[7],
+                    source_document_type=row[8],
+                    score=float(row[13]),  # rrf_score
+                    doc_id=row[9],
+                    vector_score=float(row[10]) if row[10] is not None else None,
+                    keyword_score=float(row[11]) if row[11] is not None else None,
+                    rrf_score=float(row[13]) if row[13] is not None else None,
+                )
+                for row in rows
+            ]
+        elif hybrid and query_text:
             return [
                 RetrievalResult(
                     text=row[0],
@@ -106,6 +166,8 @@ class RetrievalService:
                     source_document_type=row[7],
                     score=float(row[10]),  # combined_score
                     doc_id=row[8],
+                    vector_score=float(row[9]) if row[9] is not None else None,
+                    keyword_score=float(row[10]) if row[10] is not None else None,
                 )
                 for row in rows
             ]

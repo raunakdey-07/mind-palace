@@ -1,44 +1,104 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 # Retrieval Evaluation Dataset
 
 # Each entry has a query and expected document titles that should appear in top-k results
 # Run evaluation with: `mindpalace eval retrieval`
 
+# Category: retrieval - direct fact lookup
 - query: "feature leakage"
   expected:
     - "BirdCLEF 2023: Audio Classification"
+  category: retrieval
 
 - query: "Altman Z score"
   expected:
     - "Finalysis: Financial Analysis Platform"
+  category: retrieval
 
 - query: "CNN transformer attention"
   expected:
     - "BirdCLEF 2023: Audio Classification"
+  category: retrieval
 
 - query: "technical indicators SMA EMA RSI"
   expected:
     - "Finalysis: Financial Analysis Platform"
+  category: retrieval
 
 - query: "ensemble weighted averaging"
   expected:
     - "BirdCLEF 2023: Audio Classification"
+  category: retrieval
 
 - query: "portfolio tracker Sharpe ratio"
   expected:
     - "Finalysis: Financial Analysis Platform"
+  category: retrieval
 
 - query: "test-time augmentation"
   expected:
     - "BirdCLEF 2023: Audio Classification"
+  category: retrieval
 
 - query: "backtesting engine"
   expected:
     - "Finalysis: Financial Analysis Platform"
+  category: retrieval
 
 - query: "Mind Palace RAG"
   expected:
     - "Mind Palace — Project README"
+  category: retrieval
 
 - query: "vector database pgvector"
   expected:
     - "Mind Palace — Project README"
+  category: retrieval
+
+# Category: synthesis - combining information from multiple sources
+- query: "compare Finalysis and BirdCLEF"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+    - "BirdCLEF 2023: Audio Classification"
+  category: synthesis
+
+- query: "what models did I use in my projects"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+    - "BirdCLEF 2023: Audio Classification"
+  category: synthesis
+
+# Category: reflective - personal learning and insights
+- query: "what did I learn from BirdCLEF"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+  category: reflective
+
+- query: "what are my key takeaways from Finalysis"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+  category: reflective
+
+# Category: temporal - time-based queries
+- query: "projects from July 2023"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+  category: temporal
+
+- query: "projects from September 2023"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+  category: temporal
+
+# Category: exploratory - open-ended discovery
+- query: "audio classification projects"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+  category: exploratory
+
+- query: "financial analysis tools I built"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+  category: exploratory

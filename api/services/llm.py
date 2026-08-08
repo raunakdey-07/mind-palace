@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 """LLM Provider abstraction for pluggable inference backends."""
 
 from __future__ import annotations

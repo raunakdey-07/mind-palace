@@ -1,32 +1,38 @@
-"""Intent-specific RAG endpoints: ask, summarize, interview, related, timeline."""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
+"""API router for intent-specific RAG endpoints."""
 
 from __future__ import annotations
 
 import time
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from api.models.schemas import (
     AskRequest,
     InterviewRequest,
     RelatedRequest,
+    RetrievalDiagnostics,
     StructuredResponse,
     SummarizeRequest,
     TimelineRequest,
 )
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
-from api.services.llm import get_llm_provider
+from api.services.llm_service import LLMService
 from api.services.retrieval import RetrievalService
 
 router = APIRouter()
 embedder = Embedder()
-llm = get_llm_provider()
+llm_service = LLMService()
 
 
 @router.post("/ask", response_model=StructuredResponse)
-async def ask(request: AskRequest) -> StructuredResponse:
+async def ask(
+    request: AskRequest, response: Response, debug: bool = Query(False)
+) -> StructuredResponse:
     """General Q&A over the knowledge base."""
     start = time.perf_counter()
     query_vector = embedder.embed_single(request.question)
@@ -39,6 +45,10 @@ async def ask(request: AskRequest) -> StructuredResponse:
                 k=request.k,
                 document_type=request.document_type,
                 tags=request.tags,
+                hybrid=True,
+                query_text=request.question,
+                rrf=True,
+                debug=debug,
             )
 
     if not results:
@@ -49,6 +59,10 @@ async def ask(request: AskRequest) -> StructuredResponse:
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="ask",
+            provider=llm_service.provider.__class__.__name__.replace(
+                "Provider", ""
+            ).lower(),
+            model=llm_service.model_name,
         )
 
     snippets = [r.text for r in results]
@@ -69,7 +83,19 @@ async def ask(request: AskRequest) -> StructuredResponse:
         f"Question: {request.question}\n\n"
         f"Answer:"
     )
-    answer = await llm.generate(prompt)
+    answer = await llm_service.generate(prompt)
+
+    diagnostics = None
+    if debug:
+        diagnostics = [
+            RetrievalDiagnostics(
+                document_id=r.doc_id,
+                vector_score=r.vector_score,
+                keyword_score=r.keyword_score,
+                rrf_score=r.rrf_score,
+            )
+            for r in results
+        ]
 
     return StructuredResponse(
         answer=answer,
@@ -78,11 +104,19 @@ async def ask(request: AskRequest) -> StructuredResponse:
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(results),
         intent="ask",
+        provider=llm_service.provider.__class__.__name__.replace(
+            "Provider", ""
+        ).lower(),
+        model=llm_service.model_name,
+        temperature=0.2,
+        diagnostics=diagnostics,
     )
 
 
 @router.post("/summarize", response_model=StructuredResponse)
-async def summarize(request: SummarizeRequest) -> StructuredResponse:
+async def summarize(
+    request: SummarizeRequest, response: Response
+) -> StructuredResponse:
     """Summarize a specific document."""
     start = time.perf_counter()
 
@@ -99,6 +133,10 @@ async def summarize(request: SummarizeRequest) -> StructuredResponse:
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="summarize",
+            provider=llm_service.provider.__class__.__name__.replace(
+                "Provider", ""
+            ).lower(),
+            model=llm_service.model_name,
         )
 
     # Get document title from first chunk
@@ -117,7 +155,7 @@ async def summarize(request: SummarizeRequest) -> StructuredResponse:
         f"Content:\n{full_text}\n\n"
         f"Summary:"
     )
-    answer = await llm.generate(prompt)
+    answer = await llm_service.generate(prompt)
 
     return StructuredResponse(
         answer=answer,
@@ -126,11 +164,18 @@ async def summarize(request: SummarizeRequest) -> StructuredResponse:
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(chunks),
         intent="summarize",
+        provider=llm_service.provider.__class__.__name__.replace(
+            "Provider", ""
+        ).lower(),
+        model=llm_service.model_name,
+        temperature=0.2,
     )
 
 
 @router.post("/interview", response_model=StructuredResponse)
-async def interview(request: InterviewRequest) -> StructuredResponse:
+async def interview(
+    request: InterviewRequest, response: Response
+) -> StructuredResponse:
     """Generate interview questions from a document."""
     start = time.perf_counter()
 
@@ -147,6 +192,10 @@ async def interview(request: InterviewRequest) -> StructuredResponse:
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="interview",
+            provider=llm_service.provider.__class__.__name__.replace(
+                "Provider", ""
+            ).lower(),
+            model=llm_service.model_name,
         )
 
     doc_title = chunks[0].source_title
@@ -169,7 +218,7 @@ async def interview(request: InterviewRequest) -> StructuredResponse:
         f"Content:\n{full_text}\n\n"
         f"Interview Questions:"
     )
-    answer = await llm.generate(prompt)
+    answer = await llm_service.generate(prompt)
 
     return StructuredResponse(
         answer=answer,
@@ -178,11 +227,16 @@ async def interview(request: InterviewRequest) -> StructuredResponse:
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(chunks),
         intent="interview",
+        provider=llm_service.provider.__class__.__name__.replace(
+            "Provider", ""
+        ).lower(),
+        model=llm_service.model_name,
+        temperature=0.2,
     )
 
 
 @router.post("/related", response_model=StructuredResponse)
-async def related(request: RelatedRequest) -> StructuredResponse:
+async def related(request: RelatedRequest, response: Response) -> StructuredResponse:
     """Find documents related to a given document."""
     start = time.perf_counter()
 
@@ -201,6 +255,10 @@ async def related(request: RelatedRequest) -> StructuredResponse:
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="related",
+            provider=llm_service.provider.__class__.__name__.replace(
+                "Provider", ""
+            ).lower(),
+            model=llm_service.model_name,
         )
 
     # Get the source document title
@@ -229,6 +287,10 @@ async def related(request: RelatedRequest) -> StructuredResponse:
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(related_docs),
         intent="related",
+        provider=llm_service.provider.__class__.__name__.replace(
+            "Provider", ""
+        ).lower(),
+        model=llm_service.model_name,
     )
 
 
@@ -238,6 +300,7 @@ async def timeline(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     limit: int = Query(50, ge=1, le=200),
+    response: Response = None,
 ) -> StructuredResponse:
     """Chronological view of documents."""
     start = time.perf_counter()
@@ -257,6 +320,10 @@ async def timeline(
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="timeline",
+            provider=llm_service.provider.__class__.__name__.replace(
+                "Provider", ""
+            ).lower(),
+            model=llm_service.model_name,
         )
 
     lines = ["**Document Timeline** (newest first):\n"]
@@ -274,11 +341,17 @@ async def timeline(
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(docs),
         intent="timeline",
+        provider=llm_service.provider.__class__.__name__.replace(
+            "Provider", ""
+        ).lower(),
+        model=llm_service.model_name,
     )
 
 
-# Keep legacy endpoint for backward compatibility
+# Keep legacy endpoint for backward compatibility - DEPRECATED
 @router.post("", response_model=StructuredResponse)
-async def legacy_query(request: AskRequest) -> StructuredResponse:
-    """Legacy /api/query endpoint - delegates to /ask."""
-    return await ask(request)
+async def legacy_query(request: AskRequest, response: Response) -> StructuredResponse:
+    """Legacy /api/query endpoint - delegates to /ask. DEPRECATED."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/query/ask>; rel="successor-version"'
+    return await ask(request, response)

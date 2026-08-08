@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 sqlalchemy>=2.0.0
@@ -16,3 +19,4 @@ httpx>=0.27.0
 python-dotenv>=1.0.0
 pyyaml>=6.0
 pytest-asyncio>=0.23.0
+alembic>=1.13.0

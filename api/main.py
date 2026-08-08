@@ -1,17 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 """Mind Palace FastAPI application entry point."""
 
+from __future__ import annotations
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from api.routers import ingest, search, query
-from api.services.db import init_db
+from api.routers import ingest, query, search
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifecycle: initialize DB on startup, clean up on shutdown."""
+    """Application lifecycle: verify DB connectivity on startup."""
+    from api.services.db import init_db
+
     await init_db()
     yield
 
@@ -19,7 +26,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Mind Palace API",
     description="RAG and agent APIs for the Mind Palace AI-Research OS",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -35,10 +42,12 @@ app.add_middleware(
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
+
 # Health check
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
 
 # Register routers
 app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])

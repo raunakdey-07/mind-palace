@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 version: "3.8"
 
 services:
@@ -12,8 +15,8 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mpadmin -d mindpalace"]
-      interval: 5s
+      test: ["CMD", "pg_isready", "-U", "mpadmin", "-d", "mindpalace"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
@@ -24,17 +27,15 @@ services:
       - ollama_data:/root/.ollama
     ports:
       - "11434:11434"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: .
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
     volumes:
       - ./content:/app/content
       - ./data:/app/data
@@ -44,12 +45,17 @@ services:
       postgresql:
         condition: service_healthy
       ollama:
-        condition: service_started
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://mpadmin:secret@postgresql:5432/mindpalace
       OLLAMA_BASE_URL: http://ollama:11434
       EMBEDDING_MODEL: all-MiniLM-L6-v2
       LLM_MODEL: llama3.3:3b-instruct
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build: ./frontend

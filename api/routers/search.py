@@ -1,8 +1,9 @@
-"""Search endpoint: semantic vector similarity search with metadata filtering."""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
+"""API router for search endpoints."""
 
 from __future__ import annotations
-
-from typing import Optional
 
 from fastapi import APIRouter, Query
 
@@ -24,6 +25,9 @@ async def search(
     ),
     tags: Optional[str] = Query(None, description="Comma-separated tags to filter by"),
     hybrid: bool = Query(False, description="Enable hybrid search (vector + keyword)"),
+    rrf: bool = Query(
+        True, description="Enable Reciprocal Rank Fusion for hybrid search"
+    ),
 ) -> SearchResponse:
     """Semantic search over ingested Markdown content with optional metadata filters."""
     query_vector = embedder.embed_single(q)
@@ -40,6 +44,7 @@ async def search(
                 tags=tag_list,
                 hybrid=hybrid,
                 query_text=q if hybrid else None,
+                rrf=rrf,
             )
 
     return SearchResponse(

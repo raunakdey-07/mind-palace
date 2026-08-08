@@ -7,7 +7,14 @@ setup:
 	. .venv/bin/activate && python -m pip install -e .
 
 dev:
-	docker compose up -d
+	@if command -v docker >/dev/null 2>&1; then \
+		docker compose up -d; \
+	elif command -v podman-compose >/dev/null 2>&1; then \
+		podman-compose up -d; \
+	else \
+		echo "Neither docker compose nor podman-compose found"; \
+		exit 1; \
+	fi
 
 test:
 	pytest -q

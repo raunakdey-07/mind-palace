@@ -10,6 +10,10 @@ Mind Palace turns your portfolio, projects, Kaggle work, research notes, and tec
 
 The project is designed as a **local-first AI platform**: no paid API keys are required for the reference setup.
 
+## Why this exists
+
+Most portfolios are static pages. Mind Palace treats a portfolio as a **living knowledge system**: every project, competition, note, and write-up becomes queryable, explainable, and reusable through semantic search and local LLMs.
+
 ---
 
 ## Current Status
@@ -39,7 +43,7 @@ The project is designed as a **local-first AI platform**: no paid API keys are r
 * Local inference via Ollama
 * Typer-based CLI
 * Retrieval evaluation benchmarks
-* Docker Compose stack
+* Containerized local development stack
 * GitHub Actions CI
 * Alembic database migrations
 
@@ -123,6 +127,13 @@ Install Ollama:
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen3:8b
 ```
+### Fedora / Podman users
+
+Install Podman Compose if it is not already available:
+
+```bash
+sudo dnf install podman-compose
+```
 
 ---
 
@@ -152,8 +163,16 @@ python -m pip install -e .
 
 ### 4. Start infrastructure
 
+**Docker**
+
 ```bash
 docker compose up -d
+```
+
+**Podman (Fedora default)**
+
+```bash
+podman-compose up -d
 ```
 
 ### 5. Verify the setup
@@ -287,6 +306,12 @@ source .venv/bin/activate
 
 python -m pip install -r requirements.txt
 python -m pip install -e .
+
+# Docker
+docker compose up -d
+
+# or Podman
+podman-compose up -d
 
 pytest -q
 mindpalace doctor

@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,18 +16,18 @@ class RetrievalResult:
     """A single retrieval result with all metadata."""
 
     text: str
-    heading_path: Optional[str]
-    document_type: Optional[str]
-    source_url: Optional[str]
-    tags: List[str]
+    heading_path: str | None
+    document_type: str | None
+    source_url: str | None
+    tags: list[str]
     source_title: str
     source_path: str
     source_document_type: str
     score: float
     doc_id: str
-    vector_score: Optional[float] = None
-    keyword_score: Optional[float] = None
-    rrf_score: Optional[float] = None
+    vector_score: float | None = None
+    keyword_score: float | None = None
+    rrf_score: float | None = None
 
 
 class RetrievalService:
@@ -47,15 +46,15 @@ class RetrievalService:
 
     async def search(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         k: int = 5,
-        document_type: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        document_type: str | None = None,
+        tags: list[str] | None = None,
         hybrid: bool = False,
-        query_text: Optional[str] = None,
+        query_text: str | None = None,
         rrf: bool = True,
         debug: bool = False,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Search with optional hybrid (vector + keyword) mode and RRF."""
         where_clauses = ["c.embedding IS NOT NULL"]
         params = {"query": query_vector, "k": k * 3 if rrf else k}  # Fetch more for RRF
@@ -188,7 +187,7 @@ class RetrievalService:
                 for row in rows
             ]
 
-    async def get_document_chunks(self, doc_id: str) -> List[RetrievalResult]:
+    async def get_document_chunks(self, doc_id: str) -> list[RetrievalResult]:
         """Get all chunks for a document (for summarization)."""
         result = await self.db.execute(
             text("""
@@ -219,7 +218,7 @@ class RetrievalService:
             for row in rows
         ]
 
-    async def get_related_documents(self, doc_id: str, k: int = 5) -> List[dict]:
+    async def get_related_documents(self, doc_id: str, k: int = 5) -> list[dict]:
         """Find related documents via shared tags and document type."""
         result = await self.db.execute(
             text("""
@@ -249,11 +248,11 @@ class RetrievalService:
 
     async def get_timeline(
         self,
-        document_type: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        document_type: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         limit: int = 50,
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Get chronological document view."""
         where_clauses = ["1=1"]
         params = {"limit": limit}

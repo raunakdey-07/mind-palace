@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 import yaml
 
@@ -63,10 +61,10 @@ def ingest_repo(
 def search(
     query: str = typer.Argument(..., help="Search query"),
     k: int = typer.Option(5, "--k", "-k", help="Number of results"),
-    document_type: Optional[str] = typer.Option(
+    document_type: str | None = typer.Option(
         None, "--type", "-t", help="Filter by document type"
     ),
-    tags: Optional[str] = typer.Option(
+    tags: str | None = typer.Option(
         None, "--tags", help="Comma-separated tags to filter by"
     ),
     hybrid: bool = typer.Option(False, "--hybrid", help="Enable hybrid search"),
@@ -107,10 +105,10 @@ def search(
 def ask(
     question: str = typer.Argument(..., help="Question to ask"),
     k: int = typer.Option(5, "--k", "-k", help="Number of retrieved chunks"),
-    document_type: Optional[str] = typer.Option(
+    document_type: str | None = typer.Option(
         None, "--type", "-t", help="Filter by document type"
     ),
-    tags: Optional[str] = typer.Option(
+    tags: str | None = typer.Option(
         None, "--tags", help="Comma-separated tags to filter by"
     ),
 ) -> None:
@@ -222,13 +220,13 @@ def related(
 
 @app.command()
 def timeline(
-    document_type: Optional[str] = typer.Option(
+    document_type: str | None = typer.Option(
         None, "--type", "-t", help="Filter by document type"
     ),
-    start_date: Optional[str] = typer.Option(
+    start_date: str | None = typer.Option(
         None, "--start", help="Start date (YYYY-MM-DD)"
     ),
-    end_date: Optional[str] = typer.Option(None, "--end", help="End date (YYYY-MM-DD)"),
+    end_date: str | None = typer.Option(None, "--end", help="End date (YYYY-MM-DD)"),
     limit: int = typer.Option(50, "--limit", "-l", help="Number of documents"),
 ) -> None:
     """Show chronological document timeline."""
@@ -256,7 +254,6 @@ def timeline(
 @app.command()
 def doctor() -> None:
     """Run system health checks."""
-    import sys
 
     import httpx
 
@@ -282,7 +279,7 @@ def doctor() -> None:
             resp.status_code == 200,
             "Start the API with: uvicorn api.main:app --reload",
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         check("API health", False, "Start the API with: uvicorn api.main:app --reload")
 
     # Check 2: Postgres connectivity
@@ -302,7 +299,7 @@ def doctor() -> None:
             result,
             "Check docker-compose is running: docker-compose ps",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         check(
             "Postgres connectivity",
             False,
@@ -317,7 +314,7 @@ def doctor() -> None:
             resp.status_code == 200,
             "Start Ollama: docker exec ollama ollama serve",
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         check(
             "Ollama availability",
             False,
@@ -334,7 +331,7 @@ def doctor() -> None:
             embedder.dimension > 0,
             "Check sentence-transformers is installed",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         check(
             "Embedding model loaded",
             False,
@@ -353,13 +350,12 @@ def doctor() -> None:
 
     # Check 6: Migrations (simplified)
     try:
-        from alembic import command
         from alembic.config import Config
 
-        alembic_cfg = Config("migrations/alembic.ini")
+        Config("migrations/alembic.ini")
         # Just check if we can load the config
         check("Alembic config loads", True, "Run: alembic upgrade head")
-    except Exception:
+    except Exception:  # noqa: BLE001
         check("Alembic config loads", False, "Run: alembic upgrade head")
 
     typer.echo(f"\n���📊 Health Check: {checks_passed}/{total_checks} passed")

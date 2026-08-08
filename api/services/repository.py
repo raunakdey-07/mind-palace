@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import func, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -40,7 +39,7 @@ async def upsert_document(
         return ""
 
     # Upsert
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     tags = metadata.get("tags", [])
     if isinstance(tags, str):
@@ -182,8 +181,8 @@ async def search_chunks(
     db: AsyncSession,
     query_vector: list[float],
     k: int = 5,
-    document_type: Optional[str] = None,
-    tags: Optional[list[str]] = None,
+    document_type: str | None = None,
+    tags: list[str] | None = None,
 ) -> list[dict]:
     """Semantic search with optional metadata filters."""
     where_clauses = ["c.embedding IS NOT NULL"]
@@ -229,7 +228,7 @@ async def search_chunks(
     ]
 
 
-async def get_document(db: AsyncSession, doc_id: str) -> Optional[dict]:
+async def get_document(db: AsyncSession, doc_id: str) -> dict | None:
     """Fetch a document by ID."""
     result = await db.execute(
         text(

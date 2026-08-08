@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://mpadmin:secret@localhost:5432/mindpalace",
+    "postgresql+psycopg://mpadmin:secret@localhost:5432/mindpalace",
 )
 
 # Sync engine (for DDL, bulk inserts)

@@ -1,8 +1,6 @@
 """Shared test fixtures for Mind Palace."""
 
 import pytest
-from api.services.chunker import chunk_by_headings, chunk_by_size, chunk_document
-from api.services.parser import parse_markdown
 
 
 @pytest.fixture

@@ -6,9 +6,8 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, Query, Response
 
 from api.models.schemas import (
     AskRequest,
@@ -17,7 +16,6 @@ from api.models.schemas import (
     RetrievalDiagnostics,
     StructuredResponse,
     SummarizeRequest,
-    TimelineRequest,
 )
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
@@ -296,9 +294,9 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
 
 @router.get("/timeline", response_model=StructuredResponse)
 async def timeline(
-    document_type: Optional[str] = Query(None, description="Filter by document type"),
-    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    document_type: str | None = Query(None, description="Filter by document type"),
+    start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
     limit: int = Query(50, ge=1, le=200),
     response: Response = None,
 ) -> StructuredResponse:

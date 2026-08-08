@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import yaml
 
@@ -11,14 +11,14 @@ class EvaluationService:
     """Service for running evaluations."""
 
     @staticmethod
-    def load_benchmarks(file_path: str) -> List[Dict[str, Any]]:
+    def load_benchmarks(file_path: str) -> list[dict[str, Any]]:
         """Load benchmark dataset from YAML."""
         with open(file_path) as f:
             return yaml.safe_load(f)
 
     @staticmethod
     def calculate_precision_at_k(
-        expected: List[str], retrieved: List[str], k: int
+        expected: list[str], retrieved: list[str], k: int
     ) -> float:
         """Calculate Precision@K."""
         if not expected:
@@ -29,7 +29,7 @@ class EvaluationService:
         return len(hits) / len(expected_set)
 
     @staticmethod
-    def calculate_reciprocal_rank(expected: List[str], retrieved: List[str]) -> float:
+    def calculate_reciprocal_rank(expected: list[str], retrieved: list[str]) -> float:
         """Calculate Reciprocal Rank."""
         for i, doc_id in enumerate(retrieved):
             if doc_id in expected:
@@ -37,7 +37,7 @@ class EvaluationService:
         return 0.0
 
     @staticmethod
-    def calculate_ndcg(expected: List[str], retrieved: List[str], k: int) -> float:
+    def calculate_ndcg(expected: list[str], retrieved: list[str], k: int) -> float:
         """Calculate Normalized Discounted Cumulative Gain."""
         if not expected:
             return 1.0

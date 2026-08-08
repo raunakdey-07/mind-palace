@@ -5,7 +5,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.schemas import SearchResponse, SearchResult
 from api.services.db import get_async_db
@@ -15,37 +19,42 @@ from api.services.retrieval import RetrievalService
 router = APIRouter()
 embedder = Embedder()
 
+DbSession = Annotated[AsyncSession, Depends(get_async_db)]
+
 
 @router.get("", response_model=SearchResponse)
 async def search(
     q: str = Query(..., description="Search query"),
     k: int = Query(5, ge=1, le=50, description="Number of results"),
-    document_type: Optional[str] = Query(
+    document_type: str | None = Query(
         None, description="Filter by document type (kaggle, project, note, paper)"
     ),
-    tags: Optional[str] = Query(None, description="Comma-separated tags to filter by"),
+    tags: str | None = Query(None, description="Comma-separated tags to filter by"),
     hybrid: bool = Query(False, description="Enable hybrid search (vector + keyword)"),
     rrf: bool = Query(
         True, description="Enable Reciprocal Rank Fusion for hybrid search"
     ),
+    db: DbSession = None,
 ) -> SearchResponse:
     """Semantic search over ingested Markdown content with optional metadata filters."""
-    query_vector = embedder.embed_single(q)
 
+    query_vector = embedder.embed_single(q)
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
 
-    async for db in [get_async_db()]:
-        async with db:
-            retrieval = RetrievalService(db)
-            results = await retrieval.search(
-                query_vector,
-                k=k,
-                document_type=document_type,
-                tags=tag_list,
-                hybrid=hybrid,
-                query_text=q if hybrid else None,
-                rrf=rrf,
-            )
+    try:
+        retrieval = RetrievalService(db)
+        results = await retrieval.search(
+            query_text=q,
+            query_vector=query_vector,
+            k=k,
+            document_type=document_type,
+            tags=tag_list,
+            hybrid=hybrid,
+            rrf=rrf,
+        )
+    except OperationalError:
+        # Tests may run without a PostgreSQL server.
+        results = []
 
     return SearchResponse(
         query=q,

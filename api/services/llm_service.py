@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
 
 from api.services.llm import LLMProvider, get_llm_provider
 

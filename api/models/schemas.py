@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 # --- Ingestion ---
@@ -16,7 +14,7 @@ class IngestFileRequest(BaseModel):
     """Request body for POST /api/ingest/file."""
 
     content: str = Field(..., description="Raw Markdown content (frontmatter + body)")
-    path: Optional[str] = Field(None, description="File path for reference")
+    path: str | None = Field(None, description="File path for reference")
 
 
 class IngestRepoRequest(BaseModel):
@@ -29,7 +27,7 @@ class IngestResponse(BaseModel):
     """Response from ingestion endpoints."""
 
     success: bool
-    document_id: Optional[str] = None
+    document_id: str | None = None
     chunk_count: int = 0
     message: str = ""
 
@@ -48,18 +46,18 @@ class SearchResult(BaseModel):
     """A single search result chunk."""
 
     text: str
-    source_title: Optional[str] = None
-    source_id: Optional[str] = None
+    source_title: str | None = None
+    source_id: str | None = None
     score: float = 0.0
-    heading_path: Optional[str] = None
-    document_type: Optional[str] = None
+    heading_path: str | None = None
+    document_type: str | None = None
 
 
 class SearchResponse(BaseModel):
     """Response from GET /api/search."""
 
     query: str
-    results: List[SearchResult]
+    results: list[SearchResult]
     total: int
 
 
@@ -71,8 +69,8 @@ class AskRequest(BaseModel):
 
     question: str = Field(..., description="The user's question")
     k: int = Field(5, ge=1, le=20, description="Number of retrieved chunks")
-    document_type: Optional[str] = Field(None, description="Filter by document type")
-    tags: Optional[List[str]] = Field(None, description="Filter by tags")
+    document_type: str | None = Field(None, description="Filter by document type")
+    tags: list[str] | None = Field(None, description="Filter by tags")
 
 
 class SummarizeRequest(BaseModel):
@@ -100,9 +98,9 @@ class RelatedRequest(BaseModel):
 class TimelineRequest(BaseModel):
     """Request body for GET /api/timeline - chronological document view."""
 
-    document_type: Optional[str] = Field(None, description="Filter by document type")
-    start_date: Optional[str] = Field(None, description="Start date (YYYY-MM-DD)")
-    end_date: Optional[str] = Field(None, description="End date (YYYY-MM-DD)")
+    document_type: str | None = Field(None, description="Filter by document type")
+    start_date: str | None = Field(None, description="Start date (YYYY-MM-DD)")
+    end_date: str | None = Field(None, description="End date (YYYY-MM-DD)")
     limit: int = Field(50, ge=1, le=200)
 
 
@@ -110,17 +108,17 @@ class Source(BaseModel):
     """Source document reference."""
 
     title: str
-    path: Optional[str] = None
-    document_type: Optional[str] = None
+    path: str | None = None
+    document_type: str | None = None
 
 
 class RetrievalDiagnostics(BaseModel):
     """Debug information about retrieval scores."""
 
     document_id: str
-    vector_score: Optional[float] = None
-    keyword_score: Optional[float] = None
-    rrf_score: Optional[float] = None
+    vector_score: float | None = None
+    keyword_score: float | None = None
+    rrf_score: float | None = None
 
 
 class StructuredResponse(BaseModel):
@@ -129,35 +127,43 @@ class StructuredResponse(BaseModel):
     answer: str = Field(
         ...,
         description="Generated answer or result",
-        example="Feature leakage occurred because the test set was used during feature selection.",
+        json_schema_extra={
+            "example": "Feature leakage occurred because the test set was used during feature selection."
+        },
     )
-    sources: List[str] = Field(
+    sources: list[str] = Field(
         default_factory=list, description="Source document IDs or URLs"
     )
-    snippets: List[str] = Field(
+    snippets: list[str] = Field(
         default_factory=list, description="Retrieved context snippets"
     )
     latency_ms: int = Field(
-        0, description="Total response latency in milliseconds", example=142
+        0,
+        description="Total response latency in milliseconds",
+        json_schema_extra={"example": "142"},
     )
     retrieved_chunks: int = Field(
-        0, description="Number of chunks retrieved", example=6
+        0, description="Number of chunks retrieved", json_schema_extra={"example": "6"}
     )
     intent: str = Field(
         ...,
         description="Intent type: ask, summarize, interview, related, timeline",
-        example="ask",
+        json_schema_extra={"example": "ask"},
     )
-    provider: Optional[str] = Field(
-        None, description="LLM provider used", example="ollama"
+    provider: str | None = Field(
+        None, description="LLM provider used", json_schema_extra={"example": "ollama"}
     )
-    model: Optional[str] = Field(
-        None, description="Model name used", example="llama3.3:3b-instruct"
+    model: str | None = Field(
+        None,
+        description="Model name used",
+        json_schema_extra={"example": "llama3.3:3b-instruct"},
     )
-    temperature: Optional[float] = Field(
-        None, description="Temperature used for generation", example=0.2
+    temperature: float | None = Field(
+        None,
+        description="Temperature used for generation",
+        json_schema_extra={"example": 0.2},
     )
-    diagnostics: Optional[List[RetrievalDiagnostics]] = Field(
+    diagnostics: list[RetrievalDiagnostics] | None = Field(
         None, description="Retrieval score breakdown (debug mode)"
     )
 
@@ -176,10 +182,10 @@ class InsightResponse(BaseModel):
     """Response from POST /api/query (matches spec)."""
 
     answer: str = Field(..., description="Generated answer from the LLM")
-    sources: List[str] = Field(
+    sources: list[str] = Field(
         default_factory=list, description="Source document IDs or URLs"
     )
-    snippets: List[str] = Field(
+    snippets: list[str] = Field(
         default_factory=list, description="Retrieved context snippets"
     )
 
@@ -199,4 +205,4 @@ class AgentResponse(BaseModel):
 
     agent: str
     result: str
-    sources: List[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)

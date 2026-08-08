@@ -19,3 +19,7 @@ testpaths = ["tests"]
 
 [project.scripts]
 mindpalace = "cli.main:app"
+
+[tool.black]
+target-version = ["py314"]
+line-length = 88

@@ -19,9 +19,7 @@ async def ingest_file(request: IngestFileRequest) -> IngestResponse:
     """Ingest a single Markdown file."""
     result = await ingestion_service.ingest_file(request.content, request.path)
     if not result["success"]:
-        raise HTTPException(
-            status_code=500, detail=result.get("message", "Unknown error")
-        )
+        raise HTTPException(status_code=500, detail=result.get("message", "Unknown error"))
     return IngestResponse(**result)
 
 
@@ -30,7 +28,5 @@ async def ingest_repo(request: IngestRepoRequest) -> IngestResponse:
     """Batch ingest all Markdown files from a repository."""
     result = await ingestion_service.ingest_repo(request.repo_path)
     if not result["success"]:
-        raise HTTPException(
-            status_code=400, detail=result.get("message", "Unknown error")
-        )
+        raise HTTPException(status_code=400, detail=result.get("message", "Unknown error"))
     return IngestResponse(**result)

@@ -2,22 +2,20 @@
 
 from __future__ import annotations
 
-from typing import List
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 DEFAULT_CHUNK_SIZE = 512
 DEFAULT_CHUNK_OVERLAP = 64
 
 
-def chunk_by_headings(text: str, max_chars: int = 1200) -> List[str]:
+def chunk_by_headings(text: str, max_chars: int = 1200) -> list[str]:
     """Split text by Markdown headings (#, ##, ###).
 
     Each chunk is a contiguous section under a heading.
     If a section exceeds max_chars, it is further split by size.
     """
-    sections: List[str] = []
-    current_section: List[str] = []
+    sections: list[str] = []
+    current_section: list[str] = []
     current_size = 0
 
     for line in text.split("\n"):
@@ -45,7 +43,7 @@ def chunk_by_size(
     text: str,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
-) -> List[str]:
+) -> list[str]:
     """Split text into fixed-size chunks with overlap using LangChain."""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -59,7 +57,7 @@ def chunk_document(
     text: str,
     strategy: str = "headings",
     **kwargs,
-) -> List[str]:
+) -> list[str]:
     """Chunk a document using the chosen strategy.
 
     Strategies:

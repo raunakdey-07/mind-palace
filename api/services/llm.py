@@ -125,9 +125,7 @@ class OpenAICompatibleProvider(LLMProvider):
         payload.update(kwargs)
 
         async with httpx.AsyncClient(timeout=120.0) as client:
-            async with client.stream(
-                "POST", url, json=payload, headers=headers
-            ) as response:
+            async with client.stream("POST", url, json=payload, headers=headers) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):

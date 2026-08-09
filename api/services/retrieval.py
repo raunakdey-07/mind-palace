@@ -78,27 +78,42 @@ class RetrievalService:
                 # RRF: fetch separate rankings and fuse
                 sql = f"""
                     WITH vector_rank AS (
-                        SELECT c.id as chunk_id, c.text, c.heading_path, c.document_type, c.source_url, c.tags,
+                        SELECT
+                            c.id as chunk_id,
+                            c.text,
+                            c.heading_path,
+                            c.document_type,
+                            c.source_url,
+                            c.tags,
                                d.title, d.path, d.document_type as doc_type, d.id as doc_id,
                                1 - (c.embedding <=> :query::vector) AS vector_score,
-                               ROW_NUMBER() OVER (ORDER BY c.embedding <=> :query::vector) as vector_rank
+                               ROW_NUMBER() OVER (
+                                   ORDER BY c.embedding <=> :query::vector
+                               ) as vector_rank
                         FROM chunks c
                         JOIN documents d ON c.doc_id = d.id
                         WHERE {where_sql}
                     ),
                     keyword_rank AS (
-                        SELECT c.id as chunk_id,
-                               similarity(c.text, :query_text) AS keyword_score,
-                               ROW_NUMBER() OVER (ORDER BY similarity(c.text, :query_text) DESC) as keyword_rank
+                        SELECT
+                            c.id as chunk_id,
+                            similarity(c.text, :query_text) AS keyword_score,
+                               ROW_NUMBER() OVER (
+                                   ORDER BY similarity(c.text, :query_text) DESC
+                               ) as keyword_rank
                         FROM chunks c
                         JOIN documents d ON c.doc_id = d.id
                         WHERE {where_sql}
                     )
-                    SELECT vr.chunk_id, vr.text, vr.heading_path, vr.document_type, vr.source_url, vr.tags,
-                           vr.title, vr.path, vr.doc_type, vr.doc_id,
+                    SELECT
+                           vr.chunk_id, vr.text, vr.heading_path, vr.document_type, vr.source_url,
+                           vr.tags, vr.title, vr.path, vr.doc_type, vr.doc_id,
                            vr.vector_score, kr.keyword_score,
                            vr.vector_rank, kr.keyword_rank,
-                           (1.0 / (60 + vr.vector_rank) + 1.0 / (60 + kr.keyword_rank)) as rrf_score
+                           (
+                               1.0 / (60 + vr.vector_rank)
+                               + 1.0 / (60 + kr.keyword_rank)
+                           ) as rrf_score
                     FROM vector_rank vr
                     JOIN keyword_rank kr ON vr.chunk_id = kr.chunk_id
                     ORDER BY rrf_score DESC
@@ -111,7 +126,10 @@ class RetrievalService:
                            d.title, d.path, d.document_type as doc_type, d.id as doc_id,
                            1 - (c.embedding <=> :query::vector) AS vector_score,
                            similarity(c.text, :query_text) AS keyword_score,
-                           (0.7 * (1 - (c.embedding <=> :query::vector)) + 0.3 * similarity(c.text, :query_text)) AS combined_score
+                           (
+                               0.7 * (1 - (c.embedding <=> :query::vector))
+                               + 0.3 * similarity(c.text, :query_text)
+                           ) AS combined_score
                     FROM chunks c
                     JOIN documents d ON c.doc_id = d.id
                     WHERE {where_sql}

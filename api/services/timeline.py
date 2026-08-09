@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 """Timeline service for chronological document views."""
 
 from __future__ import annotations
@@ -22,7 +25,5 @@ class TimelineService:
         async for db in [get_async_db()]:
             async with db:
                 retrieval = RetrievalService(db)
-                return await retrieval.get_timeline(
-                    document_type, start_date, end_date, limit
-                )
+                return await retrieval.get_timeline(document_type, start_date, end_date, limit)
         return []

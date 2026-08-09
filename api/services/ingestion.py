@@ -10,7 +10,6 @@ from typing import Optional
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
 from api.services.parser import (
-    FrontmatterSchema,
     chunk_with_heading_paths,
     parse_markdown,
 )

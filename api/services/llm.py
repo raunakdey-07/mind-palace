@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from typing import AsyncIterator, Optional
 
 
 class LLMProvider(ABC):
@@ -15,15 +15,18 @@ class LLMProvider(ABC):
     @abstractmethod
     async def generate(self, prompt: str, **kwargs) -> str:
         """Generate a completion for the given prompt."""
+        pass
 
     @abstractmethod
     async def stream_generate(self, prompt: str, **kwargs) -> AsyncIterator[str]:
         """Stream a completion for the given prompt."""
+        pass
 
     @property
     @abstractmethod
     def model_name(self) -> str:
         """Return the model identifier."""
+        pass
 
 
 class OllamaProvider(LLMProvider):
@@ -62,19 +65,17 @@ class OllamaProvider(LLMProvider):
         payload = {"model": self._model, "prompt": prompt, "stream": True}
         payload.update(kwargs)
 
-        async with (
-            httpx.AsyncClient(timeout=120.0) as client,
-            client.stream("POST", url, json=payload) as response,
-        ):
-            response.raise_for_status()
-            async for line in response.aiter_lines():
-                if line:
-                    try:
-                        data = json.loads(line)
-                        if "response" in data:
-                            yield data["response"]
-                    except json.JSONDecodeError, KeyError:
-                        continue
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream("POST", url, json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line:
+                        try:
+                            data = json.loads(line)
+                            if "response" in data:
+                                yield data["response"]
+                        except json.JSONDecodeError:
+                            continue
 
 
 class OpenAICompatibleProvider(LLMProvider):
@@ -84,7 +85,7 @@ class OpenAICompatibleProvider(LLMProvider):
         self,
         base_url: str,
         model: str,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
     ):
         self.base_url = base_url.rstrip("/")
         self._model = model
@@ -123,22 +124,20 @@ class OpenAICompatibleProvider(LLMProvider):
         payload = {"model": self._model, "prompt": prompt, "stream": True}
         payload.update(kwargs)
 
-        async with (
-            httpx.AsyncClient(timeout=120.0) as client,
-            client.stream("POST", url, json=payload, headers=headers) as response,
-        ):
-            response.raise_for_status()
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        break
-                    try:
-                        data = json.loads(data_str)
-                        if data["choices"][0]["text"]:
-                            yield data["choices"][0]["text"]
-                    except json.JSONDecodeError, KeyError:
-                        continue
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream("POST", url, json=payload, headers=headers) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if data["choices"][0]["text"]:
+                                yield data["choices"][0]["text"]
+                        except (json.JSONDecodeError, KeyError):
+                            continue
 
 
 def get_llm_provider() -> LLMProvider:

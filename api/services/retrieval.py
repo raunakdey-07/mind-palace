@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import List, Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,18 +17,18 @@ class RetrievalResult:
     """A single retrieval result with all metadata."""
 
     text: str
-    heading_path: str | None
-    document_type: str | None
-    source_url: str | None
-    tags: list[str]
+    heading_path: Optional[str]
+    document_type: Optional[str]
+    source_url: Optional[str]
+    tags: List[str]
     source_title: str
     source_path: str
     source_document_type: str
     score: float
     doc_id: str
-    vector_score: float | None = None
-    keyword_score: float | None = None
-    rrf_score: float | None = None
+    vector_score: Optional[float] = None
+    keyword_score: Optional[float] = None
+    rrf_score: Optional[float] = None
 
 
 class RetrievalService:
@@ -46,15 +47,15 @@ class RetrievalService:
 
     async def search(
         self,
-        query_vector: list[float],
+        query_vector: List[float],
         k: int = 5,
-        document_type: str | None = None,
-        tags: list[str] | None = None,
+        document_type: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         hybrid: bool = False,
-        query_text: str | None = None,
+        query_text: Optional[str] = None,
         rrf: bool = True,
         debug: bool = False,
-    ) -> list[RetrievalResult]:
+    ) -> List[RetrievalResult]:
         """Search with optional hybrid (vector + keyword) mode and RRF."""
         where_clauses = ["c.embedding IS NOT NULL"]
         params = {"query": query_vector, "k": k * 3 if rrf else k}  # Fetch more for RRF
@@ -77,27 +78,42 @@ class RetrievalService:
                 # RRF: fetch separate rankings and fuse
                 sql = f"""
                     WITH vector_rank AS (
-                        SELECT c.id as chunk_id, c.text, c.heading_path, c.document_type, c.source_url, c.tags,
+                        SELECT
+                            c.id as chunk_id,
+                            c.text,
+                            c.heading_path,
+                            c.document_type,
+                            c.source_url,
+                            c.tags,
                                d.title, d.path, d.document_type as doc_type, d.id as doc_id,
                                1 - (c.embedding <=> :query::vector) AS vector_score,
-                               ROW_NUMBER() OVER (ORDER BY c.embedding <=> :query::vector) as vector_rank
+                               ROW_NUMBER() OVER (
+                                   ORDER BY c.embedding <=> :query::vector
+                               ) as vector_rank
                         FROM chunks c
                         JOIN documents d ON c.doc_id = d.id
                         WHERE {where_sql}
                     ),
                     keyword_rank AS (
-                        SELECT c.id as chunk_id,
-                               similarity(c.text, :query_text) AS keyword_score,
-                               ROW_NUMBER() OVER (ORDER BY similarity(c.text, :query_text) DESC) as keyword_rank
+                        SELECT
+                            c.id as chunk_id,
+                            similarity(c.text, :query_text) AS keyword_score,
+                               ROW_NUMBER() OVER (
+                                   ORDER BY similarity(c.text, :query_text) DESC
+                               ) as keyword_rank
                         FROM chunks c
                         JOIN documents d ON c.doc_id = d.id
                         WHERE {where_sql}
                     )
-                    SELECT vr.chunk_id, vr.text, vr.heading_path, vr.document_type, vr.source_url, vr.tags,
-                           vr.title, vr.path, vr.doc_type, vr.doc_id,
+                    SELECT
+                           vr.chunk_id, vr.text, vr.heading_path, vr.document_type, vr.source_url,
+                           vr.tags, vr.title, vr.path, vr.doc_type, vr.doc_id,
                            vr.vector_score, kr.keyword_score,
                            vr.vector_rank, kr.keyword_rank,
-                           (1.0 / (60 + vr.vector_rank) + 1.0 / (60 + kr.keyword_rank)) as rrf_score
+                           (
+                               1.0 / (60 + vr.vector_rank)
+                               + 1.0 / (60 + kr.keyword_rank)
+                           ) as rrf_score
                     FROM vector_rank vr
                     JOIN keyword_rank kr ON vr.chunk_id = kr.chunk_id
                     ORDER BY rrf_score DESC
@@ -110,7 +126,10 @@ class RetrievalService:
                            d.title, d.path, d.document_type as doc_type, d.id as doc_id,
                            1 - (c.embedding <=> :query::vector) AS vector_score,
                            similarity(c.text, :query_text) AS keyword_score,
-                           (0.7 * (1 - (c.embedding <=> :query::vector)) + 0.3 * similarity(c.text, :query_text)) AS combined_score
+                           (
+                               0.7 * (1 - (c.embedding <=> :query::vector))
+                               + 0.3 * similarity(c.text, :query_text)
+                           ) AS combined_score
                     FROM chunks c
                     JOIN documents d ON c.doc_id = d.id
                     WHERE {where_sql}
@@ -187,7 +206,7 @@ class RetrievalService:
                 for row in rows
             ]
 
-    async def get_document_chunks(self, doc_id: str) -> list[RetrievalResult]:
+    async def get_document_chunks(self, doc_id: str) -> List[RetrievalResult]:
         """Get all chunks for a document (for summarization)."""
         result = await self.db.execute(
             text("""
@@ -218,7 +237,7 @@ class RetrievalService:
             for row in rows
         ]
 
-    async def get_related_documents(self, doc_id: str, k: int = 5) -> list[dict]:
+    async def get_related_documents(self, doc_id: str, k: int = 5) -> List[dict]:
         """Find related documents via shared tags and document type."""
         result = await self.db.execute(
             text("""
@@ -248,11 +267,11 @@ class RetrievalService:
 
     async def get_timeline(
         self,
-        document_type: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
+        document_type: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         limit: int = 50,
-    ) -> list[dict]:
+    ) -> List[dict]:
         """Get chronological document view."""
         where_clauses = ["1=1"]
         params = {"limit": limit}

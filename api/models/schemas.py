@@ -128,15 +128,14 @@ class StructuredResponse(BaseModel):
         ...,
         description="Generated answer or result",
         json_schema_extra={
-            "example": "Feature leakage occurred because the test set was used during feature selection."
+            "example": "Feature leakage because the test set was used during feature selection."
         },
     )
     sources: list[str] = Field(
-        default_factory=list, description="Source document IDs or URLs"
+        default_factory=list,
+        description="Source document IDs or URLs",
     )
-    snippets: list[str] = Field(
-        default_factory=list, description="Retrieved context snippets"
-    )
+    snippets: list[str] = Field(default_factory=list, description="Retrieved context snippets")
     latency_ms: int = Field(
         0,
         description="Total response latency in milliseconds",
@@ -182,12 +181,8 @@ class InsightResponse(BaseModel):
     """Response from POST /api/query (matches spec)."""
 
     answer: str = Field(..., description="Generated answer from the LLM")
-    sources: list[str] = Field(
-        default_factory=list, description="Source document IDs or URLs"
-    )
-    snippets: list[str] = Field(
-        default_factory=list, description="Retrieved context snippets"
-    )
+    sources: list[str] = Field(default_factory=list, description="Source document IDs or URLs")
+    snippets: list[str] = Field(default_factory=list, description="Retrieved context snippets")
 
 
 # --- Agent ---

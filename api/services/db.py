@@ -12,23 +12,27 @@ from __future__ import annotations
 import os
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import Session, sessionmaker
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg://mpadmin:secret@localhost:5432/mindpalace",
+    "postgresql://mpadmin:secret@localhost:5432/mindpalace",
 )
 
 # Sync engine (for DDL, bulk inserts)
 engine = create_engine(DATABASE_URL, echo=False)
 
-# Async engine (for FastAPI async routes)
-async_engine = create_async_engine(DATABASE_URL, echo=False)
+# Async engine (for FastAPI async routes) - use asyncpg driver
+async_database_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+async_engine: AsyncEngine = create_async_engine(async_database_url, echo=False)
 
-AsyncSessionLocal = async_sessionmaker(
-    async_engine, class_=AsyncSession, expire_on_commit=False
-)
+AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 SessionLocal = sessionmaker(bind=engine)
 
 

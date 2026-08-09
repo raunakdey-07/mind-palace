@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import time
+from typing import Optional
 
 from fastapi import APIRouter, Query, Response
 
@@ -57,19 +58,13 @@ async def ask(
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="ask",
-            provider=llm_service.provider.__class__.__name__.replace(
-                "Provider", ""
-            ).lower(),
+            provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
             model=llm_service.model_name,
         )
 
     snippets = [r.text for r in results]
     sources = list(
-        {
-            r.source_title or r.source_path
-            for r in results
-            if r.source_title or r.source_path
-        }
+        {r.source_title or r.source_path for r in results if r.source_title or r.source_path}
     )
     context = "\n\n---\n\n".join(snippets)
 
@@ -102,9 +97,7 @@ async def ask(
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(results),
         intent="ask",
-        provider=llm_service.provider.__class__.__name__.replace(
-            "Provider", ""
-        ).lower(),
+        provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,
         temperature=0.2,
         diagnostics=diagnostics,
@@ -112,9 +105,7 @@ async def ask(
 
 
 @router.post("/summarize", response_model=StructuredResponse)
-async def summarize(
-    request: SummarizeRequest, response: Response
-) -> StructuredResponse:
+async def summarize(request: SummarizeRequest, response: Response) -> StructuredResponse:
     """Summarize a specific document."""
     start = time.perf_counter()
 
@@ -131,9 +122,7 @@ async def summarize(
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="summarize",
-            provider=llm_service.provider.__class__.__name__.replace(
-                "Provider", ""
-            ).lower(),
+            provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
             model=llm_service.model_name,
         )
 
@@ -162,18 +151,14 @@ async def summarize(
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(chunks),
         intent="summarize",
-        provider=llm_service.provider.__class__.__name__.replace(
-            "Provider", ""
-        ).lower(),
+        provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,
         temperature=0.2,
     )
 
 
 @router.post("/interview", response_model=StructuredResponse)
-async def interview(
-    request: InterviewRequest, response: Response
-) -> StructuredResponse:
+async def interview(request: InterviewRequest, response: Response) -> StructuredResponse:
     """Generate interview questions from a document."""
     start = time.perf_counter()
 
@@ -190,9 +175,7 @@ async def interview(
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="interview",
-            provider=llm_service.provider.__class__.__name__.replace(
-                "Provider", ""
-            ).lower(),
+            provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
             model=llm_service.model_name,
         )
 
@@ -225,9 +208,7 @@ async def interview(
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(chunks),
         intent="interview",
-        provider=llm_service.provider.__class__.__name__.replace(
-            "Provider", ""
-        ).lower(),
+        provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,
         temperature=0.2,
     )
@@ -241,9 +222,7 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
     async for db in [get_async_db()]:
         async with db:
             retrieval = RetrievalService(db)
-            related_docs = await retrieval.get_related_documents(
-                request.document_id, k=request.k
-            )
+            related_docs = await retrieval.get_related_documents(request.document_id, k=request.k)
 
     if not related_docs:
         return StructuredResponse(
@@ -253,9 +232,7 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="related",
-            provider=llm_service.provider.__class__.__name__.replace(
-                "Provider", ""
-            ).lower(),
+            provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
             model=llm_service.model_name,
         )
 
@@ -275,7 +252,8 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
     for i, rd in enumerate(related_docs, 1):
         tags_str = ", ".join(rd["tags"]) if rd["tags"] else "no tags"
         lines.append(
-            f"{i}. **{rd['title']}** ({rd['document_type']}) — Tags: {tags_str} — Shared tags: {rd['shared_tags']}"
+            f"{i}. **{rd['title']}** ({rd['document_type']}) — Tags: {tags_str} — "
+            f"Shared tags: {rd['shared_tags']}"
         )
 
     return StructuredResponse(
@@ -285,18 +263,16 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(related_docs),
         intent="related",
-        provider=llm_service.provider.__class__.__name__.replace(
-            "Provider", ""
-        ).lower(),
+        provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,
     )
 
 
 @router.get("/timeline", response_model=StructuredResponse)
 async def timeline(
-    document_type: str | None = Query(None, description="Filter by document type"),
-    start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
-    end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
+    document_type: Optional[str] = Query(None, description="Filter by document type"),
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     limit: int = Query(50, ge=1, le=200),
     response: Response = None,
 ) -> StructuredResponse:
@@ -306,9 +282,7 @@ async def timeline(
     async for db in [get_async_db()]:
         async with db:
             retrieval = RetrievalService(db)
-            docs = await retrieval.get_timeline(
-                document_type, start_date, end_date, limit
-            )
+            docs = await retrieval.get_timeline(document_type, start_date, end_date, limit)
 
     if not docs:
         return StructuredResponse(
@@ -318,9 +292,7 @@ async def timeline(
             latency_ms=int((time.perf_counter() - start) * 1000),
             retrieved_chunks=0,
             intent="timeline",
-            provider=llm_service.provider.__class__.__name__.replace(
-                "Provider", ""
-            ).lower(),
+            provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
             model=llm_service.model_name,
         )
 
@@ -339,9 +311,7 @@ async def timeline(
         latency_ms=int((time.perf_counter() - start) * 1000),
         retrieved_chunks=len(docs),
         intent="timeline",
-        provider=llm_service.provider.__class__.__name__.replace(
-            "Provider", ""
-        ).lower(),
+        provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,
     )
 

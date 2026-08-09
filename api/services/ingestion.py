@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
 from api.services.parser import (
@@ -29,7 +31,7 @@ class IngestionService:
     async def ingest_file(
         self,
         content: str,
-        path: str | None = None,
+        path: Optional[str] = None,
     ) -> dict:
         """Ingest a single Markdown file."""
         # Parse and validate frontmatter
@@ -168,7 +170,7 @@ class IngestionService:
 
                         await update_manifest(db, rel_path, doc_hash, doc_id, count)
                         total_chunks += count
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 # Continue with other files
                 print(f"[ingest] Error processing {md_file}: {e}")
 

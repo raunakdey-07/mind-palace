@@ -1,76 +1,100 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 """Markdown parser: extracts YAML frontmatter, body content, and heading structure."""
 
 from __future__ import annotations
 
-import datetime
 import re
-from dataclasses import dataclass
-
+import datetime
+from typing import Any
 import frontmatter
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
 class FrontmatterSchema(BaseModel):
-    title: str | None = None
-    date: datetime.date | None = None
-    tags: list[str] = []
-    status: str | None = None
-    summary: str | None = None
+    """Validated frontmatter schema for Mind Palace documents."""
+
+    title: str = Field(..., min_length=1)
+    date: datetime.date
+    tags: list[str] = Field(default_factory=list)
+    document_type: str = Field(
+        default="note",
+        pattern=r"^(kaggle|project|note|paper)$",
+    )
+    competition: str = Field(default="")
+    status: str = Field(default="active")
+    git_repo: str = Field(default="")
+    notebook: str = Field(default="")
+    summary: str = Field(default="")
 
     model_config = ConfigDict(extra="allow")
 
 
-def extract_title(metadata: dict) -> str:
-    title = metadata.get("title")
-    if isinstance(title, str) and title.strip():
-        return title.strip()
-    return "Untitled"
+def parse_markdown(raw: str) -> tuple[dict[str, Any], str]:
+    """
+    Backward-compatible parser.
 
+    Returns:
+        (metadata_dict, body_text)
 
-@dataclass
-class ParsedDocument:
-    """Parsed Markdown document with metadata and structured content."""
-
-    frontmatter: FrontmatterSchema
-    body: str
-    sections: list[tuple[str, str]]  # (heading_path, content)
-
-
-def parse_markdown(raw: str) -> tuple[dict, str]:
-    """Parse a Markdown file into validated frontmatter and body text."""
+    If no valid frontmatter exists, returns ({}, body).
+    """
 
     try:
         post = frontmatter.loads(raw)
         raw_metadata = dict(post.metadata) if post.metadata else {}
         body = post.content.strip()
-    except Exception:  # noqa: BLE001
-        raw_metadata = {}
-        body = raw.strip()
+    except Exception:
+        return {}, raw.strip()
 
-    # No frontmatter: preserve previous behavior expected by tests
+    # No frontmatter present
     if not raw_metadata:
         return {}, body
 
     try:
-        frontmatter_obj = FrontmatterSchema(**raw_metadata)
-    except ValidationError as e:
-        errors = "; ".join(f"{err['loc'][0]}: {err['msg']}" for err in e.errors())
-        raise ValueError(f"Invalid frontmatter: {errors}") from e
+        validated = FrontmatterSchema(**raw_metadata)
+        metadata = validated.model_dump()
+    except ValidationError:
+        # Preserve legacy permissive behavior
+        metadata = raw_metadata
 
-    metadata = frontmatter_obj.model_dump(exclude_none=True)
     return metadata, body
 
 
+def extract_title(metadata: dict[str, Any] | str) -> str:
+    """
+    Backward-compatible title extractor.
+
+    Accepts either:
+    - a metadata dict (legacy tests)
+    - a raw markdown string
+    """
+
+    if isinstance(metadata, dict):
+        title = metadata.get("title")
+        return str(title) if title else "Untitled"
+
+    if isinstance(metadata, str):
+        meta, body = parse_markdown(metadata)
+
+        title = meta.get("title")
+        if title:
+            return str(title)
+
+        for line in body.splitlines():
+            if line.startswith("# "):
+                return line[2:].strip()
+
+    return "Untitled"
+
+
 def extract_sections_with_paths(text: str) -> list[tuple[str, str]]:
-    """
-    Extract sections with their full heading path.
+    """Extract sections with their full heading path."""
 
-    Example:
-        ## Methods > ### Data Collection
-    """
-
-    lines = text.split("\n")
+    lines = text.splitlines()
     sections: list[tuple[str, str]] = []
+
     current_heading_stack: list[tuple[int, str]] = []
     current_content: list[str] = []
 
@@ -78,11 +102,13 @@ def extract_sections_with_paths(text: str) -> list[tuple[str, str]]:
         if current_heading_stack or current_content:
             heading_path = " > ".join(h for _, h in current_heading_stack)
             content = "\n".join(current_content).strip()
+
             if content or heading_path:
                 sections.append((heading_path, content))
 
     for line in lines:
         heading_match = re.match(r"^(#{1,6})\s+(.+)$", line)
+
         if heading_match:
             flush_section()
 
@@ -101,12 +127,19 @@ def extract_sections_with_paths(text: str) -> list[tuple[str, str]]:
     return sections
 
 
+def estimate_tokens(text: str) -> int:
+    """Rough token estimate (4 chars ≈ 1 token)."""
+
+    return max(1, len(text) // 4)
+
+
 def chunk_with_heading_paths(
-    sections: list[tuple[str, str]], max_chars: int = 1200
-) -> list[dict]:
+    sections: list[tuple[str, str]],
+    max_chars: int = 1200,
+) -> list[dict[str, Any]]:
     """Convert sections into chunks with heading_path metadata."""
 
-    chunks: list[dict] = []
+    chunks: list[dict[str, Any]] = []
 
     for heading_path, content in sections:
         if not content.strip() and not heading_path:
@@ -126,8 +159,10 @@ def chunk_with_heading_paths(
         current_chunk = ""
 
         for para in paragraphs:
-            if len(current_chunk) + len(para) + 2 <= max_chars:
-                current_chunk += ("\n\n" if current_chunk else "") + para
+            candidate = para if not current_chunk else f"{current_chunk}\n\n{para}"
+
+            if len(candidate) <= max_chars:
+                current_chunk = candidate
             else:
                 if current_chunk:
                     chunks.append(
@@ -149,9 +184,3 @@ def chunk_with_heading_paths(
             )
 
     return chunks
-
-
-def estimate_tokens(text: str) -> int:
-    """Rough token estimate (4 chars ≈ 1 token)."""
-
-    return max(1, len(text) // 4)

@@ -1,344 +1,84 @@
-# Mind Palace
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
 
-[![Release](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/releases)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions)
+# mind-palace
 
-**AI-Native Research Operating System**
-
-Mind Palace turns your portfolio, projects, Kaggle work, research notes, and technical documents into a **searchable, interactive knowledge base** powered by local LLMs and vector search.
-
-The project is designed as a **local-first AI platform**: no paid API keys are required for the reference setup.
-
-## Why this exists
-
-Most portfolios are static pages. Mind Palace treats a portfolio as a **living knowledge system**: every project, competition, note, and write-up becomes queryable, explainable, and reusable through semantic search and local LLMs.
-
----
-
-## Current Status
-
-* **v0.1.0-foundation released**
-* **Phase 2 (Retrieval Quality) in progress**
-* Local-first deployment working
-* PostgreSQL + pgvector backend implemented
-* Hybrid retrieval and RRF implemented
-* Evaluation harness implemented
-
----
-
-## Features
-
-### Implemented
-
-* Markdown ingestion with YAML frontmatter
-* Deterministic document IDs
-* Incremental ingestion via manifest tracking
-* PostgreSQL + pgvector storage
-* Semantic vector search
-* Hybrid retrieval (vector + keyword)
-* Reciprocal Rank Fusion (RRF)
-* Structured RAG responses with citations
-* Pluggable LLM provider interface
-* Local inference via Ollama
-* Typer-based CLI
-* Retrieval evaluation benchmarks
-* Containerized local development stack
-* GitHub Actions CI
-* Alembic database migrations
-
-### In Progress
-
-* Cross-encoder reranking
-* Retrieval metrics (Recall@k, MRR, nDCG)
-* Latency instrumentation
-* Query diagnostics tooling
-
-### Planned
-
-* Next.js frontend
-* Research / resume / interview agents
-* Knowledge graph
-* MCP server
-* Advanced observability
-
----
-
-## Architecture
-
-```text
-Markdown / MDX / Repositories
-              │
-              ▼
-       Ingestion Service
-              │
-              ▼
-      Metadata Extraction
-              │
-              ▼
-      Embedding Generation
-              │
-              ▼
-     PostgreSQL + pgvector
-              │
-              ▼
-        Hybrid Retrieval
-      (Vector + Keyword)
-              │
-              ▼
-         RRF Ranking
-              │
-              ▼
-        LLM Generation
-              │
-              ▼
- API / CLI / Portfolio UI
-```
-
----
-
-## Tech Stack
-
-| Layer              | Technology                    |
-| ------------------ | ----------------------------- |
-| Backend            | FastAPI, SQLAlchemy, Pydantic |
-| Database           | PostgreSQL + pgvector         |
-| Embeddings         | sentence-transformers         |
-| Retrieval          | pgvector + pg_trgm + RRF      |
-| LLM Runtime        | Ollama                        |
-| Migrations         | Alembic                       |
-| CLI                | Typer                         |
-| CI/CD              | GitHub Actions                |
-| Containers         | Docker Compose                |
-| Frontend (planned) | Next.js + MDX                 |
-
----
-
-## Prerequisites
-
-* Python **3.11+**
-* PostgreSQL **15+** with pgvector
-* Docker / Podman
-* Ollama
-
-Install Ollama:
-
-```bash
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen3:8b
-```
-### Fedora / Podman users
-
-Install Podman Compose if it is not already available:
-
-```bash
-sudo dnf install podman-compose
-```
-
----
+**AI-Native Research Operating System** — turns your portfolio content into a searchable, interactive knowledge base powered by local LLMs and vector search.
 
 ## Quick Start
 
-### 1. Clone the repository
-
 ```bash
+# 1. Clone
 git clone https://github.com/raunakdey-07/mind-palace.git
 cd mind-palace
+
+# 2. Initialize database (run once)
+alembic upgrade head
+
+# 3. Start the stack
+docker-compose up -d
+
+# 4. Pull an LLM (inside the Ollama container or host)
+docker exec ollama ollama pull llama3.3:3b-instruct
+
+# 5. Ingest your content
+docker exec mindpalace-backend-1 mindpalace ingest ./content/
+
+# 6. Open the API docs
+# http://localhost:8000/docs
 ```
 
-### 2. Create a virtual environment
+## What It Does
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
+- **Ingests** Markdown files (with YAML frontmatter) into Postgres + pgvector
+- **Searches** your content semantically via vector similarity with hybrid search and RRF
+- **Answers questions** using RAG (retrieval-augmented generation) with a local LLM
+- **Agents** for research, resume review, and interview prep
+- **Evaluation** suite for retrieval quality
+- **Health checks** via `mindpalace doctor`
 
-### 3. Install dependencies
+## Tech Stack
 
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-### 4. Start infrastructure
-
-**Docker**
-
-```bash
-docker compose up -d
-```
-
-**Podman (Fedora default)**
-
-```bash
-podman-compose up -d
-```
-
-### 5. Verify the setup
-
-```bash
-mindpalace doctor
-pytest -q
-```
-
----
-
-## CLI Usage
-
-### Ingest content
-
-```bash
-mindpalace ingest content/
-```
-
-### Semantic search
-
-```bash
-mindpalace search "feature leakage"
-```
-
-### Ask a question
-
-```bash
-mindpalace ask "What did I learn from BirdCLEF?"
-```
-
-### Generate interview questions
-
-```bash
-mindpalace interview birdclef
-```
-
-### Run retrieval evaluation
-
-```bash
-mindpalace eval retrieval
-```
-
----
-
-## API Usage
-
-Start the API:
-
-```bash
-uvicorn api.main:app --reload
-```
-
-### Health check
-
-```bash
-curl http://localhost:8000/health
-```
-
-### Ask a question
-
-```bash
-curl -X POST http://localhost:8000/api/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is Finalysis?"}'
-```
-
----
+| Layer       | Tool                                    |
+|-------------|-----------------------------------------|
+| Backend     | FastAPI, SQLAlchemy, Pydantic           |
+| Vector DB   | PostgreSQL + pgvector                   |
+| Embeddings  | sentence-transformers (`all-MiniLM-L6-v2`) |
+| LLM         | Ollama (local, no API costs)            |
+| Services    | Modular service boundary (ingestion, retrieval, LLM, etc.) |
+| Migrations  | Alembic                                 |
+| Frontend    | Next.js + MDX (Phase 3)                 |
+| CLI         | typer                                   |
+| CI/CD       | GitHub Actions                          |
+| Observability | Prometheus + Grafana                  |
 
 ## Project Structure
 
-```text
-api/
-├── routers/        # API endpoints
-├── models/         # Pydantic schemas
-└── services/       # Business logic
-
-cli/                # Typer CLI
-
-content/            # Markdown knowledge base
-
-docs/               # Architecture & design docs
-
-eval/               # Retrieval benchmarks
-
-migrations/         # Alembic migrations
-
-tests/              # Unit and integration tests
+```
+api/          - FastAPI backend (routers, models, services)
+├── routers/  - API endpoints
+├── models/   - Pydantic schemas
+├── services/ - Business logic services (ingestion, retrieval, LLM, etc.)
+cli/          - Typer-based CLI
+content/      - Markdown files (your portfolio content)
+migrations/   - Alembic migration scripts
+eval/         - Evaluation benchmarks
+tests/        - Unit and integration tests
+docs/         - Design documents
 ```
 
----
+## Phases
 
-## Development Workflow
-
-### Run tests
-
-```bash
-pytest -q
-```
-
-### Run linting
-
-```bash
-ruff check .
-```
-
-### Run type checking
-
-```bash
-mypy api cli
-```
-
-### Run evaluation
-
-```bash
-mindpalace eval retrieval
-```
-
----
-
-## Reproducibility Test
-
-Verify that a fresh clone works:
-
-```bash
-git clone https://github.com/raunakdey-07/mind-palace.git /tmp/mp-test
-cd /tmp/mp-test
-
-python -m venv .venv
-source .venv/bin/activate
-
-python -m pip install -r requirements.txt
-python -m pip install -e .
-
-# Docker
-docker compose up -d
-
-# or Podman
-podman-compose up -d
-
-pytest -q
-mindpalace doctor
-mindpalace eval retrieval
-```
-
----
-
-## Documentation
-
-See the `docs/` directory for detailed design documents:
-
-* `00_PROJECT_FOUNDATION.md`
-* `01_TECHNICAL_DECISIONS.md`
-
----
-
-## Contributing
-
-Contributions are welcome. Please open an issue before large architectural changes.
-
----
+1. **Core Indexing & Search** — ingest + semantic search with hybrid/RRF
+2. **RAG Q&A** — LLM-powered answers with citations and structured responses
+3. **Agents** — research, resume, interview agents
+4. **Frontend** — Next.js UI with chat and search
+5. **Hardening** — CI/CD, monitoring, K8s deployment
 
 ## License
 
-Mind Palace is licensed under the **Apache License 2.0**.
-
-See [LICENSE](LICENSE) for the full license text and [NOTICE](NOTICE) for attribution information.
+Mind Palace is licensed under the Apache License 2.0.
 
 The project is intentionally released under a permissive license to encourage learning, experimentation, research, and commercial adoption while providing explicit patent rights to users and contributors.
+
+See [LICENSE](LICENSE)

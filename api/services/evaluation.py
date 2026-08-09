@@ -17,9 +17,7 @@ class EvaluationService:
             return yaml.safe_load(f)
 
     @staticmethod
-    def calculate_precision_at_k(
-        expected: list[str], retrieved: list[str], k: int
-    ) -> float:
+    def calculate_precision_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
         """Calculate Precision@K."""
         if not expected:
             return 1.0

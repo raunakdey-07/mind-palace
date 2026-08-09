@@ -31,9 +31,7 @@ async def search(
     ),
     tags: str | None = Query(None, description="Comma-separated tags to filter by"),
     hybrid: bool = Query(False, description="Enable hybrid search (vector + keyword)"),
-    rrf: bool = Query(
-        True, description="Enable Reciprocal Rank Fusion for hybrid search"
-    ),
+    rrf: bool = Query(True, description="Enable Reciprocal Rank Fusion for hybrid search"),
     db: DbSession = None,
 ) -> SearchResponse:
     """Semantic search over ingested Markdown content with optional metadata filters."""

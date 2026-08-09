@@ -1,9 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Raunak Dey
+
 """Database repository: CRUD operations for documents and chunks."""
 
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +43,7 @@ async def upsert_document(
         return ""
 
     # Upsert
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
 
     tags = metadata.get("tags", [])
     if isinstance(tags, str):
@@ -51,8 +55,14 @@ async def upsert_document(
 
     await db.execute(
         text("""
-            INSERT INTO documents (id, title, path, document_type, date, summary, tags, git_repo, content_hash, last_indexed, updated_at)
-            VALUES (:id, :title, :path, :doc_type, :date, :summary, :tags, :git_repo, :hash, :now, :now)
+            INSERT INTO documents (
+                id, title, path, document_type, date, summary, tags,
+                git_repo, content_hash, last_indexed, updated_at
+            )
+            VALUES (
+                :id, :title, :path, :doc_type, :date, :summary, :tags,
+                :git_repo, :hash, :now, :now
+            )
             ON CONFLICT (id) DO UPDATE SET
                 title = EXCLUDED.title,
                 path = EXCLUDED.path,
@@ -62,7 +72,7 @@ async def upsert_document(
                 content_hash = EXCLUDED.content_hash,
                 last_indexed = :now,
                 updated_at = :now
-        """),
+            """),
         {
             "id": doc_id,
             "title": metadata.get("title", title),
@@ -83,9 +93,7 @@ async def upsert_document(
 async def check_manifest(db: AsyncSession, path: str, content_hash: str) -> bool:
     """Check if file is already ingested with same content."""
     result = await db.execute(
-        text(
-            "SELECT 1 FROM ingestion_manifest WHERE path = :path AND content_hash = :hash"
-        ),
+        text("SELECT 1 FROM ingestion_manifest WHERE path = :path AND content_hash = :hash"),
         {"path": path, "hash": content_hash},
     )
     return result.first() is not None
@@ -181,8 +189,8 @@ async def search_chunks(
     db: AsyncSession,
     query_vector: list[float],
     k: int = 5,
-    document_type: str | None = None,
-    tags: list[str] | None = None,
+    document_type: Optional[str] = None,
+    tags: Optional[list[str]] = None,
 ) -> list[dict]:
     """Semantic search with optional metadata filters."""
     where_clauses = ["c.embedding IS NOT NULL"]
@@ -228,11 +236,12 @@ async def search_chunks(
     ]
 
 
-async def get_document(db: AsyncSession, doc_id: str) -> dict | None:
+async def get_document(db: AsyncSession, doc_id: str) -> Optional[dict]:
     """Fetch a document by ID."""
     result = await db.execute(
         text(
-            "SELECT id, title, path, document_type, date, summary, tags, git_repo FROM documents WHERE id = :id"
+            "SELECT id, title, path, document_type, date, summary, tags, git_repo "
+            "FROM documents WHERE id = :id"
         ),
         {"id": doc_id},
     )
@@ -255,18 +264,21 @@ async def get_chunks_for_document(db: AsyncSession, doc_id: str) -> list[dict]:
     """Fetch all chunks for a document (for summarization)."""
     result = await db.execute(
         text(
-            "SELECT text, heading_path, order_index FROM chunks WHERE doc_id = :doc_id ORDER BY order_index"
+            "SELECT text, heading_path, order_index "
+            "FROM chunks WHERE doc_id = :doc_id "
+            "ORDER BY order_index"
         ),
         {"doc_id": doc_id},
     )
     return [
-        {"text": row[0], "heading_path": row[1], "order_index": row[2]}
-        for row in result.fetchall()
+        {"text": row[0], "heading_path": row[1], "order_index": row[2]} for row in result.fetchall()
     ]
 
 
 async def get_related_documents(
-    db: AsyncSession, doc_id: str, k: int = 5
+    db: AsyncSession,
+    doc_id: str,
+    k: int = 5,
 ) -> list[dict]:
     """Find related documents via shared tags and document type."""
     result = await db.execute(

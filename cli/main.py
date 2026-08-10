@@ -32,12 +32,12 @@ def ingest(
         resp = httpx.post(url, json={"content": content, "path": path}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        typer.echo(f"������✅ {data.get('message', 'Ingested')}")
+        typer.echo(f"[OK] {data.get('message', 'Ingested')}")
     except FileNotFoundError:
-        typer.echo(f"������❌ File not found: {path}", err=True)
+        typer.echo(f"[ERROR] File not found: {path}", err=True)
         raise typer.Exit(code=1)
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -53,9 +53,9 @@ def ingest_repo(
         resp = httpx.post(url, json={"repo_path": path}, timeout=300)
         resp.raise_for_status()
         data = resp.json()
-        typer.echo(f"������✅ {data.get('message', 'Ingested')}")
+        typer.echo(f"[OK] {data.get('message', 'Ingested')}")
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -85,7 +85,7 @@ def search(
         resp = httpx.get(url, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        typer.echo(f'\n���������🔍 Search: "{data["query"]}" ({data["total"]} results)\n')
+        typer.echo(f'\n[SEARCH] Search: "{data["query"]}" ({data["total"]} results)\n')
         for i, r in enumerate(data["results"], 1):
             typer.echo(f"--- Result {i} (score: {r['score']:.3f}) ---")
             source = r.get("source_title") or r.get("source_id", "unknown")
@@ -97,7 +97,7 @@ def search(
             typer.echo(f"{r['text'][:300]}")
             typer.echo()
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -126,15 +126,15 @@ def ask(
         data = resp.json()
         typer.echo(
             (
-                f"\n���������🤖 Answer ({data['latency_ms']}ms,"
+                f"\n[ANSWER] Answer ({data['latency_ms']}ms,"
                 f" {data['retrieved_chunks']} chunks):\n"
                 f"{data['answer']}\n"
             )
         )
         if data["sources"]:
-            typer.echo(f"���������📎 Sources: {', '.join(data['sources'])}")
+            typer.echo(f"[SOURCES] Sources: {', '.join(data['sources'])}")
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -155,11 +155,11 @@ def summarize(
         )
         resp.raise_for_status()
         data = resp.json()
-        typer.echo(f"\n���������📝 Summary ({data['latency_ms']}ms):\n{data['answer']}\n")
+        typer.echo(f"\n[SUMMARY] Summary ({data['latency_ms']}ms):\n{data['answer']}\n")
         if data["sources"]:
-            typer.echo(f"���������📎 Source: {', '.join(data['sources'])}")
+            typer.echo(f"[SOURCES] Source: {', '.join(data['sources'])}")
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -188,12 +188,12 @@ def interview(
         resp.raise_for_status()
         data = resp.json()
         typer.echo(
-            f"\n���������🎤 Interview Questions ({data['latency_ms']}ms):\n{data['answer']}\n"
+            f"\n[INTERVIEW] Interview Questions ({data['latency_ms']}ms):\n{data['answer']}\n"
         )
         if data["sources"]:
-            typer.echo(f"���������📎 Source: {', '.join(data['sources'])}")
+            typer.echo(f"[SOURCES] Source: {', '.join(data['sources'])}")
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -210,9 +210,9 @@ def related(
         resp = httpx.post(url, json={"document_id": document_id, "k": k}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        typer.echo(f"\n���������🔗 Related Documents ({data['latency_ms']}ms):\n{data['answer']}\n")
+        typer.echo(f"\n[RELATED] Related Documents ({data['latency_ms']}ms):\n{data['answer']}\n")
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -241,9 +241,9 @@ def timeline(
         resp = httpx.get(url, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        typer.echo(f"\n���������📅 Timeline ({data['latency_ms']}ms):\n{data['answer']}\n")
+        typer.echo(f"\n[TIMELINE] Timeline ({data['latency_ms']}ms):\n{data['answer']}\n")
     except httpx.HTTPError as e:
-        typer.echo(f"������❌ API error: {e}", err=True)
+        typer.echo(f"[ERROR] API error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -260,12 +260,12 @@ def doctor() -> None:
         nonlocal checks_passed, total_checks
         total_checks += 1
         if condition:
-            typer.echo(f"������✅ {name}")
+            typer.echo(f"[OK] {name}")
             checks_passed += 1
         else:
-            typer.echo(f"������❌ {name}")
+            typer.echo(f"[ERROR] {name}")
             if fix_hint:
-                typer.echo(f"   ���� �� �� 💡 {fix_hint}")
+                typer.echo(f"   - Hint: {fix_hint}")
 
     # Check 1: API health
     try:
@@ -354,12 +354,12 @@ def doctor() -> None:
     except Exception:
         check("Alembic config loads", False, "Run: alembic upgrade head")
 
-    typer.echo(f"\n���������📊 Health Check: {checks_passed}/{total_checks} passed")
+    typer.echo(f"\n[HEALTH] Health Check: {checks_passed}/{total_checks} passed")
     if checks_passed == total_checks:
-        typer.echo("���������🎉 All systems go!")
+        typer.echo("[SUCCESS] All systems go!")
         raise typer.Exit(code=0)
     else:
-        typer.echo("������⚠������️  Some checks failed. See hints above.")
+        typer.echo("[WARN]  Some checks failed. See hints above.")
         raise typer.Exit(code=1)
 
 
@@ -383,7 +383,7 @@ def eval_retrieval(
     passed = 0
     total_precision = 0.0
 
-    typer.echo(f"\n���������📊 Running retrieval evaluation on {total} queries (k={k})...\n")
+    typer.echo(f"\n[HEALTH] Running retrieval evaluation on {total} queries (k={k})...\n")
 
     for i, bm in enumerate(benchmarks, 1):
         query = bm["query"]
@@ -396,7 +396,7 @@ def eval_retrieval(
             data = resp.json()
             results = data["results"]
         except httpx.HTTPError as e:
-            typer.echo(f"  ���� �� �� ❌ Query {i}: API error - {e}")
+            typer.echo(f"  [ERROR] Query {i}: API error - {e}")
             continue
 
         retrieved_titles = {r.get("source_title", "") for r in results}
@@ -404,9 +404,7 @@ def eval_retrieval(
         precision = len(hits) / len(expected) if expected else 1.0
         total_precision += precision
 
-        status = (
-            "������✅" if precision == 1.0 else "������⚠������️" if precision > 0 else "������❌"
-        )
+        status = "[OK]" if precision == 1.0 else "[WARN]" if precision > 0 else "[ERROR]"
         typer.echo(f'  {status} Query {i} [{category}]: "{query}"')
         typer.echo(f"      Expected: {', '.join(expected)}")
         typer.echo(f"      Retrieved: {', '.join(retrieved_titles) or 'none'}")
@@ -417,15 +415,14 @@ def eval_retrieval(
 
     avg_precision = total_precision / total if total > 0 else 0
     typer.echo(
-        f"\n���������📈 Results: {passed}/{total} perfect, Avg Precision@{k}: {avg_precision:.2f}"
+        f"\n[RESULTS] Results: {passed}/{total} perfect, Avg Precision@{k}: {avg_precision:.2f}"
     )
 
     if passed == total:
-        typer.echo("���������🎉 All queries retrieved expected documents!")
+        typer.echo("[SUCCESS] All queries retrieved expected documents!")
     else:
         typer.echo(
-            "������⚠������️  Some queries missed expected documents — consider tuning "
-            "chunking/embedding"
+            "[WARN]  Some queries missed expected documents — consider tuning " "chunking/embedding"
         )
 
 

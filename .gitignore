@@ -77,3 +77,11 @@ Thumbs.db
 
 # Data
 data/
+# Ignore placeholder infra/docs folders
+helm/
+docs/
+monitoring/
+
+# Keep only the main project README
+*.md
+!README.md

@@ -18,7 +18,7 @@ Most portfolios are static pages. Mind Palace treats a portfolio as a **living k
 
 ## Current Status
 
-* **v0.1.0-foundation released**
+* **v0.2.1 released**
 * **Phase 2 (Retrieval Quality) in progress**
 * Local-first deployment working
 * PostgreSQL + pgvector backend implemented
@@ -216,6 +216,24 @@ mindpalace interview birdclef
 mindpalace eval retrieval
 ```
 
+### Summarize a document
+
+```bash
+mindpalace summarize <document-id>
+```
+
+### Find related documents
+
+```bash
+mindpalace related <document-id>
+```
+
+### View document timeline
+
+```bash
+mindpalace timeline
+```
+
 ---
 
 ## API Usage
@@ -235,9 +253,31 @@ curl http://localhost:8000/health
 ### Ask a question
 
 ```bash
-curl -X POST http://localhost:8000/api/ask \
+curl -X POST http://localhost:8000/api/query/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "What is Finalysis?"}'
+```
+
+### Summarize a document
+
+```bash
+curl -X POST http://localhost:8000/api/query/summarize \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "<doc-id>"}'
+```
+
+### Find related documents
+
+```bash
+curl -X POST http://localhost:8000/api/query/related \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "<doc-id>"}'
+```
+
+### View timeline
+
+```bash
+curl -X GET http://localhost:8000/api/query/timeline
 ```
 
 ---
@@ -253,8 +293,6 @@ api/
 cli/                # Typer CLI
 
 content/            # Markdown knowledge base
-
-docs/               # Architecture & design docs
 
 eval/               # Retrieval benchmarks
 
@@ -317,15 +355,6 @@ pytest -q
 mindpalace doctor
 mindpalace eval retrieval
 ```
-
----
-
-## Documentation
-
-See the `docs/` directory for detailed design documents:
-
-* `00_PROJECT_FOUNDATION.md`
-* `01_TECHNICAL_DECISIONS.md`
 
 ---
 

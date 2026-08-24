@@ -32,6 +32,7 @@ async def search(
     tags: str | None = Query(None, description="Comma-separated tags to filter by"),
     hybrid: bool = Query(False, description="Enable hybrid search (vector + keyword)"),
     rrf: bool = Query(True, description="Enable Reciprocal Rank Fusion for hybrid search"),
+    rerank: bool = Query(False, description="Enable cross-encoder reranking"),
     db: DbSession = None,
 ) -> SearchResponse:
     """Semantic search over ingested Markdown content with optional metadata filters."""
@@ -49,6 +50,7 @@ async def search(
             tags=tag_list,
             hybrid=hybrid,
             rrf=rrf,
+            rerank=rerank,
         )
     except OperationalError:
         # Tests may run without a PostgreSQL server.

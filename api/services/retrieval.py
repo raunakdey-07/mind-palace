@@ -29,6 +29,7 @@ class RetrievalResult:
     vector_score: Optional[float] = None
     keyword_score: Optional[float] = None
     rrf_score: Optional[float] = None
+    rerank_score: Optional[float] = None
 
 
 class RetrievalService:
@@ -39,7 +40,7 @@ class RetrievalService:
     - Hybrid search (vector + keyword/pg_trgm)
     - Reciprocal Rank Fusion (RRF)
     - Metadata filtering
-    - Future: cross-encoder reranking
+    - Cross-encoder reranking
     """
 
     def __init__(self, db: AsyncSession):
@@ -54,11 +55,19 @@ class RetrievalService:
         hybrid: bool = False,
         query_text: Optional[str] = None,
         rrf: bool = True,
+        rerank: bool = False,
+        candidate_k: int = 20,
         debug: bool = False,
     ) -> List[RetrievalResult]:
-        """Search with optional hybrid (vector + keyword) mode and RRF."""
+        """Search with optional hybrid (vector + keyword) mode, RRF, and reranking.
+
+        When ``rerank`` is enabled, ``candidate_k`` candidates are retrieved first
+        and then scored by a cross-encoder; the top ``k`` are returned.
+        """
+        fetch_k = max(k, candidate_k) if (rerank and query_text) else k
+
         where_clauses = ["c.embedding IS NOT NULL"]
-        params = {"query": query_vector, "k": k * 3 if rrf else k}  # Fetch more for RRF
+        params: dict = {"query": query_vector, "k": fetch_k * 3 if rrf else fetch_k}
 
         if document_type:
             where_clauses.append("c.document_type = :doc_type")
@@ -151,60 +160,71 @@ class RetrievalService:
 
         result = await self.db.execute(text(sql), params)
         rows = result.fetchall()
+        results = [
+            self._row_to_result(row, hybrid=hybrid and bool(query_text), rrf=rrf) for row in rows
+        ]
 
-        if hybrid and query_text and rrf:
-            return [
-                RetrievalResult(
-                    text=row[1],
-                    heading_path=row[2],
-                    document_type=row[3],
-                    source_url=row[4],
-                    tags=row[5] or [],
-                    source_title=row[6],
-                    source_path=row[7],
-                    source_document_type=row[8],
-                    score=float(row[13]),  # rrf_score
-                    doc_id=row[9],
-                    vector_score=float(row[10]) if row[10] is not None else None,
-                    keyword_score=float(row[11]) if row[11] is not None else None,
-                    rrf_score=float(row[13]) if row[13] is not None else None,
-                )
-                for row in rows
-            ]
-        elif hybrid and query_text:
-            return [
-                RetrievalResult(
-                    text=row[0],
-                    heading_path=row[1],
-                    document_type=row[2],
-                    source_url=row[3],
-                    tags=row[4] or [],
-                    source_title=row[5],
-                    source_path=row[6],
-                    source_document_type=row[7],
-                    score=float(row[10]),  # combined_score
-                    doc_id=row[8],
-                    vector_score=float(row[9]) if row[9] is not None else None,
-                    keyword_score=float(row[10]) if row[10] is not None else None,
-                )
-                for row in rows
-            ]
-        else:
-            return [
-                RetrievalResult(
-                    text=row[0],
-                    heading_path=row[1],
-                    document_type=row[2],
-                    source_url=row[3],
-                    tags=row[4] or [],
-                    source_title=row[5],
-                    source_path=row[6],
-                    source_document_type=row[7],
-                    score=float(row[9]),
-                    doc_id=row[8],
-                )
-                for row in rows
-            ]
+        # Apply cross-encoder reranking over the candidate set when enabled.
+        if rerank and query_text and results:
+            from .reranker import Reranker
+
+            texts = [r.text for r in results]
+            scores = Reranker().score(query_text, texts)
+
+            for result_item, rerank_score in zip(results, scores):
+                result_item.rerank_score = rerank_score
+                result_item.score = rerank_score
+
+            results.sort(key=lambda x: x.score if x.score is not None else 0.0, reverse=True)
+
+        return results[:k]
+
+    @staticmethod
+    def _row_to_result(row: tuple, hybrid: bool, rrf: bool) -> RetrievalResult:
+        """Map a database row to a RetrievalResult based on the query shape."""
+        if hybrid and rrf:
+            return RetrievalResult(
+                text=row[1],
+                heading_path=row[2],
+                document_type=row[3],
+                source_url=row[4],
+                tags=row[5] or [],
+                source_title=row[6],
+                source_path=row[7],
+                source_document_type=row[8],
+                score=float(row[13]),
+                doc_id=row[9],
+                vector_score=float(row[10]) if row[10] is not None else None,
+                keyword_score=float(row[11]) if row[11] is not None else None,
+                rrf_score=float(row[13]) if row[13] is not None else None,
+            )
+        if hybrid:
+            return RetrievalResult(
+                text=row[0],
+                heading_path=row[1],
+                document_type=row[2],
+                source_url=row[3],
+                tags=row[4] or [],
+                source_title=row[5],
+                source_path=row[6],
+                source_document_type=row[7],
+                score=float(row[10]),
+                doc_id=row[8],
+                vector_score=float(row[9]) if row[9] is not None else None,
+                keyword_score=float(row[10]) if row[10] is not None else None,
+            )
+        return RetrievalResult(
+            text=row[0],
+            heading_path=row[1],
+            document_type=row[2],
+            source_url=row[3],
+            tags=row[4] or [],
+            source_title=row[5],
+            source_path=row[6],
+            source_document_type=row[7],
+            score=float(row[9]),
+            doc_id=row[8],
+        )
 
     async def get_document_chunks(self, doc_id: str) -> List[RetrievalResult]:
         """Get all chunks for a document (for summarization)."""
@@ -274,7 +294,7 @@ class RetrievalService:
     ) -> List[dict]:
         """Get chronological document view."""
         where_clauses = ["1=1"]
-        params = {"limit": limit}
+        params: dict = {"limit": limit}
 
         if document_type:
             where_clauses.append("document_type = :doc_type")

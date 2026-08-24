@@ -22,5 +22,8 @@ test:
 eval:
 	python -m cli.main eval retrieval
 
+strategies:
+	python -m cli.main eval strategies
+
 doctor:
 	python -m cli.main doctor

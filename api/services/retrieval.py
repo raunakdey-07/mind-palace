@@ -12,6 +12,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+def _to_pgvector(vector: List[float]) -> str:
+    """Serialize a float vector to pgvector's text literal format."""
+    return "[" + ",".join(str(float(x)) for x in vector) + "]"
+
+
 @dataclass
 class RetrievalResult:
     """A single retrieval result with all metadata."""
@@ -67,7 +72,7 @@ class RetrievalService:
         fetch_k = max(k, candidate_k) if (rerank and query_text) else k
 
         where_clauses = ["c.embedding IS NOT NULL"]
-        params: dict = {"query": query_vector, "k": fetch_k * 3 if rrf else fetch_k}
+        params: dict = {"query": _to_pgvector(query_vector), "k": fetch_k * 3 if rrf else fetch_k}
 
         if document_type:
             where_clauses.append("c.document_type = :doc_type")
@@ -95,9 +100,9 @@ class RetrievalService:
                             c.source_url,
                             c.tags,
                                d.title, d.path, d.document_type as doc_type, d.id as doc_id,
-                               1 - (c.embedding <=> :query::vector) AS vector_score,
+                               1 - (c.embedding <=> CAST(:query AS vector)) AS vector_score,
                                ROW_NUMBER() OVER (
-                                   ORDER BY c.embedding <=> :query::vector
+                                   ORDER BY c.embedding <=> CAST(:query AS vector)
                                ) as vector_rank
                         FROM chunks c
                         JOIN documents d ON c.doc_id = d.id
@@ -133,10 +138,10 @@ class RetrievalService:
                 sql = f"""
                     SELECT c.text, c.heading_path, c.document_type, c.source_url, c.tags,
                            d.title, d.path, d.document_type as doc_type, d.id as doc_id,
-                           1 - (c.embedding <=> :query::vector) AS vector_score,
+                           1 - (c.embedding <=> CAST(:query AS vector)) AS vector_score,
                            similarity(c.text, :query_text) AS keyword_score,
                            (
-                               0.7 * (1 - (c.embedding <=> :query::vector))
+                               0.7 * (1 - (c.embedding <=> CAST(:query AS vector)))
                                + 0.3 * similarity(c.text, :query_text)
                            ) AS combined_score
                     FROM chunks c
@@ -150,11 +155,11 @@ class RetrievalService:
             sql = f"""
                 SELECT c.text, c.heading_path, c.document_type, c.source_url, c.tags,
                        d.title, d.path, d.document_type as doc_type, d.id as doc_id,
-                       1 - (c.embedding <=> :query::vector) AS score
+                       1 - (c.embedding <=> CAST(:query AS vector)) AS score
                 FROM chunks c
                 JOIN documents d ON c.doc_id = d.id
                 WHERE {where_sql}
-                ORDER BY c.embedding <=> :query::vector
+                ORDER BY c.embedding <=> CAST(:query AS vector)
                 LIMIT :k
             """
 

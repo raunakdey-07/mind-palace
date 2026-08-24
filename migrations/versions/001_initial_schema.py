@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
@@ -23,9 +24,7 @@ def upgrade() -> None:
         sa.Column("document_type", sa.Text(), nullable=False, server_default="note"),
         sa.Column("date", sa.Date(), nullable=True),
         sa.Column("summary", sa.Text(), nullable=True),
-        sa.Column(
-            "tags", postgresql.ARRAY(sa.Text()), nullable=False, server_default="{}"
-        ),
+        sa.Column("tags", postgresql.ARRAY(sa.Text()), nullable=False, server_default="{}"),
         sa.Column("git_repo", sa.Text(), nullable=True),
         sa.Column("status", sa.Text(), nullable=False, server_default="active"),
         sa.Column("content_hash", sa.Text(), nullable=False),
@@ -71,12 +70,10 @@ def upgrade() -> None:
         sa.Column("heading_path", sa.Text(), nullable=True),
         sa.Column("document_type", sa.Text(), nullable=True),
         sa.Column("source_url", sa.Text(), nullable=True),
-        sa.Column(
-            "tags", postgresql.ARRAY(sa.Text()), nullable=False, server_default="{}"
-        ),
+        sa.Column("tags", postgresql.ARRAY(sa.Text()), nullable=False, server_default="{}"),
         sa.Column("language", sa.Text(), nullable=False, server_default="en"),
         sa.Column("token_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("embedding", postgresql.VECTOR(384), nullable=True),
+        sa.Column("embedding", Vector(384), nullable=True),
         sa.Column("embedding_model", sa.Text(), nullable=True),
         sa.Column("embedding_dimension", sa.Integer(), nullable=True),
         sa.Column("embedding_version", sa.Text(), nullable=True),
@@ -134,9 +131,7 @@ def upgrade() -> None:
     # Add unique constraints
     op.create_unique_constraint("uq_documents_doc_id", "documents", ["id"])
     op.create_unique_constraint("uq_manifest_path", "ingestion_manifest", ["path"])
-    op.create_unique_constraint(
-        "uq_chunks_doc_chunk", "chunks", ["doc_id", "order_index"]
-    )
+    op.create_unique_constraint("uq_chunks_doc_chunk", "chunks", ["doc_id", "order_index"])
 
 
 def downgrade() -> None:

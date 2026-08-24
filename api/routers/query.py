@@ -18,7 +18,7 @@ from api.models.schemas import (
     StructuredResponse,
     SummarizeRequest,
 )
-from api.services.db import get_async_db
+from api.services.db import session_scope
 from api.services.embedder import Embedder
 from api.services.llm_service import LLMService
 from api.services.retrieval import RetrievalService
@@ -36,19 +36,18 @@ async def ask(
     start = time.perf_counter()
     query_vector = embedder.embed_single(request.question)
 
-    async for db in [get_async_db()]:
-        async with db:
-            retrieval = RetrievalService(db)
-            results = await retrieval.search(
-                query_vector,
-                k=request.k,
-                document_type=request.document_type,
-                tags=request.tags,
-                hybrid=True,
-                query_text=request.question,
-                rrf=True,
-                debug=debug,
-            )
+    async with session_scope() as db:
+        retrieval = RetrievalService(db)
+        results = await retrieval.search(
+            query_vector,
+            k=request.k,
+            document_type=request.document_type,
+            tags=request.tags,
+            hybrid=True,
+            query_text=request.question,
+            rrf=True,
+            debug=debug,
+        )
 
     if not results:
         return StructuredResponse(
@@ -109,10 +108,9 @@ async def summarize(request: SummarizeRequest, response: Response) -> Structured
     """Summarize a specific document."""
     start = time.perf_counter()
 
-    async for db in [get_async_db()]:
-        async with db:
-            retrieval = RetrievalService(db)
-            chunks = await retrieval.get_document_chunks(request.document_id)
+    async with session_scope() as db:
+        retrieval = RetrievalService(db)
+        chunks = await retrieval.get_document_chunks(request.document_id)
 
     if not chunks:
         return StructuredResponse(
@@ -162,10 +160,9 @@ async def interview(request: InterviewRequest, response: Response) -> Structured
     """Generate interview questions from a document."""
     start = time.perf_counter()
 
-    async for db in [get_async_db()]:
-        async with db:
-            retrieval = RetrievalService(db)
-            chunks = await retrieval.get_document_chunks(request.document_id)
+    async with session_scope() as db:
+        retrieval = RetrievalService(db)
+        chunks = await retrieval.get_document_chunks(request.document_id)
 
     if not chunks:
         return StructuredResponse(
@@ -219,10 +216,9 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
     """Find documents related to a given document."""
     start = time.perf_counter()
 
-    async for db in [get_async_db()]:
-        async with db:
-            retrieval = RetrievalService(db)
-            related_docs = await retrieval.get_related_documents(request.document_id, k=request.k)
+    async with session_scope() as db:
+        retrieval = RetrievalService(db)
+        related_docs = await retrieval.get_related_documents(request.document_id, k=request.k)
 
     if not related_docs:
         return StructuredResponse(
@@ -237,16 +233,15 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
         )
 
     # Get the source document title
-    async for db in [get_async_db()]:
-        async with db:
-            from sqlalchemy import text
+    async with session_scope() as db:
+        from sqlalchemy import text
 
-            result = await db.execute(
-                text("SELECT title FROM documents WHERE id = :id"),
-                {"id": request.document_id},
-            )
-            row = result.first()
-            doc_title = row[0] if row else "Unknown"
+        result = await db.execute(
+            text("SELECT title FROM documents WHERE id = :id"),
+            {"id": request.document_id},
+        )
+        row = result.first()
+        doc_title = row[0] if row else "Unknown"
 
     lines = [f"Documents related to **{doc_title}**:\n"]
     for i, rd in enumerate(related_docs, 1):
@@ -279,10 +274,9 @@ async def timeline(
     """Chronological view of documents."""
     start = time.perf_counter()
 
-    async for db in [get_async_db()]:
-        async with db:
-            retrieval = RetrievalService(db)
-            docs = await retrieval.get_timeline(document_type, start_date, end_date, limit)
+    async with session_scope() as db:
+        retrieval = RetrievalService(db)
+        docs = await retrieval.get_timeline(document_type, start_date, end_date, limit)
 
     if not docs:
         return StructuredResponse(

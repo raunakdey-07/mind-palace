@@ -1,4 +1,4 @@
-"""Evaluation service for retrieval and answer quality."""
+"""Evaluation service: deterministic retrieval metrics and benchmark loading."""
 
 from __future__ import annotations
 
@@ -7,48 +7,90 @@ from typing import Any
 import yaml
 
 
+def recall_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
+    """Fraction of expected documents present in the top-k retrieved."""
+    if not expected:
+        return 0.0
+    expected_set = set(expected)
+    retrieved_set = set(retrieved[:k])
+    return len(expected_set & retrieved_set) / len(expected_set)
+
+
+def precision_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
+    """Fraction of the top-k retrieved documents that are relevant."""
+    if k <= 0:
+        return 0.0
+    top = retrieved[:k]
+    if not top:
+        return 0.0
+    expected_set = set(expected)
+    hits = sum(1 for doc in top if doc in expected_set)
+    return hits / len(top)
+
+
+def reciprocal_rank(expected: list[str], retrieved: list[str]) -> float:
+    """Reciprocal rank of the first relevant result (0 if none found)."""
+    expected_set = set(expected)
+    for i, doc in enumerate(retrieved):
+        if doc in expected_set:
+            return 1.0 / (i + 1)
+    return 0.0
+
+
+def ndcg_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
+    """nDCG with binary relevance; useful when graded labels exist."""
+    if not expected or k <= 0:
+        return 0.0
+    expected_set = set(expected)
+
+    dcg = sum(1.0 / _log2(i + 2) for i, doc in enumerate(retrieved[:k]) if doc in expected_set)
+    ideal_hits = min(len(expected_set), k)
+    idcg = sum(1.0 / _log2(i + 2) for i in range(ideal_hits))
+    return dcg / idcg if idcg > 0 else 0.0
+
+
+def _log2(n: int) -> float:
+    import math
+
+    return math.log2(n)
+
+
 class EvaluationService:
-    """Service for running evaluations."""
+    """Service for loading benchmarks and computing aggregate metrics."""
 
     @staticmethod
     def load_benchmarks(file_path: str) -> list[dict[str, Any]]:
-        """Load benchmark dataset from YAML."""
+        """Load and validate benchmark dataset from YAML.
+
+        Raises ValueError on malformed entries so bad data fails loudly.
+        """
         with open(file_path) as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
 
-    @staticmethod
-    def calculate_precision_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
-        """Calculate Precision@K."""
-        if not expected:
-            return 1.0
-        expected_set = set(expected)
-        retrieved_set = set(retrieved[:k])
-        hits = expected_set & retrieved_set
-        return len(hits) / len(expected_set)
+        if not isinstance(data, list):
+            raise ValueError(f"Benchmark file must contain a list, got {type(data).__name__}")
 
-    @staticmethod
-    def calculate_reciprocal_rank(expected: list[str], retrieved: list[str]) -> float:
-        """Calculate Reciprocal Rank."""
-        for i, doc_id in enumerate(retrieved):
-            if doc_id in expected:
-                return 1.0 / (i + 1)
-        return 0.0
-
-    @staticmethod
-    def calculate_ndcg(expected: list[str], retrieved: list[str], k: int) -> float:
-        """Calculate Normalized Discounted Cumulative Gain."""
-        if not expected:
-            return 1.0
-
-        # Calculate DCG
-        dcg = 0.0
-        for i, doc_id in enumerate(retrieved[:k]):
-            if doc_id in expected:
-                dcg += 1.0 / (i + 2)  # log2(i+2) approximation for relevance=1
-
-        # Calculate IDCG (ideal DCG)
-        idcg = 0.0
-        for i in range(min(len(expected), k)):
-            idcg += 1.0 / (i + 2)
-
-        return dcg / idcg if idcg > 0 else 0.0
+        validated: list[dict[str, Any]] = []
+        seen_queries: set[str] = set()
+        for i, entry in enumerate(data):
+            if not isinstance(entry, dict):
+                raise ValueError(f"Benchmark entry {i} must be a mapping")
+            query = entry.get("query")
+            expected = entry.get("expected") or entry.get("relevant_documents")
+            if not query or not isinstance(query, str):
+                raise ValueError(f"Benchmark entry {i} missing non-empty 'query'")
+            if not expected or not isinstance(expected, list):
+                raise ValueError(f"Benchmark entry {i} ('{query}') missing 'expected' list")
+            if not all(isinstance(d, str) and d for d in expected):
+                raise ValueError(f"Benchmark entry {i} ('{query}') has invalid expected docs")
+            if query in seen_queries:
+                raise ValueError(f"Duplicate benchmark query: '{query}'")
+            seen_queries.add(query)
+            validated.append(
+                {
+                    "query": query,
+                    "expected": list(dict.fromkeys(expected)),  # dedupe, preserve order
+                    "category": entry.get("category", "general"),
+                }
+            )
+        return validated

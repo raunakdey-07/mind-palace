@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -53,5 +54,12 @@ async def init_db() -> None:
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI async session dependency."""
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+@asynccontextmanager
+async def session_scope() -> AsyncGenerator[AsyncSession, None]:
+    """Standalone async session context manager for non-FastAPI callers."""
     async with AsyncSessionLocal() as session:
         yield session

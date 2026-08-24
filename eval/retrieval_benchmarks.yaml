@@ -2,103 +2,112 @@
 # Copyright 2026 Raunak Dey
 
 # Retrieval Evaluation Dataset
+#
+# Each entry: query, expected document titles, category.
+# Run with: mindpalace eval retrieval --strategies all
+#
+# Categories:
+#   factual      - exact terminology lookup
+#   semantic     - wording differs substantially from source
+#   technical    - implementation/architecture details
+#   project      - specific project/feature queries
+#   multi-concept- several related concepts at once
+#   ambiguous    - multiple documents plausibly match
+#   false-positive - semantically similar but wrong docs must not dominate
 
-# Each entry has a query and expected document titles that should appear in top-k results
-# Run evaluation with: `mindpalace eval retrieval`
-
-# Category: retrieval - direct fact lookup
-- query: "feature leakage"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-  category: retrieval
+# --- factual ---
+- query: "mel spectrogram augmentation"
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: factual
 
 - query: "Altman Z score"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-  category: retrieval
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: factual
 
-- query: "CNN transformer attention"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-  category: retrieval
+- query: "pgvector knowledge store"
+  expected: ["Mind Palace — Project README"]
+  category: factual
 
-- query: "technical indicators SMA EMA RSI"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-  category: retrieval
+# --- semantic (different wording than source) ---
+- query: "identifying bird species from sound recordings"
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: semantic
 
-- query: "ensemble weighted averaging"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-  category: retrieval
+- query: "tracking my stock portfolio performance"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: semantic
 
-- query: "portfolio tracker Sharpe ratio"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-  category: retrieval
+- query: "second brain for my research notes"
+  expected: ["Mind Palace — Project README"]
+  category: semantic
 
-- query: "test-time augmentation"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-  category: retrieval
+# --- technical ---
+- query: "CNN transformer attention architecture"
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: technical
 
-- query: "backtesting engine"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-  category: retrieval
+- query: "SMA EMA RSI MACD indicators"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: technical
 
-- query: "Mind Palace RAG"
-  expected:
-    - "Mind Palace — Project README"
-  category: retrieval
+- query: "RAG question answering with local LLM"
+  expected: ["Mind Palace — Project README"]
+  category: technical
 
-- query: "vector database pgvector"
-  expected:
-    - "Mind Palace — Project README"
-  category: retrieval
+- query: "backtesting engine strategy validation"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: technical
 
-# Category: synthesis - combining information from multiple sources
-- query: "compare Finalysis and BirdCLEF"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-    - "BirdCLEF 2023: Audio Classification"
-  category: synthesis
-
-- query: "what models did I use in my projects"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-    - "BirdCLEF 2023: Audio Classification"
-  category: synthesis
-
-# Category: reflective - personal learning and insights
+# --- project ---
 - query: "what did I learn from BirdCLEF"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-  category: reflective
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: project
 
-- query: "what are my key takeaways from Finalysis"
+- query: "how does Finalysis handle market data"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: project
+
+- query: "Mind Palace tech stack"
+  expected: ["Mind Palace — Project README"]
+  category: project
+
+# --- multi-concept ---
+- query: "compare Finalysis and BirdCLEF projects"
   expected:
     - "Finalysis: Financial Analysis Platform"
-  category: reflective
+    - "BirdCLEF 2023: Audio Classification"
+  category: multi-concept
 
-# Category: temporal - time-based queries
-- query: "projects from July 2023"
+- query: "ensemble models and class imbalance handling"
   expected:
     - "BirdCLEF 2023: Audio Classification"
-  category: temporal
+  category: multi-concept
 
-- query: "projects from September 2023"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-  category: temporal
-
-# Category: exploratory - open-ended discovery
-- query: "audio classification projects"
+# --- ambiguous (multiple plausible matches; both should appear in top-k) ---
+- query: "projects completed in 2023"
   expected:
     - "BirdCLEF 2023: Audio Classification"
-  category: exploratory
-
-- query: "financial analysis tools I built"
-  expected:
     - "Finalysis: Financial Analysis Platform"
-  category: exploratory
+  category: ambiguous
+
+- query: "machine learning projects I built"
+  expected:
+    - "BirdCLEF 2023: Audio Classification"
+    - "Finalysis: Financial Analysis Platform"
+  category: ambiguous
+
+# --- false-positive traps ---
+# Semantically close to finance but answer lives in BirdCLEF doc.
+- query: "weighted averaging of model predictions"
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: false-positive
+
+# Semantically close to audio/birds but answer is Finalysis backtesting.
+- query: "validating trading strategies against historical data"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: false-positive
+
+# Close to "portfolio" wording in README but answer is Finalysis tracker.
+- query: "Sharpe ratio and max drawdown metrics"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: false-positive

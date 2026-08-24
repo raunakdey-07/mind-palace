@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from api.services.db import get_async_db
+from api.services.db import session_scope
 from api.services.retrieval import RetrievalService
 
 
@@ -22,8 +22,6 @@ class TimelineService:
         limit: int = 50,
     ) -> List[dict]:
         """Get chronological document view."""
-        async for db in [get_async_db()]:
-            async with db:
-                retrieval = RetrievalService(db)
-                return await retrieval.get_timeline(document_type, start_date, end_date, limit)
-        return []
+        async with session_scope() as db:
+            retrieval = RetrievalService(db)
+            return await retrieval.get_timeline(document_type, start_date, end_date, limit)

@@ -49,7 +49,7 @@ async def upsert_document(
     if isinstance(tags, str):
         tags = [t.strip() for t in tags.split(",")]
 
-    doc_type = metadata.get("type", "note")
+    doc_type = metadata.get("document_type") or metadata.get("type") or "note"
     if doc_type not in ("kaggle", "project", "note", "paper"):
         doc_type = "note"
 
@@ -148,6 +148,10 @@ async def insert_chunks(
 
     values = []
     for i, chunk in enumerate(chunks):
+        embedding = chunk.get("embedding")
+        # asyncpg/pgvector expects the vector as its text representation.
+        if embedding is not None and not isinstance(embedding, str):
+            embedding = "[" + ",".join(str(float(x)) for x in embedding) + "]"
         values.append(
             {
                 "doc_id": doc_id,
@@ -159,7 +163,7 @@ async def insert_chunks(
                 "tags": tags,
                 "language": chunk.get("language", "en"),
                 "token_count": chunk.get("token_count", 0),
-                "embedding": chunk.get("embedding"),
+                "embedding": embedding,
                 "embedding_model": embedding_model,
                 "embedding_dimension": embedding_dimension,
                 "embedding_version": embedding_version,
@@ -176,7 +180,8 @@ async def insert_chunks(
             VALUES (
                 gen_random_uuid(), :doc_id, :order_index, :text, :heading_path, :document_type,
                 :source_url, :tags, :language, :token_count,
-                :embedding::vector, :embedding_model, :embedding_dimension, :embedding_version
+                CAST(:embedding AS vector),
+                :embedding_model, :embedding_dimension, :embedding_version
             )
         """),
         values,

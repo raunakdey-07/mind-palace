@@ -363,6 +363,49 @@ def doctor() -> None:
         raise typer.Exit(code=1)
 
 
+@eval_app.command("strategies")
+def eval_strategies(
+    benchmark_file: str = typer.Option("eval/retrieval_benchmarks.yaml", "--file", "-f"),
+    candidates: str = typer.Option(
+        "20", "--candidates", "-c", help="Comma-separated reranker candidate pool sizes"
+    ),
+    details: bool = typer.Option(False, "--details", "-d", help="Show failure diagnostics"),
+) -> None:
+    """Compare vector/hybrid/RRF/reranked retrieval on the benchmark.
+
+    Requires a live PostgreSQL + pgvector database with an ingested corpus
+    (set DATABASE_URL). Does not require the API server.
+    """
+    import asyncio
+
+    from api.services.benchmark import (
+        format_failure_details,
+        format_report,
+        run_benchmark,
+    )
+
+    try:
+        candidate_sizes = tuple(int(c.strip()) for c in candidates.split(",") if c.strip())
+    except ValueError:
+        typer.echo(f"[ERROR] Invalid candidate sizes: {candidates}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        results, failures = asyncio.run(
+            run_benchmark(benchmark_file, candidate_sizes=candidate_sizes)
+        )
+    except Exception as e:
+        typer.echo(f"[ERROR] Benchmark failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo("\n[RESULTS] Retrieval strategy comparison\n")
+    typer.echo(format_report(results, failures=failures))
+    if details and failures:
+        typer.echo("\n[DEBUG] Failure diagnostics\n")
+        typer.echo(format_failure_details(failures))
+    typer.echo()
+
+
 @eval_app.command("retrieval")
 def eval_retrieval(
     benchmark_file: str = typer.Option("eval/retrieval_benchmarks.yaml", "--file", "-f"),
@@ -422,7 +465,7 @@ def eval_retrieval(
         typer.echo("[SUCCESS] All queries retrieved expected documents!")
     else:
         typer.echo(
-            "[WARN]  Some queries missed expected documents — consider tuning " "chunking/embedding"
+            "[WARN]  Some queries missed expected documents — consider tuning chunking/embedding"
         )
 
 
@@ -431,3 +474,7 @@ def serve() -> None:
     """Start the local development server."""
     typer.echo("Run: uvicorn api.main:app --reload")
     typer.echo("Then visit http://localhost:8000/docs")
+
+
+if __name__ == "__main__":
+    app()

@@ -30,19 +30,24 @@ async def upsert_document(
     body: str,
     metadata: dict,
 ) -> str:
-    """Insert or update a document and return its deterministic ID."""
+    """Insert or update a document and return its (deterministic) ID.
+
+    Documents are keyed by ``path``: re-ingesting changed content updates the
+    existing row in place (new deterministic id, fresh hash) rather than
+    colliding with the unique-path constraint.
+    """
     doc_hash = content_hash(body)
     doc_id = deterministic_doc_id(path, body)
 
-    # Check if document exists and is unchanged
+    # Unchanged content -> nothing to do (path-keyed; id may differ from a
+    # recomputed deterministic id if hashing rules ever change)
     result = await db.execute(
-        text("SELECT 1 FROM documents WHERE id = :id AND content_hash = :hash"),
-        {"id": doc_id, "hash": doc_hash},
+        text("SELECT 1 FROM documents WHERE path = :path AND content_hash = :hash"),
+        {"path": path, "hash": doc_hash},
     )
     if result.first():
         return ""
 
-    # Upsert
     now = datetime.now(timezone.utc)
 
     tags = metadata.get("tags", [])
@@ -60,15 +65,19 @@ async def upsert_document(
                 git_repo, content_hash, last_indexed, updated_at
             )
             VALUES (
-                :id, :title, :path, :doc_type, :date, :summary, :tags,
+                COALESCE(
+                    (SELECT id FROM documents WHERE path = :path),
+                    :id
+                ),
+                :title, :path, :doc_type, :date, :summary, :tags,
                 :git_repo, :hash, :now, :now
             )
-            ON CONFLICT (id) DO UPDATE SET
+            ON CONFLICT (path) DO UPDATE SET
                 title = EXCLUDED.title,
-                path = EXCLUDED.path,
                 document_type = EXCLUDED.document_type,
                 summary = EXCLUDED.summary,
                 tags = EXCLUDED.tags,
+                git_repo = EXCLUDED.git_repo,
                 content_hash = EXCLUDED.content_hash,
                 last_indexed = :now,
                 updated_at = :now
@@ -86,8 +95,14 @@ async def upsert_document(
             "now": now,
         },
     )
-    await db.commit()
-    return doc_id
+
+    # Return the id actually stored for this path: on update the existing
+    # row keeps its original id so chunk/manifest references stay valid.
+    result = await db.execute(
+        text("SELECT id FROM documents WHERE path = :path"),
+        {"path": path},
+    )
+    return result.scalar_one()
 
 
 async def check_manifest(db: AsyncSession, path: str, content_hash: str) -> bool:

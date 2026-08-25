@@ -16,11 +16,20 @@ def recall_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
     return len(expected_set & retrieved_set) / len(expected_set)
 
 
+def _dedupe(retrieved: list[str]) -> list[str]:
+    """Collapse duplicate titles, preserving first-occurrence order.
+
+    Retrieval returns chunks; evaluation compares documents. Multiple chunks
+    of one document must not inflate per-document metrics.
+    """
+    return list(dict.fromkeys(retrieved))
+
+
 def precision_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
-    """Fraction of the top-k retrieved documents that are relevant."""
+    """Fraction of distinct relevant docs among the top-k distinct results."""
     if k <= 0:
         return 0.0
-    top = retrieved[:k]
+    top = _dedupe(retrieved)[:k]
     if not top:
         return 0.0
     expected_set = set(expected)
@@ -38,12 +47,13 @@ def reciprocal_rank(expected: list[str], retrieved: list[str]) -> float:
 
 
 def ndcg_at_k(expected: list[str], retrieved: list[str], k: int) -> float:
-    """nDCG with binary relevance; useful when graded labels exist."""
+    """nDCG with binary relevance over distinct retrieved documents."""
     if not expected or k <= 0:
         return 0.0
     expected_set = set(expected)
+    ranked = [doc for doc in _dedupe(retrieved)[:k]]
 
-    dcg = sum(1.0 / _log2(i + 2) for i, doc in enumerate(retrieved[:k]) if doc in expected_set)
+    dcg = sum(1.0 / _log2(i + 2) for i, doc in enumerate(ranked) if doc in expected_set)
     ideal_hits = min(len(expected_set), k)
     idcg = sum(1.0 / _log2(i + 2) for i in range(ideal_hits))
     return dcg / idcg if idcg > 0 else 0.0

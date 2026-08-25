@@ -15,13 +15,14 @@ from api.services.db import session_scope
 from api.services.embedder import Embedder
 from api.services.evaluation import (
     EvaluationService,
+    ndcg_at_k,
     precision_at_k,
     recall_at_k,
     reciprocal_rank,
 )
 from api.services.retrieval import RetrievalResult, RetrievalService
 
-K_VALUES = (3, 5, 10)
+K_VALUES = (1, 3, 5, 10)
 
 
 @dataclass
@@ -32,6 +33,7 @@ class StrategyResult:
     recall: dict[int, float] = field(default_factory=dict)
     precision: dict[int, float] = field(default_factory=dict)
     mrr: float = 0.0
+    ndcg: dict[int, float] = field(default_factory=dict)
     latencies_ms: list[float] = field(default_factory=list)
 
     @property
@@ -120,6 +122,7 @@ async def run_benchmark(
                     sr.precision[k] = sr.precision.get(k, 0.0) + precision_at_k(
                         expected, retrieved_titles, k
                     )
+                    sr.ndcg[k] = sr.ndcg.get(k, 0.0) + ndcg_at_k(expected, retrieved_titles, k)
                 sr.mrr += reciprocal_rank(expected, retrieved_titles)
 
                 if not set(expected) & set(retrieved_titles[: max(k_values)]):
@@ -130,6 +133,7 @@ async def run_benchmark(
         for k in k_values:
             sr.recall[k] /= n
             sr.precision[k] /= n
+            sr.ndcg[k] /= n
         sr.mrr /= n
 
     return results, failures
@@ -176,9 +180,10 @@ def format_report(
     lines = []
     header = (
         "Strategy".ljust(24)
-        + "".join(f"R@{k}".rjust(7) for k in k_values)
-        + "".join(f"P@{k}".rjust(7) for k in k_values)
+        + "".join(f"R@{k}".rjust(6 if k == 1 else 7) for k in k_values)
+        + "P@3".rjust(7)
         + "MRR".rjust(7)
+        + "nDCG@5".rjust(8)
         + "avg ms".rjust(9)
     )
     lines.append(header)
@@ -188,9 +193,10 @@ def format_report(
     for name in ordered:
         sr = results[name]
         row = name.ljust(24)
-        row += "".join(f"{sr.recall[k]:.2f}".rjust(7) for k in k_values)
-        row += "".join(f"{sr.precision[k]:.2f}".rjust(7) for k in k_values)
+        row += "".join(f"{sr.recall[k]:.2f}".rjust(6 if k == 1 else 7) for k in k_values)
+        row += f"{sr.precision.get(3, 0.0):.2f}".rjust(7)
         row += f"{sr.mrr:.2f}".rjust(7)
+        row += f"{sr.ndcg.get(5, 0.0):.2f}".rjust(8)
         row += f"{sr.avg_latency_ms:.0f}".rjust(9)
         lines.append(row)
 

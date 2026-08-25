@@ -351,10 +351,14 @@ async def test_duplicate_paths_deterministic_ids():
 async def test_ingest_repo_reports_failures(tmp_path):
     d = tmp_path / "corpus"
     d.mkdir()
-    (d / "good.md").write_text(DOC_V1)
-    (d / "broken.md").write_text("---\ntitle: [unclosed\n")  # invalid YAML may still parse;
-    # use a genuinely unreadable file instead
-    bad = d / "unreadable.md"
+    # Use a subdirectory so relative ingest paths are namespaced under
+    # test/ and get removed by the _clean_test_paths fixture. Bare top-level
+    # names here previously leaked into the shared database and polluted
+    # benchmark runs.
+    sub = d / "test"
+    sub.mkdir()
+    (sub / "good.md").write_text(DOC_V1)
+    bad = sub / "unreadable.md"
     bad.write_text(DOC_V1)
     bad.chmod(0o000)
 
@@ -365,4 +369,21 @@ async def test_ingest_repo_reports_failures(tmp_path):
         bad.chmod(0o644)
 
     assert result["success"] is False  # one file failed
-    assert "failed" in result["message"].lower()
+    assert "failed" in result["message"]
+
+    # Ingested rows must be inside the namespaced path and are removed by
+    # the fixture; verify no stray top-level entries remain.
+    import sqlalchemy as sa
+
+    engine = sa.create_engine(_sync_url())
+    try:
+        with engine.connect() as conn:
+            stray = conn.execute(
+                sa.text(
+                    "SELECT count(*) FROM documents "
+                    "WHERE path IN ('good.md', 'broken.md', 'unreadable.md')"
+                )
+            ).scalar_one()
+    finally:
+        engine.dispose()
+    assert stray == 0

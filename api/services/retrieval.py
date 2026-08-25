@@ -197,11 +197,11 @@ class RetrievalService:
                 source_title=row[6],
                 source_path=row[7],
                 source_document_type=row[8],
-                score=float(row[13]),
+                score=float(row[14]),
                 doc_id=row[9],
                 vector_score=float(row[10]) if row[10] is not None else None,
                 keyword_score=float(row[11]) if row[11] is not None else None,
-                rrf_score=float(row[13]) if row[13] is not None else None,
+                rrf_score=float(row[14]) if row[14] is not None else None,
             )
         if hybrid:
             return RetrievalResult(

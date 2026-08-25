@@ -21,6 +21,10 @@
   category: factual
 
 - query: "Altman Z score"
+  # NOTE: the term 'Altman Z score' does not appear anywhere in the corpus.
+  # The expectation relies on the Finalysis doc being the only plausible
+  # financial-analysis match — a weak, vocabulary-mismatch label. Kept as a
+  # known-hard case: it measures semantic generalization, not exact lookup.
   expected: ["Finalysis: Financial Analysis Platform"]
   category: factual
 
@@ -111,3 +115,37 @@
 - query: "Sharpe ratio and max drawdown metrics"
   expected: ["Finalysis: Financial Analysis Platform"]
   category: false-positive
+
+# --- distractor-heavy: many surface-similar terms, one right answer ---
+- query: "model ensemble predictions"
+  # Both docs mention ensembles/predictions; the BirdCLEF doc is about model
+  # ensembles specifically. Finalysis mentions none of these terms.
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: false-positive
+
+# --- negative-ish: terminology shared across all docs; expects the doc
+#     where the concept is the core subject ---
+- query: "data science project using python"
+  expected:
+    - "Finalysis: Financial Analysis Platform"
+  category: ambiguous
+
+# --- metadata-style filtering via document type vocabulary ---
+- query: "kaggle competition submission"
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: factual
+
+# --- long natural-language question ---
+- query: "which of my projects used convolutional neural networks combined with transformer attention layers for audio signal processing"
+  expected: ["BirdCLEF 2023: Audio Classification"]
+  category: semantic
+
+# --- short ambiguous query ---
+- query: "streamlit"
+  expected: ["Finalysis: Financial Analysis Platform"]
+  category: factual
+
+# --- short ambiguous query 2: term appears in multiple docs ---
+- query: "markdown"
+  expected: ["Mind Palace — Project README"]
+  category: ambiguous

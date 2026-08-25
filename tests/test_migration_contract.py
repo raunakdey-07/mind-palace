@@ -22,7 +22,8 @@ import os
 import pytest
 import sqlalchemy as sa
 
-pytestmark = pytest.mark.asyncio
+# DB-backed but synchronous (direct engine access); intentionally NOT marked
+# with the asyncio mark other suites use.
 
 
 def _sync_url() -> str:

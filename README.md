@@ -117,9 +117,17 @@ Markdown / MDX / Repositories
 ## Prerequisites
 
 * Python **3.11+**
-* PostgreSQL **15+** with pgvector
+* PostgreSQL **15+** with the **pgvector server extension**
 * Docker / Podman
 * Ollama
+
+> **Note:** installing the Python `pgvector` package does **not** install the
+> PostgreSQL `vector` extension — that must come from your database image or
+> package manager. Use a pgvector-enabled image such as `pgvector/pgvector:pg15`
+> (CI) or `ankane/pgvector` (docker-compose). The initial Alembic migration
+> provisions `vector`, `pgcrypto`, and `pg_trgm` extensions itself via
+> `CREATE EXTENSION IF NOT EXISTS`, so any fresh database works as long as
+> the image ships them.
 
 Install Ollama:
 
@@ -175,7 +183,17 @@ docker compose up -d
 podman-compose up -d
 ```
 
-### 5. Verify the setup
+### 5. Apply database migrations
+
+```bash
+make migrate
+# or: python -m alembic -c migrations/alembic.ini upgrade head
+```
+
+This creates the schema and provisions the required PostgreSQL extensions
+(`vector`, `pgcrypto`, `pg_trgm`) on a fresh database.
+
+### 6. Verify the setup
 
 ```bash
 mindpalace doctor

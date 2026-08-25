@@ -15,6 +15,14 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # PostgreSQL server extensions must exist before the schema that uses
+    # them. The Python `pgvector` package does NOT install the server
+    # extension; the database image must provide it (pgvector/pgvector,
+    # ankane/pgvector both do).
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")  # gen_random_uuid()
+    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")  # hybrid keyword search
+
     # Create documents table
     op.create_table(
         "documents",
@@ -154,3 +162,6 @@ def downgrade() -> None:
     op.drop_table("ingestion_manifest")
     op.drop_table("chunks")
     op.drop_table("documents")
+
+    # Extensions are left in place on downgrade: dropping them could affect
+    # other databases/objects sharing the cluster, and they are cheap to keep.

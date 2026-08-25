@@ -1,4 +1,4 @@
-.PHONY: setup dev test lint eval doctor
+.PHONY: setup dev test lint eval doctor migrate
 
 setup:
 	python -m venv .venv
@@ -24,6 +24,9 @@ eval:
 
 strategies:
 	python -m cli.main eval strategies
+
+migrate:
+	python -m alembic -c migrations/alembic.ini upgrade head
 
 doctor:
 	python -m cli.main doctor

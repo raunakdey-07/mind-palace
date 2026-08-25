@@ -18,12 +18,69 @@ Most portfolios are static pages. Mind Palace treats a portfolio as a **living k
 
 ## Current Status
 
-* **v0.2.1 released**
-* **Phase 2 (Retrieval Quality) in progress**
+* **v0.3.0 released** — reproducible foundation (database setup, ingestion lifecycle, retrieval evaluation)
 * Local-first deployment working
 * PostgreSQL + pgvector backend implemented
-* Hybrid retrieval and RRF implemented
-* Evaluation harness implemented
+* Hybrid retrieval + RRF is the default strategy
+* Cross-encoder reranking available as explicit opt-in
+* Retrieval evaluation framework with measured baselines
+
+---
+
+## Pipeline
+
+Mind Palace processes content through a single well-defined pipeline:
+
+```text
+Markdown files (content/)
+      │
+      ▼
+Parsing            YAML frontmatter validation, body extraction
+      │
+      ▼
+Chunking           heading-path-aware sections, size-bounded splits
+      │
+      ▼
+Embedding          sentence-transformers (all-MiniLM-L6-v2, 384-dim, normalized)
+      │
+      ▼
+Storage            PostgreSQL + pgvector (HNSW index), ingestion manifest
+      │
+      ▼
+Retrieval          vector search, hybrid (vector + pg_trgm keyword), RRF fusion,
+                   optional cross-encoder reranking
+      │
+      ▼
+Generation         grounded RAG answers with source attribution (Ollama)
+      │
+      ▼
+Evaluation         Recall@k / Precision@k / MRR / latency per strategy
+```
+
+### Retrieval strategies
+
+| Strategy | When to use | Default |
+|---|---|---|
+| `vector` | pure semantic similarity | |
+| `hybrid` | semantic + keyword signals, weighted blend | |
+| `hybrid + RRF` | rank-fused; best measured quality at negligible cost | **yes** |
+| `hybrid + RRF + reranker` | cross-encoder re-scoring of a candidate pool | opt-in (`?rerank=true`) |
+
+**Decision rationale:** benchmark measurements on the current corpus show hybrid+RRF is the only strategy reaching Recall@3 = 1.00 at ~2 ms average latency. Cross-encoder reranking adds roughly two orders of magnitude of latency (~200 ms+) for a marginal MRR change and slightly worse Recall@3 on multi-relevant queries. It therefore remains available but off by default; this decision is revisited as the corpus grows.
+
+### Evaluation
+
+The evaluation framework lives in `eval/` and runs through the CLI:
+
+```bash
+mindpalace eval strategies --candidates 10,20,50 --details
+```
+
+It executes the same 19-query deterministic dataset against every strategy and reports Recall@3/5/10, Precision@3/5/10, MRR, and latency, plus per-query failure diagnostics (scores, ranks, chunk text).
+
+**Scope caveat:** the current corpus is small (3 documents, 13 chunks). The benchmark is genuinely useful for **regression detection** — it caught real defects during development — but the corpus is far too small to claim broad retrieval superiority or to tune ranking parameters meaningfully. Candidate-pool-size experiments are inconclusive at this scale because every pool contains the entire corpus.
+
+See `eval/EVALUATION.md` for full methodology, configuration, and measured results.
 
 ---
 
@@ -31,69 +88,30 @@ Most portfolios are static pages. Mind Palace treats a portfolio as a **living k
 
 ### Implemented
 
-* Markdown ingestion with YAML frontmatter
-* Deterministic document IDs
-* Incremental ingestion via manifest tracking
-* PostgreSQL + pgvector storage
+* Markdown ingestion with YAML frontmatter validation
+* Deterministic document IDs; path-keyed upserts for changed documents
+* Incremental ingestion via manifest tracking with stale-chunk replacement
+* Heading-path-aware chunking with size bounds
+* PostgreSQL + pgvector storage (HNSW index), self-provisioning migrations
 * Semantic vector search
-* Hybrid retrieval (vector + keyword)
-* Reciprocal Rank Fusion (RRF)
+* Hybrid retrieval (vector + pg_trgm keyword) with Reciprocal Rank Fusion
+* Optional cross-encoder reranking (explicit opt-in)
 * Structured RAG responses with citations
-* Pluggable LLM provider interface
-* Local inference via Ollama
-* Typer-based CLI
-* Retrieval evaluation benchmarks
+* Pluggable LLM provider interface; local inference via Ollama
+* Typer-based CLI (`python -m cli.main` or the `mindpalace` console script)
+* Retrieval evaluation framework (Recall@k, Precision@k, MRR, nDCG, latency)
+* Ingestion lifecycle and migration contract test suites
 * Containerized local development stack
-* GitHub Actions CI
+* GitHub Actions CI with database-backed integration tests
 * Alembic database migrations
-
-### In Progress
-
-* Cross-encoder reranking
-* Retrieval metrics (Recall@k, MRR, nDCG)
-* Latency instrumentation
-* Query diagnostics tooling
 
 ### Planned
 
 * Next.js frontend
 * Research / resume / interview agents
-* Knowledge graph
+* Knowledge graph (under investigation — not yet justified by evidence)
 * MCP server
 * Advanced observability
-
----
-
-## Architecture
-
-```text
-Markdown / MDX / Repositories
-              │
-              ▼
-       Ingestion Service
-              │
-              ▼
-      Metadata Extraction
-              │
-              ▼
-      Embedding Generation
-              │
-              ▼
-     PostgreSQL + pgvector
-              │
-              ▼
-        Hybrid Retrieval
-      (Vector + Keyword)
-              │
-              ▼
-         RRF Ranking
-              │
-              ▼
-        LLM Generation
-              │
-              ▼
- API / CLI / Portfolio UI
-```
 
 ---
 
@@ -102,8 +120,9 @@ Markdown / MDX / Repositories
 | Layer              | Technology                    |
 | ------------------ | ----------------------------- |
 | Backend            | FastAPI, SQLAlchemy, Pydantic |
-| Database           | PostgreSQL + pgvector         |
-| Embeddings         | sentence-transformers         |
+| Database           | PostgreSQL 15+ + pgvector     |
+| Embeddings         | sentence-transformers (all-MiniLM-L6-v2) |
+| Reranking          | sentence-transformers CrossEncoder (opt-in) |
 | Retrieval          | pgvector + pg_trgm + RRF      |
 | LLM Runtime        | Ollama                        |
 | Migrations         | Alembic                       |
@@ -121,13 +140,13 @@ Markdown / MDX / Repositories
 * Docker / Podman
 * Ollama
 
-> **Note:** installing the Python `pgvector` package does **not** install the
-> PostgreSQL `vector` extension — that must come from your database image or
-> package manager. Use a pgvector-enabled image such as `pgvector/pgvector:pg15`
-> (CI) or `ankane/pgvector` (docker-compose). The initial Alembic migration
-> provisions `vector`, `pgcrypto`, and `pg_trgm` extensions itself via
-> `CREATE EXTENSION IF NOT EXISTS`, so any fresh database works as long as
-> the image ships them.
+> **Important:** installing the Python `pgvector` package does **not** install
+> the PostgreSQL `vector` extension — that must come from your database image
+> or package manager. Use a pgvector-enabled image such as `pgvector/pgvector:pg15`
+> (used by CI) or `ankane/pgvector` (docker-compose). The initial Alembic
+> migration provisions the `vector`, `pgcrypto`, and `pg_trgm` extensions via
+> `CREATE EXTENSION IF NOT EXISTS`, so any fresh database works as long as the
+> image ships them.
 
 Install Ollama:
 
@@ -191,9 +210,15 @@ make migrate
 ```
 
 This creates the schema and provisions the required PostgreSQL extensions
-(`vector`, `pgcrypto`, `pg_trgm`) on a fresh database.
+(`vector`, `pgcrypto`, `pg_trgm`) on a fresh database. It is safe to re-run.
 
-### 6. Verify the setup
+### 6. Ingest content
+
+```bash
+mindpalace ingest-repo content/
+```
+
+### 7. Verify the setup
 
 ```bash
 mindpalace doctor
@@ -204,10 +229,12 @@ pytest -q
 
 ## CLI Usage
 
+The CLI can be invoked either as the installed console script (`mindpalace`) or directly with `python -m cli.main`.
+
 ### Ingest content
 
 ```bash
-mindpalace ingest content/
+mindpalace ingest-repo content/
 ```
 
 ### Semantic search
@@ -225,10 +252,19 @@ mindpalace ask "What did I learn from BirdCLEF?"
 ### Generate interview questions
 
 ```bash
-mindpalace interview birdclef
+mindpalace interview <document-id>
 ```
 
-### Run retrieval evaluation
+### Run retrieval strategy comparison
+
+```bash
+mindpalace eval strategies                  # default candidate pool
+mindpalace eval strategies --candidates 10,20,50 --details
+```
+
+Requires a live PostgreSQL + pgvector database (`DATABASE_URL`) with an ingested corpus; does not require the API server.
+
+### Run simple retrieval check
 
 ```bash
 mindpalace eval retrieval
@@ -268,6 +304,14 @@ uvicorn api.main:app --reload
 curl http://localhost:8000/health
 ```
 
+### Search (with optional hybrid / RRF / reranking)
+
+```bash
+curl "http://localhost:8000/api/search?q=feature+leakage&k=5"
+curl "http://localhost:8000/api/search?q=feature+leakage&hybrid=true&rrf=true"
+curl "http://localhost:8000/api/search?q=feature+leakage&hybrid=true&rrf=true&rerank=true"
+```
+
 ### Ask a question
 
 ```bash
@@ -304,19 +348,27 @@ curl -X GET http://localhost:8000/api/query/timeline
 
 ```text
 api/
-├── routers/        # API endpoints
+├── routers/        # API endpoints (ingest, search, query)
 ├── models/         # Pydantic schemas
-└── services/       # Business logic
+└── services/
+    ├── parser.py       # frontmatter + heading-path extraction
+    ├── ingestion.py    # parse → chunk → embed → store pipeline
+    ├── embedder.py     # sentence-transformers wrapper
+    ├── retrieval.py    # vector / hybrid / RRF / reranked search
+    ├── reranker.py     # cross-encoder singleton (opt-in)
+    ├── evaluation.py   # Recall@k / Precision@k / MRR / nDCG metrics
+    ├── benchmark.py    # strategy comparison runner
+    └── repository.py   # documents/chunks/manifest data access
 
-cli/                # Typer CLI
+cli/                # Typer CLI entry point
 
 content/            # Markdown knowledge base
 
-eval/               # Retrieval benchmarks
+eval/               # Benchmark dataset + EVALUATION.md report
 
-migrations/         # Alembic migrations
+migrations/         # Alembic migrations (self-provisioning extensions)
 
-tests/              # Unit and integration tests
+tests/              # Unit, lifecycle, migration-contract tests
 ```
 
 ---
@@ -329,9 +381,21 @@ tests/              # Unit and integration tests
 pytest -q
 ```
 
-### Run linting
+Tests run without a database (DB-backed integration tests skip automatically).
+Set `DATABASE_URL` to a migrated PostgreSQL+pgvector database to run the full
+suite including ingestion-lifecycle and migration-contract tests:
 
 ```bash
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+make migrate
+pytest -q
+```
+
+### Run linting and formatting
+
+```bash
+black --check api cli tests migrations --line-length 100
+flake8 api cli tests migrations --max-line-length=100
 ruff check .
 ```
 
@@ -344,14 +408,14 @@ mypy api cli
 ### Run evaluation
 
 ```bash
-mindpalace eval retrieval
+mindpalace eval strategies
 ```
 
 ---
 
 ## Reproducibility Test
 
-Verify that a fresh clone works:
+Verify that a fresh clone works end to end:
 
 ```bash
 git clone https://github.com/raunakdey-07/mind-palace.git /tmp/mp-test
@@ -363,16 +427,16 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip install -e .
 
-# Docker
-docker compose up -d
-
-# or Podman
-podman-compose up -d
+docker compose up -d          # or podman-compose up -d
+make migrate                  # schema + extensions on a fresh database
+mindpalace ingest-repo content/
 
 pytest -q
 mindpalace doctor
-mindpalace eval retrieval
+mindpalace eval strategies
 ```
+
+CI performs the same sequence against a fresh `pgvector/pgvector:pg15` service container on every push to `main`.
 
 ---
 

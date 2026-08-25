@@ -19,6 +19,7 @@ include = ["api*", "cli*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [tool.black]
 target-version = ["py311"]

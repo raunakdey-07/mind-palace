@@ -46,6 +46,82 @@ def _db_available() -> bool:
 requires_db = pytest.mark.skipif(not _db_available(), reason="no reachable DATABASE_URL")
 
 
+def _sync_url() -> str:
+    url = os.getenv("DATABASE_URL", "")
+    return (
+        url.replace("postgresql+psycopg://", "postgresql+psycopg2://")
+        .replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        .replace("postgresql://", "postgresql+psycopg2://")
+    )
+
+
+SEMANTICS_DOC = """---
+title: "Semantics Probe Document"
+date: 2024-06-02
+tags: ["semantics-test", "finance"]
+document_type: "project"
+summary: "Seeded fixture for search semantics tests"
+---
+
+# Semantics Probe
+
+Mel spectrogram augmentation and ensemble weighted averaging handle bird call classification.
+
+## Finance Section
+
+Portfolio tracking with Sharpe ratio, max drawdown, SMA EMA RSI MACD indicators.
+"""
+
+
+async def _seed_semantics_doc():
+    """Ingest fixture content so score/filter contracts have data to exercise.
+
+    CI databases are fresh (schema only), so tests cannot assume any corpus.
+    """
+    from api.services.db import session_scope
+    from api.services.ingestion import IngestionService
+
+    svc = IngestionService()
+    async with session_scope() as db:
+        await svc._ingest_content(db, SEMANTICS_DOC, "test/semantics_probe.md")
+
+
+def _cleanup_semantics_doc():
+    import sqlalchemy as sa
+
+    engine = sa.create_engine(_sync_url())
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "DELETE FROM chunks WHERE doc_id IN "
+                    "(SELECT id FROM documents WHERE path = 'test/semantics_probe.md')"
+                )
+            )
+            conn.execute(
+                sa.text("DELETE FROM ingestion_manifest WHERE path = 'test/semantics_probe.md'")
+            )
+            conn.execute(sa.text("DELETE FROM documents WHERE path = 'test/semantics_probe.md'"))
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+async def _seed_corpus():
+    """Ensure fixture content exists for DB-backed tests.
+
+    Runs inside the test's event loop so the asyncpg connections used for
+    seeding share the loop the test itself will use.
+    """
+    if _db_available():
+        _cleanup_semantics_doc()
+        await _seed_semantics_doc()
+        yield
+        _cleanup_semantics_doc()
+    else:
+        yield
+
+
 @pytest.fixture(autouse=True)
 def _fresh_engine_per_test():
     """Dispose the shared async engine around each test.
@@ -156,16 +232,16 @@ async def test_rerank_scores_are_logits_can_be_negative(embedder):
 async def test_document_type_filter_excludes_other_types(embedder):
     async with __import__("api.services.db", fromlist=["session_scope"]).session_scope() as db:
         svc = RetrievalService(db)
-        q = "ensemble models"
+        q = "ensemble weighted averaging bird"
         results = await svc.search(
             embedder.embed_single(q),
             query_text=q,
             k=10,
             hybrid=True,
-            document_type="kaggle",
+            document_type="project",
         )
     assert results
-    assert all(r.source_document_type == "kaggle" for r in results)
+    assert all(r.source_document_type == "project" for r in results)
 
     none_results = await svc.search(
         embedder.embed_single(q),

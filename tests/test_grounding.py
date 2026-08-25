@@ -15,6 +15,8 @@ the system does not post-validate answers against retrieved evidence.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -35,6 +37,15 @@ def _fresh_engine_per_test():
         asyncio.run(async_engine.dispose())
     except Exception:
         pass
+
+
+def _sync_url() -> str:
+    url = os.getenv("DATABASE_URL", "")
+    return (
+        url.replace("postgresql+psycopg://", "postgresql+psycopg2://")
+        .replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        .replace("postgresql://", "postgresql+psycopg2://")
+    )
 
 
 def _build_ask_prompt(question: str, snippets: list[str]) -> str:
@@ -113,18 +124,76 @@ async def _run_ask(question: str, monkeypatch, k: int = 3):
     }
 
 
-@pytest.mark.skipif(not __import__("os").getenv("DATABASE_URL"), reason="needs DATABASE_URL")
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
 async def test_sources_derived_from_retrieval_not_invented(monkeypatch):
-    out = await _run_ask("What techniques handled class imbalance in BirdCLEF?", monkeypatch)
+    """Ingest a known document, then verify sources derive from retrieval.
+
+    Self-sufficient: does not assume the database has a pre-loaded corpus
+    (CI databases are migrated but empty).
+    """
+    import os
+
+    import sqlalchemy as sa
+
+    doc_md = """---
+title: "Grounding Test Doc"
+date: 2024-06-01
+tags: ["grounding-test"]
+document_type: "note"
+summary: "Unique grounding fixture"
+---
+
+# Grounding Test Doc
+
+The zephyr quantum flux capacitor regulates wobble at 42 hertz.
+"""
+    # Ingest via sync engine URL-independent path (reuse lifecycle helpers)
+    from api.services.db import session_scope
+    from api.services.ingestion import IngestionService
+
+    svc = IngestionService()
+    async with session_scope() as db:
+        result = await svc._ingest_content(db, doc_md, "test/grounding_fixture.md")
+    assert result["success"] and result["chunk_count"] > 0
+
+    try:
+        out = await _run_ask("What does the zephyr quantum flux capacitor regulate?", monkeypatch)
+    finally:
+        # cleanup regardless of assertion outcome
+        url = (
+            os.environ["DATABASE_URL"]
+            .replace("postgresql+psycopg://", "postgresql+psycopg2://")
+            .replace("postgresql://", "postgresql+psycopg2://")
+        )
+        engine = sa.create_engine(url)
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        "DELETE FROM chunks WHERE doc_id IN "
+                        "(SELECT id FROM documents WHERE path = 'test/grounding_fixture.md')"
+                    )
+                )
+                conn.execute(
+                    sa.text(
+                        "DELETE FROM ingestion_manifest WHERE path = 'test/grounding_fixture.md'"
+                    )
+                )
+                conn.execute(
+                    sa.text("DELETE FROM documents WHERE path = 'test/grounding_fixture.md'")
+                )
+        finally:
+            engine.dispose()
+
     assert out["llm_called"]
-    # every source must correspond to a chunk that was actually retrieved
-    assert len(out["sources"]) >= 1
-    assert all(isinstance(s, str) for s in out["sources"])
-    # the BirdCLEF question should retrieve the BirdCLEF doc among sources
-    assert any("BirdCLEF" in s for s in out["sources"])
+    assert out["retrieved_chunks"] >= 1
+    # source attribution must come from the retrieved fixture, not be invented
+    assert any("Grounding Test Doc" in s for s in out["sources"])
+    # the fabricated-term question must retrieve the fixture containing it
+    assert any("zephyr quantum flux capacitor" in snip for snip in out["snippets"])
 
 
-@pytest.mark.skipif(not __import__("os").getenv("DATABASE_URL"), reason="needs DATABASE_URL")
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
 async def test_no_retrieval_short_circuits_llm(monkeypatch):
     """A question whose retrieval returns nothing must not call the LLM at all.
 

@@ -20,8 +20,16 @@ target_metadata = None  # We'll use raw SQL migrations
 
 
 def get_url():
-    return os.getenv(
-        "DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+    """Resolve DATABASE_URL to a sync driver for Alembic.
+
+    The runtime app uses asyncpg; migrations run synchronously, so any
+    async driver prefix is rewritten to psycopg2 (a repo dependency).
+    """
+    url = os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    return (
+        url.replace("postgresql+psycopg://", "postgresql+psycopg2://")
+        .replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        .replace("postgresql://", "postgresql+psycopg2://")
     )
 
 

@@ -21,14 +21,26 @@ from api.services.repository import content_hash, deterministic_doc_id
 pytestmark = pytest.mark.asyncio
 
 
+def _sync_url() -> str:
+    """Normalize DATABASE_URL to a sync driver available in this env.
+
+    Prefers psycopg2 (repo dependency); falls back to raw postgresql:// which
+    SQLAlchemy maps to psycopg2 as well.
+    """
+    url = os.getenv("DATABASE_URL", "")
+    return (
+        url.replace("postgresql+psycopg://", "postgresql+psycopg2://")
+        .replace("postgresql+psycopg2://", "postgresql+psycopg2://")
+        .replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        .replace("postgresql://", "postgresql+psycopg2://")
+    )
+
+
 def _db_available() -> bool:
-    url = os.getenv("DATABASE_URL")
-    if not url:
+    if not os.getenv("DATABASE_URL"):
         return False
     try:
-        engine = sa.create_engine(
-            url.replace("+asyncpg", "+psycopg").replace("postgresql+psycopg://", "postgresql://")
-        )
+        engine = sa.create_engine(_sync_url())
         with engine.connect():
             engine.dispose()
         return True
@@ -49,13 +61,12 @@ def _clean_test_paths():
     from sqlalchemy import create_engine
     from sqlalchemy import text as sa_text
 
-    url = os.getenv("DATABASE_URL", "")
     if not _db_available():
         yield
         return
 
     def cleanup():
-        engine = create_engine(url)
+        engine = create_engine(_sync_url())
         with engine.begin() as conn:
             conn.execute(
                 sa_text(

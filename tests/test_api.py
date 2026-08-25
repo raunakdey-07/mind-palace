@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import OperationalError
 
 from api.main import app
 
@@ -46,6 +47,30 @@ async def test_search_endpoint_no_results():
 
     assert data["results"] == []
     assert data["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_search_backend_unavailable_is_503_not_empty():
+    """Regression: DB outages must return 503, not an empty 200 response.
+
+    Clients must be able to distinguish 'no results' from 'backend down'.
+    """
+    transport = ASGITransport(app=app)
+
+    with patch(
+        "api.routers.search.RetrievalService.search",
+        new_callable=AsyncMock,
+    ) as mock_search:
+        mock_search.side_effect = OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://test",
+        ) as client:
+            response = await client.get("/api/search", params={"q": "anything"})
+
+    assert response.status_code == 503
+    assert "unavailable" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio

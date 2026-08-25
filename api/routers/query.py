@@ -23,6 +23,12 @@ from api.services.embedder import Embedder
 from api.services.llm_service import LLMService
 from api.services.retrieval import RetrievalService
 
+# Context budget for /ask: retrieved chunks are added highest-ranked first
+# until this character budget is reached. ~4 chars/token -> ~8k tokens of
+# evidence, leaving ample room in modern LLM context windows while bounding
+# worst-case prompt growth on large corpora.
+MAX_CONTEXT_CHARS = 32000
+
 router = APIRouter()
 embedder = Embedder()
 llm_service = LLMService()
@@ -61,11 +67,29 @@ async def ask(
             model=llm_service.model_name,
         )
 
-    snippets = [r.text for r in results]
+    # Context budget: drop lowest-ranked chunks until the joined context fits.
+    # Highest-ranked (most relevant) evidence is preserved; sources are derived
+    # AFTER budgeting so attribution never references dropped evidence.
+    included: list[str] = []
+    kept_results = []
+    total = 0
+    for r in results:
+        if total + len(r.text) > MAX_CONTEXT_CHARS and included:
+            continue
+        if len(r.text) > MAX_CONTEXT_CHARS and not included:
+            # A single oversized chunk is truncated rather than dropping all evidence.
+            included.append(r.text[:MAX_CONTEXT_CHARS])
+            kept_results.append(r)
+            total = MAX_CONTEXT_CHARS
+            continue
+        included.append(r.text)
+        kept_results.append(r)
+        total += len(r.text)
+
     sources = list(
-        {r.source_title or r.source_path for r in results if r.source_title or r.source_path}
+        {r.source_title or r.source_path for r in kept_results if r.source_title or r.source_path}
     )
-    context = "\n\n---\n\n".join(snippets)
+    context = "\n\n---\n\n".join(included)
 
     prompt = (
         f"Answer the following question using only the provided context. "
@@ -86,15 +110,15 @@ async def ask(
                 keyword_score=r.keyword_score,
                 rrf_score=r.rrf_score,
             )
-            for r in results
+            for r in kept_results
         ]
 
     return StructuredResponse(
         answer=answer,
         sources=sources,
-        snippets=snippets,
+        snippets=[c.text[:200] for c in kept_results[:3]],
         latency_ms=int((time.perf_counter() - start) * 1000),
-        retrieved_chunks=len(results),
+        retrieved_chunks=len(kept_results),
         intent="ask",
         provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,

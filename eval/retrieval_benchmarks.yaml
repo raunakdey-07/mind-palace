@@ -1,151 +1,251 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2026 Raunak Dey
-
-# Retrieval Evaluation Dataset
-#
-# Each entry: query, expected document titles, category.
-# Run with: mindpalace eval retrieval --strategies all
-#
-# Categories:
-#   factual      - exact terminology lookup
-#   semantic     - wording differs substantially from source
-#   technical    - implementation/architecture details
-#   project      - specific project/feature queries
-#   multi-concept- several related concepts at once
-#   ambiguous    - multiple documents plausibly match
-#   false-positive - semantically similar but wrong docs must not dominate
-
-# --- factual ---
-- query: "mel spectrogram augmentation"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: factual
-
-- query: "Altman Z score"
-  # NOTE: the term 'Altman Z score' does not appear anywhere in the corpus.
-  # The expectation relies on the Finalysis doc being the only plausible
-  # financial-analysis match — a weak, vocabulary-mismatch label. Kept as a
-  # known-hard case: it measures semantic generalization, not exact lookup.
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: factual
-
-- query: "pgvector knowledge store"
-  expected: ["Mind Palace — Project README"]
-  category: factual
-
-# --- semantic (different wording than source) ---
-- query: "identifying bird species from sound recordings"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: semantic
-
-- query: "tracking my stock portfolio performance"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: semantic
-
-- query: "second brain for my research notes"
-  expected: ["Mind Palace — Project README"]
-  category: semantic
-
-# --- technical ---
-- query: "CNN transformer attention architecture"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: technical
-
-- query: "SMA EMA RSI MACD indicators"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: technical
-
-- query: "RAG question answering with local LLM"
-  expected: ["Mind Palace — Project README"]
-  category: technical
-
-- query: "backtesting engine strategy validation"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: technical
-
-# --- project ---
-- query: "what did I learn from BirdCLEF"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: project
-
-- query: "how does Finalysis handle market data"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: project
-
-- query: "Mind Palace tech stack"
-  expected: ["Mind Palace — Project README"]
-  category: project
-
-# --- multi-concept ---
-- query: "compare Finalysis and BirdCLEF projects"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-    - "BirdCLEF 2023: Audio Classification"
-  category: multi-concept
-
-- query: "ensemble models and class imbalance handling"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-  category: multi-concept
-
-# --- ambiguous (multiple plausible matches; both should appear in top-k) ---
-- query: "projects completed in 2023"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-    - "Finalysis: Financial Analysis Platform"
-  category: ambiguous
-
-- query: "machine learning projects I built"
-  expected:
-    - "BirdCLEF 2023: Audio Classification"
-    - "Finalysis: Financial Analysis Platform"
-  category: ambiguous
-
-# --- false-positive traps ---
-# Semantically close to finance but answer lives in BirdCLEF doc.
-- query: "weighted averaging of model predictions"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: false-positive
-
-# Semantically close to audio/birds but answer is Finalysis backtesting.
-- query: "validating trading strategies against historical data"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: false-positive
-
-# Close to "portfolio" wording in README but answer is Finalysis tracker.
-- query: "Sharpe ratio and max drawdown metrics"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: false-positive
-
-# --- distractor-heavy: many surface-similar terms, one right answer ---
-- query: "model ensemble predictions"
-  # Both docs mention ensembles/predictions; the BirdCLEF doc is about model
-  # ensembles specifically. Finalysis mentions none of these terms.
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: false-positive
-
-# --- negative-ish: terminology shared across all docs; expects the doc
-#     where the concept is the core subject ---
-- query: "data science project using python"
-  expected:
-    - "Finalysis: Financial Analysis Platform"
-  category: ambiguous
-
-# --- metadata-style filtering via document type vocabulary ---
-- query: "kaggle competition submission"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: factual
-
-# --- long natural-language question ---
-- query: "which of my projects used convolutional neural networks combined with transformer attention layers for audio signal processing"
-  expected: ["BirdCLEF 2023: Audio Classification"]
-  category: semantic
-
-# --- short ambiguous query ---
-- query: "streamlit"
-  expected: ["Finalysis: Financial Analysis Platform"]
-  category: factual
-
-# --- short ambiguous query 2: term appears in multiple docs ---
-- query: "markdown"
-  expected: ["Mind Palace — Project README"]
-  category: ambiguous
+- "query": "mel spectrogram augmentation"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  "category": "lexical"
+- "query": "Sharpe ratio max drawdown"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  "category": "lexical"
+- "query": "efficient frontier quadratic programming"
+  "expected":
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "category": "lexical"
+- "query": "focal loss pseudo-labeling"
+  "expected":
+  - "BirdCLEF 2024: Soundscape Analysis"
+  "category": "lexical"
+- "query": "Grad-CAM heatmap explanations"
+  "expected":
+  - "Project: Image Classifier for Plant Diseases"
+  "category": "lexical"
+- "query": "identifying bird species from sound recordings"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  "category": "semantic"
+- "query": "allocating investments to balance risk and return"
+  "expected":
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "category": "semantic"
+- "query": "converting spoken words into text"
+  "expected":
+  - "Project: Audio Transcription Service with Whisper"
+  "category": "semantic"
+- "query": "finding similar customers based on purchase behavior"
+  "expected":
+  - "Project: Recommendation Engine for E-commerce"
+  "category": "semantic"
+- "query": "detecting unusual patterns in server health data"
+  "expected":
+  - "Project: Time Series Anomaly Detection for Server Metrics"
+  "category": "semantic"
+- "query": "Altman Z score bankruptcy risk"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  "category": "terminology-mismatch"
+- "query": "quantizing neural networks for microcontrollers"
+  "expected":
+  - "Project: Speech Command Recognition on Edge Devices"
+  "category": "terminology-mismatch"
+- "query": "siamese network sentence similarity encoding"
+  "expected":
+  - "Paper Notes: Sentence-BERT Sentence Embeddings using Siamese BERT-Networks"
+  "category": "terminology-mismatch"
+- "query": "streamlit"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  - "Project: Crypto Portfolio Tracker"
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "category": "short-query"
+- "query": "whisper"
+  "expected":
+  - "Project: Audio Transcription Service with Whisper"
+  "category": "short-query"
+- "query": "neo4j"
+  "expected":
+  - "Project: Knowledge Graph Builder from Wikipedia"
+  "category": "short-query"
+- "query": "pgvector"
+  "expected":
+  - "Mind Palace — Project README"
+  - "Note: Vector Databases and Embedding Search"
+  "category": "short-query"
+- "query": "which competition did I use DeBERTa sliding windows and multi-task loss to score student essays\
+    \ on cohesion and grammar"
+  "expected":
+  - "Kaggle: Feedback Prize English Language Learning"
+  "category": "long-question"
+- "query": "I need to find the project where I built a dashboard for tracking cryptocurrency holdings\
+    \ across exchanges with cost basis calculation for taxes"
+  "expected":
+  - "Project: Crypto Portfolio Tracker"
+  "category": "long-question"
+- "query": "what approach handled extreme class imbalance in bird sound detection when rare species had\
+    \ very few labeled examples in the second year of the competition"
+  "expected":
+  - "BirdCLEF 2024: Soundscape Analysis"
+  "category": "long-question"
+- "query": "class imbalance handling techniques"
+  "expected":
+  - "Note: Class Imbalance Techniques Compared"
+  - "BirdCLEF 2023: Audio Classification"
+  - "BirdCLEF 2024: Soundscape Analysis"
+  "category": "ambiguous"
+- "query": "target encoding categorical features"
+  "expected":
+  - "Note: Feature Engineering for Tabular Competitions"
+  - "Kaggle: House Prices Regression with Stacking"
+  "category": "ambiguous"
+- "query": "time series prediction with neural networks"
+  "expected":
+  - "Project: Stock Price Predictor with LSTM Networks"
+  - "Kaggle: Optiver Realized Volatility Prediction"
+  "category": "ambiguous"
+- "query": "transformer architecture self-attention"
+  "expected":
+  - "Paper Notes: Attention Is All You Need"
+  - "Note: Transformer Models from BERT to LLMs"
+  "category": "ambiguous"
+- "query": "ensemble model averaging predictions"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  - "BirdCLEF 2024: Soundscape Analysis"
+  - "Kaggle: House Prices Regression with Stacking"
+  "category": "distractor-heavy"
+- "query": "financial analysis python tools"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  "category": "distractor-heavy"
+- "query": "audio deep learning models"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  - "Project: Speech Command Recognition on Edge Devices"
+  - "Project: Audio Transcription Service with Whisper"
+  "category": "distractor-heavy"
+- "query": "compare the two BirdCLEF competitions approaches"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  - "BirdCLEF 2024: Soundscape Analysis"
+  "category": "multi-document"
+- "query": "difference between tracking a portfolio and optimizing a portfolio"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "category": "multi-document"
+- "query": "papers about retrieval and ranking fusion methods"
+  "expected":
+  - "Paper Notes: Dense Passage Retrieval for Open-Domain QA"
+  - "Paper Notes: Reciprocal Rank Fusion Outperforms Condorcet"
+  "category": "multi-document"
+- "query": "reinforcement learning robotics control policy gradients"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "quantum computing qubit error correction"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "kubernetes cluster autoscaling configuration"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "graph neural network message passing convolution"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "volatility forecasting order book data"
+  "expected":
+  - "Kaggle: Optiver Realized Volatility Prediction"
+  "filters":
+    "document_type": "kaggle"
+  "category": "metadata-filtered"
+- "query": "attention mechanism architecture explanation"
+  "expected":
+  - "Paper Notes: Attention Is All You Need"
+  "filters":
+    "document_type": "paper"
+  "category": "metadata-filtered"
+- "query": "portfolio construction optimization"
+  "expected":
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "filters":
+    "document_type": "project"
+  "category": "metadata-filtered"
+- "query": "cross validation strategies leakage prevention"
+  "expected":
+  - "Note: Understanding Cross-Validation Strategies"
+  "filters":
+    "document_type": "note"
+  "category": "metadata-filtered"
+- "query": "stock market prediction models"
+  "expected":
+  - "Project: Stock Price Predictor with LSTM Networks"
+  - "Kaggle: Optiver Realized Volatility Prediction"
+  "filters":
+    "tags":
+    - "finance"
+  "category": "tag-filtered"
+- "query": "image classification transfer learning"
+  "expected":
+  - "Project: Image Classifier for Plant Diseases"
+  - "Kaggle: Image Segmentation for Ship Detection"
+  "filters":
+    "tags":
+    - "computer-vision"
+  "category": "tag-filtered"
+- "query": "soundscape detection with focal loss"
+  "expected":
+  - "BirdCLEF 2024: Soundscape Analysis"
+  "category": "similar-title"
+- "query": "weighted sampling for rare bird species"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  "category": "similar-title"
+- "query": "tracking holdings valuation dashboards"
+  "expected":
+  - "Project: Crypto Portfolio Tracker"
+  "category": "similar-title"
+- "query": "what mattered more than architecture changes in the first bird sound competition"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  "category": "section-level"
+- "query": "which project found that background soil confused the model"
+  "expected":
+  - "Project: Image Classifier for Plant Diseases"
+  "category": "section-level"
+- "query": "honest conclusion about whether the stock predictor found real market edge"
+  "expected":
+  - "Project: Stock Price Predictor with LSTM Networks"
+  "category": "section-level"
+- "query": "how many bird species were in the 2023 competition training data"
+  "expected":
+  - "BirdCLEF 2023: Audio Classification"
+  "category": "factual"
+- "query": "which libraries provide the exchange API integration for crypto prices"
+  "expected":
+  - "Project: Crypto Portfolio Tracker"
+  "category": "factual"
+- "query": "what loss function handles class imbalance via easy example down-weighting"
+  "expected":
+  - "BirdCLEF 2024: Soundscape Analysis"
+  - "Note: Class Imbalance Techniques Compared"
+  "category": "factual"
+- "query": "Ledoit-Wolf shrinkage covariance estimation"
+  "expected":
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "category": "factual"
+- "query": "in-batch negatives hard negatives training"
+  "expected":
+  - "Paper Notes: Dense Passage Retrieval for Open-Domain QA"
+  "category": "factual"
+- "query": "constant k equals sixty rank-based score-free combination"
+  "expected":
+  - "Paper Notes: Reciprocal Rank Fusion Outperforms Condorcet"
+  "category": "factual"
+- "query": "simhash near duplicate detection frontier"
+  "expected":
+  - "Project: Distributed Web Crawler"
+  "category": "factual"
+- "query": "event loop binding connection pool disposal"
+  "expected":
+  - "Note: Async Python Patterns with asyncio and SQLAlchemy"
+  "category": "factual"

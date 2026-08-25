@@ -58,22 +58,53 @@ def build_strategies(
     embedder: Embedder,
     query: str,
     candidate_sizes: tuple[int, ...] = (20,),
+    document_type: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict[str, Callable]:
     """Return ordered strategy runners for a query. Same queries for every strategy.
+
+    Metadata filters from the benchmark entry are applied identically to all
+    strategies so comparisons stay apples-to-apples.
 
     When multiple candidate sizes are given, one rerank variant per size is added
     (e.g. ``hybrid+rrf+rerank@c10``).
     """
     vector = embedder.embed_single(query)
     strategies: dict[str, Callable] = {
-        "vector": _make_strategy(service, vector, hybrid=False),
-        "hybrid": _make_strategy(service, vector, hybrid=True, rrf=False, query_text=query),
-        "hybrid+rrf": _make_strategy(service, vector, hybrid=True, rrf=True, query_text=query),
+        "vector": _make_strategy(
+            service, vector, hybrid=False, document_type=document_type, tags=tags
+        ),
+        "hybrid": _make_strategy(
+            service,
+            vector,
+            hybrid=True,
+            rrf=False,
+            query_text=query,
+            document_type=document_type,
+            tags=tags,
+        ),
+        "hybrid+rrf": _make_strategy(
+            service,
+            vector,
+            hybrid=True,
+            rrf=True,
+            query_text=query,
+            document_type=document_type,
+            tags=tags,
+        ),
     }
     for c in candidate_sizes:
         name = f"hybrid+rrf+rerank@c{c}"
         strategies[name] = _make_strategy(
-            service, vector, hybrid=True, rrf=True, query_text=query, rerank=True, candidate_k=c
+            service,
+            vector,
+            hybrid=True,
+            rrf=True,
+            query_text=query,
+            rerank=True,
+            candidate_k=c,
+            document_type=document_type,
+            tags=tags,
         )
     return strategies
 
@@ -101,8 +132,16 @@ async def run_benchmark(
 
         for bm in benchmarks:
             query = bm["query"]
-            expected = bm["expected"]
-            runners = build_strategies(service, embedder, query, candidate_sizes)
+            expected = bm.get("expected", [])
+            filters = bm.get("filters") or {}
+            runners = build_strategies(
+                service,
+                embedder,
+                query,
+                candidate_sizes,
+                document_type=filters.get("document_type"),
+                tags=filters.get("tags"),
+            )
 
             for name in results_or_default(runners):
                 if name not in results:
@@ -115,6 +154,17 @@ async def run_benchmark(
 
                 sr = results[name]
                 sr.latencies_ms.append(elapsed_ms)
+
+                # Negative queries: relevant set is empty. Score them on
+                # precision only (any retrieved doc is a false positive);
+                # recall/MRR/nDCG are undefined and excluded from averages.
+                if bm.get("expect_empty"):
+                    for k in k_values:
+                        sr.precision[k] = sr.precision.get(k, 0.0) + precision_at_k(
+                            [], retrieved_titles, k
+                        )
+                    continue
+
                 for k in k_values:
                     sr.recall[k] = sr.recall.get(k, 0.0) + recall_at_k(
                         expected, retrieved_titles, k
@@ -128,13 +178,16 @@ async def run_benchmark(
                 if not set(expected) & set(retrieved_titles[: max(k_values)]):
                     failures.append(_failure_record(bm, name, expected, retrieved_results))
 
-    n = len(benchmarks)
+    n_positive = sum(1 for b in benchmarks if not b.get("expect_empty"))
+    n_all = len(benchmarks)
     for sr in results.values():
         for k in k_values:
-            sr.recall[k] /= n
-            sr.precision[k] /= n
-            sr.ndcg[k] /= n
-        sr.mrr /= n
+            sr.recall[k] /= n_positive
+            sr.ndcg[k] /= n_positive
+            # Precision averaged over ALL queries (negatives included): a
+            # strategy returning junk for negative queries is penalized here.
+            sr.precision[k] /= n_all
+        sr.mrr /= n_positive
 
     return results, failures
 

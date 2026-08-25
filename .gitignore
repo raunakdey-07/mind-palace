@@ -82,6 +82,9 @@ helm/
 docs/
 monitoring/
 
-# Keep only the main project README
+# Keep project documentation; ignore stray personal notes
 *.md
 !README.md
+!NOTICE.md
+!content_eval/*.md
+!eval/EVALUATION.md

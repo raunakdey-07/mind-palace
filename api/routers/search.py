@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,9 +52,13 @@ async def search(
             rrf=rrf,
             rerank=rerank,
         )
-    except OperationalError:
-        # Tests may run without a PostgreSQL server.
-        results = []
+    except OperationalError as e:
+        # Backend unavailable must NOT masquerade as "no results": clients
+        # need to distinguish an empty index from an outage.
+        raise HTTPException(
+            status_code=503,
+            detail="Search backend unavailable",
+        ) from e
 
     return SearchResponse(
         query=q,

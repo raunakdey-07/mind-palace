@@ -63,10 +63,17 @@ Evaluation         Recall@k / Precision@k / MRR / latency per strategy
 |---|---|---|
 | `vector` | pure semantic similarity | |
 | `hybrid` | semantic + keyword signals, weighted blend | |
-| `hybrid + RRF` | rank-fused; best measured quality at negligible cost | **yes** |
+| `hybrid + RRF` | rank-fused; robust to score-scale drift | **yes** |
 | `hybrid + RRF + reranker` | cross-encoder re-scoring of a candidate pool | opt-in (`?rerank=true`) |
 
-**Decision rationale:** benchmark measurements on the current corpus show hybrid+RRF is the only strategy reaching Recall@3 = 1.00 at ~2 ms average latency. Cross-encoder reranking adds roughly two orders of magnitude of latency (~200 ms+) for a marginal MRR change and slightly worse Recall@3 on multi-relevant queries. It therefore remains available but off by default; this decision is revisited as the corpus grows.
+**Decision rationale (51-doc corpus, 54 queries):** all three non-reranked
+strategies are statistically comparable on quality (MRR 0.84–0.88, R@10
+0.92–0.96 — differences are within sampling noise at this benchmark size).
+Hybrid+RRF remains the API default because rank-based fusion is robust to
+score-scale drift as the corpus evolves, and its latency (~15 ms) is close to
+pure vector search. Reranking shows a small consistent gain on R@1/MRR/nDCG
+but costs ~1.7 s per query and slightly reduces R@3; it stays opt-in.
+See `eval/EVALUATION.md` for full measurements and failure analysis.
 
 ### Evaluation
 
@@ -78,7 +85,12 @@ mindpalace eval strategies --candidates 10,20,50 --details
 
 It executes the same 19-query deterministic dataset against every strategy and reports Recall@3/5/10, Precision@3/5/10, MRR, and latency, plus per-query failure diagnostics (scores, ranks, chunk text).
 
-**Scope caveat:** the current corpus is small (3 documents, 13 chunks). The benchmark is genuinely useful for **regression detection** — it caught real defects during development — but the corpus is far too small to claim broad retrieval superiority or to tune ranking parameters meaningfully. Candidate-pool-size experiments are inconclusive at this scale because every pool contains the entire corpus.
+**Scope caveat:** the evaluation corpus contains 51 documents and 171 chunks
+with 54 labeled queries. This is large enough for meaningful strategy
+comparison and regression detection, but far too small to claim broad
+retrieval superiority or to draw universal conclusions about ranking
+parameters. Metric differences between top strategies are within sampling
+noise at this scale.
 
 See `eval/EVALUATION.md` for full methodology, configuration, and measured results.
 
@@ -362,7 +374,9 @@ api/
 
 cli/                # Typer CLI entry point
 
-content/            # Markdown knowledge base
+content/            # Sample knowledge base (3 docs)
+
+content_eval/       # Evaluation corpus (51 docs, used by the benchmark)
 
 eval/               # Benchmark dataset + EVALUATION.md report
 

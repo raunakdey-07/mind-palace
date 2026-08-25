@@ -86,21 +86,37 @@ class EvaluationService:
             if not isinstance(entry, dict):
                 raise ValueError(f"Benchmark entry {i} must be a mapping")
             query = entry.get("query")
-            expected = entry.get("expected") or entry.get("relevant_documents")
             if not query or not isinstance(query, str):
                 raise ValueError(f"Benchmark entry {i} missing non-empty 'query'")
-            if not expected or not isinstance(expected, list):
-                raise ValueError(f"Benchmark entry {i} ('{query}') missing 'expected' list")
-            if not all(isinstance(d, str) and d for d in expected):
-                raise ValueError(f"Benchmark entry {i} ('{query}') has invalid expected docs")
             if query in seen_queries:
                 raise ValueError(f"Duplicate benchmark query: '{query}'")
             seen_queries.add(query)
+
+            expect_empty = bool(entry.get("expect_empty", False))
+            expected = entry.get("expected") or entry.get("relevant_documents") or []
+
+            if expect_empty:
+                # Negative query: must declare no relevant documents.
+                if expected:
+                    raise ValueError(
+                        f"Benchmark entry {i} ('{query}') sets expect_empty "
+                        "but lists expected documents"
+                    )
+                expected = []
+            else:
+                if not expected or not isinstance(expected, list):
+                    raise ValueError(f"Benchmark entry {i} ('{query}') missing 'expected' list")
+                if not all(isinstance(d, str) and d for d in expected):
+                    raise ValueError(f"Benchmark entry {i} ('{query}') has invalid expected docs")
+                expected = list(dict.fromkeys(expected))  # dedupe, preserve order
+
             validated.append(
                 {
                     "query": query,
-                    "expected": list(dict.fromkeys(expected)),  # dedupe, preserve order
+                    "expected": expected,
+                    "expect_empty": expect_empty,
                     "category": entry.get("category", "general"),
+                    "filters": entry.get("filters") or {},
                 }
             )
         return validated

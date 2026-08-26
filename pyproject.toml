@@ -13,9 +13,13 @@ dependencies = []
 [project.scripts]
 mindpalace = "cli.main:app"
 
+[tool.setuptools]
+# Top-level single-file modules alongside the api/cli packages.
+py-modules = ["mindpalace_sdk", "mcp_server"]
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "cli*", "mindpalace_sdk*", "mcp_server*"]
+include = ["api*", "cli*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

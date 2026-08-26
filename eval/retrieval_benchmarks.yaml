@@ -249,3 +249,209 @@
   "expected":
   - "Note: Async Python Patterns with asyncio and SQLAlchemy"
   "category": "factual"
+- "query": "CTC loss connectionist temporal classification"
+  "expected":
+  - "Kaggle: ASL Fingerspelling Recognition"
+  "category": "lexical"
+- "query": "ArcFace metric learning margin"
+  "expected":
+  - "Kaggle: Humpback Whale Identification"
+  - "Kaggle: Shopee Product Matching"
+  "category": "lexical"
+- "query": "denoising autoencoder pretraining"
+  "expected":
+  - "Kaggle: Jane Street Market Prediction"
+  "category": "lexical"
+- "query": "ONNX runtime dynamic batching"
+  "expected":
+  - "Project: ML Model Serving with FastAPI and ONNX"
+  "category": "lexical"
+- "query": "point-in-time correct feature store"
+  "expected":
+  - "Project: Feature Store with Redis and PostgreSQL"
+  "category": "lexical"
+- "query": "SM-2 spaced repetition ease factor"
+  "expected":
+  - "Project: Flashcard Scheduler with Spaced Repetition"
+  "category": "lexical"
+- "query": "Louvain community detection fraud rings"
+  "expected":
+  - "Project: Graph-Based Fraud Detection"
+  "category": "lexical"
+- "query": "XLM-RoBERTa multilingual fine-tuning"
+  "expected":
+  - "Kaggle: Contradictory My Dear Watson NLI"
+  - "Project: Multilingual Text Classifier for Support Tickets"
+  "category": "lexical"
+- "query": "predicting what a student will get right next"
+  "expected":
+  - "Kaggle: Riiid Answer Correctness Prediction"
+  "category": "semantic"
+- "query": "recovering the text prompt that generated an image"
+  "expected":
+  - "Kaggle: Stable Diffusion Image to Prompt"
+  "category": "semantic"
+- "query": "finding duplicate product listings across photos and titles"
+  "expected":
+  - "Kaggle: Shopee Product Matching"
+  "category": "semantic"
+- "query": "turning podcast audio into chapter markers"
+  "expected":
+  - "Project: Podcast Chapter Marker Generator"
+  "category": "semantic"
+- "query": "checking that backups can actually be restored"
+  "expected":
+  - "Project: Backup Verification and Restore Testing"
+  "category": "semantic"
+- "query": "how long until lab equipment fails from seismic signals"
+  "expected":
+  - "Kaggle: LANL Earthquake Prediction"
+  "category": "semantic"
+- "query": "word error rate transcription accuracy"
+  "expected":
+  - "Project: Audio Transcription Service with Whisper"
+  "category": "terminology-mismatch"
+- "query": "knowledge tracing cognitive student modeling"
+  "expected":
+  - "Kaggle: Riiid Answer Correctness Prediction"
+  "category": "terminology-mismatch"
+- "query": "nilm nonintrusive load monitoring disaggregation"
+  "expected":
+  - "Project: Home Assistant Energy Dashboard"
+  "category": "terminology-mismatch"
+- "query": "approximate nearest neighbor search graphs"
+  "expected":
+  - "Note: Vector Databases and Embedding Search"
+  "category": "terminology-mismatch"
+- "query": "optuna"
+  "expected":
+  - "Note: Hyperparameter Tuning Strategies"
+  - "Kaggle: Tabular Playground February Continuous Regression"
+  "category": "short-query"
+- "query": "cypher"
+  "expected":
+  - "Project: Knowledge Graph Builder from Wikipedia"
+  "category": "short-query"
+- "query": "tesseract"
+  "expected":
+  - "Project: Expense Receipt OCR Pipeline"
+  "category": "short-query"
+- "query": "faiss"
+  "expected":
+  - "Project: Semantic Search over ArXiv Papers"
+  "category": "short-query"
+- "query": "label noise handling strategies"
+  "expected":
+  - "Kaggle: Cassava Leaf Disease Classification"
+  - "Kaggle: Histopathologic Cancer Detection"
+  "category": "ambiguous"
+- "query": "time series forecasting with gradient boosting"
+  "expected":
+  - "Kaggle: Store Sales Time Series Forecasting"
+  - "Kaggle: Optiver Realized Volatility Prediction"
+  "category": "ambiguous"
+- "query": "speaker diarization and transcript segmentation"
+  "expected":
+  - "Project: Meeting Notes Summarizer"
+  - "Project: Podcast Chapter Marker Generator"
+  "category": "ambiguous"
+- "query": "projects that combine audio processing with machine learning"
+  "expected":
+  - "Project: Speech Command Recognition on Edge Devices"
+  - "Project: Audio Transcription Service with Whisper"
+  - "BirdCLEF 2023: Audio Classification"
+  "category": "multi-document"
+- "query": "everything about my finance-related projects and competitions"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  - "Project: Crypto Portfolio Tracker"
+  "category": "multi-document"
+- "query": "blockchain smart contract solidity development"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "autonomous vehicle lidar point cloud perception"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "protein folding alphafold structure prediction"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "game engine physics simulation collision detection"
+  "expect_empty": true
+  "category": "negative"
+  "expected": []
+- "query": "essay scoring regression language models"
+  "expected":
+  - "Kaggle: Feedback Prize English Language Learning"
+  - "Kaggle: CommonLit Readability Prize"
+  "filters":
+    "document_type": "kaggle"
+  "category": "metadata-filtered"
+- "query": "attention architecture origin paper"
+  "expected":
+  - "Paper Notes: Attention Is All You Need"
+  "filters":
+    "document_type": "paper"
+  "category": "metadata-filtered"
+- "query": "document parsing extraction pipeline"
+  "expected":
+  - "Project: PDF Extraction Pipeline for Research Papers"
+  - "Project: Resume Parsing and Skill Extraction"
+  "filters":
+    "document_type": "project"
+  "category": "metadata-filtered"
+- "query": "statistics for comparing model performance"
+  "expected":
+  - "Note: Confidence Intervals for Model Comparison"
+  - "Note: Statistics Foundations for Machine Learning"
+  "filters":
+    "document_type": "note"
+  "category": "metadata-filtered"
+- "query": "deep learning computer vision projects"
+  "expected":
+  - "Project: Image Classifier for Plant Diseases"
+  - "Project: Stock Price Predictor with LSTM Networks"
+  "filters":
+    "tags":
+    - "deep-learning"
+  "category": "tag-filtered"
+- "query": "streamlit dashboard applications"
+  "expected":
+  - "Finalysis: Financial Analysis Platform"
+  - "Project: Crypto Portfolio Tracker"
+  - "Project: Portfolio Optimizer with Mean-Variance Analysis"
+  "filters":
+    "tags":
+    - "streamlit"
+  "category": "tag-filtered"
+- "query": "tabular playground january competition"
+  "expected":
+  - "Kaggle: Tabular Playground Series January"
+  "category": "similar-title"
+- "query": "february synthetic regression playground"
+  "expected":
+  - "Kaggle: Tabular Playground February Continuous Regression"
+  "category": "similar-title"
+- "query": "feedback prize scoring summaries against sources"
+  "expected":
+  - "Kaggle: Feedback Prize Evaluating Student Summaries"
+  "category": "similar-title"
+- "query": "feedback prize analytic essay measures cohesion grammar"
+  "expected":
+  - "Kaggle: Feedback Prize English Language Learning"
+  "category": "similar-title"
+- "query": "what latency constraint eliminated half the model choices in the anonymized market competition"
+  "expected":
+  - "Kaggle: Ubiquant Market Prediction"
+  "category": "section-level"
+- "query": "which retrieval stage determined final accuracy in the science exam competition"
+  "expected":
+  - "Kaggle: LLMScienceExam QA with Retrieval"
+  "category": "section-level"
+- "query": "what did the graph fraud project conclude about GNN versus gradient boosting"
+  "expected":
+  - "Project: Graph-Based Fraud Detection"
+  "category": "section-level"

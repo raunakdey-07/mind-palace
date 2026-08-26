@@ -11,6 +11,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable
 
+from api.services.confidence import MetricSamples
 from api.services.db import session_scope
 from api.services.embedder import Embedder
 from api.services.evaluation import (
@@ -122,6 +123,7 @@ async def run_benchmark(
     embedder = Embedder()
 
     results: dict[str, StrategyResult] = {}
+    samples: dict[str, MetricSamples] = {}
     failures: list[dict] = []
 
     # Warm up models once so first-query load time doesn't skew latency.
@@ -146,6 +148,7 @@ async def run_benchmark(
             for name in results_or_default(runners):
                 if name not in results:
                     results[name] = StrategyResult(name=name)
+                    samples[name] = MetricSamples(strategy=name)
                 runner = runners[name]
 
                 start = time.perf_counter()
@@ -175,6 +178,14 @@ async def run_benchmark(
                     sr.ndcg[k] = sr.ndcg.get(k, 0.0) + ndcg_at_k(expected, retrieved_titles, k)
                 sr.mrr += reciprocal_rank(expected, retrieved_titles)
 
+                # Retain per-query values for statistical comparison.
+                samples[name].add(
+                    recall={k: recall_at_k(expected, retrieved_titles, k) for k in k_values},
+                    precision={k: precision_at_k(expected, retrieved_titles, k) for k in k_values},
+                    mrr=reciprocal_rank(expected, retrieved_titles),
+                    ndcg={k: ndcg_at_k(expected, retrieved_titles, k) for k in k_values},
+                )
+
                 if not set(expected) & set(retrieved_titles[: max(k_values)]):
                     failures.append(_failure_record(bm, name, expected, retrieved_results))
 
@@ -189,7 +200,7 @@ async def run_benchmark(
             sr.precision[k] /= n_all
         sr.mrr /= n_positive
 
-    return results, failures
+    return results, failures, samples
 
 
 def results_or_default(runners: dict[str, Callable]) -> list[str]:

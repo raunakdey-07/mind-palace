@@ -383,6 +383,7 @@ def eval_strategies(
         format_report,
         run_benchmark,
     )
+    from api.services.confidence import format_comparison_table
 
     try:
         candidate_sizes = tuple(int(c.strip()) for c in candidates.split(",") if c.strip())
@@ -391,7 +392,7 @@ def eval_strategies(
         raise typer.Exit(code=1)
 
     try:
-        results, failures = asyncio.run(
+        results, failures, samples = asyncio.run(
             run_benchmark(benchmark_file, candidate_sizes=candidate_sizes)
         )
     except Exception as e:
@@ -400,6 +401,14 @@ def eval_strategies(
 
     typer.echo("\n[RESULTS] Retrieval strategy comparison\n")
     typer.echo(format_report(results, failures=failures))
+
+    ordered = [samples[n] for n in ("vector", "hybrid", "hybrid+rrf") if n in samples]
+    rerank = [samples[n] for n in samples if n.startswith("hybrid+rrf+rerank")]
+    if "hybrid+rrf" in samples and (ordered or rerank):
+        base = samples["hybrid+rrf"]
+        others = [s for s in ordered + rerank if s.strategy != "hybrid+rrf"]
+        typer.echo("\n[STATS] Paired bootstrap comparison (95% CI, resampled per query)\n")
+        typer.echo(format_comparison_table(base, others, k=3, metric="recall"))
     if details and failures:
         typer.echo("\n[DEBUG] Failure diagnostics\n")
         typer.echo(format_failure_details(failures))

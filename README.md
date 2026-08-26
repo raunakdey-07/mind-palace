@@ -66,13 +66,13 @@ Evaluation         Recall@k / Precision@k / MRR / latency per strategy
 | `hybrid + RRF` | rank-fused; robust to score-scale drift | **yes** |
 | `hybrid + RRF + reranker` | cross-encoder re-scoring of a candidate pool | opt-in (`?rerank=true`) |
 
-**Decision rationale (51-doc corpus, 54 queries):** all three non-reranked
-strategies are statistically comparable on quality (MRR 0.84–0.88, R@10
-0.92–0.96 — differences are within sampling noise at this benchmark size).
-Hybrid+RRF remains the API default because rank-based fusion is robust to
-score-scale drift as the corpus evolves, and its latency (~15 ms) is close to
-pure vector search. Reranking shows a small consistent gain on R@1/MRR/nDCG
-but costs ~1.7 s per query and slightly reduces R@3; it stays opt-in.
+**Decision rationale (202-doc corpus, 98 queries, paired bootstrap):** all
+strategies are statistically indistinguishable on quality — every paired
+difference in Recall@3 contains zero at 95% confidence. hybrid+RRF remains the
+default because rank-based fusion is robust to score-scale drift as the corpus
+evolves, at moderate latency (~50 ms). Reranking shows point-estimate gains
+but costs ~1.7 s per query (30×); it stays opt-in, with candidate pool 10 if
+enabled. Vector-only (~6 ms) is an equivalent-quality fast path.
 See `eval/EVALUATION.md` for full measurements and failure analysis.
 
 ### Evaluation
@@ -83,14 +83,12 @@ The evaluation framework lives in `eval/` and runs through the CLI:
 mindpalace eval strategies --candidates 10,20,50 --details
 ```
 
-It executes the same 19-query deterministic dataset against every strategy and reports Recall@3/5/10, Precision@3/5/10, MRR, and latency, plus per-query failure diagnostics (scores, ranks, chunk text).
+It executes the same 98-query deterministic dataset against every strategy and reports Recall@1/3/5/10, Precision@3, MRR, nDCG@5, latency, paired bootstrap confidence intervals, and per-query failure diagnostics.
 
-**Scope caveat:** the evaluation corpus contains 51 documents and 171 chunks
-with 54 labeled queries. This is large enough for meaningful strategy
-comparison and regression detection, but far too small to claim broad
-retrieval superiority or to draw universal conclusions about ranking
-parameters. Metric differences between top strategies are within sampling
-noise at this scale.
+**Scope caveat:** the evaluation corpus contains 202 documents and 671 chunks
+with 98 labeled queries plus mechanical ground-truth validation. Strategy
+differences remain within statistical noise; the benchmark's primary value is
+regression detection and exposing failure classes, not crowning a winner.
 
 See `eval/EVALUATION.md` for full methodology, configuration, and measured results.
 
@@ -376,7 +374,7 @@ cli/                # Typer CLI entry point
 
 content/            # Sample knowledge base (3 docs)
 
-content_eval/       # Evaluation corpus (51 docs, used by the benchmark)
+content_eval/       # Evaluation corpus (202 docs, used by the benchmark)
 
 eval/               # Benchmark dataset + EVALUATION.md report
 

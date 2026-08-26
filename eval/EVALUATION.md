@@ -4,11 +4,11 @@
 
 | Item | Value |
 |---|---|
-| Corpus | `content_eval/` — 51 Markdown documents, 171 chunks |
-| Document types | 12 kaggle, 18 project, 13 note, 8 paper |
+| Corpus | `content_eval/` — 202 Markdown documents, 671 chunks |
+| Document types | kaggle, project, note, paper (proportional mix) |
 | Embedding model | `all-MiniLM-L6-v2` (384-dim, normalized) |
 | Reranker model | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
-| Benchmark | `eval/retrieval_benchmarks.yaml` — 54 queries, 14 categories |
+| Benchmark | `eval/retrieval_benchmarks.yaml` — 98 queries, 14 categories |
 | Relevance model | binary, document-level (consistent across all metrics) |
 | k values | 1, 3, 5, 10 |
 | Database | PostgreSQL 15 + pgvector (HNSW index), pg_trgm |
@@ -16,90 +16,98 @@
 
 ## Ground-truth methodology
 
-Labels were assigned by **reading each source document and marking which
-document(s) contain the answer**, independent of any retrieval output. A
-verification script cross-checks every `expected` title against the corpus
-frontmatter — a label referencing a non-existent title is treated as a bug in
-the benchmark, not a retrieval failure. Four queries are explicitly negative
-(`expect_empty: true`): no relevant document exists anywhere in the corpus,
-and they are scored on precision only.
+Labels were assigned by reading source documents — never derived from
+retrieval output. Mechanical validation (`tests/test_benchmark_ground_truth.py`)
+enforces: every expected title exists in the corpus frontmatter; negative
+queries carry no labels; filters reference valid metadata values; queries are
+unique; every query has a category. Eight queries are explicitly negative
+(`expect_empty: true`) and are scored on precision only.
 
-## Results (54 queries; recall/MRR/nDCG over the 50 positive queries)
+## Results (98 queries; recall/MRR/nDCG over the 90 positive queries)
 
 | Strategy | R@1 | R@3 | R@5 | R@10 | P@3 | MRR | nDCG@5 | avg ms |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| vector | 0.67 | 0.87 | 0.91 | 0.95 | 0.36 | 0.87 | 0.86 | 6 |
-| hybrid | 0.69 | 0.87 | 0.91 | 0.96 | 0.36 | 0.88 | 0.87 | 22 |
-| hybrid+rrf | 0.66 | 0.85 | 0.89 | 0.92 | 0.35 | 0.84 | 0.85 | 15 |
-| hybrid+rrf+rerank@c20 | 0.70 | 0.86 | 0.91 | 0.95 | 0.37 | 0.88 | 0.88 | ~1750 |
+| vector | 0.57 | 0.78 | 0.83 | 0.92 | 0.31 | 0.79 | 0.76 | 6 |
+| hybrid | 0.56 | 0.79 | 0.86 | 0.92 | 0.32 | 0.78 | 0.77 | 82 |
+| hybrid+rrf | 0.57 | 0.78 | 0.87 | 0.90 | 0.32 | 0.78 | 0.78 | 51 |
+| hybrid+rrf+rerank@c20 | 0.63 | 0.79 | 0.83 | 0.89 | 0.31 | 0.81 | 0.79 | ~1740 |
 
-P@3 ≈ 0.36 for all strategies reflects the metric's definition, not weakness:
-most positive queries have exactly one relevant document out of 51, so P@3 is
-capped near 1/3 by construction.
+## Statistical comparison (paired bootstrap, 95% CI)
 
-## Reranker candidate-size comparison
+Per-query Recall@3 values resampled over queries; paired differences between
+strategies on the same queries:
 
-| candidate_k | R@1 | R@3 | R@10 | MRR | nDCG@5 | avg ms |
-|---:|---:|---:|---:|---:|---:|---:|
-| 10 | 0.70 | 0.86 | 0.97 | 0.88 | 0.88 | ~1300 |
-| 20 | 0.70 | 0.86 | 0.95 | 0.88 | 0.88 | ~1750 |
-| 50 | 0.70 | 0.86 | 0.95 | 0.88 | 0.87 | ~3500 |
+```text
+Strategy                mean        95% CI           vs hybrid+rrf
+hybrid+rrf              0.780  [0.702,0.852]                  -
+vector                  0.776  [0.704,0.846]     [-0.065,+0.061]
+hybrid                  0.793  [0.722,0.861]     [-0.046,+0.074]
+rerank@c20              0.794  [0.720,0.867]     [-0.043,+0.070]
+```
 
-## Findings
+**Every paired-difference interval contains zero.** No strategy is
+statistically distinguishable from any other on this benchmark at this sample
+size.
 
-1. **The expanded corpus changes the picture materially.** On the previous
-   3-document corpus every strategy scored R@5 = 1.00 and differences were
-   noise. Here real separation exists — and **no strategy dominates**.
-2. **Reranking now shows a genuine but small quality gain**: best or tied-best
-   on R@1 (0.70), P@3 (0.37), MRR (0.88), nDCG@5 (0.88). The gain over plain
-   hybrid is +0.01–0.02 across metrics — within plausible sampling noise at
-   N=50 queries (see statistics note below).
-3. **Reranking costs ~1750 ms vs 15–23 ms** — roughly two orders of magnitude.
-   It also *hurts* R@3 slightly (0.86 vs 0.87) by re-ordering relevant docs out
-   of the top-3 on some queries.
-4. **hybrid (weighted blend) is now marginally better than hybrid+rrf**
-   (MRR 0.88 vs 0.84, R@10 0.96 vs 0.92). The earlier small-corpus result that
-   favored RRF did not fully survive corpus expansion. The gap is small enough
-   that both remain defensible defaults; hybrid+RRF stays the API default
-   pending confirmation on an even larger corpus, since its score-free fusion
-   is more robust to score-scale drift as the corpus evolves.
-5. **Candidate pool size**: c=10 matches c=20/c=50 quality at lower latency.
-   If reranking is enabled, c=10 is the sensible setting.
-6. **Negative-query handling**: all strategies correctly returned few/no
-   results for the four negative queries; precision penalties are included in
-   the P@3 column.
+### Decision (evidence-based)
 
-### Statistics caveat
+Since quality differences are within noise, the decision falls to latency,
+robustness, and simplicity:
 
-With 50 positive queries, one query flipping changes Recall@k by ±0.02. The
-differences between hybrid, hybrid+RRF, and reranked retrieval are of exactly
-this magnitude. The honest conclusion is that **all three are statistically
-comparable on this benchmark**; only their latency differs decisively.
+1. **Default stays hybrid+RRF** (~51 ms). Rank-based fusion is scale-free — it
+   needs no score calibration as the corpus evolves, unlike the weighted blend.
+2. **Reranking remains opt-in.** Its +0.01–0.03 point-estimate gains are not
+   statistically established, while its ~1740 ms cost is a 30× latency increase.
+   If enabled, candidate pool c=10 is sufficient (larger pools add cost, not
+   quality).
+3. **Vector-only is a legitimate fast path** (~6 ms) at equivalent quality —
+   worth exposing for latency-sensitive consumers.
 
-## Failure analysis (representative)
+The previous milestone's provisional conclusion ("RRF best") was an artifact
+of a trivially small corpus; the honest statement is now *equivalence with
+different latency profiles*.
 
-| Query (category) | Failure mode | Diagnosis |
-|---|---|---|
-| "Sharpe ratio max drawdown" (lexical, vector/hybrid miss) | Distractor confusion: Portfolio Optimizer outranks Finalysis | Retrieval works; both docs legitimately discuss Sharpe ratio. Label treats Finalysis as sole-relevant — arguably too strict. |
-| "converting spoken words into text" (semantic, RRF miss at rank 15) | Semantic mismatch: speech-commands doc wins | The paraphrase "spoken words → text" embeds closer to keyword-spotting than to transcription prose. Reranker recovers it to rank 6 — its clearest win. |
-| "finding similar customers..." (semantic, RRF miss) | Distractor confusion: Santander doc wins | Both docs are about customer similarity; label ambiguity again. |
-| "Altman Z score bankruptcy risk" (terminology-mismatch, RRF/rerank miss) | Vocabulary gap: term absent from corpus | Known-hard case retained deliberately; measures generalization, not lookup. |
+## Latency findings
 
-Failure classes observed: distractor confusion (labels arguably too strict),
-vocabulary gaps (expected), semantic embedding limits (reranker helps).
-No chunking or metadata failures were observed.
+| Stage | Latency |
+|---|---|
+| Query embedding | ~5 ms |
+| Vector retrieval | ~6 ms |
+| Hybrid retrieval | ~82 ms (pg_trgm similarity is the expensive signal) |
+| Hybrid+RRF | ~51 ms |
+| Reranking c=10/20/50 | ~1300/~1740/~3500 ms |
 
-## Earlier small-corpus results (superseded)
+Reranking dominates end-to-end latency by two orders of magnitude and scales
+linearly with candidate count. The trigram branch makes plain hybrid the
+slowest non-reranked mode.
 
-On the original 3-document/13-chunk corpus all strategies scored R@5 = 1.00;
-hybrid+RRF reached R@3 = 1.00 at ~2 ms while reranking cost ~200 ms+. Those
-numbers reflected a trivially easy retrieval task and should not be cited as
-evidence of strategy quality.
+## Failure analysis
+
+16 total misses across strategies (no expected doc in top-10). Classes:
+
+1. **Corpus-growth distractors** (dominant class): new notes on ranking/
+   evaluation topics outrank finance docs for finance queries because the
+   corpus now contains many superficially similar technical notes. This is
+   genuine retrieval difficulty emerging from scale — exactly what the corpus
+   expansion was designed to expose.
+2. **Semantic paraphrase misses**: "converting spoken words into text" /
+   "finding similar customers" still miss under RRF; embeddings link these
+   queries to adjacent-domain documents instead.
+3. **Vocabulary gaps** ("Altman Z score"): unchanged known-hard case.
+
+No chunking or metadata failures observed. Label validity is mechanically
+guaranteed by the ground-truth tests.
+
+## Superseded results
+
+Earlier reports on the 3-document and 51-document corpora showed near-ceiling
+scores (R@5 = 1.00) and a provisional "hybrid+RRF is best" conclusion. Both
+were artifacts of insufficient corpus scale and are superseded by this report.
+Do not cite them as evidence of strategy quality.
 
 ## Reproducing
 
 ```bash
-# start pgvector and load schema + corpus
 podman run -d --name mp-eval-pg -e POSTGRES_DB=mindpalace \
   -e POSTGRES_USER=mpadmin -e POSTGRES_PASSWORD=secret -p 5433:5432 ankane/pgvector
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace

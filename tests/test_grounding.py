@@ -19,6 +19,8 @@ import os
 
 import pytest
 
+DEFAULT_CORPUS_ID = "00000000000000000000000000000000000000000000000000000000default"
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -153,7 +155,9 @@ The zephyr quantum flux capacitor regulates wobble at 42 hertz.
 
     svc = IngestionService()
     async with session_scope() as db:
-        result = await svc._ingest_content(db, doc_md, "test/grounding_fixture.md")
+        result = await svc._ingest_content(
+            db, doc_md, "test/grounding_fixture.md", DEFAULT_CORPUS_ID
+        )
     assert result["success"] and result["chunk_count"] > 0
 
     try:

@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from api.routers import ingest, query, search
+from api.routers import context, corpora, ingest, query, search
 
 
 @asynccontextmanager
@@ -50,6 +50,8 @@ async def health() -> dict:
 
 
 # Register routers
+app.include_router(corpora.router, prefix="/api/corpora", tags=["corpora"])
 app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(query.router, prefix="/api/query", tags=["query"])
+app.include_router(context.router, prefix="/api/context", tags=["context"])

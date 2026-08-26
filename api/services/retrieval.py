@@ -63,16 +63,23 @@ class RetrievalService:
         rerank: bool = False,
         candidate_k: int = 20,
         debug: bool = False,
+        corpus_id: Optional[str] = None,
     ) -> List[RetrievalResult]:
         """Search with optional hybrid (vector + keyword) mode, RRF, and reranking.
 
         When ``rerank`` is enabled, ``candidate_k`` candidates are retrieved first
         and then scored by a cross-encoder; the top ``k`` are returned.
+        Results are scoped to ``corpus_id`` when provided — searches never leak
+        across corpora.
         """
         fetch_k = max(k, candidate_k) if (rerank and query_text) else k
 
         where_clauses = ["c.embedding IS NOT NULL"]
         params: dict = {"query": _to_pgvector(query_vector), "k": fetch_k * 3 if rrf else fetch_k}
+
+        if corpus_id:
+            where_clauses.append("d.corpus_id = :corpus")
+            params["corpus"] = corpus_id
 
         if document_type:
             where_clauses.append("c.document_type = :doc_type")

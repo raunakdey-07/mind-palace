@@ -18,6 +18,8 @@ import sqlalchemy as sa
 from api.services.parser import parse_markdown
 from api.services.repository import content_hash, deterministic_doc_id
 
+DEFAULT_CORPUS_ID = "00000000000000000000000000000000000000000000000000000000default"
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -189,7 +191,7 @@ async def test_new_document_fully_indexed():
 
     svc = await _get_service()
     async with session_scope() as db:
-        result = await svc._ingest_content(db, DOC_V1, "test/lifecycle.md")
+        result = await svc._ingest_content(db, DOC_V1, "test/lifecycle.md", DEFAULT_CORPUS_ID)
 
     assert result["success"] is True
     assert result["chunk_count"] == 2  # two H1 sections
@@ -213,9 +215,9 @@ async def test_unchanged_document_skipped_without_duplicates():
 
     svc = await _get_service()
     async with session_scope() as db:
-        first = await svc._ingest_content(db, DOC_V1, "test/unchanged.md")
+        first = await svc._ingest_content(db, DOC_V1, "test/unchanged.md", DEFAULT_CORPUS_ID)
     async with session_scope() as db:
-        second = await svc._ingest_content(db, DOC_V1, "test/unchanged.md")
+        second = await svc._ingest_content(db, DOC_V1, "test/unchanged.md", DEFAULT_CORPUS_ID)
 
     assert first["success"] and second["success"]
     assert second["chunk_count"] == 0
@@ -234,9 +236,9 @@ async def test_changed_document_updates_and_removes_stale_chunks():
 
     svc = await _get_service()
     async with session_scope() as db:
-        v1 = await svc._ingest_content(db, DOC_V1, "test/changed.md")
+        v1 = await svc._ingest_content(db, DOC_V1, "test/changed.md", DEFAULT_CORPUS_ID)
     async with session_scope() as db:
-        v2 = await svc._ingest_content(db, DOC_V2, "test/changed.md")
+        v2 = await svc._ingest_content(db, DOC_V2, "test/changed.md", DEFAULT_CORPUS_ID)
 
     assert v1["chunk_count"] == 2
     # V2 adds a section -> 3 chunks; same path so the document row keeps its id
@@ -273,9 +275,9 @@ async def test_metadata_only_change_is_detected():
 
     svc = await _get_service()
     async with session_scope() as db:
-        r1 = await svc._ingest_content(db, DOC_V1, "test/metaonly.md")
+        r1 = await svc._ingest_content(db, DOC_V1, "test/metaonly.md", DEFAULT_CORPUS_ID)
     async with session_scope() as db:
-        r2 = await svc._ingest_content(db, meta_a, "test/metaonly.md")
+        r2 = await svc._ingest_content(db, meta_a, "test/metaonly.md", DEFAULT_CORPUS_ID)
 
     assert r1["chunk_count"] > 0
     # body unchanged -> manifest hit -> skipped even though summary changed
@@ -292,7 +294,7 @@ async def test_empty_document_is_skipped_gracefully():
         ("test/blank_frontmatter.md", "---\ntitle: X\ndate: 2024-01-01\n---\n\n   \n"),
     ]:
         async with session_scope() as db:
-            result = await svc._ingest_content(db, content, name)
+            result = await svc._ingest_content(db, content, name, DEFAULT_CORPUS_ID)
         assert result["success"] is True
         assert result["chunk_count"] == 0
 
@@ -306,7 +308,7 @@ async def test_malformed_document_does_not_corrupt_state():
 
     # Ingest a good version first
     async with session_scope() as db:
-        good = await svc._ingest_content(db, DOC_V1, "test/malformed.md")
+        good = await svc._ingest_content(db, DOC_V1, "test/malformed.md", DEFAULT_CORPUS_ID)
     assert good["success"]
 
     # Now force a failure after upsert by breaking embeddings via monkeypatched embedder
@@ -320,7 +322,7 @@ async def test_malformed_document_does_not_corrupt_state():
         modified = DOC_V1.replace("alpha", "alpha-v2-failure")
         async with session_scope() as db:
             with pytest.raises(RuntimeError):
-                await svc._ingest_content(db, modified, "test/malformed.md")
+                await svc._ingest_content(db, modified, "test/malformed.md", DEFAULT_CORPUS_ID)
     finally:
         svc.embedder.embed = original_embed
 
@@ -337,9 +339,9 @@ async def test_duplicate_paths_deterministic_ids():
 
     svc = await _get_service()
     async with session_scope() as db:
-        r1 = await svc._ingest_content(db, DOC_V1, "test/dup.md")
+        r1 = await svc._ingest_content(db, DOC_V1, "test/dup.md", DEFAULT_CORPUS_ID)
     async with session_scope() as db:
-        r2 = await svc._ingest_content(db, DOC_V1, "test/dup.md")
+        r2 = await svc._ingest_content(db, DOC_V1, "test/dup.md", DEFAULT_CORPUS_ID)
 
     expected_id = deterministic_doc_id("test/dup.md", parse_markdown(DOC_V1)[1])
     assert r1["document_id"] == expected_id
@@ -369,7 +371,7 @@ async def test_ingest_repo_reports_failures(tmp_path):
         bad.chmod(0o644)
 
     assert result["success"] is False  # one file failed
-    assert "failed" in result["message"]
+    assert result["failed"] >= 1
 
     # Ingested rows must be inside the namespaced path and are removed by
     # the fixture; verify no stray top-level entries remain.

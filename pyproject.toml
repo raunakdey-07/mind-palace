@@ -15,7 +15,7 @@ mindpalace = "cli.main:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "cli*"]
+include = ["api*", "cli*", "mindpalace_sdk*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

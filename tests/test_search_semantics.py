@@ -43,6 +43,8 @@ def _db_available() -> bool:
         return False
 
 
+DEFAULT_CORPUS_ID = "00000000000000000000000000000000000000000000000000000000default"
+
 requires_db = pytest.mark.skipif(not _db_available(), reason="no reachable DATABASE_URL")
 
 
@@ -83,7 +85,7 @@ async def _seed_semantics_doc():
 
     svc = IngestionService()
     async with session_scope() as db:
-        await svc._ingest_content(db, SEMANTICS_DOC, "test/semantics_probe.md")
+        await svc._ingest_content(db, SEMANTICS_DOC, "test/semantics_probe.md", DEFAULT_CORPUS_ID)
 
 
 def _cleanup_semantics_doc():

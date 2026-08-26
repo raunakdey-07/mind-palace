@@ -2,466 +2,316 @@
 
 [![Release](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions)
+[![CI](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/actions)
 
-**AI-Native Research Operating System**
+**Open-source memory infrastructure for AI applications. Give it a corpus; get reliable, attributable, model-ready context.**
 
-Mind Palace turns your portfolio, projects, Kaggle work, research notes, and technical documents into a **searchable, interactive knowledge base** powered by local LLMs and vector search.
+```python
+from mindpalace_sdk import MindPalace
 
-The project is designed as a **local-first AI platform**: no paid API keys are required for the reference setup.
+mp = MindPalace("my-corpus")
+mp.sync("./docs")
 
-## Why this exists
-
-Most portfolios are static pages. Mind Palace treats a portfolio as a **living knowledge system**: every project, competition, note, and write-up becomes queryable, explainable, and reusable through semantic search and local LLMs.
-
----
-
-## Current Status
-
-* **v0.3.0 released** — reproducible foundation (database setup, ingestion lifecycle, retrieval evaluation)
-* Local-first deployment working
-* PostgreSQL + pgvector backend implemented
-* Hybrid retrieval + RRF is the default strategy
-* Cross-encoder reranking available as explicit opt-in
-* Retrieval evaluation framework with measured baselines
-
----
-
-## Pipeline
-
-Mind Palace processes content through a single well-defined pipeline:
-
-```text
-Markdown files (content/)
-      │
-      ▼
-Parsing            YAML frontmatter validation, body extraction
-      │
-      ▼
-Chunking           heading-path-aware sections, size-bounded splits
-      │
-      ▼
-Embedding          sentence-transformers (all-MiniLM-L6-v2, 384-dim, normalized)
-      │
-      ▼
-Storage            PostgreSQL + pgvector (HNSW index), ingestion manifest
-      │
-      ▼
-Retrieval          vector search, hybrid (vector + pg_trgm keyword), RRF fusion,
-                   optional cross-encoder reranking
-      │
-      ▼
-Generation         grounded RAG answers with source attribution (Ollama)
-      │
-      ▼
-Evaluation         Recall@k / Precision@k / MRR / latency per strategy
+pack = mp.context("How does authentication work?", budget_tokens=4000)
+print(pack.context)   # bounded evidence text, ready for your prompt
+print(pack.sources)   # where every piece came from
 ```
 
-### Retrieval strategies
+## What problem it solves
 
-| Strategy | When to use | Default |
-|---|---|---|
-| `vector` | pure semantic similarity | |
-| `hybrid` | semantic + keyword signals, weighted blend | |
-| `hybrid + RRF` | rank-fused; robust to score-scale drift | **yes** |
-| `hybrid + RRF + reranker` | cross-encoder re-scoring of a candidate pool | opt-in (`?rerank=true`) |
+AI applications need your knowledge — documentation, notes, research, project files — as context. Wiring that up usually means gluing together a parser, chunker, embedding pipeline, vector database, and retrieval logic, then hoping the results are trustworthy.
 
-**Decision rationale (202-doc corpus, 98 queries, paired bootstrap):** all
-strategies are statistically indistinguishable on quality — every paired
-difference in Recall@3 contains zero at 95% confidence. hybrid+RRF remains the
-default because rank-based fusion is robust to score-scale drift as the corpus
-evolves, at moderate latency (~50 ms). Reranking shows point-estimate gains
-but costs ~1.7 s per query (30×); it stays opt-in, with candidate pool 10 if
-enabled. Vector-only (~6 ms) is an equivalent-quality fast path.
-See `eval/EVALUATION.md` for full measurements and failure analysis.
+Mind Palace is that layer, done once and done properly:
 
-### Evaluation
+- **Point it at a corpus** (a folder of Markdown files)
+- **It ingests, chunks, embeds, and indexes** into PostgreSQL + pgvector
+- **Your AI application asks questions** and receives bounded, attributable, model-ready context
+- **The corpus persists** — it survives restarts, updates incrementally, and stays yours
 
-The evaluation framework lives in `eval/` and runs through the CLI:
+It is not a chatbot, not an agent framework, and not a generic vector database. It is the smallest, clearest layer between a corpus and an AI system that needs to remember it.
 
-```bash
-mindpalace eval strategies --candidates 10,20,50 --details
-```
+## What it does not do
 
-It executes the same 98-query deterministic dataset against every strategy and reports Recall@1/3/5/10, Precision@3, MRR, nDCG@5, latency, paired bootstrap confidence intervals, and per-query failure diagnostics.
-
-**Scope caveat:** the evaluation corpus contains 202 documents and 671 chunks
-with 98 labeled queries plus mechanical ground-truth validation. Strategy
-differences remain within statistical noise; the benchmark's primary value is
-regression detection and exposing failure classes, not crowning a winner.
-
-See `eval/EVALUATION.md` for full methodology, configuration, and measured results.
-
----
-
-## Features
-
-### Implemented
-
-* Markdown ingestion with YAML frontmatter validation
-* Deterministic document IDs; path-keyed upserts for changed documents
-* Incremental ingestion via manifest tracking with stale-chunk replacement
-* Heading-path-aware chunking with size bounds
-* PostgreSQL + pgvector storage (HNSW index), self-provisioning migrations
-* Semantic vector search
-* Hybrid retrieval (vector + pg_trgm keyword) with Reciprocal Rank Fusion
-* Optional cross-encoder reranking (explicit opt-in)
-* Structured RAG responses with citations
-* Pluggable LLM provider interface; local inference via Ollama
-* Typer-based CLI (`python -m cli.main` or the `mindpalace` console script)
-* Retrieval evaluation framework (Recall@k, Precision@k, MRR, nDCG, latency)
-* Ingestion lifecycle and migration contract test suites
-* Containerized local development stack
-* GitHub Actions CI with database-backed integration tests
-* Alembic database migrations
-
-### Planned
-
-* Next.js frontend
-* Research / resume / interview agents
-* Knowledge graph (under investigation — not yet justified by evidence)
-* MCP server
-* Advanced observability
-
----
-
-## Tech Stack
-
-| Layer              | Technology                    |
-| ------------------ | ----------------------------- |
-| Backend            | FastAPI, SQLAlchemy, Pydantic |
-| Database           | PostgreSQL 15+ + pgvector     |
-| Embeddings         | sentence-transformers (all-MiniLM-L6-v2) |
-| Reranking          | sentence-transformers CrossEncoder (opt-in) |
-| Retrieval          | pgvector + pg_trgm + RRF      |
-| LLM Runtime        | Ollama                        |
-| Migrations         | Alembic                       |
-| CLI                | Typer                         |
-| CI/CD              | GitHub Actions                |
-| Containers         | Docker Compose                |
-| Frontend (planned) | Next.js + MDX                 |
-
----
-
-## Prerequisites
-
-* Python **3.11+**
-* PostgreSQL **15+** with the **pgvector server extension**
-* Docker / Podman
-* Ollama
-
-> **Important:** installing the Python `pgvector` package does **not** install
-> the PostgreSQL `vector` extension — that must come from your database image
-> or package manager. Use a pgvector-enabled image such as `pgvector/pgvector:pg15`
-> (used by CI) or `ankane/pgvector` (docker-compose). The initial Alembic
-> migration provisions the `vector`, `pgcrypto`, and `pg_trgm` extensions via
-> `CREATE EXTENSION IF NOT EXISTS`, so any fresh database works as long as the
-> image ships them.
-
-Install Ollama:
-
-```bash
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen3:8b
-```
-### Fedora / Podman users
-
-Install Podman Compose if it is not already available:
-
-```bash
-sudo dnf install podman-compose
-```
+- No chat UI, no agent loops, no LLM calls where deterministic code suffices
+- Not agent memory (conversations, preferences) — corpus memory only
+- No cloud dependency: local/self-hosted is the first-class path
+- Not tied to any AI vendor: works with OpenAI-compatible apps, Anthropic apps, local models via Ollama, plain Python, plain HTTP, or MCP clients
 
 ---
 
 ## Quick Start
 
-### 1. Clone the repository
+### 1. Install & start infrastructure
 
 ```bash
 git clone https://github.com/raunakdey-07/mind-palace.git
 cd mind-palace
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install -e .
+
+docker compose up -d          # or podman-compose up -d
 ```
 
-### 2. Create a virtual environment
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-### 4. Start infrastructure
-
-**Docker**
-
-```bash
-docker compose up -d
-```
-
-**Podman (Fedora default)**
-
-```bash
-podman-compose up -d
-```
-
-### 5. Apply database migrations
+### 2. Migrate (creates schema + provisions pgvector/pgcrypto/pg_trgm)
 
 ```bash
 make migrate
-# or: python -m alembic -c migrations/alembic.ini upgrade head
 ```
 
-This creates the schema and provisions the required PostgreSQL extensions
-(`vector`, `pgcrypto`, `pg_trgm`) on a fresh database. It is safe to re-run.
-
-### 6. Ingest content
-
-```bash
-mindpalace ingest-repo content/
-```
-
-### 7. Verify the setup
-
-```bash
-mindpalace doctor
-pytest -q
-```
-
----
-
-## CLI Usage
-
-The CLI can be invoked either as the installed console script (`mindpalace`) or directly with `python -m cli.main`.
-
-### Ingest content
-
-```bash
-mindpalace ingest-repo content/
-```
-
-### Semantic search
-
-```bash
-mindpalace search "feature leakage"
-```
-
-### Ask a question
-
-```bash
-mindpalace ask "What did I learn from BirdCLEF?"
-```
-
-### Generate interview questions
-
-```bash
-mindpalace interview <document-id>
-```
-
-### Run retrieval strategy comparison
-
-```bash
-mindpalace eval strategies                  # default candidate pool
-mindpalace eval strategies --candidates 10,20,50 --details
-```
-
-Requires a live PostgreSQL + pgvector database (`DATABASE_URL`) with an ingested corpus; does not require the API server.
-
-### Run simple retrieval check
-
-```bash
-mindpalace eval retrieval
-```
-
-### Summarize a document
-
-```bash
-mindpalace summarize <document-id>
-```
-
-### Find related documents
-
-```bash
-mindpalace related <document-id>
-```
-
-### View document timeline
-
-```bash
-mindpalace timeline
-```
-
----
-
-## API Usage
-
-Start the API:
-
-```bash
-uvicorn api.main:app --reload
-```
-
-### Health check
-
-```bash
-curl http://localhost:8000/health
-```
-
-### Search (with optional hybrid / RRF / reranking)
-
-```bash
-curl "http://localhost:8000/api/search?q=feature+leakage&k=5"
-curl "http://localhost:8000/api/search?q=feature+leakage&hybrid=true&rrf=true"
-curl "http://localhost:8000/api/search?q=feature+leakage&hybrid=true&rrf=true&rerank=true"
-```
-
-### Ask a question
-
-```bash
-curl -X POST http://localhost:8000/api/query/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is Finalysis?"}'
-```
-
-### Summarize a document
-
-```bash
-curl -X POST http://localhost:8000/api/query/summarize \
-  -H "Content-Type: application/json" \
-  -d '{"document_id": "<doc-id>"}'
-```
-
-### Find related documents
-
-```bash
-curl -X POST http://localhost:8000/api/query/related \
-  -H "Content-Type: application/json" \
-  -d '{"document_id": "<doc-id>"}'
-```
-
-### View timeline
-
-```bash
-curl -X GET http://localhost:8000/api/query/timeline
-```
-
----
-
-## Project Structure
-
-```text
-api/
-├── routers/        # API endpoints (ingest, search, query)
-├── models/         # Pydantic schemas
-└── services/
-    ├── parser.py       # frontmatter + heading-path extraction
-    ├── ingestion.py    # parse → chunk → embed → store pipeline
-    ├── embedder.py     # sentence-transformers wrapper
-    ├── retrieval.py    # vector / hybrid / RRF / reranked search
-    ├── reranker.py     # cross-encoder singleton (opt-in)
-    ├── evaluation.py   # Recall@k / Precision@k / MRR / nDCG metrics
-    ├── benchmark.py    # strategy comparison runner
-    └── repository.py   # documents/chunks/manifest data access
-
-cli/                # Typer CLI entry point
-
-content/            # Sample knowledge base (3 docs)
-
-content_eval/       # Evaluation corpus (202 docs, used by the benchmark)
-
-eval/               # Benchmark dataset + EVALUATION.md report
-
-migrations/         # Alembic migrations (self-provisioning extensions)
-
-tests/              # Unit, lifecycle, migration-contract tests
-```
-
----
-
-## Development Workflow
-
-### Run tests
-
-```bash
-pytest -q
-```
-
-Tests run without a database (DB-backed integration tests skip automatically).
-Set `DATABASE_URL` to a migrated PostgreSQL+pgvector database to run the full
-suite including ingestion-lifecycle and migration-contract tests:
+### 3. Create a corpus, sync documents, get context
 
 ```bash
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
-make migrate
-pytest -q
+
+python - <<'EOF'
+from mindpalace_sdk import MindPalace
+
+mp = MindPalace("my-first-corpus")
+summary = mp.sync("examples/docs")
+print(summary)                # added/changed/unchanged/deleted counts
+
+pack = mp.context("How does authentication work?", budget_tokens=2000)
+print(pack.context)
+for s in pack.sources:
+    print(f"  source: {s.title} ({s.path})")
+EOF
 ```
 
-### Run linting and formatting
+That is the entire product loop. Everything below adds detail.
 
-```bash
-black --check api cli tests migrations --line-length 100
-flake8 api cli tests migrations --max-line-length=100
-ruff check .
+---
+
+## The lifecycle
+
+```text
+create corpus
+    ↓
+sync / ingest corpus        (added / changed / unchanged / deleted reconciliation)
+    ↓
+inspect corpus              (counts, last ingestion time)
+    ↓
+search                      ("what is relevant?")
+    ↓
+pack context                ("what should I give the model?" — bounded, attributed)
+    ↓
+AI application consumes context
 ```
 
-### Run type checking
+Search and context packing are deliberately separate: search ranks relevance;
+context packing decides what fits in a prompt within an explicit token budget.
 
-```bash
-mypy api cli
+## Corpus isolation
+
+Corpora are explicit namespaces. Documents, chunks, and embeddings belong to
+exactly one corpus:
+
+- searches never leak across corpora (enforced in SQL, proven by tests)
+- ingestion cannot overwrite another corpus's documents
+- the same relative path may exist in multiple corpora independently
+- deleting a corpus removes exactly its data
+
+## Synchronization
+
+`sync` reconciles indexed state against the source directory:
+
+| State | Action |
+|---|---|
+| added | new files are chunked, embedded, indexed |
+| changed | files are reprocessed; stale chunks replaced |
+| unchanged | skipped via content-hash manifest |
+| deleted | removed from source → removed from index |
+
+A failed document never leaves a false "successfully indexed" state.
+
+## Context packing
+
+`context()` returns a structured pack:
+
+```json
+{
+  "query": "...",
+  "context": "...bounded evidence text...",
+  "sources": [{"title": "...", "path": "...", "doc_id": "..."}],
+  "chunks": [{"text": "...", "score": 0.87, "rank": 1, "source": {...}}],
+  "token_estimate": 1234,
+  "strategy": "hybrid_rrf",
+  "truncated": false
+}
 ```
 
-### Run evaluation
+Budgets are enforced, never silently overflowed. Strongest evidence is kept
+first; overflow drops from the bottom. Sources derive only from retained
+evidence.
+
+## Interfaces
+
+### Python SDK (`mindpalace_sdk.py`)
+
+```python
+from mindpalace_sdk import MindPalace
+
+mp = MindPalace("corpus-name")       # created if missing
+summary = mp.sync("./docs")
+results = mp.search("query", k=5)
+pack = mp.context("question", budget_tokens=4000)
+```
+
+### REST API
+
+```
+POST   /api/corpora                  create a corpus
+GET    /api/corpora                  list corpora
+GET    /api/corpora/{name}           inspect one corpus
+DELETE /api/corpora/{name}           delete a corpus
+POST   /api/corpora/{name}/sync      sync with a directory
+GET    /api/search?q=&k=&hybrid&rrf&rerank   raw search
+GET    /api/context?q=&corpus=&budget_tokens=  model-ready context pack
+POST   /api/query/ask                grounded RAG answer (requires Ollama)
+```
+
+Backend unavailability returns **503**, never an empty success.
+
+### MCP server
+
+Expose corpora as tools to any MCP-compatible client:
+
+```json
+{
+  "mcpServers": {
+    "mind-palace": {
+      "command": "python",
+      "args": ["-m", "mcp_server"],
+      "env": {"DATABASE_URL": "postgresql://..."}
+    }
+  }
+}
+```
+
+Tools: `context`, `search`, `sync`, `list_corpora`.
+
+---
+
+## Retrieval architecture
+
+```text
+Markdown → parse (frontmatter + heading paths) → chunk (structure-aware)
+        → embed (all-MiniLM-L6-v2, 384-dim, normalized)
+        → PostgreSQL + pgvector (HNSW)
+        → hybrid retrieval (vector + pg_trgm keyword)
+        → Reciprocal Rank Fusion
+        → optional cross-encoder reranking (opt-in)
+        → context packing (budgeted, attributed)
+```
+
+**Default strategy: hybrid + RRF.** Measured on a 202-document benchmark,
+all non-reranked strategies are statistically indistinguishable on Recall@3
+(paired bootstrap, 95% CI). RRF is preferred because rank fusion needs no
+score calibration as the corpus evolves. Vector-only (~6 ms) is an equivalent-
+quality fast path. Reranking shows point-estimate gains but costs ~1.7 s per
+query — opt-in only.
+
+See `eval/EVALUATION.md` for methodology, confidence intervals, failure
+analysis, and superseded-results history.
+
+---
+
+## Evaluation
+
+The repository ships a 202-document evaluation corpus and a 98-query benchmark
+across 14 categories (lexical, semantic, terminology-mismatch, negative,
+metadata-filtered, similar-title discrimination, section-level, multi-document).
+
+Ground truth is hand-labeled and mechanically validated against corpus
+metadata. Strategy comparison uses paired bootstrap confidence intervals.
 
 ```bash
-mindpalace eval strategies
+python -m cli.main eval strategies --candidates 10,20,50 --details
+```
+
+Honest scope: this validates regression safety and exposes failure classes.
+It does not prove superiority over other retrieval systems.
+
+---
+
+## Security posture
+
+> **Corpus content is data, not instructions.**
+
+Retrieved text must never be treated as trusted system instructions by a
+consuming application. Mind Palace attributes all evidence so downstream
+systems can verify provenance, but prompt-injection defense belongs in the
+consuming application's design.
+
+Database credentials come exclusively from `DATABASE_URL`; local defaults
+target disposable containers only.
+
+---
+
+## Project structure
+
+```text
+api/
+├── routers/            # REST surface (corpora, ingest, search, query, context)
+├── models/schemas.py   # Pydantic request/response contracts
+└── services/
+    ├── corpora.py          # corpus namespaces
+    ├── ingestion.py        # sync/reconciliation pipeline
+    ├── parser.py           # frontmatter + heading-path extraction
+    ├── embedder.py         # sentence-transformers wrapper
+    ├── retrieval.py        # vector/hybrid/RRF/reranked search
+    ├── reranker.py         # cross-encoder (opt-in)
+    ├── context_packer.py   # budgeted, attributed context packs
+    ├── evaluation.py       # Recall/Precision/MRR/nDCG metrics
+    ├── benchmark.py        # strategy comparison runner
+    └── confidence.py       # bootstrap CIs, paired differences
+
+mindpalace_sdk.py     # Python SDK
+mcp_server.py         # MCP integration
+cli/                  # Typer CLI
+content_eval/         # 202-doc evaluation corpus
+eval/                 # benchmark dataset + EVALUATION.md report
+migrations/           # Alembic migrations (self-provisioning extensions)
+tests/                # unit, contract, integration, migration tests
+examples/             # minimal runnable examples
 ```
 
 ---
 
-## Reproducibility Test
-
-Verify that a fresh clone works end to end:
+## Development
 
 ```bash
-git clone https://github.com/raunakdey-07/mind-palace.git /tmp/mp-test
-cd /tmp/mp-test
-
-python -m venv .venv
-source .venv/bin/activate
-
-python -m pip install -r requirements.txt
-python -m pip install -e .
-
-docker compose up -d          # or podman-compose up -d
-make migrate                  # schema + extensions on a fresh database
-mindpalace ingest-repo content/
-
-pytest -q
-mindpalace doctor
-mindpalace eval strategies
+pytest -q                       # unit suite (DB-backed tests skip without DATABASE_URL)
+DATABASE_URL=... pytest -q      # full suite incl. integration tests
+make migrate                    # apply migrations
+black --check api cli tests migrations --line-length 100
+flake8 api cli tests migrations --max-line-length=100
+python -m cli.main eval strategies
 ```
 
-CI performs the same sequence against a fresh `pgvector/pgvector:pg15` service container on every push to `main`.
+---
+
+## Known limitations
+
+- Grounding of `/ask` answers is prompt-based, not formally verified
+- Reranking latency (~1.7 s) is unresolved; it remains opt-in
+- Source-format support is Markdown-only today (plain text/code planned)
+- Deletion propagation requires an explicit `sync` call
+- Benchmark differences between top strategies remain within statistical noise
+
+## Roadmap
+
+1. Retrieval quality gate in CI (benchmark vs baseline on every PR)
+2. Additional source formats (plain text, code, HTML, PDF)
+3. Embedding-model abstraction with versioned re-indexing
+4. Reranker cost engineering (smaller models, ONNX, caching)
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please open an issue before large architectural changes.
-
----
+Contributions welcome. Please open an issue before large architectural changes.
+Retrieval changes must include benchmark evidence.
 
 ## License
 
-Mind Palace is licensed under the **Apache License 2.0**.
-
-See [LICENSE](LICENSE) for the full license text and [NOTICE](NOTICE) for attribution information.
-
-The project is intentionally released under a permissive license to encourage learning, experimentation, research, and commercial adoption while providing explicit patent rights to users and contributors.
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

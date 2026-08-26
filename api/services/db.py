@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -34,9 +35,14 @@ ASYNC_DATABASE_URL = (
     .replace("postgresql://", "postgresql+asyncpg://")
 )
 
+# NullPool: connections are not reused across event loops. The API server
+# runs a single long-lived loop so pooling helps there, but SDK/CLI callers
+# create short-lived loops per operation and pooled connections would break
+# with 'attached to a different loop' errors.
 async_engine: AsyncEngine = create_async_engine(
     ASYNC_DATABASE_URL,
     echo=False,
+    poolclass=NullPool,
 )
 
 AsyncSessionLocal = async_sessionmaker(

@@ -61,6 +61,101 @@ class SearchResponse(BaseModel):
     total: int
 
 
+# --- Corpora ---
+
+
+class CorpusCreate(BaseModel):
+    """Request body for POST /api/corpora."""
+
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Corpus name (letters, digits, '-', '_', '.')",
+    )
+    description: str = Field("", description="Human-readable description")
+
+
+class CorpusResponse(BaseModel):
+    """A corpus namespace."""
+
+    id: str
+    name: str
+    description: str = ""
+    document_count: int = 0
+
+
+class CorpusStatsResponse(BaseModel):
+    """Detailed corpus statistics."""
+
+    id: str
+    name: str
+    description: str
+    document_count: int
+    chunk_count: int = 0
+    last_ingested: str | None = None
+
+
+class SyncRequest(BaseModel):
+    """Request body for POST /api/corpora/{name}/sync."""
+
+    path: str = Field(..., description="Source directory to synchronize from")
+
+
+class SyncResponse(BaseModel):
+    """Machine-readable sync summary."""
+
+    success: bool
+    corpus_id: str | None = None
+    added: int = 0
+    changed: int = 0
+    unchanged: int = 0
+    deleted: int = 0
+    failed: int = 0
+    chunk_count: int = 0
+    duration_ms: int = 0
+    message: str = ""
+
+
+# --- Context packing ---
+
+
+class ContextSourceInfo(BaseModel):
+    """Provenance for one source document in a context pack."""
+
+    title: str
+    path: str = ""
+    doc_id: str
+    heading_path: str | None = None
+    document_type: str | None = None
+
+
+class ContextChunkInfo(BaseModel):
+    """One evidence chunk in a context pack."""
+
+    text: str
+    score: float
+    rank: int
+    source: ContextSourceInfo
+
+
+class ContextPackResponse(BaseModel):
+    """Model-ready context with full attribution.
+
+    The ``context`` field is ready to be inserted into an LLM prompt.
+    ``sources`` and ``chunks`` carry provenance; ``truncated`` reports
+    whether evidence was dropped to satisfy the budget.
+    """
+
+    query: str
+    context: str
+    sources: list[ContextSourceInfo] = Field(default_factory=list)
+    chunks: list[ContextChunkInfo] = Field(default_factory=list)
+    token_estimate: int = 0
+    strategy: str = "hybrid_rrf"
+    truncated: bool = False
+
+
 # --- RAG Query (Intent-Specific) ---
 
 

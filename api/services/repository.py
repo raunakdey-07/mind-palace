@@ -29,21 +29,25 @@ async def upsert_document(
     path: str,
     body: str,
     metadata: dict,
+    corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
 ) -> str:
     """Insert or update a document and return its (deterministic) ID.
 
-    Documents are keyed by ``path``: re-ingesting changed content updates the
-    existing row in place (new deterministic id, fresh hash) rather than
-    colliding with the unique-path constraint.
+    Documents are keyed by ``(corpus_id, path)``: re-ingesting changed content
+    updates the existing row in place rather than colliding with the unique
+    constraint. The row keeps its original id on update so chunk/manifest
+    references stay valid.
     """
     doc_hash = content_hash(body)
     doc_id = deterministic_doc_id(path, body)
 
-    # Unchanged content -> nothing to do (path-keyed; id may differ from a
-    # recomputed deterministic id if hashing rules ever change)
+    # Unchanged content -> nothing to do (path-keyed within this corpus)
     result = await db.execute(
-        text("SELECT 1 FROM documents WHERE path = :path AND content_hash = :hash"),
-        {"path": path, "hash": doc_hash},
+        text(
+            "SELECT 1 FROM documents WHERE corpus_id = :corpus AND path = :path "
+            "AND content_hash = :hash"
+        ),
+        {"corpus": corpus_id, "path": path, "hash": doc_hash},
     )
     if result.first():
         return ""
@@ -62,17 +66,17 @@ async def upsert_document(
         text("""
             INSERT INTO documents (
                 id, title, path, document_type, date, summary, tags,
-                git_repo, content_hash, last_indexed, updated_at
+                git_repo, content_hash, last_indexed, updated_at, corpus_id
             )
             VALUES (
                 COALESCE(
-                    (SELECT id FROM documents WHERE path = :path),
+                    (SELECT id FROM documents WHERE corpus_id = :corpus AND path = :path),
                     :id
                 ),
                 :title, :path, :doc_type, :date, :summary, :tags,
-                :git_repo, :hash, :now, :now
+                :git_repo, :hash, :now, :now, :corpus
             )
-            ON CONFLICT (path) DO UPDATE SET
+            ON CONFLICT (corpus_id, path) DO UPDATE SET
                 title = EXCLUDED.title,
                 document_type = EXCLUDED.document_type,
                 summary = EXCLUDED.summary,
@@ -93,36 +97,52 @@ async def upsert_document(
             "git_repo": metadata.get("git_repo", ""),
             "hash": doc_hash,
             "now": now,
+            "corpus": corpus_id,
         },
     )
 
-    # Return the id actually stored for this path: on update the existing
-    # row keeps its original id so chunk/manifest references stay valid.
+    # Return the id actually stored for this (corpus, path): on update the
+    # existing row keeps its original id so chunk/manifest references stay valid.
     result = await db.execute(
-        text("SELECT id FROM documents WHERE path = :path"),
-        {"path": path},
+        text("SELECT id FROM documents WHERE corpus_id = :corpus AND path = :path"),
+        {"corpus": corpus_id, "path": path},
     )
     return result.scalar_one()
 
 
-async def check_manifest(db: AsyncSession, path: str, content_hash: str) -> bool:
-    """Check if file is already ingested with same content."""
+async def check_manifest(
+    db: AsyncSession,
+    path: str,
+    content_hash: str,
+    corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+) -> bool:
+    """Check if file is already ingested with same content in this corpus."""
     result = await db.execute(
-        text("SELECT 1 FROM ingestion_manifest WHERE path = :path AND content_hash = :hash"),
-        {"path": path, "hash": content_hash},
+        text(
+            "SELECT 1 FROM ingestion_manifest WHERE corpus_id = :corpus "
+            "AND path = :path AND content_hash = :hash"
+        ),
+        {"corpus": corpus_id, "path": path, "hash": content_hash},
     )
     return result.first() is not None
 
 
 async def update_manifest(
-    db: AsyncSession, path: str, content_hash: str, doc_id: str, chunk_count: int
+    db: AsyncSession,
+    path: str,
+    content_hash: str,
+    doc_id: str,
+    chunk_count: int,
+    corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
 ) -> None:
     """Update ingestion manifest after successful ingestion."""
     await db.execute(
         text("""
-            INSERT INTO ingestion_manifest (path, content_hash, doc_id, chunk_count, last_ingested)
-            VALUES (:path, :hash, :doc_id, :chunk_count, now())
-            ON CONFLICT (path) DO UPDATE SET
+            INSERT INTO ingestion_manifest (
+                path, content_hash, doc_id, chunk_count, last_ingested, corpus_id
+            )
+            VALUES (:path, :hash, :doc_id, :chunk_count, now(), :corpus)
+            ON CONFLICT (corpus_id, path) DO UPDATE SET
                 content_hash = EXCLUDED.content_hash,
                 doc_id = EXCLUDED.doc_id,
                 chunk_count = EXCLUDED.chunk_count,
@@ -133,6 +153,7 @@ async def update_manifest(
             "hash": content_hash,
             "doc_id": doc_id,
             "chunk_count": chunk_count,
+            "corpus": corpus_id,
         },
     )
     await db.commit()

@@ -9,6 +9,7 @@ receives bounded, attributable context ready for prompt insertion.
 
 from __future__ import annotations
 
+import time
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,6 +21,7 @@ from api.services.context_packer import pack_context
 from api.services.corpora import get_corpus_by_name
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
+from api.services.observability import OperationTrace
 from api.services.retrieval import RetrievalService
 
 router = APIRouter()
@@ -66,7 +68,10 @@ async def get_context(
             raise HTTPException(status_code=404, detail=f"corpus '{corpus}' not found")
         corpus_id = c["id"]
 
+    trace = OperationTrace(operation="context", corpus=corpus, strategy=strategy)
+    t0 = time.perf_counter()
     query_vector = embedder.embed_single(q)
+    trace.embedding_ms = (time.perf_counter() - t0) * 1000
 
     try:
         retrieval = RetrievalService(db)
@@ -78,9 +83,14 @@ async def get_context(
             query_text=q if strategy != "vector" else None,
             corpus_id=corpus_id,
         )
+        trace.retrieval_ms = (time.perf_counter() - t0) * 1000 - trace.embedding_ms
+        trace.candidate_count = len(results)
     except OperationalError as e:
         raise HTTPException(status_code=503, detail="Database unavailable") from e
 
     pack = pack_context(q, results, budget_tokens=budget_tokens, strategy=strategy)
+    trace.mark_pack(pack.token_estimate, pack.truncated)
+    trace.returned_count = len(pack.chunks)
+    trace.emit()
 
     return ContextPackResponse(**pack.to_dict())

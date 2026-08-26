@@ -9,6 +9,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
+from api.services.corpora import DEFAULT_CORPUS_ID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +30,7 @@ async def upsert_document(
     path: str,
     body: str,
     metadata: dict,
-    corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+    corpus_id: str = DEFAULT_CORPUS_ID,
 ) -> str:
     """Insert or update a document and return its (deterministic) ID.
 
@@ -114,7 +115,7 @@ async def check_manifest(
     db: AsyncSession,
     path: str,
     content_hash: str,
-    corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+    corpus_id: str = DEFAULT_CORPUS_ID,
 ) -> bool:
     """Check if file is already ingested with same content in this corpus."""
     result = await db.execute(
@@ -133,7 +134,7 @@ async def update_manifest(
     content_hash: str,
     doc_id: str,
     chunk_count: int,
-    corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+    corpus_id: str = DEFAULT_CORPUS_ID,
 ) -> None:
     """Update ingestion manifest after successful ingestion."""
     await db.execute(

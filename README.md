@@ -231,6 +231,22 @@ python -m cli.main eval strategies --candidates 10,20,50 --details
 Honest scope: this validates regression safety and exposes failure classes.
 It does not prove superiority over other retrieval systems.
 
+## How Mind Palace compares
+
+Honest positioning against adjacent categories:
+
+| Category | What it gives you | What you still have to build | Mind Palace's difference |
+|---|---|---|---|
+| Vector databases (pgvector, Pinecone, Qdrant) | storage + similarity search | parsing, chunking, sync, context assembly, attribution | Mind Palace uses pgvector but owns the corpus→context pipeline |
+| RAG frameworks (LangChain, LlamaIndex) | composable retrieval abstractions | your own evaluation, quality gates, provenance guarantees | Mind Palace is a tested product with measured retrieval, not a toolkit |
+| Agent memory (mem0, Zep) | conversation/episodic memory | corpus ingestion at scale | different problem: durable knowledge vs evolving experience |
+| MCP memory servers | protocol transport | everything else | Mind Palace exposes its full pipeline over MCP with budgets and provenance |
+| Document search (search engines) | keyword/lexical matching | embeddings, LLM-readiness, budgets | hybrid retrieval tuned and benchmarked for LLM consumption |
+
+The one-sentence version: **Mind Palace is not a database and not an agent framework. It is a focused corpus-memory layer that turns arbitrary knowledge into durable, attributable, model-ready context through simple APIs and standard AI integration.**
+
+This claim is validated by the repository itself: the retrieval core is benchmarked (`eval/EVALUATION.md`), the context contract is tested (`tests/test_api_contract.py`), and the quick start runs without cloud services.
+
 ---
 
 ## Security posture

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 import typer
@@ -413,6 +414,56 @@ def eval_strategies(
         typer.echo("\n[DEBUG] Failure diagnostics\n")
         typer.echo(format_failure_details(failures))
     typer.echo()
+
+
+@eval_app.command("gate")
+def eval_gate(
+    benchmark_file: str = typer.Option("eval/retrieval_benchmarks.yaml", "--file", "-f"),
+    save: str = typer.Option(None, "--save", help="Save results as a baseline JSON file"),
+    baseline: str = typer.Option(None, "--baseline", help="Compare against a baseline JSON file"),
+) -> None:
+    """Retrieval quality gate: machine-readable results, optional regression check.
+
+    With --save, records the current run as a baseline. With --baseline,
+    compares the current run against a saved baseline and exits non-zero on
+    statistically significant regression. Noise never fails the gate.
+    """
+    import asyncio
+
+    from api.services.benchmark import run_benchmark
+    from api.services.quality_gate import (
+        collect_gate_results,
+        compare_to_baseline,
+        render_gate_report,
+    )
+
+    try:
+        results, failures, samples = asyncio.run(run_benchmark(benchmark_file))
+    except Exception as e:
+        typer.echo(f"[ERROR] Benchmark failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    gate = collect_gate_results(results, samples)
+    comparison = None
+    if baseline:
+        with open(baseline) as f:
+            base_data = json.load(f)
+        comparison = compare_to_baseline(samples, base_data)
+        gate["comparison"] = comparison
+
+    payload = json.dumps(gate, indent=2)
+    if save:
+        with open(save, "w") as f:
+            f.write(payload)
+        typer.echo(f"[GATE] Baseline saved to {save}")
+
+    typer.echo(render_gate_report(gate, comparison))
+
+    if save:
+        typer.echo(payload)
+
+    if comparison and comparison["regressions"]:
+        raise typer.Exit(code=1)
 
 
 @eval_app.command("retrieval")

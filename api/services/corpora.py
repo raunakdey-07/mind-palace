@@ -11,10 +11,17 @@ always corpus-scoped so data cannot leak across corpora.
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# The migration-created corpus that holds all pre-corpus documents.
+DEFAULT_CORPUS_ID = "00000000000000000000000000000000000000000000000000000000default"
+DEFAULT_CORPUS_NAME = "default"
+
+_NAME_RE = re.compile(r"[A-Za-z0-9._\-]+")
 
 
 def corpus_id_for_name(name: str) -> str:

@@ -75,11 +75,28 @@ different latency profiles*.
 | Vector retrieval | ~6 ms |
 | Hybrid retrieval | ~82 ms (pg_trgm similarity is the expensive signal) |
 | Hybrid+RRF | ~51 ms |
-| Reranking c=10/20/50 | ~1300/~1740/~3500 ms |
+| Reranking c=10/20/50 | ~1300/~1740/~3500 ms end-to-end |
 
-Reranking dominates end-to-end latency by two orders of magnitude and scales
-linearly with candidate count. The trigram branch makes plain hybrid the
-slowest non-reranked mode.
+### Reranker cost decomposition (measured)
+
+| Component | Cost |
+|---|---|
+| Model load (cold start) | **8263 ms** — once per process; dominates first request |
+| Warm inference, 5 candidates | ~73 ms |
+| Warm inference, 10 candidates | ~98 ms |
+| Warm inference, 20 candidates | ~142 ms |
+| Warm inference, 50 candidates | ~424 ms |
+
+Warm inference scales roughly linearly with candidate count. The gap between
+these warm numbers and end-to-end benchmark latency (~1.7 s at c=20) indicates
+per-call overhead beyond pure scoring (embedding, retrieval, serialization) —
+meaning a long-lived server process amortizes model load and should see
+sub-200 ms reranking at c=20.
+
+Implications:
+- candidate pool c=10 gives near-c=20 quality at ~30% less scoring cost
+- model load must happen at service startup, not per request
+- ONNX/quantization are plausible future wins but unproven here
 
 ## Failure analysis
 

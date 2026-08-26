@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
-import re
 import datetime
+import re
 from typing import Any
+
 import frontmatter
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -159,6 +160,32 @@ def chunk_with_heading_paths(
         current_chunk = ""
 
         for para in paragraphs:
+            # A single paragraph longer than max_chars must itself be split,
+            # otherwise one huge paragraph produces an oversized chunk.
+            while len(para) > max_chars:
+                if current_chunk:
+                    chunks.append(
+                        {
+                            "text": current_chunk,
+                            "heading_path": heading_path,
+                            "token_count": estimate_tokens(current_chunk),
+                        }
+                    )
+                    current_chunk = ""
+                cut = para[:max_chars]
+                # Prefer breaking at a sentence/word boundary within the window.
+                boundary = max(cut.rfind(". "), cut.rfind("\n"), cut.rfind(" "))
+                if boundary > max_chars // 2:
+                    cut = para[: boundary + 1]
+                chunks.append(
+                    {
+                        "text": cut.strip(),
+                        "heading_path": heading_path,
+                        "token_count": estimate_tokens(cut),
+                    }
+                )
+                para = para[len(cut) :].lstrip()
+
             candidate = para if not current_chunk else f"{current_chunk}\n\n{para}"
 
             if len(candidate) <= max_chars:

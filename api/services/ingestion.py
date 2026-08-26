@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from api.services.corpora import DEFAULT_CORPUS_ID
 from api.services.db import session_scope
 from api.services.embedder import Embedder
 from api.services.parser import (
@@ -102,7 +103,7 @@ class IngestionService:
             doc_type,
             tags,
             chunk_records,
-            self.embedder._model.__class__.__name__,
+            self.embedder.model_name,
             self.embedder.dimension,
             "1.0",
         )
@@ -120,7 +121,7 @@ class IngestionService:
         self,
         content: str,
         path: Optional[str] = None,
-        corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+        corpus_id: str = DEFAULT_CORPUS_ID,
     ) -> dict:
         """Ingest a single Markdown file into the given corpus."""
         async with session_scope() as db:
@@ -129,7 +130,7 @@ class IngestionService:
     async def ingest_repo(
         self,
         repo_path: str,
-        corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+        corpus_id: str = DEFAULT_CORPUS_ID,
     ) -> dict:
         """Batch ingest all Markdown files from a repository into a corpus."""
         return await self.sync_repo(repo_path, corpus_id, delete_removed=False)
@@ -137,7 +138,7 @@ class IngestionService:
     async def sync_repo(
         self,
         repo_path: str,
-        corpus_id: str = "00000000000000000000000000000000000000000000000000000000default",
+        corpus_id: str = DEFAULT_CORPUS_ID,
         delete_removed: bool = True,
     ) -> dict:
         """Synchronize a corpus with a source directory.

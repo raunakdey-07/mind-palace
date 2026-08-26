@@ -60,6 +60,19 @@ def test_long_section_split_respects_max_chars():
     assert all(c["heading_path"] == "Long" for c in chunks)
 
 
+def test_single_oversized_paragraph_is_split():
+    """Regression: one paragraph longer than max_chars previously produced a
+    single oversized chunk because only paragraph boundaries were considered."""
+    huge_paragraph = "word " * 1000  # ~5000 chars, no \n\n inside
+    md = f"# Huge\n\n{huge_paragraph}\n"
+    chunks = _chunk(md, max_chars=800)
+    assert len(chunks) > 1
+    assert all(len(c["text"]) <= 800 for c in chunks)
+    # no content lost
+    reconstructed = " ".join(c["text"] for c in chunks)
+    assert "word" in reconstructed
+
+
 def test_short_sections_become_single_chunks():
     md = "# Tiny\n\nHi.\n"
     chunks = _chunk(md)

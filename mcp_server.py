@@ -94,7 +94,9 @@ def list_corpora() -> str:
 
 
 def main() -> None:
-    mcp.run_stdio_async()
+    import asyncio
+
+    asyncio.run(mcp.run_stdio_async())
 
 
 if __name__ == "__main__":

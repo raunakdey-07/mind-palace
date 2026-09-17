@@ -50,7 +50,11 @@ async def memory_ingestion_db(monkeypatch):
     url = os.getenv("MEMORY_TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
     if not url:
         pytest.skip("requires MEMORY_TEST_DATABASE_URL or DATABASE_URL")
-    url = url.replace("postgresql://", "postgresql+asyncpg://")
+    url = (
+        url.replace("postgresql+psycopg://", "postgresql+asyncpg://")
+        .replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+        .replace("postgresql://", "postgresql+asyncpg://")
+    )
     engine = create_async_engine(url, poolclass=NullPool)
     schema = "ingestion_memory_" + uuid4().hex
     corpus = hashlib.sha256(uuid4().bytes).hexdigest()

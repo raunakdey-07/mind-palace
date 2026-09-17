@@ -9,9 +9,10 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from api.services.corpora import DEFAULT_CORPUS_ID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.services.corpora import DEFAULT_CORPUS_ID
 
 
 def content_hash(content: str) -> str:
@@ -31,6 +32,8 @@ async def upsert_document(
     body: str,
     metadata: dict,
     corpus_id: str = DEFAULT_CORPUS_ID,
+    *,
+    force: bool = False,
 ) -> str:
     """Insert or update a document and return its (deterministic) ID.
 
@@ -40,7 +43,11 @@ async def upsert_document(
     references stay valid.
     """
     doc_hash = content_hash(body)
-    doc_id = deterministic_doc_id(path, body)
+    doc_id = (
+        deterministic_doc_id(path, body)
+        if corpus_id == DEFAULT_CORPUS_ID
+        else content_hash(f"{corpus_id}:{path}")
+    )
 
     # Unchanged content -> nothing to do (path-keyed within this corpus)
     result = await db.execute(
@@ -50,7 +57,7 @@ async def upsert_document(
         ),
         {"corpus": corpus_id, "path": path, "hash": doc_hash},
     )
-    if result.first():
+    if result.first() and not force:
         return ""
 
     now = datetime.now(timezone.utc)
@@ -80,6 +87,7 @@ async def upsert_document(
             ON CONFLICT (corpus_id, path) DO UPDATE SET
                 title = EXCLUDED.title,
                 document_type = EXCLUDED.document_type,
+                date = EXCLUDED.date,
                 summary = EXCLUDED.summary,
                 tags = EXCLUDED.tags,
                 git_repo = EXCLUDED.git_repo,
@@ -135,6 +143,8 @@ async def update_manifest(
     doc_id: str,
     chunk_count: int,
     corpus_id: str = DEFAULT_CORPUS_ID,
+    *,
+    commit: bool = True,
 ) -> None:
     """Update ingestion manifest after successful ingestion."""
     await db.execute(
@@ -157,16 +167,18 @@ async def update_manifest(
             "corpus": corpus_id,
         },
     )
-    await db.commit()
+    if commit:
+        await db.commit()
 
 
-async def delete_chunks_for_doc(db: AsyncSession, doc_id: str) -> None:
+async def delete_chunks_for_doc(db: AsyncSession, doc_id: str, *, commit: bool = True) -> None:
     """Remove all chunks belonging to a document."""
     await db.execute(
         text("DELETE FROM chunks WHERE doc_id = :doc_id"),
         {"doc_id": doc_id},
     )
-    await db.commit()
+    if commit:
+        await db.commit()
 
 
 async def insert_chunks(
@@ -178,6 +190,8 @@ async def insert_chunks(
     embedding_model: str,
     embedding_dimension: int,
     embedding_version: str,
+    *,
+    commit: bool = True,
 ) -> int:
     """Insert chunk records with full metadata."""
     if not chunks:
@@ -223,7 +237,8 @@ async def insert_chunks(
         """),
         values,
     )
-    await db.commit()
+    if commit:
+        await db.commit()
     return len(chunks)
 
 

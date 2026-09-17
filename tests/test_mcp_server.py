@@ -7,12 +7,12 @@ import json
 import pytest
 
 
-def test_mcp_server_registers_four_tools():
+def test_mcp_server_preserves_legacy_tools():
     from mcp_server import mcp
 
     tools = __import__("asyncio").run(mcp.list_tools())
     names = {t.name for t in tools}
-    assert names == {"context", "search", "sync", "list_corpora"}
+    assert {"context", "search", "sync", "list_corpora"} <= names
 
 
 def test_mcp_context_tool_returns_attributed_pack(tmp_path, monkeypatch):
@@ -108,7 +108,7 @@ def test_mcp_search_tool_shape(tmp_path):
 
     import asyncio
 
-    from mcp_server import mcp, _clients
+    from mcp_server import _clients, mcp
 
     _clients.clear()  # drop cached clients holding stale corpus state
 

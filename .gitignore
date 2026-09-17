@@ -88,3 +88,6 @@ monitoring/
 !NOTICE.md
 !content_eval/*.md
 !eval/EVALUATION.md
+!examples/MEMORY.md
+!examples/MEMORY_API.md
+!examples/evolving-project/**/*.md

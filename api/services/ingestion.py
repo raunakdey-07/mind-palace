@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -34,8 +35,9 @@ DEFAULT_DOC_TYPE = "note"
 class IngestionService:
     """Service for ingesting Markdown documents."""
 
-    def __init__(self):
+    def __init__(self, *, memory_enabled: bool = False):
         self.embedder = Embedder()
+        self.memory_enabled = memory_enabled
 
     async def _ingest_content(self, db, content: str, path: str, corpus_id: str) -> dict:
         """Shared ingestion pipeline for one parsed document.
@@ -43,6 +45,30 @@ class IngestionService:
         The caller owns the session lifetime. Returns a result dict with
         ``success``, ``message``, and (on success) ``document_id``/``chunk_count``.
         """
+        from api.services import memory
+
+        async with db.begin():
+            await memory.lock_corpus(db, corpus_id)
+            metadata, _ = parse_markdown(content)
+            use_memory = (
+                self.memory_enabled or "claims" in metadata or await memory.enabled(db, corpus_id)
+            )
+            if use_memory:
+                result = await self._ingest_memory_content(db, content, path, corpus_id)
+            else:
+                result = await self._ingest_live_content(db, content, path, corpus_id)
+        logging.getLogger(__name__).info(
+            "document_ingested",
+            extra={
+                "corpus_id": corpus_id,
+                "document_id": result.get("document_id"),
+                "event": result.get("event"),
+                "memory_enabled": use_memory,
+            },
+        )
+        return result
+
+    async def _ingest_live_content(self, db, content: str, path: str, corpus_id: str) -> dict:
         metadata, body = parse_markdown(content)
         doc_hash = content_hash(body)
 
@@ -57,6 +83,7 @@ class IngestionService:
             return {
                 "success": True,
                 "message": "Document unchanged (manifest), skipped",
+                "event": "UNCHANGED",
                 "chunk_count": 0,
             }
 
@@ -76,7 +103,7 @@ class IngestionService:
             }
 
         # Replace stale chunks with the freshly computed ones.
-        await delete_chunks_for_doc(db, doc_id)
+        await delete_chunks_for_doc(db, doc_id, commit=False)
 
         sections = extract_sections_with_paths(body)
         chunks = chunk_with_heading_paths(sections)
@@ -106,15 +133,92 @@ class IngestionService:
             self.embedder.model_name,
             self.embedder.dimension,
             "1.0",
+            commit=False,
         )
 
-        await update_manifest(db, path, doc_hash, doc_id, count, corpus_id)
+        await update_manifest(db, path, doc_hash, doc_id, count, corpus_id, commit=False)
 
         return {
             "success": True,
             "document_id": doc_id,
             "chunk_count": count,
             "message": f"Ingested {count} chunks",
+        }
+
+    async def _ingest_memory_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+        """One caller-owned transaction for the archive and live-index projection."""
+        from sqlalchemy import text
+
+        from api.services import memory
+
+        await memory.lock_corpus(db, corpus_id)
+        metadata, body = parse_markdown(content)
+        chunks = chunk_with_heading_paths(extract_sections_with_paths(body))
+        records = [{**chunk, "order_index": i} for i, chunk in enumerate(chunks)]
+        # Validate before embedding or any live mutation. No inferred claims.
+        memory.validate_source(path, content, metadata, records)
+        previous = await memory._latest(db, corpus_id, memory.memory_document_id(corpus_id, path))
+        fingerprint = memory._hash(content, metadata)
+        live = (
+            await db.execute(
+                text("SELECT id FROM documents WHERE corpus_id = :c AND path = :p"),
+                {"c": corpus_id, "p": path},
+            )
+        ).scalar_one_or_none()
+        if (
+            previous
+            and previous["event"] != "DELETED"
+            and previous["fingerprint"] == fingerprint
+            and live
+        ):
+            return {
+                "success": True,
+                "document_id": live,
+                "chunk_count": 0,
+                "version_id": previous["id"],
+                "event": "UNCHANGED",
+                "message": "Document unchanged, skipped",
+            }
+
+        embeddings = self.embedder.embed([c["text"] for c in records])
+        if len(embeddings) != len(records):
+            raise ValueError("embedding count does not match chunk count")
+        for record, embedding in zip(records, embeddings):
+            record["embedding"] = embedding
+        doc_id = await upsert_document(
+            db, extract_title(metadata), path, body, metadata, corpus_id=corpus_id, force=True
+        )
+        await delete_chunks_for_doc(db, doc_id, commit=False)
+        doc_type = metadata.get("document_type") or metadata.get("type") or DEFAULT_DOC_TYPE
+        if doc_type not in ("project", "kaggle", "note", "paper"):
+            doc_type = DEFAULT_DOC_TYPE
+        tags = metadata.get("tags", [])
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(",")]
+        count = await insert_chunks(
+            db,
+            doc_id,
+            doc_type,
+            tags,
+            records,
+            self.embedder.model_name,
+            self.embedder.dimension,
+            "1.0",
+            commit=False,
+        )
+        version = await memory.record_version(
+            db, corpus_id, path, doc_id, content, metadata, records
+        )
+        await update_manifest(
+            db, path, content_hash(content), doc_id, count, corpus_id, commit=False
+        )
+        return {
+            "success": True,
+            "document_id": doc_id,
+            "chunk_count": count,
+            "version_id": version["id"],
+            "event": version["event"],
+            "message": f"Ingested {count} chunks with version history",
         }
 
     async def ingest_file(
@@ -156,7 +260,7 @@ class IngestionService:
         """
         start = time.perf_counter()
         repo_path = Path(repo_path)
-        if not repo_path.exists():
+        if not repo_path.is_dir():
             return {"success": False, "message": f"Path not found: {repo_path}"}
 
         added = changed = unchanged = deleted = failed = 0
@@ -169,16 +273,8 @@ class IngestionService:
             source_paths.add(rel_path)
             try:
                 content = md_file.read_text(encoding="utf-8")
-                doc_hash = content_hash(parse_markdown(content)[1])
-
-                # Classify before ingesting so the summary is accurate.
                 async with session_scope() as db:
-                    prior = await check_manifest(db, rel_path, doc_hash, corpus_id)
                     known = await self._path_known(db, corpus_id, rel_path)
-
-                if prior:
-                    unchanged += 1
-                    continue
 
                 state = "changed" if known else "added"
                 async with session_scope() as db:
@@ -186,21 +282,35 @@ class IngestionService:
 
                 if not result["success"]:
                     failed += 1
-                    print(f"[ingest] Failed {md_file}: {result.get('message')}")
+                    logging.getLogger(__name__).warning(
+                        "document_ingestion_failed", extra={"corpus_id": corpus_id}
+                    )
                     continue
 
-                if state == "added":
+                if result.get("event") == "UNCHANGED":
+                    unchanged += 1
+                elif state == "added":
                     added += 1
                 else:
                     changed += 1
                 total_chunks += result.get("chunk_count", 0)
             except Exception as e:
                 failed += 1
-                print(f"[ingest] Error processing {md_file}: {e}")
+                logging.getLogger(__name__).warning(
+                    "document_ingestion_failed",
+                    extra={"corpus_id": corpus_id, "error_type": type(e).__name__},
+                )
 
         if delete_removed:
             async with session_scope() as db:
-                removed = await self._delete_stale_paths(db, corpus_id, source_paths)
+                async with db.begin():
+                    from api.services import memory
+
+                    await memory.lock_corpus(db, corpus_id)
+                    use_memory = self.memory_enabled or await memory.enabled(db, corpus_id)
+                    removed = await self._delete_stale_paths(
+                        db, corpus_id, source_paths, memory_enabled=use_memory
+                    )
             deleted = removed
 
         duration_ms = int((time.perf_counter() - start) * 1000)
@@ -231,7 +341,9 @@ class IngestionService:
         return result.first() is not None
 
     @staticmethod
-    async def _delete_stale_paths(db, corpus_id: str, keep_paths: set[str]) -> int:
+    async def _delete_stale_paths(
+        db, corpus_id: str, keep_paths: set[str], *, memory_enabled: bool = False
+    ) -> int:
         """Delete indexed documents, chunks, and manifest entries whose source
         paths no longer exist in the source directory.
 
@@ -247,7 +359,11 @@ class IngestionService:
         )
         stale = [(row[0], row[1]) for row in result.fetchall() if row[1] not in keep_paths]
         for doc_id, path in stale:
-            await delete_chunks_for_doc(db, doc_id)
+            if memory_enabled:
+                from api.services import memory
+
+                await memory.record_deletion(db, corpus_id, path)
+            await delete_chunks_for_doc(db, doc_id, commit=False)
             await db.execute(text("DELETE FROM documents WHERE id = :d"), {"d": doc_id})
             await db.execute(
                 text("DELETE FROM ingestion_manifest WHERE doc_id = :d"), {"d": doc_id}
@@ -265,6 +381,4 @@ class IngestionService:
             {"c": corpus_id, "keep": keep_list},
         )
 
-        if stale:
-            await db.commit()
         return len(stale)

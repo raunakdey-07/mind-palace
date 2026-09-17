@@ -13,20 +13,31 @@ Minimal, typed client over the Mind Palace core. The intended experience:
     print(pack.context)       # model-ready text
     print(pack.sources)       # attribution
 
-The SDK talks to the database through the same service layer as the API;
-no HTTP server is required.
+Named local clients retain the original sync/search/context behavior. Memory
+operations use the central memory service locally, or HTTP when ``base_url`` is
+provided (without loading local embedding or database services)::
+
+    mp = MindPalace("my-corpus", base_url="http://127.0.0.1:8000")
+    print(mp.memory.current().canonical_json())
+
+An unnamed local client can use ``mp.memory.current(corpus="my-corpus")`` without
+initializing legacy retrieval. The synchronous local SDK cannot be called from
+an active event loop; async applications should await memory_public.execute.
+Remote failures raise MemoryClientError with code, message, and status_code;
+local service failures propagate the central MemoryError unchanged.
 """
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-from api.services.context_packer import ContextPack, pack_context
-from api.services.corpora import get_or_create_corpus
-from api.services.db import session_scope
-from api.services.embedder import Embedder
-from api.services.ingestion import IngestionService
-from api.services.retrieval import RetrievalService
+if TYPE_CHECKING:
+    from api.models.memory import MemoryResponse
+    from api.services.context_packer import ContextPack
 
 
 @dataclass
@@ -47,16 +58,217 @@ class CorpusNotFoundError(Exception):
     """Raised when an operation references a corpus that does not exist."""
 
 
-class MindPalace:
-    """Corpus memory client for one named corpus."""
+class MemoryClientError(Exception):
+    """Remote memory failure; server error codes/messages are preserved.
 
-    def __init__(self, name: str, *, create_if_missing: bool = True):
+    Adapter-generated codes are timeout (504), transport_error (503),
+    invalid_response (502), and http_error (the HTTP response status).
+    """
+
+    def __init__(self, code: str, message: str, status_code: int):
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+        super().__init__(message)
+
+
+def _require_sync() -> None:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    raise RuntimeError(
+        "The synchronous local SDK cannot run inside an active event loop; "
+        "await api.services.memory_public.execute instead."
+    )
+
+
+class MemoryClient:
+    """Thin adapter over MemoryRequest and the central memory operations.
+
+    Timestamps accept aware datetimes or ISO-8601 strings; validation belongs to
+    MemoryRequest. Corpus defaults to the parent client's name.
+    """
+
+    def __init__(self, client: MindPalace):
+        self._client = client
+
+    def _execute(self, operation: str, corpus: str | None, query: str, **fields) -> MemoryResponse:
+        from api.models.memory import MemoryRequest, MemoryResponse
+
+        request = MemoryRequest(
+            corpus=self._client.name if corpus is None else corpus, query=query, **fields
+        )
+        if self._client.base_url is None:
+            _require_sync()
+            from api.services.memory_public import execute
+
+            return asyncio.run(execute(operation, request))
+
+        import httpx
+
+        try:
+            response = httpx.post(
+                f"{self._client.base_url}/api/memory/{operation}",
+                json=request.model_dump(mode="json"),
+                headers=self._client.headers,
+                timeout=self._client.timeout,
+            )
+        except httpx.TimeoutException as exc:
+            raise MemoryClientError("timeout", "Memory request timed out", 504) from exc
+        except httpx.RequestError as exc:
+            raise MemoryClientError(
+                "transport_error", "Memory service is unavailable", 503
+            ) from exc
+
+        if not response.is_success:
+            code, message = "http_error", f"Memory request failed (HTTP {response.status_code})"
+            try:
+                detail = response.json()
+                if isinstance(detail, dict):
+                    detail = detail.get("detail", detail.get("error", detail))
+                    if isinstance(detail, dict):
+                        if isinstance(detail.get("code"), str):
+                            code = detail["code"]
+                        if isinstance(detail.get("message"), str):
+                            message = detail["message"]
+            except ValueError:
+                pass
+            raise MemoryClientError(code, message, response.status_code)
+        try:
+            return MemoryResponse.model_validate(response.json())
+        except ValueError as exc:
+            raise MemoryClientError(
+                "invalid_response", "Memory service returned an invalid response", 502
+            ) from exc
+
+    def current(
+        self,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute("current", corpus, query, valid_at=valid_at, path=path)
+
+    def history(
+        self,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        as_of: datetime | str | None = None,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute("history", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+
+    def changes(
+        self,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        as_of: datetime | str | None = None,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute("changes", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+
+    def evidence(
+        self,
+        claim_id: str,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        as_of: datetime | str | None = None,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute(
+            "evidence", corpus, query, claim_id=claim_id, as_of=as_of, valid_at=valid_at, path=path
+        )
+
+    def as_of(
+        self,
+        timestamp: datetime | str,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute("as-of", corpus, query, as_of=timestamp, valid_at=valid_at, path=path)
+
+    def snapshot(
+        self,
+        as_of: datetime | str | None = None,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute("snapshot", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+
+    def replay_snapshot(
+        self,
+        snapshot_id: str,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        path: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute("replay", corpus, query, snapshot_id=snapshot_id, path=path)
+
+    def pack(
+        self,
+        budget: int = 8000,
+        corpus: str | None = None,
+        query: str = "",
+        *,
+        as_of: datetime | str | None = None,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+        snapshot_id: str | None = None,
+    ) -> MemoryResponse:
+        return self._execute(
+            "pack",
+            corpus,
+            query,
+            budget=budget,
+            as_of=as_of,
+            valid_at=valid_at,
+            path=path,
+            snapshot_id=snapshot_id,
+        )
+
+
+class MindPalace:
+    """Local corpus client or remote memory client (when base_url is supplied)."""
+
+    def __init__(
+        self,
+        name: str | None = None,
+        *,
+        create_if_missing: bool = True,
+        base_url: str | None = None,
+        headers: Mapping[str, str] | None = None,
+        timeout: float = 30,
+    ):
         self.name = name
-        self._embedder = Embedder()
-        self._ingestion = IngestionService()
+        self.base_url = base_url.rstrip("/") if base_url is not None else None
+        self.headers = dict(headers or {})
+        self.timeout = timeout
+        self.memory = MemoryClient(self)
         self._create_if_missing = create_if_missing
-        if create_if_missing:
-            self._run(self._ensure_corpus())
+        if base_url is None and name is not None:
+            from api.services.embedder import Embedder
+            from api.services.ingestion import IngestionService
+
+            self._embedder = Embedder()
+            self._ingestion = IngestionService()
+            if create_if_missing:
+                self._run(self._ensure_corpus())
 
     @staticmethod
     def _run(coro):
@@ -67,7 +279,12 @@ class MindPalace:
         The engine uses the default queue pool; disposal warnings from
         cross-loop close are suppressed as they are benign here.
         """
-        import asyncio
+        try:
+            _require_sync()
+        except RuntimeError:
+            coro.close()
+            raise
+
         import logging
 
         from api.services.db import async_engine
@@ -82,6 +299,9 @@ class MindPalace:
                 pass
 
     async def _ensure_corpus(self):
+        from api.services.corpora import get_or_create_corpus
+        from api.services.db import session_scope
+
         async with session_scope() as db:
             await get_or_create_corpus(db, self.name)
 
@@ -115,6 +335,11 @@ class MindPalace:
         strategy: str = "hybrid_rrf",
     ) -> ContextPack:
         """Retrieve evidence for ``query`` and pack model-ready context."""
+        self._require_legacy()
+        from api.services.context_packer import pack_context
+        from api.services.db import session_scope
+        from api.services.retrieval import RetrievalService
+
         corpus_id = self._corpus_id(must_exist=True)
         vector = self._embedder.embed_single(query)
 
@@ -135,6 +360,10 @@ class MindPalace:
 
     def search(self, query: str, *, k: int = 5, strategy: str = "hybrid_rrf"):
         """Raw retrieval results (what is relevant), without packing."""
+        self._require_legacy()
+        from api.services.db import session_scope
+        from api.services.retrieval import RetrievalService
+
         corpus_id = self._corpus_id(must_exist=True)
         vector = self._embedder.embed_single(query)
 
@@ -154,8 +383,14 @@ class MindPalace:
 
     # -- internals ---------------------------------------------------------
 
+    def _require_legacy(self) -> None:
+        if self.base_url is not None or self.name is None:
+            raise ValueError("sync/search/context require a named local MindPalace client")
+
     def _corpus_id(self, must_exist: bool = False) -> str:
+        self._require_legacy()
         from api.services.corpora import get_corpus_by_name
+        from api.services.db import session_scope
 
         async def _get():
             async with session_scope() as db:

@@ -7,11 +7,14 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from api.routers import context, corpora, ingest, query, search
+from api.routers import context, corpora, ingest, memory, query, search
 
 
 @asynccontextmanager
@@ -29,6 +32,27 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    memory_ask = (
+        request.url.path in {"/api/query/ask", "/api/query"}
+        and isinstance(exc.body, dict)
+        and exc.body.get("mode", "rag") != "rag"
+    )
+    if request.url.path.startswith("/api/memory/") or memory_ask:
+        # Do not echo untrusted inputs or non-JSON-serializable validator contexts.
+        message = "; ".join(
+            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+            for error in exc.errors()
+        )
+        return JSONResponse(
+            status_code=422,
+            content={"detail": {"code": "invalid_request", "message": message}},
+        )
+    return await request_validation_exception_handler(request, exc)
+
 
 # CORS — allow the Next.js frontend in dev
 app.add_middleware(
@@ -55,3 +79,4 @@ app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(query.router, prefix="/api/query", tags=["query"])
 app.include_router(context.router, prefix="/api/context", tags=["context"])
+app.include_router(memory.router, prefix="/api/memory", tags=["memory"])

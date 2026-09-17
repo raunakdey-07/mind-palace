@@ -5,7 +5,9 @@
 
 A thin adapter exposing the Mind Palace core over MCP so any MCP-compatible
 AI client can use corpus memory as tools. Deliberately minimal:
-context, search, sync, list_corpora.
+context, search, sync, list_corpora, and the public memory operations.
+The memory tools do not expose arbitrary writes; snapshot creates immutable state.
+Authentication is not currently provided.
 
 Run with:
     python -m mcp_server
@@ -25,9 +27,12 @@ Configure in an MCP client (example):
 from __future__ import annotations
 
 import json
+from typing import Annotated
 
 from mcp.server.mcpserver import MCPServer
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from api.models.memory import MemoryRequest, MemoryResponse
 from mindpalace_sdk import MindPalace
 
 mcp = MCPServer("mind-palace")
@@ -91,6 +96,85 @@ def list_corpora() -> str:
 
     items = asyncio.run(_list())
     return json.dumps(items, indent=2, default=str)
+
+
+# Advertise the central response schema while allowing MCP-native error results.
+MemoryToolResult = Annotated[CallToolResult, MemoryResponse]
+_READ_MEMORY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
+
+
+async def _execute_memory(operation: str, request: MemoryRequest) -> CallToolResult:
+    from api.services.memory_public import MemoryError, execute
+
+    try:
+        response = await execute(operation, request)
+    except MemoryError as exc:
+        detail = {"code": exc.code, "message": exc.message}
+        return CallToolResult(
+            isError=True,
+            content=[TextContent(type="text", text=json.dumps({"detail": detail}))],
+            structuredContent={"detail": detail},
+        )
+    payload = response.model_dump(mode="json")
+    return CallToolResult(
+        content=[TextContent(type="text", text=response.canonical_json())],
+        structuredContent=payload,
+    )
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_current(request: MemoryRequest) -> MemoryToolResult:
+    """Read current memories from an explicitly named corpus."""
+    return await _execute_memory("current", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_history(request: MemoryRequest) -> MemoryToolResult:
+    """Read historical memories, preserving status and evidence attribution."""
+    return await _execute_memory("history", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_changes(request: MemoryRequest) -> MemoryToolResult:
+    """Read memory changes and their provenance."""
+    return await _execute_memory("changes", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_evidence(request: MemoryRequest) -> MemoryToolResult:
+    """Read source evidence for memories in a corpus."""
+    return await _execute_memory("evidence", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_as_of(request: MemoryRequest) -> MemoryToolResult:
+    """Read memory as of an observation time, not present-day state."""
+    return await _execute_memory("as-of", request)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        openWorldHint=False,
+    ),
+    structured_output=True,
+)
+async def memory_snapshot(request: MemoryRequest) -> MemoryToolResult:
+    """Create an immutable snapshot; cannot overwrite claims or arbitrary memory."""
+    return await _execute_memory("snapshot", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_replay(request: MemoryRequest) -> MemoryToolResult:
+    """Replay an immutable snapshot within its corpus."""
+    return await _execute_memory("replay", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_pack(request: MemoryRequest) -> MemoryToolResult:
+    """Pack attributed memory evidence; budget is Unicode characters, not tokens."""
+    return await _execute_memory("pack", request)
 
 
 def main() -> None:

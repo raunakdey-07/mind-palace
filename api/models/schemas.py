@@ -5,7 +5,11 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import AwareDatetime, BaseModel, Field, model_validator
+
+from api.models.memory import MemoryRequest, MemoryResponse
 
 # --- Ingestion ---
 
@@ -160,12 +164,50 @@ class ContextPackResponse(BaseModel):
 
 
 class AskRequest(BaseModel):
-    """Request body for POST /api/ask - general Q&A."""
+    """Request body for POST /api/query/ask; RAG remains the default."""
 
     question: str = Field(..., description="The user's question")
     k: int = Field(5, ge=1, le=20, description="Number of retrieved chunks")
     document_type: str | None = Field(None, description="Filter by document type")
     tags: list[str] | None = Field(None, description="Filter by tags")
+    mode: Literal["rag", "memory"] = "rag"
+    corpus: str | None = Field(None, description="Required in explicit memory mode")
+    budget: int = Field(
+        8000,
+        ge=512,
+        le=128000,
+        strict=True,
+        description="Memory pack budget in Unicode characters, not tokens",
+    )
+    as_of: AwareDatetime | None = None
+    valid_at: AwareDatetime | None = None
+    path: str | None = None
+    claim_id: str | None = None
+    snapshot_id: str | None = None
+
+    def memory_request(self) -> MemoryRequest:
+        return MemoryRequest(
+            corpus=self.corpus,
+            query=self.question,
+            budget=self.budget,
+            as_of=self.as_of,
+            valid_at=self.valid_at,
+            path=self.path,
+            claim_id=self.claim_id,
+            snapshot_id=self.snapshot_id,
+        )
+
+    @model_validator(mode="after")
+    def validate_memory_mode(self):
+        if self.mode == "memory":
+            if not self.corpus:
+                raise ValueError("corpus is required in memory mode")
+            if not self.question.strip():
+                raise ValueError("question must not be blank in memory mode")
+            if self.document_type is not None or self.tags is not None:
+                raise ValueError("document_type and tags are RAG-only filters")
+            self.memory_request()
+        return self
 
 
 class SummarizeRequest(BaseModel):
@@ -260,6 +302,13 @@ class StructuredResponse(BaseModel):
     diagnostics: list[RetrievalDiagnostics] | None = Field(
         None, description="Retrieval score breakdown (debug mode)"
     )
+
+
+class MemoryAskResponse(StructuredResponse):
+    """Answer plus the exact canonical pack used for evidence attribution."""
+
+    mode: Literal["memory"] = "memory"
+    memory: MemoryResponse
 
 
 # --- Legacy (for backward compatibility) ---

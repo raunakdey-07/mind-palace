@@ -11,7 +11,10 @@ from typing import Optional
 import typer
 import yaml
 
+from cli.memory import app as memory_app
+
 app = typer.Typer(name="mindpalace", help="Mind Palace CLI")
+app.add_typer(memory_app)
 
 eval_app = typer.Typer(name="eval", help="Evaluation commands")
 app.add_typer(eval_app)

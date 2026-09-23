@@ -35,7 +35,7 @@ class MemoryError(Exception):
 
 
 OPERATIONS = frozenset(
-    {"current", "history", "changes", "evidence", "as-of", "snapshot", "replay", "pack"}
+    {"current", "history", "changes", "evidence", "as-of", "snapshot", "replay", "pack", "query"}
 )
 
 
@@ -55,6 +55,7 @@ def _validate(operation: str, request: MemoryRequest) -> None:
         "snapshot": {"as_of"},
         "replay": {"snapshot_id", "path"},
         "pack": {"path", "as_of", "valid_at", "snapshot_id", "budget"},
+        "query": {"path", "as_of", "valid_at", "snapshot_id", "budget", "intent"},
     }[operation]
     # SDK sends default fields too; reject non-default unsupported selectors.
     for name in type(request).model_fields:
@@ -258,7 +259,12 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
     quotes or return dangling evidence references. The truncated flag is reserved
     before selection, so even changing the flag cannot overflow the budget.
     """
-    result = MemoryResponse(query=full.query, corpus=full.corpus, state=full.state, truncated=True)
+    result = MemoryResponse(
+        query=full.query,
+        corpus=full.corpus,
+        state=full.state,
+        truncated=True,
+    )
     if len(result.canonical_json()) > budget:
         raise MemoryError("invalid_budget", "Budget cannot fit the response envelope", 422)
     evidence = {e.id: e for e in full.evidence}
@@ -271,7 +277,11 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
         "uncertain_memories",
     ):
         for item in getattr(full, field):
-            candidate = result.model_copy(deep=True)
+            # Selection treats nested items as read-only. Isolate only the lists
+            # we append to; _attach replaces evidence/sources rather than mutating them.
+            candidate = result.model_copy()
+            setattr(candidate, field, list(getattr(result, field)))
+            candidate.conflicts = list(result.conflicts)
             if item not in getattr(candidate, field):
                 getattr(candidate, field).append(item)
             # A change can mention a conflicting claim before the conflicts section
@@ -311,6 +321,13 @@ async def execute_in_session(db, operation: str, request: MemoryRequest) -> Memo
     corpus = await get_corpus_by_name(db, request.corpus)
     if corpus is None:
         raise MemoryError("corpus_not_found", "Corpus not found", 404)
+    if operation == "query":
+        from api.services.memory_query import interpret
+
+        interpreted = interpret(request)
+        request = request.model_copy(
+            update={"as_of": interpreted.as_of, "intent": interpreted.name}
+        )
     saved = None
     cutoff = request.as_of
     if operation == "snapshot":
@@ -333,6 +350,14 @@ async def execute_in_session(db, operation: str, request: MemoryRequest) -> Memo
     if request.path and not any(v["path"] == request.path for v in versions):
         raise MemoryError("document_not_found", "Document not found in this corpus/state", 404)
     state = State(as_of=cutoff, valid_at=valid_at, snapshot=saved["id"] if saved else None)
+    if operation == "query":
+        from api.services.memory_query import query
+
+        # Resolve the COMPLETE scoped state before applying any relevance filter.
+        full = project(
+            versions, request.model_copy(update={"query": "", "path": None}), "pack", state, saved
+        )
+        return await query(full, request)
     result = project(versions, request, operation, state, saved)
     return bounded_pack(result, request.budget) if operation == "pack" else result
 

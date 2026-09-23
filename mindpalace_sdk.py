@@ -33,7 +33,7 @@ import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from api.models.memory import MemoryResponse
@@ -141,6 +141,35 @@ class MemoryClient:
             raise MemoryClientError(
                 "invalid_response", "Memory service returned an invalid response", 502
             ) from exc
+
+    def query(
+        self,
+        query: str,
+        corpus: str | None = None,
+        *,
+        intent: Literal[
+            "auto", "current", "historical", "temporal", "change", "conflict", "provenance"
+        ] = "auto",
+        budget: int = 8000,
+        as_of: datetime | str | None = None,
+        valid_at: datetime | str | None = None,
+        path: str | None = None,
+        claim_id: str | None = None,
+        snapshot_id: str | None = None,
+    ) -> MemoryResponse:
+        """Query memory with intent-aware evidence bounded in Unicode characters."""
+        return self._execute(
+            "query",
+            corpus,
+            query,
+            intent=intent,
+            budget=budget,
+            as_of=as_of,
+            valid_at=valid_at,
+            path=path,
+            claim_id=claim_id,
+            snapshot_id=snapshot_id,
+        )
 
     def current(
         self,

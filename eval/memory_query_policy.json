@@ -1,0 +1,13 @@
+{
+  "frozen": true,
+  "policy": {
+    "approach": "E",
+    "minimum": 0.3,
+    "strong": 0.65,
+    "relative": 0.9,
+    "max_topics": 4
+  },
+  "sha256": "c21422fc26aaf2d7137dc9d194bf6e01e2be2358274e728baf1e0ce7892f69f9",
+  "selection_basis": "Development only: 18/24 original, 34/40 additional, 6/6 temporal, 1/2 multi exact, 2/2 unrelated rejected. Frozen before held-out retrieval.",
+  "heldout_sha256": "77e05babeeb0dd62d08a03865728d8ffffe50c20b57066566ab865c2dc37757a"
+}

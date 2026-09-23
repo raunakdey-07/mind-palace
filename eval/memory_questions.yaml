@@ -1,0 +1,377 @@
+# Additional hand-authored questions and labels, never generated from service output.
+# Stage aliases and delete-after-payload semantics come from memory_benchmarks.yaml.
+# stage selects the observed workload; as_of selects an A/B/C temporal cutoff.
+# Current means unopposed at the selected cutoff; historical means no longer active.
+# Conflicting active assertions go only in expected_conflicts, including counterclaims
+# outside a selected path. [] explicitly scores absence, not an omitted expectation.
+# Paths are corpus-relative. Provenance questions label claims, not evidence quotes.
+version: 1
+queries:
+  # Synonyms, stale vocabulary, and current authority.
+  - id: question-pilot-message-bus
+    question: Which message bus carries Dispatch events during the pilot?
+    stage: A
+    intent: current
+    expected_current_claims: [Dispatch uses Redis Streams for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-redis-replacement-now
+    question: I remember Redis Streams handling events; what carries them after cutover?
+    stage: C
+    intent: current
+    expected_current_claims: [Dispatch uses Kafka for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-cache-not-bus
+    question: Redis still appears in the architecture notes; which system is actually the event bus now?
+    stage: G
+    intent: current
+    path: architecture/streaming.md
+    expected_current_claims: [Dispatch uses Kafka for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-pilot-gateway-credentials
+    question: What kind of credentials does the operator gateway accept in the pilot?
+    stage: A
+    intent: current
+    expected_current_claims: [Dispatch authenticates operator requests with JWT bearer tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-jwt-replacement-now
+    question: My old notes say JWT bearer tokens; what authentication contract applies after federation?
+    stage: C
+    intent: current
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-token-encoding-not-contract
+    question: Regardless of JWT encoding, what is the current operator authentication mechanism?
+    stage: D
+    intent: current
+    path: authentication/operator.md
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-recovery-responsibility
+    question: Which team is responsible for getting Dispatch replay recovery back on track?
+    stage: B
+    intent: current
+    expected_current_claims:
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  # Closely related vocabulary must not conflate storage, migration, or transport.
+  - id: question-ledger-not-stream
+    question: Is the source of truth for orders the Redis or Kafka stream, or a database?
+    stage: D
+    intent: current
+    expected_current_claims: [Dispatch stores authoritative order records in PostgreSQL.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-schema-rollout-not-storage
+    question: How are PostgreSQL schema upgrades rolled out, rather than where orders are stored?
+    stage: D
+    intent: current
+    expected_current_claims: [Dispatch migrates PostgreSQL schemas with expand-contract changes.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-transport-not-ledger
+    question: Which technology moves order events after cutover, as distinct from the PostgreSQL order ledger?
+    stage: D
+    intent: current
+    expected_current_claims: [Dispatch uses Kafka for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-three-system-roles
+    question: What are the current order storage, database migration strategy, and event transport for Dispatch?
+    stage: D
+    intent: current
+    expected_current_claims:
+      - Dispatch stores authoritative order records in PostgreSQL.
+      - Dispatch migrates PostgreSQL schemas with expand-contract changes.
+      - Dispatch uses Kafka for event streaming.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-pilot-target-versus-live
+    question: In the pilot, what transport is live and how many partitions does the provisioned Kafka target have?
+    stage: A
+    intent: current
+    expected_current_claims:
+      - Dispatch uses Redis Streams for event streaming.
+      - Dispatch configures the Kafka orders topic with 6 partitions.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-expanded-topic-size
+    question: How many partitions does the orders topic have once the capacity expansion is complete?
+    stage: D
+    intent: current
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-delivery-guarantee
+    question: What delivery guarantee should an order-event consumer expect during the pilot?
+    stage: A
+    intent: current
+    expected_current_claims: [Dispatch delivers order events at least once.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-audit-not-order-storage
+    question: Where are operator audit events written, rather than authoritative order records?
+    stage: D
+    intent: current
+    expected_current_claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  # Historical and change questions include full old and new authored assertions.
+  - id: question-retired-event-bus
+    question: Which event bus did Dispatch retire, and which one is recorded as current?
+    stage: D
+    intent: historical
+    path: architecture/streaming.md
+    expected_current_claims: [Dispatch uses Kafka for event streaming.]
+    expected_historical_claims: [Dispatch uses Redis Streams for event streaming.]
+    expected_conflicts: []
+
+  - id: question-archived-gateway-contract
+    question: What earlier operator credential contract is archived alongside the federated replacement?
+    stage: D
+    intent: historical
+    path: authentication/operator.md
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: [Dispatch authenticates operator requests with JWT bearer tokens.]
+    expected_conflicts: []
+
+  - id: question-topic-sizing-history
+    question: What old and current orders-topic partition counts appear in the configuration history?
+    stage: G
+    intent: historical
+    path: architecture/kafka-config.md
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+    expected_historical_claims: [Dispatch configures the Kafka orders topic with 6 partitions.]
+    expected_conflicts: []
+
+  - id: question-bus-cutover-delta
+    question: What changed in the event-streaming decision between the pilot and the cutover?
+    stage: C
+    intent: change
+    path: architecture/streaming.md
+    expected_current_claims: [Dispatch uses Kafka for event streaming.]
+    expected_historical_claims: [Dispatch uses Redis Streams for event streaming.]
+    expected_conflicts: []
+
+  - id: question-federation-delta
+    question: Which operator authentication contract was replaced when identity federation arrived, and by what?
+    stage: C
+    intent: change
+    path: authentication/operator.md
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: [Dispatch authenticates operator requests with JWT bearer tokens.]
+    expected_conflicts: []
+
+  - id: question-capacity-delta
+    question: What were the before-and-after partition settings for the orders-topic expansion?
+    stage: D
+    intent: change
+    path: architecture/kafka-config.md
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+    expected_historical_claims: [Dispatch configures the Kafka orders topic with 6 partitions.]
+    expected_conflicts: []
+
+  - id: question-ownership-clarification
+    question: Did the escalation wording update replace the replay owner claim, or does the ownership document still name the same team?
+    stage: B
+    intent: change
+    path: operations/ownership.md
+    expected_current_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  # Temporal labels are current at the alias, not at the later observation stage.
+  - id: question-pilot-bus-from-restoration
+    question: Looking back from the restored-runbook stage, which event bus was in use at the pilot checkpoint?
+    stage: G
+    intent: temporal
+    as_of: A
+    path: architecture/streaming.md
+    expected_current_claims: [Dispatch uses Redis Streams for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-precutover-transport
+    question: Before the cutover, at the ownership-clarification checkpoint, was Redis Streams still the event transport?
+    stage: D
+    intent: temporal
+    as_of: B
+    expected_current_claims: [Dispatch uses Redis Streams for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-pilot-auth-from-conflict
+    question: Setting aside today's incident-runbook disagreement, what operator authentication contract was current in the pilot?
+    stage: E
+    intent: temporal
+    as_of: A
+    expected_current_claims: [Dispatch authenticates operator requests with JWT bearer tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-clarification-auth-from-restoration
+    question: At the ownership-clarification checkpoint, before federation, what credentials authenticated operator requests?
+    stage: G
+    intent: temporal
+    as_of: B
+    path: authentication/operator.md
+    expected_current_claims: [Dispatch authenticates operator requests with JWT bearer tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-cutover-topic-from-expansion
+    question: Ignore the later expansion; how many orders-topic partitions were configured at cutover?
+    stage: G
+    intent: temporal
+    as_of: C
+    path: architecture/kafka-config.md
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 6 partitions.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-federated-auth-before-runbook
+    question: At the cutover checkpoint, before the stale incident checklist appeared, what authentication contract applied?
+    stage: G
+    intent: temporal
+    as_of: C
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  # Preserve both sides of live conflicts; a path must not hide the counterclaim.
+  - id: question-incident-versus-gateway
+    question: The incident checklist says JWT but the gateway contract says OIDC; which live assertions disagree?
+    stage: E
+    intent: conflict
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: question-stale-jwt-source-dispute
+    question: When I look up the JWT incident checklist, what competing authentication assertion must also be shown?
+    stage: E
+    intent: conflict
+    path: runbooks/auth-incident.md
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: question-restored-checklist-dispute
+    question: Now that the pilot incident checklist is back, which two operator authentication assertions are in conflict again?
+    stage: G
+    intent: conflict
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: question-restored-jwt-path-dispute
+    question: Does the restored JWT runbook stand unchallenged, or which live authentication claims disagree with each other?
+    stage: G
+    intent: conflict
+    path: runbooks/auth-incident.md
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  # Deletion removes current support, not archived claims or their provenance.
+  - id: question-deleted-checklist-current
+    question: After its deletion, does the incident checklist provide any current operator authentication claim?
+    stage: F
+    intent: current
+    path: runbooks/auth-incident.md
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-deleted-checklist-archive
+    question: What authentication instruction survives in the archive of the removed incident checklist?
+    stage: F
+    intent: historical
+    path: runbooks/auth-incident.md
+    expected_current_claims: []
+    expected_historical_claims:
+      - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+    expected_conflicts: []
+
+  - id: question-auth-authority-after-removal
+    question: With the stale JWT checklist removed, which operator authentication contract remains unopposed?
+    stage: F
+    intent: current
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-removed-checklist-provenance
+    question: Which archived claim can still be supported by the deleted incident runbook's original wording?
+    stage: F
+    intent: provenance
+    path: runbooks/auth-incident.md
+    expected_current_claims: []
+    expected_historical_claims:
+      - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+    expected_conflicts: []
+
+  - id: question-ledger-provenance
+    question: Which authoritative storage claim is supported by the order-storage document's ledger and reconciliation passages?
+    stage: D
+    intent: provenance
+    path: data/storage.md
+    expected_current_claims: [Dispatch stores authoritative order records in PostgreSQL.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-untrusted-provenance
+    question: What trust-boundary claim does the security document support with its quoted examples of hostile runbook text?
+    stage: D
+    intent: provenance
+    path: security/retrieved-content.md
+    expected_current_claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  # Irrelevant negatives deliberately have no supported answer in this corpus.
+  - id: question-unrelated-weather
+    question: What will the weather be in Lisbon tomorrow?
+    stage: D
+    intent: current
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: question-unrelated-payroll
+    question: Which payroll provider processes employee salaries for Dispatch?
+    stage: G
+    intent: current
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []

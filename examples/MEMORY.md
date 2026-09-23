@@ -1,4 +1,216 @@
-# Persistent memory: evolving project demo (M005)
+# Persistent memory: demos and evaluation
+
+Mind Palace provides persistent, portable **corpus memory for AI applications**,
+not human or conversational memory. Start with [why memory beyond RAG](WHY_MEMORY.md)
+and the [public API contract](MEMORY_API.md).
+
+## Rolled-back A–G evaluation demo (M006)
+
+From the repository root, after installing requirements and `pip install -e .`:
+
+```bash
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+HF_HUB_OFFLINE=1 python examples/memory_evaluation_demo.py
+```
+
+Use a disposable PostgreSQL database with permission to create a schema and
+provision the migrations' extensions. No API server, LLM, or model cache is
+needed. The demo uses `memory_benchmark_workload()` with **artificial deterministic
+fixture embeddings**, not a learned retrieval model. It opens a random schema,
+applies migrations there, and rolls back the outer transaction on exit; no real
+corpus or report artifact persists. It issues no direct production SQL or commit.
+The shared context owns savepoints and rollback. Run it standalone, sequentially.
+
+The script resolves the real `eval/memory_benchmarks.yaml` relative to the checkout,
+loads its A–G source directories, and executes all **39 exact authored query cases**
+at their declared stages. It prints current/history counts, document changes,
+conflict alternatives, exact evidence, saved snapshot stages, and pack budgets.
+It does not invent source data, timestamps, or expected results from API output.
+Checks remain active under `python -O`. Default workload timeout is 120 seconds;
+`--timeout-seconds` accepts 1–600. Timeout requests cancellation and rollback
+cleanup; cleanup time is additional, and no PASS is printed on failure.
+There is deliberately no `--save`: use the evaluation CLI for report artifacts.
+
+| Stage | New events | Meaning | Live docs / conflict groups |
+|---|---|---|---|
+| A | 10 NEW | Redis Streams, JWT, Kafka migration target with 6 partitions | 10 / 0 |
+| B | 1 MODIFIED | Ownership prose only; `memory_changed=false`, `DOCUMENT_MODIFIED` | 10 / 0 |
+| C | 2 MODIFIED | Same-document streaming/auth supersession to Kafka/OIDC | 10 / 0 |
+| D | 1 MODIFIED | Kafka partitions 6 → 12 | 10 / 0 |
+| E | 1 NEW | Stale JWT incident runbook conflicts with OIDC | 11 / 1 |
+| F | 1 DELETED | Runbook tombstoned; exact evidence retained | 10 / 0 |
+| G | 1 RESTORED | Identical runbook bytes restore the same semantic conflict pair | 11 / 1 |
+
+Stage directories are overlays with logical paths relative to each stage root;
+unchanged copies add no versions. **Deletion runs after ingestion**: F deliberately
+contains the runbook file as well as listing it for deletion. The current loader
+supports this; the older compatibility warning in the corpus README is stale.
+Stage letters resolve to actual captured observation cutoffs, not simulated dates.
+The fixture assigns no validity dates. E/G have nine unopposed current claims
+plus two conflicting active claims—not eleven unopposed current claims.
+
+Assertions include prose-only modification, supersession, deletion/restoration,
+public provenance and exact archived chunk slices, two distinct references for
+one storage claim, and the hostile fixture's verbatim text remaining data. Each
+A–G replay is captured before later mutations and compared **byte for byte** after
+G, without normalizing away clocks for that check. `normalize()` is also exercised
+for stage aliases. Packs at 1000/2000/4000/8000/16000 Unicode characters check the
+complete envelope, evidence closure, all-or-none conflict alternatives, honest
+truncation, and repeatability for the same frozen G state. A whole conflict may
+be omitted when it does not fit; that is not a resolved disagreement.
+
+### Recorded demo validation (2026-09-17)
+
+The following command completed successfully in this workspace:
+
+```bash
+DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace \
+  HF_HUB_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 \
+  venvmp/bin/python examples/memory_evaluation_demo.py
+```
+
+**PASS:** 39 authored cases, provenance, frozen replay, and pack safety; the
+transaction rolled back. Final stage counts were **17 versions, 16 claims,
+17 evidence references, 7 snapshots, 11 live documents, 1 live conflict group**.
+Lifecycle totals: 11 NEW, 4 MODIFIED, 1 DELETED, 1 RESTORED. These are demo
+observations, not latency percentiles or retrieval/generation quality results.
+
+## Memory evaluation CLI and results
+
+This local CLI runs directly against PostgreSQL, unlike `memory current` and
+other remote-only memory CLI commands. From the repository root:
+
+```bash
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+mkdir -p eval/results
+HF_HUB_OFFLINE=1 python -m cli.main eval memory --repetitions 1 \
+  --save eval/results/memory-fixture-smoke.json
+```
+
+The save path must be new: the CLI refuses overwrite and does **not** create its
+parent directory. Omit `--save` for text output only. A one-repetition run is a
+functional check, not a percentile measurement. Default repetitions are 20;
+valid range is 1–1000. Default scaling sizes are empty (no synthetic sweep).
+
+Manual cached-model measurement, only when the real model is already cached:
+
+```bash
+HF_HUB_OFFLINE=1 python -m cli.main eval memory --embeddings cached \
+  --repetitions 20 --sizes 100,500,1000 \
+  --save eval/results/memory-cached-manual.json
+```
+
+Cached mode constructs an independent local-only sentence-transformer using
+`EMBEDDING_MODEL` (default `all-MiniLM-L6-v2`), requires 384 dimensions, and fails
+if weights are absent. It neither downloads nor silently substitutes a fixture.
+The default fixture mode constructs no learned model and makes no provider call;
+its artificial deterministic vectors cannot establish retrieval quality.
+
+**Recorded cached evaluation:** tailored lexical cases passed **39/39**; the
+natural-language diagnostic was **0/24 correct nonempty current-claim sets**.
+The live baseline's **79.17% literal text coverage is not semantic accuracy**.
+These reported cached results are separate from the fixture demo run above.
+See [WHY_MEMORY.md](WHY_MEMORY.md) for interpretation and the maintainer-authored
+[measured M006 report](../docs/evaluation/m006.md) for results and environment.
+No unknown performance numbers or 5,000-document measurements are asserted here.
+
+`--generation` explicitly opts in to A: a memory-pack prompt through `LLMService`,
+and B: the actual default `/api/query/ask` route captured at the relevant live
+stage (B requires cached embeddings). Both need explicit `LLM_PROVIDER`; configured
+providers may require secrets, receive corpus text, and incur cost. Run only as a
+standalone evaluation: the B adapter temporarily binds route globals and must not
+share a process with serving traffic. Judging is literal checks, not an LLM judge
+or proof of correct temporal framing. **Generation A/B: NOT RUN in the recorded
+evaluation because no LLM service was available. M006 is not declared complete
+or deployment-ready.**
+
+Detailed scoring, timing, normalization, and gate semantics are in
+[MEMORY_API.md](MEMORY_API.md#reusable-evaluation-workload-and-cli-semantics).
+
+## M006.5 question retrieval: implemented and evaluated
+
+M006.5 adds `POST /api/memory/query`, SDK `memory.query`, MCP `memory_query`, and
+remote CLI `memory query`. Existing lexical `current`, `history`, `changes`, and
+`pack` behavior is unchanged. Default `/api/query/ask` remains live RAG; explicit
+`mode="memory"` now sends its `question` through query with automatic intent before
+optional LLM generation. [REST, SDK, MCP, and CLI examples](MEMORY_API.md#question-retrieval-m0065).
+
+```bash
+python -m cli.main memory query --corpus my-corpus \
+  --query "What carries Dispatch events now?" --intent current --budget 8000
+```
+
+Use an existing authored corpus. The question belongs in **`query`** and is
+mandatory/nonempty. `intent` accepts `auto` (default), `current`, `historical`,
+`temporal`, `change`, `conflict`, `provenance`. A date-only question cutoff means
+midnight UTC observation time. Stage names require a real `as_of` or `snapshot_id`
+from the caller; “before Kafka” does not infer a precise event boundary. Structured
+time selectors take precedence, and temporal intent requires a cutoff/snapshot.
+
+The query service loads the existing configured MiniLM model on demand and can
+reuse its in-process singleton. Question and archived claim/text-key-path vectors
+are **transient, recomputed per query, with no persistent cache/index**. The
+0.30 cosine floor and 0.90 top-score band are relevance heuristics; same-authored-key
+score propagation is not authority. Status/time projection, exact provenance,
+and complete conflict groups still come from the memory core. Determinism needs
+the same state, clocks, request, model, and runtime, not merely repeated words.
+**No M006.5 schema migration** is needed; migration 005 below is the earlier
+multiple-evidence extension, not a query migration.
+
+### Recorded retrieval measurements
+
+The saved `eval/results/m0065-final.json` contains **17/24** exact original
+current-claim sets versus the earlier lexical **0/24**, and **30/40** exact added
+question cases. Added category results are current **13/19**, historical **4/4**,
+temporal **3/6**, change **3/4**, conflict **4/4**, provenance **3/3**. All **17**
+failures and unchanged labels are documented in the
+[full M006.5 report](../docs/evaluation/m0065.md), including the potential
+ownership-clarification empty-history label issue.
+
+There were **0 safety failures over 264 output cases** (64 main + 200 budget
+outputs) and no execution failures. Budget correctness and retrieval completeness
+are distinct: exact sets at 1000/2000/4000/8000/16000 characters were
+**3/40, 3/40, 26/40, 30/40, 30/40**. A passing safety/execution gate does not certify
+relevance; `truncated=false` does not prove no relevant claim was missed.
+
+One warmed fixed query, 20 repetitions: **124.2/131.3 ms p50/p95**, versus
+**4.0/5.1 ms** preembedded live search. Query includes per-call embedding and
+archive projection/packing; live search excludes query embedding, so this is
+**not a fair end-to-end latency comparison**. These are small-fixture local
+measurements, not production latency promises.
+
+### Reproduce M006.5 separately
+
+With dependencies installed and `all-MiniLM-L6-v2` already cached, use the existing
+local PostgreSQL instance on port 5433 (or your configured disposable database):
+
+```bash
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+mkdir -p eval/results
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 \
+  venvmp/bin/python -m api.services.memory_query_benchmark --end-to-end \
+  --save eval/results/m0065-local-rerun.json
+```
+
+This is a standalone, rollback-only database workload, not a REST-server benchmark
+or a generation run. It uses the cached real model with no fixture fallback.
+Unlike `cli.main eval memory --save`, this module **overwrites** its target and
+does not create the parent; use a fresh filename to preserve recorded reports.
+Omit `--end-to-end` (with a separate save path) for the ranking experiment only.
+
+**Status:** M006.5 implemented/evaluated with remaining relevance limits;
+**generation NOT RUN**. The maintainer reports the current full suite at **932
+passed**; no-DB tests and lint are pending maintainer validation. These are not
+new validation runs performed for this documentation update. This does not
+establish a universally reliable question service or production readiness.
+The [M006 report](../docs/evaluation/m006.md) and its incomplete generation/scaling
+findings remain unchanged.
+
+## Persistent evolving-project demo (M005)
+
+The older SDK example below is still useful when you deliberately want a
+committed corpus and response artifacts. Its persistence and embedding behavior
+are different from the rolled-back A–G demo above.
 
 Mind Palace retains evidence-backed source assertions as a project changes. It
 records what a document asserted and when it was observed; it does not establish
@@ -112,7 +324,7 @@ Omit `HF_HUB_OFFLINE=1` only if model downloads are acceptable and needed.
 
 ## M004 foundation reference
 
-## Schema (migration `004_memory`)
+## Schema (foundation `004_memory`, extended by `005_multiple_evidence`)
 
 | Table | Purpose |
 |---|---|
@@ -120,7 +332,7 @@ Omit `HF_HUB_OFFLINE=1` only if model downloads are acceptable and needed.
 | `memory_versions` | Immutable observed source states: raw content, normalized metadata, fingerprint, `observed_at`, predecessor, `NEW`/`MODIFIED`/`RESTORED`/`DELETED` event, version number. |
 | `memory_chunks` | Immutable version-specific chunks (text, heading path, order). No embeddings duplicated. |
 | `memory_claims` | Explicitly authored claims: key, JSONB value, claim text, optional `valid_from`/`valid_until`, `supersedes_id`, `supersession_basis`. |
-| `memory_evidence` | Exact quote plus character offsets into one archived chunk; one evidence row per claim. |
+| `memory_evidence` | Exact quotes plus character offsets into archived chunks; migration 004 allowed one row per claim, migration 005 permits multiple distinct references. |
 | `memory_snapshots`, `memory_snapshot_versions` | Reproducible point-in-time references to immutable versions. |
 
 Relationships (all composite, corpus-scoped):
@@ -147,9 +359,37 @@ Database-enforced invariants (triggers/constraints, not just application checks)
 - Existing documents are backfilled with memory identities only — no invented
   versions, claims, or timestamps.
 
+## Migration `005_multiple_evidence`
+
+The released `004_memory` schema enforced `UNIQUE(corpus_id, claim_id)`, so it
+could not represent two references for one claim. Two agreeing claims from two
+documents were not a substitute. Migration `005_multiple_evidence` replaces that
+constraint with unique `(corpus_id, claim_id, chunk_id, start_offset, end_offset)`
+references and a claim lookup index. Existing corpus/version foreign keys,
+exact-quote validation, deferred evidence requirements, and append-only guards
+remain. The API response is still schema version 1 with plural `evidence_ids`.
+
+A nonempty evidence list now authors all references atomically with a version.
+The original evidence string remains supported with its prior identity behavior;
+existing rows are not rewritten. Every supporting chunk must contain the claim
+text as well as its exact quote. Duplicate or empty quotes are rejected. List
+order remains in normalized metadata/fingerprints; reference resolution sorts
+quotes, choosing the first occurrence in the lowest-order matching chunk.
+
+Snapshot capture freezes evidence insertion for its referenced versions. A
+BEFORE INSERT trigger uses the same corpus advisory lock and rejects new evidence
+for any snapshotted version, so append-only inserts cannot mutate saved replay.
+There is no public late-evidence append operation. Downgrade locks the evidence
+table and **refuses if any claim has more than one reference**, before DDL; it
+never discards provenance to restore the old uniqueness constraint.
+
+The actual `data/storage.md` fixture authors one `data.primary` claim supported
+by two quotes in two chunks. That file is unchanged across A–G: two references,
+not two claims or extra lifecycle versions.
+
 ## Claim authoring
 
-Two equivalent deterministic forms:
+Two deterministic forms (string shorthand and structured claims):
 
 ```yaml
 ---
@@ -166,8 +406,9 @@ claims:
 
 Validation (no LLM anywhere):
 
-- `evidence` must be an exact substring of one archived chunk.
-- `claim` text must also appear in that chunk. Provenance is exact-match, not
+- `evidence` is a nonempty exact quote string or nonempty list of distinct quote
+  strings. Each quote must be an exact substring of an archived chunk.
+- `claim` text must also appear in every supporting chunk. Provenance is exact-match, not
   semantic entailment: the source author is responsible for truthfulness.
 - One claim per key per version; duplicate keys are rejected.
 - Rejection raises `ClaimValidationError` (path, content fingerprint, reason)
@@ -258,8 +499,12 @@ SDK instead calls `memory_public.execute`, which owns and commits the transactio
 
 ## Known limitations
 
-- Claim support is exact text containment; no semantic entailment, no source
-  truthfulness verification, no LLM inference anywhere.
+- Claim support is exact text containment; no semantic entailment or source
+  truthfulness verification. No LLM extracts/adjudicates claims. Opt-in memory
+  `/ask` generation is separate and remains unmeasured.
+- M006.5 question relevance is heuristic, with related-concept confusion,
+  multi-part omissions, and false positives on unrelated questions. Existing
+  lexical operations are unchanged; no universal question reliability is claimed.
 - Conflicts are same-key differing values across active documents — not general
   contradiction detection.
 - No MOVED/SUPERSEDED lifecycle states; renames are new identities.

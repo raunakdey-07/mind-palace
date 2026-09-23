@@ -45,9 +45,9 @@ async def test_tools_are_async_typed_and_preserve_legacy_tools():
     tools = {tool.name: tool for tool in await mcp_server.mcp.list_tools()}
     assert {"context", "search", "sync", "list_corpora"} <= tools.keys()
     assert {name for name in tools if name.startswith("memory_")} == {
-        tool_name(operation) for operation in OPERATIONS
+        tool_name(operation) for operation in (*OPERATIONS, "query")
     }
-    for operation in OPERATIONS:
+    for operation in (*OPERATIONS, "query"):
         tool = tools[tool_name(operation)]
         assert inspect.iscoroutinefunction(getattr(mcp_server, tool.name))
         schema = tool.input_schema
@@ -56,6 +56,7 @@ async def test_tools_are_async_typed_and_preserve_legacy_tools():
         assert request_schema["additionalProperties"] is False
         assert request_schema["properties"]["budget"]["minimum"] == 512
         assert request_schema["properties"]["budget"]["maximum"] == 128000
+        assert request_schema["properties"]["intent"]["default"] == "auto"
         assert tool.output_schema == MemoryResponse.model_json_schema()
         assert tool.annotations.read_only_hint == (operation != "snapshot")
         assert tool.annotations.destructive_hint is False

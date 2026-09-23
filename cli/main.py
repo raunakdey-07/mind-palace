@@ -367,6 +367,50 @@ def doctor() -> None:
         raise typer.Exit(code=1)
 
 
+@eval_app.command("memory")
+def eval_memory(
+    benchmark_file: str = typer.Option("eval/memory_benchmarks.yaml", "--file", "-f"),
+    repetitions: int = typer.Option(20, "--repetitions", min=1, max=1000),
+    sizes: str = typer.Option("", "--sizes", help="Optional synthetic sizes, e.g. 100,500,1000"),
+    embeddings: str = typer.Option("fixture", "--embeddings", help="fixture or cached (offline)"),
+    generation: bool = typer.Option(False, "--generation", help="Opt in to configured LLM costs"),
+    save: Optional[str] = typer.Option(None, "--save", help="Write JSON to a NEW report file"),
+) -> None:
+    """Evaluate evolving memory in a rolled-back schema, never an existing corpus.
+
+    Fixture vectors test semantics only. Use cached embeddings for live retrieval
+    comparisons. Run standalone, not inside a serving process. p50/p95 need 20 runs.
+    """
+    import asyncio
+    from pathlib import Path
+
+    from api.services.memory_benchmark import format_report, run_memory_benchmark
+
+    try:
+        corpus_sizes = tuple(int(value.strip()) for value in sizes.split(",") if value.strip())
+        if save and Path(save).exists():
+            raise ValueError("Refusing to overwrite report; choose a new --save path")
+        result = asyncio.run(
+            run_memory_benchmark(
+                benchmark_file,
+                repetitions=repetitions,
+                corpus_sizes=corpus_sizes,
+                embeddings=embeddings,
+                generation=generation,
+            )
+        )
+        if save:
+            with open(save, "x", encoding="utf-8") as report:
+                json.dump(result, report, ensure_ascii=False, indent=2)
+                report.write("\n")
+        typer.echo(format_report(result))
+    except (ValueError, OSError) as exc:
+        typer.echo(f"[ERROR] {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+    if not result["passed"]:
+        raise typer.Exit(code=1)
+
+
 @eval_app.command("strategies")
 def eval_strategies(
     benchmark_file: str = typer.Option("eval/retrieval_benchmarks.yaml", "--file", "-f"),

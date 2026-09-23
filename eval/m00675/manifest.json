@@ -1,0 +1,35 @@
+{
+  "benchmark": "mind-palace-m006.75",
+  "version": "1.0.0",
+  "dataset": {
+    "path": "eval/memory_questions_heldout.yaml",
+    "sha256": "77e05babeeb0dd62d08a03865728d8ffffe50c20b57066566ab865c2dc37757a"
+  },
+  "policy": {
+    "path": "eval/memory_query_policy.json",
+    "sha256": "92efbd3bdf7ac4eaf9da1fb20ea5e0b0392abe0aff11828058e1d7e721cc4fdd"
+  },
+  "evaluation_mode": "heldout-reliability",
+  "database": "dedicated PostgreSQL URL supplied by DATABASE_URL; benchmark uses an isolated rollback schema",
+  "embedding_model": {
+    "identifier": "all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "snapshot_sha256": "dccc04cbafd9d0dd36ff3c09449796f53aec3edf5af4e5e8353f5b4c25c5f8ad",
+    "dimension": 384,
+    "normalized": true,
+    "metric": "cosine"
+  },
+  "source_files": [
+    "api/services/memory_relevance.py",
+    "api/services/memory_query.py",
+    "api/services/memory_public.py",
+    "api/services/memory_query_benchmark.py",
+    "api/services/memory_benchmark.py",
+    "api/models/memory.py"
+  ],
+  "source_revision": "92168f302455308a133a75c4c49d70169943bd1a",
+  "source_fingerprint": "b8e2bc82c289ab604abca04b36f89e655fdd5d7253338211a3665610b505453f",
+  "result_sha256": "881530c7c6e7ba29fb38eb5b27609071463f733c6a8cd173aeff04173a5d8dc8",
+  "result": "eval/m00675/result.json",
+  "command": "./scripts/benchmark/m00675.sh"
+}

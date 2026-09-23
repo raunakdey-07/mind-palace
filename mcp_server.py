@@ -123,6 +123,12 @@ async def _execute_memory(operation: str, request: MemoryRequest) -> CallToolRes
 
 
 @mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_query(request: MemoryRequest) -> MemoryToolResult:
+    """Query corpus memory with intent-aware evidence bounded in Unicode characters."""
+    return await _execute_memory("query", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
 async def memory_current(request: MemoryRequest) -> MemoryToolResult:
     """Read current memories from an explicitly named corpus."""
     return await _execute_memory("current", request)

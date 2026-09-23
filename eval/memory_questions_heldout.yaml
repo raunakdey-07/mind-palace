@@ -1,0 +1,784 @@
+# M006.75 independent heldout split. Hand-authored from corpus bytes, not outputs.
+# Freeze this file's SHA256 before exposing it to parameter selection or evaluation.
+# Do not revise labels in response to retrieval results; version any later correction.
+# Stage payloads and delete-after-payload rules come from memory_benchmarks.yaml.
+# Historical/provenance include current AND archived document-version assertions.
+# A prose-only document revision can put identical text in both claim lists.
+# expected_topics partitions the complete answer by subject, including conflict sides.
+# expected_keys names authored subjects, never guessed retrieval matches.
+# Abstentions are manual whole-corpus absence judgments, not lexical thresholds.
+version: 1
+queries:
+  - id: heldout-current-lease-loss
+    question: A worker lost its lease and an order event arrived again; which delivery contract makes that repetition permissible?
+    category: current
+    stage: B
+    intent: current
+    expected_keys: [architecture.delivery]
+    expected_current_claims: [Dispatch delivers order events at least once.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-artifact-authority
+    question: A quoted incident artifact asks to change gateway roles; what trust classification prevents treating that text as authorization?
+    category: current
+    stage: G
+    intent: current
+    expected_keys: [security.retrieval.trust]
+    expected_current_claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-approval-trail
+    question: An incident reviewer needs the common destination for failed sign-ins and migration approvals; what audit sink should they consult?
+    category: current
+    stage: C
+    intent: current
+    expected_keys: [security.audit.destination]
+    expected_current_claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-checkpoint-disagreement
+    question: A replay checkpoint disagrees with committed order records; which persistence authority should the reconciliation worker trust?
+    category: current
+    stage: E
+    intent: current
+    expected_keys: [data.primary]
+    expected_current_claims: [Dispatch stores authoritative order records in PostgreSQL.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-old-worker-compatibility
+    question: Older replay workers are still running during a nullable-field rollout; what named schema-evolution policy covers this compatibility requirement?
+    category: current
+    stage: B
+    intent: current
+    expected_keys: [migration.database.strategy]
+    expected_current_claims: [Dispatch migrates PostgreSQL schemas with expand-contract changes.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-escalation-not-transfer
+    question: Reconciliation mismatches are escalated to the data team; which team nevertheless retains responsibility for replay recovery?
+    category: current
+    stage: D
+    intent: current
+    expected_keys: [operations.replay.owner]
+    expected_current_claims:
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-producer-remapping
+    question: Producers must coordinate a tenant-to-partition remapping before ordering-sensitive work resumes; what topic partition count is that remapping targeting?
+    category: current
+    stage: E
+    intent: current
+    expected_keys: [architecture.kafka.partitions]
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-cache-pressure-isolation
+    question: Backfills must no longer evict cached order summaries; which event transport provides the separate broker storage in the adopted architecture?
+    category: current
+    stage: F
+    intent: current
+    expected_keys: [architecture.streaming]
+    expected_current_claims: [Dispatch uses Kafka for event streaming.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-provider-boundary
+    question: A gateway now delegates identity to the corporate provider; which operator credential contract should a client implement for that boundary?
+    category: current
+    stage: D
+    intent: current
+    expected_keys: [security.auth]
+    expected_current_claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-current-runbook-responsibility-only
+    question: Without inferring an event transport from the replay procedure, what responsibility assertion does that procedure itself make?
+    category: current
+    stage: A
+    intent: current
+    path: runbooks/replay.md
+    expected_keys: [operations.replay.owner]
+    expected_current_claims: [Dispatch replay recovery is owned by the Platform team.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-history-identical-owner-versions
+    question: Comparing the original ownership document with its consumer-group handoff revision, what ownership assertions belong to the active and archived versions?
+    category: historical
+    stage: B
+    intent: historical
+    path: operations/ownership.md
+    expected_keys: [operations.replay.owner]
+    expected_current_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_historical_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_conflicts: []
+
+  - id: heldout-history-paired-cutovers
+    question: For a retrospective on the simultaneous transport and identity cutovers, what event-streaming and operator-authentication assertions should appear in the current and former columns?
+    category: historical
+    stage: C
+    intent: historical
+    expected_keys: [architecture.streaming, security.auth]
+    expected_current_claims:
+      - Dispatch uses Kafka for event streaming.
+      - Dispatch authenticates operator requests with OIDC access tokens.
+    expected_historical_claims:
+      - Dispatch uses Redis Streams for event streaming.
+      - Dispatch authenticates operator requests with JWT bearer tokens.
+    expected_conflicts: []
+
+  - id: heldout-history-broker-evolution
+    question: How do the archived and active assertions together describe the evolution of both event transport and orders-topic capacity?
+    category: historical
+    stage: D
+    intent: historical
+    expected_keys: [architecture.streaming, architecture.kafka.partitions]
+    expected_current_claims:
+      - Dispatch uses Kafka for event streaming.
+      - Dispatch configures the Kafka orders topic with 12 partitions.
+    expected_historical_claims:
+      - Dispatch uses Redis Streams for event streaming.
+      - Dispatch configures the Kafka orders topic with 6 partitions.
+    expected_conflicts: []
+
+  - id: heldout-history-security-capacity-sequence
+    question: What old and present claims capture the identity-provider transition followed by the orders-topic capacity change?
+    category: historical
+    stage: D
+    intent: historical
+    expected_keys: [security.auth, architecture.kafka.partitions]
+    expected_current_claims:
+      - Dispatch authenticates operator requests with OIDC access tokens.
+      - Dispatch configures the Kafka orders topic with 12 partitions.
+    expected_historical_claims:
+      - Dispatch authenticates operator requests with JWT bearer tokens.
+      - Dispatch configures the Kafka orders topic with 6 partitions.
+    expected_conflicts: []
+
+  - id: heldout-history-owner-and-delivery
+    question: In the archive through the handoff clarification, what are the current replay-owner and delivery assertions, and which owner assertion also survives from an older document version?
+    category: historical
+    stage: B
+    intent: historical
+    expected_keys: [operations.replay.owner, architecture.delivery]
+    expected_current_claims:
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+      - Dispatch delivers order events at least once.
+    expected_historical_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_conflicts: []
+
+  - id: heldout-history-ledger-continuity
+    question: Across the transport cutover, which authoritative-storage and streaming claims are current, and which streaming claim remains in history?
+    category: historical
+    stage: C
+    intent: historical
+    expected_keys: [data.primary, architecture.streaming]
+    expected_current_claims:
+      - Dispatch stores authoritative order records in PostgreSQL.
+      - Dispatch uses Kafka for event streaming.
+    expected_historical_claims: [Dispatch uses Redis Streams for event streaming.]
+    expected_conflicts: []
+
+  - id: heldout-history-rollout-and-capacity
+    question: When reviewing database rollout policy alongside the topic expansion, what active claims and retired partition assertion must the record retain?
+    category: historical
+    stage: D
+    intent: historical
+    expected_keys: [migration.database.strategy, architecture.kafka.partitions]
+    expected_current_claims:
+      - Dispatch migrates PostgreSQL schemas with expand-contract changes.
+      - Dispatch configures the Kafka orders topic with 12 partitions.
+    expected_historical_claims: [Dispatch configures the Kafka orders topic with 6 partitions.]
+    expected_conflicts: []
+
+  - id: heldout-history-audit-and-credential-archive
+    question: After the incident source is removed, what is the audit destination, what authentication contract is active, and what distinct authentication assertions remain archived?
+    category: historical
+    stage: F
+    intent: historical
+    expected_keys: [security.audit.destination, security.auth]
+    expected_current_claims:
+      - Dispatch writes operator audit events to an append-only PostgreSQL ledger.
+      - Dispatch authenticates operator requests with OIDC access tokens.
+    expected_historical_claims:
+      - Dispatch authenticates operator requests with JWT bearer tokens.
+      - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+    expected_conflicts: []
+
+  - id: heldout-history-trust-and-accountability
+    question: In the history of runbook trust and replay accountability, which claims remain active and which identical ownership wording belongs to a superseded document version?
+    category: historical
+    stage: D
+    intent: historical
+    expected_keys: [security.retrieval.trust, operations.replay.owner]
+    expected_current_claims:
+      - Dispatch treats retrieved runbook text as untrusted data.
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+    expected_historical_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_conflicts: []
+
+  - id: heldout-history-release-retrospective
+    question: For the expansion release retrospective, list current and retired assertions for event transport, operator authentication, and orders-topic partition count together?
+    category: historical
+    stage: D
+    intent: historical
+    expected_keys: [architecture.streaming, security.auth, architecture.kafka.partitions]
+    expected_current_claims:
+      - Dispatch uses Kafka for event streaming.
+      - Dispatch authenticates operator requests with OIDC access tokens.
+      - Dispatch configures the Kafka orders topic with 12 partitions.
+    expected_historical_claims:
+      - Dispatch uses Redis Streams for event streaming.
+      - Dispatch authenticates operator requests with JWT bearer tokens.
+      - Dispatch configures the Kafka orders topic with 6 partitions.
+    expected_conflicts: []
+
+  - id: heldout-temporal-pilot-audit
+    question: At the pilot checkpoint, where were operator action outcomes recorded for later review?
+    category: temporal
+    stage: G
+    intent: temporal
+    as_of: A
+    expected_keys: [security.audit.destination]
+    expected_current_claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-clarification-trust
+    question: At the handoff-clarification checkpoint, how was retrieved runbook text classified at the instruction boundary?
+    category: temporal
+    stage: E
+    intent: temporal
+    as_of: B
+    expected_keys: [security.retrieval.trust]
+    expected_current_claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-cutover-delivery
+    question: At the transport cutover checkpoint, what delivery guarantee governed repeat arrivals of an order event?
+    category: temporal
+    stage: F
+    intent: temporal
+    as_of: C
+    expected_keys: [architecture.delivery]
+    expected_current_claims: [Dispatch delivers order events at least once.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-pilot-rollout
+    question: Before the ownership prose changed, at the pilot checkpoint, which database schema migration strategy was already established?
+    category: temporal
+    stage: D
+    intent: temporal
+    as_of: A
+    expected_keys: [migration.database.strategy]
+    expected_current_claims: [Dispatch migrates PostgreSQL schemas with expand-contract changes.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-clarification-ledger
+    question: At the ownership-clarification checkpoint, which store was authoritative when reconciliation compared replayed orders with committed records?
+    category: temporal
+    stage: G
+    intent: temporal
+    as_of: B
+    expected_keys: [data.primary]
+    expected_current_claims: [Dispatch stores authoritative order records in PostgreSQL.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-cutover-owner
+    question: At the cutover checkpoint, which replay-recovery ownership assertions were supported by the responsibility note and the recovery procedure?
+    category: temporal
+    stage: E
+    intent: temporal
+    as_of: C
+    expected_keys: [operations.replay.owner]
+    expected_current_claims:
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-pilot-two-ledgers
+    question: At the pilot checkpoint, what were the authoritative order store and the operator audit destination, considered separately?
+    category: temporal
+    stage: F
+    intent: temporal
+    as_of: A
+    expected_keys: [data.primary, security.audit.destination]
+    expected_current_claims:
+      - Dispatch stores authoritative order records in PostgreSQL.
+      - Dispatch writes operator audit events to an append-only PostgreSQL ledger.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-clarification-recovery-contract
+    question: At the clarification checkpoint, what combination of replay ownership and event delivery guarantee applied to recovery work?
+    category: temporal
+    stage: D
+    intent: temporal
+    as_of: B
+    expected_keys: [operations.replay.owner, architecture.delivery]
+    expected_current_claims:
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+      - Dispatch delivers order events at least once.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-cutover-safe-rollout
+    question: At the cutover checkpoint, which schema migration policy and retrieved-content trust rule constrained an operator following a rollout runbook?
+    category: temporal
+    stage: G
+    intent: temporal
+    as_of: C
+    expected_keys: [migration.database.strategy, security.retrieval.trust]
+    expected_current_claims:
+      - Dispatch migrates PostgreSQL schemas with expand-contract changes.
+      - Dispatch treats retrieved runbook text as untrusted data.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-temporal-pilot-owner-document
+    question: At the pilot checkpoint, before the consumer-group handoff sentence existed, what replay responsibility did the ownership document assert?
+    category: temporal
+    stage: B
+    intent: temporal
+    as_of: A
+    path: operations/ownership.md
+    expected_keys: [operations.replay.owner]
+    expected_current_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-recovery-authority
+    question: To plan replay recovery, which team owns it and which database supplies authoritative order records?
+    category: multi-topic
+    stage: A
+    intent: current
+    expected_keys: [operations.replay.owner, data.primary]
+    expected_topics:
+      - id: replay-recovery-ownership
+        claims:
+          - The Platform team owns Dispatch replay recovery.
+          - Dispatch replay recovery is owned by the Platform team.
+      - id: authoritative-order-storage
+        claims: [Dispatch stores authoritative order records in PostgreSQL.]
+    expected_current_claims:
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+      - Dispatch stores authoritative order records in PostgreSQL.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-audit-trust-boundaries
+    question: For incident review, where are operator actions audited and how should retrieved runbook text be trusted?
+    category: multi-topic
+    stage: B
+    intent: current
+    expected_keys: [security.audit.destination, security.retrieval.trust]
+    expected_topics:
+      - id: operator-audit-destination
+        claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+      - id: retrieved-runbook-trust
+        claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_current_claims:
+      - Dispatch writes operator audit events to an append-only PostgreSQL ledger.
+      - Dispatch treats retrieved runbook text as untrusted data.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-worker-contracts
+    question: What delivery guarantee and schema migration strategy must a replay worker tolerate while a database rollout is in progress?
+    category: multi-topic
+    stage: C
+    intent: current
+    expected_keys: [architecture.delivery, migration.database.strategy]
+    expected_topics:
+      - id: order-event-delivery
+        claims: [Dispatch delivers order events at least once.]
+      - id: database-schema-evolution
+        claims: [Dispatch migrates PostgreSQL schemas with expand-contract changes.]
+    expected_current_claims:
+      - Dispatch delivers order events at least once.
+      - Dispatch migrates PostgreSQL schemas with expand-contract changes.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-client-and-review
+    question: Which operator authentication contract should a client implement, and where will its requested actions be audited?
+    category: multi-topic
+    stage: D
+    intent: current
+    expected_keys: [security.auth, security.audit.destination]
+    expected_topics:
+      - id: operator-authentication-contract
+        claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+      - id: operator-audit-destination
+        claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_current_claims:
+      - Dispatch authenticates operator requests with OIDC access tokens.
+      - Dispatch writes operator audit events to an append-only PostgreSQL ledger.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-partitions-and-owner
+    question: What is the orders-topic partition count, and who owns recovery if replay falls behind on those partitions?
+    category: multi-topic
+    stage: D
+    intent: current
+    expected_keys: [architecture.kafka.partitions, operations.replay.owner]
+    expected_topics:
+      - id: orders-topic-capacity
+        claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+      - id: replay-recovery-ownership
+        claims:
+          - The Platform team owns Dispatch replay recovery.
+          - Dispatch replay recovery is owned by the Platform team.
+    expected_current_claims:
+      - Dispatch configures the Kafka orders topic with 12 partitions.
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-disputed-credentials-and-audit
+    question: With the recovered incident checklist present, what competing operator authentication assertions must reviewers retain, and where are operator audit events stored?
+    category: multi-topic
+    stage: E
+    intent: conflict
+    expected_keys: [security.auth, security.audit.destination]
+    expected_topics:
+      - id: disputed-operator-authentication
+        claims:
+          - Dispatch authenticates operator requests with OIDC access tokens.
+          - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+      - id: operator-audit-destination
+        claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_current_claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: heldout-multi-restored-dispute-and-trust
+    question: Once the incident checklist is restored, which authentication alternatives disagree and what trust classification still applies to retrieved runbook text?
+    category: multi-topic
+    stage: G
+    intent: conflict
+    expected_keys: [security.auth, security.retrieval.trust]
+    expected_topics:
+      - id: disputed-operator-authentication
+        claims:
+          - Dispatch authenticates operator requests with OIDC access tokens.
+          - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+      - id: retrieved-runbook-trust
+        claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_current_claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: heldout-multi-recovery-three-contracts
+    question: With the stale incident source removed, what operator credentials, replay ownership, and event delivery guarantee apply to a recovery attempt?
+    category: multi-topic
+    stage: F
+    intent: current
+    expected_keys: [security.auth, operations.replay.owner, architecture.delivery]
+    expected_topics:
+      - id: operator-authentication-contract
+        claims: [Dispatch authenticates operator requests with OIDC access tokens.]
+      - id: replay-recovery-ownership
+        claims:
+          - The Platform team owns Dispatch replay recovery.
+          - Dispatch replay recovery is owned by the Platform team.
+      - id: order-event-delivery
+        claims: [Dispatch delivers order events at least once.]
+    expected_current_claims:
+      - Dispatch authenticates operator requests with OIDC access tokens.
+      - The Platform team owns Dispatch replay recovery.
+      - Dispatch replay recovery is owned by the Platform team.
+      - Dispatch delivers order events at least once.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-storage-audit-capacity
+    question: For a capacity review, identify the authoritative order database, the operator audit sink, and the configured orders-topic partition count separately?
+    category: multi-topic
+    stage: G
+    intent: current
+    expected_keys: [data.primary, security.audit.destination, architecture.kafka.partitions]
+    expected_topics:
+      - id: authoritative-order-storage
+        claims: [Dispatch stores authoritative order records in PostgreSQL.]
+      - id: operator-audit-destination
+        claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+      - id: orders-topic-capacity
+        claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+    expected_current_claims:
+      - Dispatch stores authoritative order records in PostgreSQL.
+      - Dispatch writes operator audit events to an append-only PostgreSQL ledger.
+      - Dispatch configures the Kafka orders topic with 12 partitions.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-multi-cutover-consumer-contract
+    question: Which event transport, delivery guarantee, and retrieved-runbook trust rule should a consumer maintainer keep distinct at cutover?
+    category: multi-topic
+    stage: C
+    intent: current
+    expected_keys: [architecture.streaming, architecture.delivery, security.retrieval.trust]
+    expected_topics:
+      - id: event-streaming-transport
+        claims: [Dispatch uses Kafka for event streaming.]
+      - id: order-event-delivery
+        claims: [Dispatch delivers order events at least once.]
+      - id: retrieved-runbook-trust
+        claims: [Dispatch treats retrieved runbook text as untrusted data.]
+    expected_current_claims:
+      - Dispatch uses Kafka for event streaming.
+      - Dispatch delivers order events at least once.
+      - Dispatch treats retrieved runbook text as untrusted data.
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-provenance-outbox-decision
+    question: Which delivery assertion is evidenced by the decision document that discusses the outbox gap and deduplication by event identifier?
+    category: conflict-provenance
+    stage: D
+    intent: provenance
+    path: decisions/delivery.md
+    expected_keys: [architecture.delivery]
+    expected_current_claims: [Dispatch delivers order events at least once.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-provenance-actor-outcome-policy
+    question: What audit-destination assertion is supported by the policy passage about recording actor, action, and outcome without bearer tokens?
+    category: conflict-provenance
+    stage: G
+    intent: provenance
+    path: security/audit.md
+    expected_keys: [security.audit.destination]
+    expected_current_claims: [Dispatch writes operator audit events to an append-only PostgreSQL ledger.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-provenance-bounded-backfill
+    question: Which schema migration assertion does the rollout document support through its nullable-field and bounded-backfill procedure?
+    category: conflict-provenance
+    stage: E
+    intent: provenance
+    path: migration/database.md
+    expected_keys: [migration.database.strategy]
+    expected_current_claims: [Dispatch migrates PostgreSQL schemas with expand-contract changes.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-provenance-recovery-procedure-owner
+    question: What ownership claim is directly supported by the recovery procedure that pauses consumers and compares checkpoints with committed records?
+    category: conflict-provenance
+    stage: F
+    intent: provenance
+    path: runbooks/replay.md
+    expected_keys: [operations.replay.owner]
+    expected_current_claims: [Dispatch replay recovery is owned by the Platform team.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-provenance-handoff-versions
+    question: For the ownership document's consumer-group handoff clarification, which current and archived claim texts can be traced to the two source versions?
+    category: conflict-provenance
+    stage: B
+    intent: provenance
+    path: operations/ownership.md
+    expected_keys: [operations.replay.owner]
+    expected_current_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_historical_claims: [The Platform team owns Dispatch replay recovery.]
+    expected_conflicts: []
+
+  - id: heldout-provenance-target-not-live
+    question: Which configuration assertion is evidenced by the pilot document that calls Kafka a provisioned migration target rather than the live transport?
+    category: conflict-provenance
+    stage: A
+    intent: provenance
+    path: architecture/kafka-config.md
+    expected_keys: [architecture.kafka.partitions]
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 6 partitions.]
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-provenance-capacity-source-versions
+    question: Which active and archived capacity claims can be attributed to the configuration source whose newer version requires producer mapping coordination?
+    category: conflict-provenance
+    stage: D
+    intent: provenance
+    path: architecture/kafka-config.md
+    expected_keys: [architecture.kafka.partitions]
+    expected_current_claims: [Dispatch configures the Kafka orders topic with 12 partitions.]
+    expected_historical_claims: [Dispatch configures the Kafka orders topic with 6 partitions.]
+    expected_conflicts: []
+
+  - id: heldout-conflict-gateway-scope
+    question: Starting from the corporate-provider gateway contract, which competing live assertion must remain visible even though it is authored in another document?
+    category: conflict-provenance
+    stage: E
+    intent: conflict
+    path: authentication/operator.md
+    expected_keys: [security.auth]
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: heldout-provenance-gateway-archive-and-dispute
+    question: In the gateway source's provenance, distinguish the archived local-token contract from the current contract's live disagreement with the incident checklist?
+    category: conflict-provenance
+    stage: E
+    intent: provenance
+    path: authentication/operator.md
+    expected_keys: [security.auth]
+    expected_current_claims: []
+    expected_historical_claims: [Dispatch authenticates operator requests with JWT bearer tokens.]
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: heldout-conflict-not-token-serialization
+    question: At restoration, why is the corporate-provider versus local-issuer dispute not settled by saying both tokens can be JWT-encoded; which incompatible live instructions remain?
+    category: conflict-provenance
+    stage: G
+    intent: conflict
+    path: authentication/operator.md
+    expected_keys: [security.auth]
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts:
+      - - Dispatch authenticates operator requests with OIDC access tokens.
+        - The Dispatch incident runbook prescribes JWT bearer tokens for operator requests.
+
+  - id: heldout-abstain-lunar-calendar
+    question: On which date will the next total lunar eclipse be visible from Kyoto?
+    category: abstention
+    stage: A
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-sourdough-ratio
+    question: What flour-to-water ratio should I use to feed a rye sourdough starter?
+    category: abstention
+    stage: B
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-museum-hours
+    question: At what time does the Prado Museum close on Sundays?
+    category: abstention
+    stage: C
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-orchid-care
+    question: How frequently should a flowering moth orchid be watered in winter?
+    category: abstention
+    stage: D
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-violin-tuning
+    question: Which four pitches are used for standard violin tuning?
+    category: abstention
+    stage: E
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-marathon-record
+    question: Who holds the women's marathon world record and what was the finishing time?
+    category: abstention
+    stage: F
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-mongolian-currency
+    question: What is the official currency of Mongolia and its international currency code?
+    category: abstention
+    stage: G
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-pottery-firing
+    question: What kiln temperature is recommended for firing cone-six stoneware pottery?
+    category: abstention
+    stage: D
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-novel-translator
+    question: Who translated the first English edition of The Tale of Genji?
+    category: abstention
+    stage: E
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []
+
+  - id: heldout-abstain-chess-castling
+    question: Under which conditions is queenside castling legal in chess?
+    category: abstention
+    stage: G
+    intent: current
+    expected: no_relevant_memory
+    expected_keys: []
+    expected_current_claims: []
+    expected_historical_claims: []
+    expected_conflicts: []

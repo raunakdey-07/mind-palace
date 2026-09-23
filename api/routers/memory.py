@@ -22,6 +22,12 @@ async def execute_memory(operation: str, request: MemoryRequest) -> MemoryRespon
         ) from exc
 
 
+@router.post("/query", response_model=MemoryResponse)
+async def query(request: MemoryRequest) -> MemoryResponse:
+    """Query corpus memory with intent-aware, bounded evidence."""
+    return await execute_memory("query", request)
+
+
 @router.post("/current", response_model=MemoryResponse)
 async def current(request: MemoryRequest) -> MemoryResponse:
     """Read current memories within a corpus."""

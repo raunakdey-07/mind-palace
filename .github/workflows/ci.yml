@@ -64,6 +64,13 @@ jobs:
           flake8 api cli tests --max-line-length=100
           black --check api cli tests --line-length 100
 
+      - name: Evaluate deterministic memory lifecycle (offline)
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          python -m cli.main eval memory --embeddings fixture --repetitions 1
+
       - name: Run tests
         run: |
           pytest -q --maxfail=1

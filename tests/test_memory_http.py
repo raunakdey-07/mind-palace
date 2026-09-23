@@ -161,7 +161,7 @@ async def test_empty_memory_never_calls_llm_or_rag(client, service, monkeypatch,
     generate.assert_not_called()
     embed.assert_not_called()
     service.execute.assert_awaited_once_with(
-        "pack", MemoryRequest(corpus="docs", query="decision", budget=512)
+        "query", MemoryRequest(corpus="docs", query="decision", budget=512, intent="auto")
     )
 
 
@@ -213,7 +213,8 @@ async def test_ask_uses_exact_canonical_pack_and_evidence(client, service, monke
     assert data["memory"] == pack.model_dump(mode="json")
     assert data["answer"] == generate.return_value
     operation, request = service.execute.await_args.args
-    assert operation == "pack"
+    assert operation == "query"
+    assert request.intent == "auto"
     assert request.budget == 4096
     assert request.snapshot_id == "a" * 64
     assert request.claim_id == "b" * 64

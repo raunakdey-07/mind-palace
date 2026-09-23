@@ -35,6 +35,41 @@ def _dispatch(method: str, corpus: str, query: str, base_url: str, **fields) -> 
         raise typer.Exit(code=2) from exc
 
 
+@app.command("query")
+def query_memory(
+    corpus: Corpus,
+    query: Query,
+    intent: Annotated[
+        str,
+        typer.Option(
+            "--intent",
+            help="auto, current, historical, temporal, change, conflict, or provenance.",
+        ),
+    ] = "auto",
+    budget: Annotated[int, typer.Option("--budget")] = 8000,
+    as_of: AsOf = None,
+    valid_at: ValidAt = None,
+    path: Path = None,
+    base_url: BaseURL = DEFAULT_BASE_URL,
+    claim_id: Annotated[str | None, typer.Option("--claim-id")] = None,
+    snapshot_id: Annotated[str | None, typer.Option("--snapshot-id")] = None,
+) -> None:
+    """Query memory with intent-aware, budgeted evidence."""
+    _dispatch(
+        "query",
+        corpus,
+        query,
+        base_url,
+        intent=intent,
+        budget=budget,
+        as_of=as_of,
+        valid_at=valid_at,
+        path=path,
+        claim_id=claim_id,
+        snapshot_id=snapshot_id,
+    )
+
+
 @app.command()
 def current(
     corpus: Corpus,

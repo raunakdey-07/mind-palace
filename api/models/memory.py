@@ -19,6 +19,9 @@ class MemoryRequest(Contract):
     claim_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     snapshot_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     budget: int = Field(default=8000, ge=512, le=128000, strict=True)
+    intent: Literal[
+        "auto", "current", "historical", "temporal", "change", "conflict", "provenance"
+    ] = "auto"
 
     @field_validator("query")
     @classmethod

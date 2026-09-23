@@ -11,7 +11,12 @@ Pass the full raw source as content, parsed YAML metadata, and the final chunks.
 JSON-compatible YAML metadata is archived, with dates/timestamps normalized to
 ISO strings. Unsupported YAML objects, non-string mapping keys, and non-finite
 numbers are rejected rather than silently lost. Each version permits one authored
-claim per key; evidence is a nonempty exact quote from one archived chunk.
+claim per key; evidence is a nonempty exact quote string or a nonempty list of
+distinct quote strings. Duplicate quotes are rejected. List order is preserved
+in metadata (and thus the fingerprint); references are resolved in sorted quote order,
+using the first occurrence in the lowest-order matching archived chunk. Every
+supporting chunk must also contain the claim text. All references are authored
+atomically with the version; there is no service for appending evidence later.
 
 as_of is an inclusive OBSERVATION cutoff, not a truth/validity date. NULL validity
 means unknown. Current claims are those in the latest non-deleted version of each
@@ -128,25 +133,42 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
             }
         if not isinstance(claim, dict) or "value" not in claim:
             raise ValueError("claims require key, value, claim, and evidence")
-        if any(
-            not isinstance(claim.get(k), str) or not claim[k].strip()
-            for k in ("key", "claim", "evidence")
+        if any(not isinstance(claim.get(k), str) or not claim[k].strip() for k in ("key", "claim")):
+            raise ValueError("claim key and claim must be nonempty strings")
+        evidence = claim.get("evidence")
+        quotes = [evidence] if isinstance(evidence, str) else evidence
+        if (
+            not isinstance(quotes, list)
+            or not quotes
+            or any(not isinstance(quote, str) or not quote.strip() for quote in quotes)
         ):
-            raise ValueError("claim key, claim, and evidence must be nonempty strings")
+            raise ValueError("claim evidence must be a nonempty string or nonempty list of strings")
+        if len(set(quotes)) != len(quotes):
+            raise ValueError("claim evidence must contain distinct quotes")
         if claim["key"] in keys:
             raise ValueError("each version may author only one claim per key")
         keys.add(claim["key"])
-        matching = next((c for c in archived if claim["evidence"] in c["text"]), None)
-        if matching is None:
-            raise ValueError(
-                f"claim[{index}] evidence must be an exact substring of an archived chunk"
+        references = []
+        for quote in sorted(quotes):
+            matching = next((c for c in archived if quote in c["text"]), None)
+            if matching is None:
+                raise ValueError(
+                    f"claim[{index}] evidence must be an exact substring of an archived chunk"
+                )
+            if claim["claim"] not in matching["text"]:
+                raise ValueError(
+                    f"claim[{index}] text must appear in the supporting chunk; "
+                    "semantic inference is not supported"
+                )
+            start = matching["text"].index(quote)
+            references.append(
+                {
+                    "quote": quote,
+                    "order_index": matching["order_index"],
+                    "start_offset": start,
+                    "end_offset": start + len(quote),
+                }
             )
-        if claim["claim"] not in matching["text"]:
-            raise ValueError(
-                f"claim[{index}] text must appear in the supporting chunk; "
-                "semantic inference is not supported"
-            )
-        start = matching["text"].index(claim["evidence"])
         valid_from = _timestamp(claim.get("valid_from"), validity=True)
         valid_until = _timestamp(claim.get("valid_until"), validity=True)
         if valid_from is not None and valid_until is not None and valid_until < valid_from:
@@ -158,10 +180,7 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
                 "claim": claim["claim"],
                 "valid_from": valid_from,
                 "valid_until": valid_until,
-                "quote": claim["evidence"],
-                "order_index": matching["order_index"],
-                "start_offset": start,
-                "end_offset": start + len(claim["evidence"]),
+                **(references[0] if isinstance(evidence, str) else {"evidence": references}),
             }
         )
     return metadata, archived, sorted(claims, key=lambda claim: claim["key"])
@@ -337,20 +356,33 @@ async def record_version(
                 "basis": basis,
             },
         )
-        await db.execute(
-            text("""
-            INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id,
-                                         quote, start_offset, end_offset)
-            VALUES (:c, :v, :id, :claim_id, :chunk_id, :quote, :start_offset, :end_offset)
-        """),
-            {
-                **params,
-                **claim,
-                "id": _hash("evidence", claim_id),
-                "claim_id": claim_id,
-                "chunk_id": chunk_ids[claim["order_index"]],
-            },
-        )
+        for reference in claim.get("evidence", [claim]):
+            chunk_id = chunk_ids[reference["order_index"]]
+            evidence_id = (
+                _hash(
+                    "evidence",
+                    claim_id,
+                    chunk_id,
+                    reference["start_offset"],
+                    reference["end_offset"],
+                )
+                if "evidence" in claim
+                else _hash("evidence", claim_id)
+            )
+            await db.execute(
+                text("""
+                INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id,
+                                             quote, start_offset, end_offset)
+                VALUES (:c, :v, :id, :claim_id, :chunk_id, :quote, :start_offset, :end_offset)
+            """),
+                {
+                    **params,
+                    **reference,
+                    "id": evidence_id,
+                    "claim_id": claim_id,
+                    "chunk_id": chunk_id,
+                },
+            )
     return {**version, "skipped": False}
 
 

@@ -79,7 +79,10 @@ Thumbs.db
 data/
 # Ignore placeholder infra/docs folders
 helm/
-docs/
+/docs/*
+!/docs/evaluation/
+/docs/evaluation/*
+!/docs/evaluation/m006.md
 monitoring/
 
 # Keep project documentation; ignore stray personal notes
@@ -90,4 +93,14 @@ monitoring/
 !eval/EVALUATION.md
 !examples/MEMORY.md
 !examples/MEMORY_API.md
+!docs/evaluation/m007-memory-decision-dataset.md
+!docs/evaluation/m007-memory-decision-engine.md
+!docs/evaluation/m007-jev-decision-study.md
+!docs/evaluation/m00675-reproducibility.md
 !examples/evolving-project/**/*.md
+!examples/WHY_MEMORY.md
+!examples/evaluation/**/*.md
+!examples/evaluation/**/data/
+!docs/evaluation/m006.md
+!docs/evaluation/m0065.md
+/eval/results/

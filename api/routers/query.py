@@ -37,10 +37,14 @@ llm_service = LLMService()
 
 
 async def _ask_memory(request: AskRequest, start: float) -> MemoryAskResponse:
-    pack = await execute_memory("pack", request.memory_request())
+    pack = await execute_memory("query", request.memory_request())
     if not pack.evidence:
         return MemoryAskResponse(
-            answer="No supporting memory evidence found for the requested corpus and state.",
+            answer=(
+                "No relevant memory found."
+                if "NO_RELEVANT_MEMORY" in pack.constraints
+                else "No supporting memory evidence found for the requested corpus and state."
+            ),
             intent="ask",
             memory=pack,
             latency_ms=int((time.perf_counter() - start) * 1000),

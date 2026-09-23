@@ -21,7 +21,6 @@ def main() -> None:
     m006 = (ROOT / "docs/evaluation/m006.md").read_text(encoding="utf-8")
     m0065 = (ROOT / "docs/evaluation/m0065.md").read_text(encoding="utf-8")
     m00675 = (ROOT / "docs/evaluation/m00675-reproducibility.md").read_text(encoding="utf-8")
-    m007 = (ROOT / "docs/evaluation/m007-memory-decision-engine.md").read_text(encoding="utf-8")
 
     require(pyproject, r'^version = "0\.5\.0"$', "package version is v0.5.0")
     require(changelog, r"^## \[v0\.5\.0\]", "v0.5.0 changelog entry")
@@ -34,7 +33,11 @@ def main() -> None:
     require(m006, r"^Public release: `v0\.5\.0`$", "M006 release metadata")
     require(m0065, r"^Public release: `v0\.5\.0`$", "M006.5 release metadata")
     require(m00675, r"^Public release: `v0\.5\.0`$", "M006.75 release metadata")
-    require(m007, r"^Public release: Unreleased research$", "M007 unreleased metadata")
+    require(
+        release_map,
+        r"\| M007 / M007\.1 \|.*\| Unreleased \|",
+        "M007 unreleased mapping",
+    )
     print("release metadata: PASS")
 
 

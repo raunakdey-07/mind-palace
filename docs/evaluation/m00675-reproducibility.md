@@ -1,5 +1,7 @@
 # M006.75 Reproducibility
 
+Public release: `v0.5.0`
+
 ## Integrity finding
 
 The earlier discrepancy came from selecting the wrong policy suite. The

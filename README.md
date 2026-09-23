@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
+[Current release: v0.5.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+
 **Mind Palace is a persistent, portable memory layer for AI applications that
 need persistent, versioned, evidence-backed knowledge over an evolving corpus.**
 It turns authored Markdown into versioned source assertions: current knowledge,

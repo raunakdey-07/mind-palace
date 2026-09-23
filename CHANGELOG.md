@@ -4,6 +4,41 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.5.1] - 2026-09-24
+
+### Added
+
+- M007.1 independent-adjudication handoff infrastructure.
+- Blind 118-case review package with authoritative traceability.
+- Ambiguity-preserving reviewer context for exact and ambiguous matches.
+- Reviewer schema, guide, blank JSONL template, and reviewer-file validation.
+- DecisionReceipt infrastructure with canonical fingerprints, explanation, replay,
+  and structured drift detection.
+- Deterministic synthetic semantic/property suites and executable M007–M008
+  research runner.
+- Archive reconstruction through the existing ingestion service.
+
+### Validation
+
+The latest full-suite validation snapshot before this release was:
+
+```text
+942 passed, 0 failed, 147 skipped, 10 warnings
+```
+
+Skipped tests are environment-gated integration tests and are not counted as
+passes.
+
+### Scientific status
+
+- M006.75 remains the latest empirical benchmark: **47/60**.
+- M007.1 is **ready for independent human adjudication**.
+- M007 scientific results are pending two independent reviewer submissions.
+- M008 evaluation remains downstream of the M007 scientific gate.
+
+This release packages research/evaluation infrastructure only. It does not claim
+M007 accuracy, agreement, calibration, or comparative improvement.
+
 ## [v0.5.0] - 2026-09-23
 
 ### Included milestones

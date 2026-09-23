@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
-[Current release: v0.5.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.5.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
 **Mind Palace is a persistent, portable memory layer for AI applications that
 need persistent, versioned, evidence-backed knowledge over an evolving corpus.**
@@ -17,6 +17,29 @@ persists it across application restarts; Python, HTTP, CLI, and MCP expose the
 same memory contract. This is **corpus memory for AI**, not human memory,
 conversation/preferences storage, a chatbot, or an agent framework. Portability
 means model-independent interfaces, not a promised archive export/import tool.
+
+## Project status
+
+**Latest released baseline:** v0.5.0 / M006.75, empirically benchmarked at
+**47/60**. The current v0.5.1 engineering handoff packages M007.1 independent
+adjudication infrastructure; it does not claim M007 scientific results.
+
+| Phase | Status | Evidence |
+|---|---|---|
+| M004 persistent memory foundation | Complete | Released |
+| M005 developer/API surface | Complete | Released |
+| M006 real-world memory evaluation | Complete | Released |
+| M006.75 query/relevance evaluation | Complete | 47/60 benchmark |
+| M007.1 adjudication infrastructure | Ready | 118-case blinded package |
+| M007 scientific evaluation | Pending | Independent adjudication required |
+| M008 temporal/longitudinal evaluation | Pending | M007 gate required |
+
+Implemented research infrastructure includes blind review generation,
+authoritative traceability, ambiguity preservation, reviewer schema/validation,
+DecisionReceipt fingerprints and explanation, replay and structured drift
+detection, temporal/snapshot/conflict primitives, synthetic semantic/property
+suites, and the executable M007–M008 runner. These are not substitutes for
+independent human adjudication or empirical benchmarks.
 
 ## Why memory beyond RAG?
 

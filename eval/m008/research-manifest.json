@@ -1,0 +1,43 @@
+{
+  "manifest_version": "1",
+  "program": "m008-temporal-memory-intelligence",
+  "baseline": {
+    "version": "v0.5.0",
+    "commit": "d84f7de",
+    "repository_head": "669249f",
+    "dataset_path": "eval/memory_questions_heldout.yaml",
+    "dataset_sha256": "77e05babeeb0dd62d08a03865728d8ffffe50c20b57066566ab865c2dc37757a",
+    "policy_path": "eval/memory_query_policy.json",
+    "policy_sha256": "92efbd3bdf7ac4eaf9da1fb20ea5e0b0392abe0aff11828058e1d7e721cc4fdd",
+    "result_path": "eval/m00675/result.json",
+    "result_sha256": "6ef168c4b8188c8afa433f26777ae2ec503a96fc4769b3c4d6a0e780ab8b2591",
+    "canonical_result_sha256": "881530c7c6e7ba29fb38eb5b27609071463f733c6a8cd173aeff04173a5d8dc8"
+  },
+  "research": {
+    "dataset_version": "m008-temporal-v0.1",
+    "dataset_path": "eval/m008/temporal-cases.jsonl",
+    "dataset_sha256": null,
+    "source_sha256": "c7b2c2ac3ad1fc7be85814d11087de253ab6c43d88ba93efe2505fb4c69a4cac",
+    "adjudication_sha256": null,
+    "split_sha256": null,
+    "independently_adjudicated_rows": 0
+  },
+  "model": {
+    "identifier": "all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "snapshot_sha256": "dccc04cbafd9d0dd36ff3c09449796f53aec3edf5af4e5e8353f5b4c25c5f8ad"
+  },
+  "environment": {
+    "python": "3.14.7",
+    "platform": "linux",
+    "environment_sha256": "d8e3d03c881a14c66236421a46d8b35208109ece9aad6ae167d68f45d8584a04",
+    "dependency_manifest_path": "requirements.txt",
+    "dependency_sha256": "3a985d3a017a34ace27e433846483e92404139f630eca2997d4f60d79f7b1790"
+  },
+  "status": "BLOCKED_BY_M007_DATA_GATE",
+  "notes": [
+    "No M008 temporal benchmark has been created.",
+    "M006.75 artifacts are frozen and were not modified.",
+    "No causal or longitudinal claim is made."
+  ]
+}

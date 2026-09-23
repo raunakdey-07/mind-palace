@@ -12,13 +12,13 @@ relationship between the two numbering systems.
 | M006 | Persistent-memory evaluation infrastructure | `v0.5.0` |
 | M006.5 | Natural-language memory query and relevance layer | `v0.5.0` |
 | M006.75 | Frozen reproducible memory-query benchmark | `v0.5.0` |
-| M007 / M007.1 | Decision-provider and Jev research | Unreleased |
+| M007 / M007.1 | Independent-adjudication handoff infrastructure | `v0.5.1` |
 
 ## Current release
 
-`v0.5.0` is the current public release. It includes M004 through M006.75.
-M007 decision-provider and Jev work remains experimental and is not part of
-the product release.
+`v0.5.1` is the current public release. It packages the M007.1
+independent-adjudication handoff while leaving M007 scientific evaluation and
+M008 downstream work pending.
 
 ## Numbering rules
 

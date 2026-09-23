@@ -1,0 +1,101 @@
+{
+  "command": "audit",
+  "data": {
+    "abstentions": 0,
+    "adjudicated_rows": 0,
+    "adjudicated_sha256": null,
+    "forbidden_fields_present": [],
+    "review_items": 118,
+    "review_set_sha256": "f3536d20aca0c128ca8a71dd00a9784d6767cd5e1096c700c0e4a7fb10bb8928",
+    "reviewers": [],
+    "status": "DATA_BLOCKED",
+    "unknown_rows": 0,
+    "unreviewed_items": 118
+  },
+  "note": "No labels or empirical results are fabricated when adjudication is incomplete.",
+  "program": "m007-m008",
+  "release_decision": "PROGRAM_READY_FOR_ADJUDICATION",
+  "stages": [
+    {
+      "empirical": "DATA_BLOCKED",
+      "id": "M007.1",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.2",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.3",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.4",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.5",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.6",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.7",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M007.8",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.1",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.2",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.3",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.4",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.5",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.6",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.7",
+      "implementation": "READY"
+    },
+    {
+      "empirical": "BLOCKED",
+      "id": "M008.8",
+      "implementation": "READY"
+    }
+  ],
+  "synthetic_semantic_validation": null
+}

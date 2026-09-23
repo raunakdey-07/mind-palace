@@ -1,0 +1,18 @@
+{
+  "dataset_version": "m007-adjudicated-v0.1",
+  "record_fields": [
+    "adjudication_id", "review_id", "dataset_version", "question_id", "candidate_id",
+    "reviewer_id", "reviewed_at", "relevance", "subject_compatibility",
+    "temporal_applicability", "evidence_sufficiency", "authority_compatibility",
+    "conflict_status", "overall_decision", "rationale", "source_reference"
+  ],
+  "enums": {
+    "relevance": ["relevant", "irrelevant", "uncertain"],
+    "subject_compatibility": ["compatible", "incompatible", "uncertain"],
+    "temporal_applicability": ["applicable", "not_applicable", "uncertain", "not_temporal"],
+    "evidence_sufficiency": ["sufficient", "insufficient", "uncertain", "conflicting"],
+    "authority_compatibility": ["current", "historical", "superseded", "conflicted", "deleted", "restored", "uncertain", "not_applicable"],
+    "conflict_status": ["none", "open", "acknowledged", "resolved", "reopened", "superseded", "rejected", "unknown", "not_applicable"],
+    "overall_decision": ["accept", "reject", "abstain"]
+  }
+}

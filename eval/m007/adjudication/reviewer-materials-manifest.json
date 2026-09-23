@@ -1,0 +1,33 @@
+{
+  "archive": {
+    "chunks": 16,
+    "claims": 15,
+    "database": "existing mindpalace_postgresql_1",
+    "documents": 14,
+    "evidence": 16,
+    "migration": "005_multiple_evidence",
+    "snapshot_versions": 0,
+    "snapshots": 0,
+    "versions": 15
+  },
+  "blind_review": true,
+  "dataset_version": "m007-adjudicated-v0.1",
+  "material_hashes": {
+    "eval/m007/adjudication/REVIEWER_GUIDE.md": "abcd2d26ee0122636710401fe376400d98198fb83c8bb2871cc3ed81c1b236ef",
+    "eval/m007/adjudication/adjudication_template.jsonl": "cbb9916c41b0a1c61967f4a5f5ad5f6854e74a7b6aaa630f920eac44b3124590",
+    "eval/m007/adjudication/instructions.md": "b3cfe80a9c42b98ca9330cb13a6744a80e582d1d4daa2b3a1316f8a89bf95f26",
+    "eval/m007/adjudication/metadata-audit.json": "834caeb8f1369e40ba314ddb1ceb1bef08fc5ea9eb842625b4920c4c760c1c75",
+    "eval/m007/adjudication/review_set.jsonl": "f3536d20aca0c128ca8a71dd00a9784d6767cd5e1096c700c0e4a7fb10bb8928",
+    "eval/m007/adjudication/reviewer_context.jsonl": "b7fdbbeec1578a855557e6303274b470ee0f13d2b458293db0082a63abf4e61e",
+    "eval/m007/adjudication/schema.json": "c13c47552bd096614b85138b3e800c10dff227ea9739c1c9d6fd3f5107f78293"
+  },
+  "review_items": 118,
+  "review_set_sha256": "f3536d20aca0c128ca8a71dd00a9784d6767cd5e1096c700c0e4a7fb10bb8928",
+  "reviewer_context_sha256": "b7fdbbeec1578a855557e6303274b470ee0f13d2b458293db0082a63abf4e61e",
+  "status": "READY_FOR_HUMAN_ADJUDICATION",
+  "traceability": {
+    "ambiguous": 22,
+    "exact": 96,
+    "untraceable": 0
+  }
+}

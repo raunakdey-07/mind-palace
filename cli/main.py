@@ -498,7 +498,7 @@ def eval_gate(
     )
 
     try:
-        results, failures, samples = asyncio.run(run_benchmark(benchmark_file))
+        results, _failures, samples = asyncio.run(run_benchmark(benchmark_file))
     except Exception as e:
         typer.echo(f"[ERROR] Benchmark failed: {e}", err=True)
         raise typer.Exit(code=1)

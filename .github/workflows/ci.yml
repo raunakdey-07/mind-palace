@@ -64,7 +64,6 @@ jobs:
 
       - name: Run linting
         run: |
-          python -m pip install flake8 black
           flake8 api cli tests --max-line-length=100
           black --check api cli tests --line-length 100
 

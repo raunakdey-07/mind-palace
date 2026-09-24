@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -19,18 +18,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from api.routers import context, corpora, ingest, memory, query, search
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Keep process startup independent of PostgreSQL connectivity."""
-    yield
-
-
 app = FastAPI(
     title="Mind Palace API",
     description="RAG and agent APIs for the Mind Palace AI-Research OS",
     version="0.6.0",
-    lifespan=lifespan,
 )
 
 

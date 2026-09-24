@@ -182,11 +182,19 @@ liveness during a database outage. Readiness returns
 reachable and `corpora`, `memory_documents`, and `memory_versions` are present.
 Connection refusal, timeout, missing schema, and other database failures return
 `503` with a generic body and no exception details. The legacy `/health` route
-remains available but is not the dependency-aware readiness signal.
+remains available, but it is not the dependency-aware readiness signal.
 
-The container health check and `mindpalace doctor` use the readiness endpoint
-(or liveness plus readiness where appropriate), not the always-green legacy
-route.
+Container health checks and `mindpalace doctor` use the readiness endpoint,
+or liveness plus readiness where appropriate, rather than the always-green
+legacy route.
+
+The backend image is deliberately API-focused. It contains the API, migrations,
+and mounted content, but not the CLI, MCP server, tests, evaluation data, or
+local virtual environments. It uses the CPU-only Torch constraint in
+`requirements-docker.txt` and runs as UID `10001`; model downloads use the
+writable temporary `HF_HOME` configured in the image. Run `requirements.txt`
+for a development checkout; use the API image only for the HTTP service, and run
+Alembic separately before starting a fresh database.
 
 ## Cursor secret configuration
 

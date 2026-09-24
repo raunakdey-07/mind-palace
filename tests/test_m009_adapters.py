@@ -78,6 +78,8 @@ def test_cursor_rejects_empty_non_string_and_signed_malformed_payloads(monkeypat
         {**base, "feed": "other_feed"},
         {**base, "observed_at": "2026-01-01T00:00:00"},
         {**base, "version_id": 7},
+        {**base, "corpus": "x" * 129},
+        {**base, "corpus": " adapter-corpus "},
         {**base, "unexpected": "field"},
         [],
     ]

@@ -1,0 +1,4 @@
+# Docker runtime constraint for the CPU-only service image.
+--extra-index-url https://download.pytorch.org/whl/cpu
+-r requirements-runtime.txt
+torch==2.14.0+cpu

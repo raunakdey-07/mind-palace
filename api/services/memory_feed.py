@@ -21,12 +21,10 @@ from api.services.corpora import get_corpus_by_name, validate_corpus_name
 from api.services.memory_public import MemoryError, translate_database_error
 
 MAX_PAGE_SIZE = 500
-DEFAULT_PAGE_SIZE = 50
 MAX_CURSOR_LENGTH = 4096
 MIN_CURSOR_SECRET_BYTES = 32
 _CURSOR_VERSION = 1
 _CURSOR_FEED = "memory_versions"
-_CORPUS_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 _CURSOR_PART_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
@@ -113,9 +111,15 @@ def decode_cursor(cursor: str, corpus: str) -> tuple[datetime, str]:
             raise ValueError("cursor version")
         if payload["feed"] != _CURSOR_FEED:
             raise ValueError("cursor feed")
-        if not isinstance(payload["corpus"], str) or not _CORPUS_RE.fullmatch(payload["corpus"]):
+        if not isinstance(payload["corpus"], str):
+            raise TypeError("cursor corpus")
+        try:
+            canonical_corpus = validate_corpus_name(payload["corpus"])
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ValueError("cursor corpus") from exc
+        if canonical_corpus != payload["corpus"]:
             raise ValueError("cursor corpus")
-        if payload["corpus"] != corpus:
+        if canonical_corpus != corpus:
             raise MemoryError("cursor_corpus_mismatch", "Cursor belongs to another corpus", 422)
         if not isinstance(payload["version_id"], str) or not payload["version_id"]:
             raise ValueError("cursor version id")

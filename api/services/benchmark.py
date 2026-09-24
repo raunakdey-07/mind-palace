@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from api.services.confidence import MetricSamples
 from api.services.db import session_scope
@@ -114,7 +114,7 @@ async def run_benchmark(
     benchmark_file: str = "eval/retrieval_benchmarks.yaml",
     k_values: tuple[int, ...] = K_VALUES,
     candidate_sizes: tuple[int, ...] = (20,),
-) -> tuple[dict[str, StrategyResult], list[dict]]:
+) -> tuple[dict[str, StrategyResult], list[dict], dict[str, MetricSamples]]:
     """Run all strategies over the benchmark.
 
     Returns per-strategy aggregates plus detailed failure records.

@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
-[Current release: v0.5.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.6.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
 **Mind Palace is a persistent, portable memory layer for AI applications that
 need persistent, versioned, evidence-backed knowledge over an evolving corpus.**
@@ -33,6 +33,12 @@ adjudication infrastructure; it does not claim M007 scientific results.
 | M007.1 adjudication infrastructure | Ready | 118-case blinded package |
 | M007 scientific evaluation | Pending | Independent adjudication required |
 | M008 temporal/longitudinal evaluation | Pending | M007 gate required |
+| M009 durable operational feed | Released | [Validation evidence](docs/m009/RELEASE_READINESS.md) |
+
+For operational consumers, Mind Palace also exposes a durable, corpus-scoped
+change feed over immutable memory versions. It uses an opaque, integrity-protected
+cursor for bounded keyset continuation; it is not a message broker, CDC stream,
+or exactly-once delivery system. See [operational memory](docs/operations.md).
 
 Implemented research infrastructure includes blind review generation,
 authoritative traceability, ambiguity preservation, reviewer schema/validation,
@@ -237,9 +243,12 @@ not bound archive-read cost; history loading is currently unbounded.
 
 ## Interfaces
 
-SDK, REST, CLI, and MCP delegate memory policy to one typed public boundary.
-See [MEMORY_API.md](examples/MEMORY_API.md) for selectors, transaction ownership,
-errors, budgets, and adapter limitations. Memory reads do not create missing corpora.
+The ordinary memory operations share one typed public boundary across SDK,
+REST, CLI, and MCP. The M009 operational feed is a separate read contract
+implemented over the same PostgreSQL archive and exposed through REST, SDK, and
+CLI; it is deliberately excluded from MCP. See [MEMORY_API.md](examples/MEMORY_API.md)
+for selectors, transaction ownership, errors, budgets, and adapter limitations.
+Memory reads do not create missing corpora.
 
 ### Python SDK (`mindpalace_sdk.py`)
 
@@ -253,6 +262,10 @@ context = mp.context("question", budget_tokens=4000)
 
 reader = MindPalace()               # no embeddings at construction; query loads on demand
 print(reader.memory.current(corpus="corpus-name", query="streaming").canonical_json())
+
+feed_client = MindPalace(base_url="http://127.0.0.1:8000")
+page = feed_client.memory.feed(corpus="corpus-name", page_size=50)
+print(page.canonical_json())
 ```
 
 Remote SDK memory calls use HTTP. Remote `sync`, `search`, and `context` are not
@@ -279,9 +292,14 @@ POST   /api/memory/as-of             assertions at an aware observation cutoff
 POST   /api/memory/snapshot          commit whole-corpus immutable references
 POST   /api/memory/replay            replay a saved snapshot
 POST   /api/memory/pack              complete JSON bounded in Unicode characters
+GET    /api/memory/feed              durable corpus-scoped keyset feed
+GET    /health/live                  process liveness
+GET    /health/ready                 database/schema readiness
 ```
 
-Memory reads are POST requests with a JSON `corpus` and selectors. Backend
+The ordinary memory operations are POST requests with a JSON `corpus` and
+selectors. The feed is a GET with `corpus`, `page_size`, and optional `cursor`.
+Backend
 unavailability is an error, not an empty success. Default `/api/query/ask` is
 live RAG; explicit `mode="memory"` sends its `question` through memory `query`
 with automatic intent, then invokes memory-aware generation with the configured LLM. Neither mode's generated-answer quality is established by the
@@ -304,6 +322,8 @@ memory semantics gate.
 Tools: `context`, `search`, `sync`, `list_corpora`, plus `memory_current`,
 `memory_history`, `memory_changes`, `memory_evidence`, `memory_as_of`,
 `memory_snapshot`, `memory_replay`, `memory_pack`, and `memory_query`.
+M009 deliberately does not add `memory_feed` to MCP; the feed is an operational
+REST/SDK/CLI synchronization contract with cursor and polling semantics.
 
 ### CLI
 
@@ -311,10 +331,12 @@ Tools: `context`, `search`, `sync`, `list_corpora`, plus `memory_current`,
 python -m cli.main memory current --corpus my-corpus --query streaming
 python -m cli.main memory query --corpus my-corpus \
   --query "What carries Dispatch events now?" --intent current --budget 8000
+mindpalace memory feed --corpus my-corpus --page-size 50
 ```
 
 The `memory` group is remote-only at `http://127.0.0.1:8000` (override with
-`--base-url`). All nine operations have commands. The separate `eval memory`
+`--base-url`). All ten public memory operations, including `feed`, have
+commands. The separate `eval memory`
 command below runs locally against PostgreSQL without a REST server.
 
 ## Quick Start
@@ -330,9 +352,12 @@ pip install -r requirements.txt
 pip install -e .
 docker compose up -d postgresql          # or podman-compose up -d postgresql
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export MIND_PALACE_CURSOR_SECRET='replace-with-a-random-32-byte-or-longer-secret'
 ```
 
-Local defaults target disposable containers only. PostgreSQL and the required
+The feed has no predictable fallback signing key; use the same secret for all
+instances that must validate one another's cursors. Local defaults target
+disposable containers only. PostgreSQL and the required
 extensions are necessary even for the network-free fixture demo. Port 5433 in
 the demo commands below is the separately available local validation database;
 use your actual database port.
@@ -428,7 +453,7 @@ HF_HUB_OFFLINE=1 python -m cli.main eval memory --repetitions 1 \
 
 The report path must be new; `--save` refuses overwrite and does not create its
 parent. Omit it for text output only. This command uses artificial fixture
-embeddings and no LLM. One repetition is a functional smoke test, not percentiles.
+embeddings and no LLM. One repetition is a functional check, not percentiles.
 
 Manual measurement with **real, already cached** embeddings:
 
@@ -502,8 +527,10 @@ by a claim that generation or production validation is complete.
   question retrieval, not universally reliable question answering or automatic
   claim extraction. Related concepts, multi-part questions, and abstention remain
   relevance limits.
-- Public memory reads load full corpus history before projection/packing, without
-  pagination. Output budgets do not bound memory/SQL cost. Scaling is not proven.
+- Ordinary public memory reads load full corpus history before projection/packing,
+  without pagination. Output budgets do not bound memory/SQL cost. The M009
+  operational feed is separately keyset-paginated; its concurrency and archive
+  late-arrival limitations are documented in `docs/operations.md`.
 - Conflicts require same-key differing values across active documents; no general
   contradiction detection, independent truth verification, or semantic entailment.
 - `/ask` grounding and citation instructions are prompt-based, not formally verified;

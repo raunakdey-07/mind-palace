@@ -1,0 +1,31 @@
+# M009 static validation report
+
+Validated: 2026-09-24
+
+Commands:
+
+```text
+venvmp/bin/python -m black --check --workers 1 api cli tests scripts/m009_release_validation.py --exclude 'scripts/benchmark/m00675.py'
+venvmp/bin/python -m flake8 --jobs 1 api cli tests scripts/m009_release_validation.py --max-line-length=100 --exclude scripts/benchmark/m00675.py
+git --no-pager diff --check
+```
+
+Results:
+
+- Black: PASS (`101 files would be left unchanged`)
+- Flake8: PASS (no diagnostics)
+- `git diff --check`: PASS (no output)
+- Release metadata check: PASS (`v0.6.0`)
+- Exact CI scope `black --check api cli tests`: PASS
+- Exact CI scope `flake8 api cli tests`: PASS
+- Public SDK import: PASS (`from mindpalace_sdk import MindPalace`)
+- CLI help for root, `memory`, and `memory feed`: PASS
+
+The host-level `pytest` launcher is not the project virtualenv and cannot
+import repository dependencies; the passing full-suite command is
+`venvmp/bin/python -m pytest -q`.
+
+The repository-wide command that included `scripts/benchmark/m00675.py` was
+also attempted and reports pre-existing M006.75 formatting/lint findings
+(`F401`, two `E501`, and a Black reformat). That research-boundary file was not
+modified; M009 product, test, and validation-runner paths pass the checks above.

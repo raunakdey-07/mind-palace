@@ -36,7 +36,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from api.models.memory import MemoryResponse
+    from api.models.memory import FeedResponse, MemoryResponse
     from api.services.context_packer import ContextPack
 
 
@@ -83,6 +83,24 @@ def _require_sync() -> None:
     )
 
 
+def _remote_error(response, default_message: str) -> MemoryClientError:
+    """Preserve the server's stable error code without exposing its body."""
+    code = "http_error"
+    message = default_message
+    try:
+        detail = response.json()
+        if isinstance(detail, dict):
+            detail = detail.get("detail", detail.get("error", detail))
+            if isinstance(detail, dict):
+                if isinstance(detail.get("code"), str):
+                    code = detail["code"]
+                if isinstance(detail.get("message"), str):
+                    message = detail["message"]
+    except ValueError:
+        pass
+    return MemoryClientError(code, message, response.status_code)
+
+
 class MemoryClient:
     """Thin adapter over MemoryRequest and the central memory operations.
 
@@ -93,12 +111,14 @@ class MemoryClient:
     def __init__(self, client: MindPalace):
         self._client = client
 
+    def _corpus_name(self, corpus: str | None) -> str | None:
+        return self._client.name if corpus is None else corpus
+
     def _execute(self, operation: str, corpus: str | None, query: str, **fields) -> MemoryResponse:
         from api.models.memory import MemoryRequest, MemoryResponse
 
-        request = MemoryRequest(
-            corpus=self._client.name if corpus is None else corpus, query=query, **fields
-        )
+        corpus_name = self._corpus_name(corpus)
+        request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
             _require_sync()
             from api.services.memory_public import execute
@@ -122,19 +142,7 @@ class MemoryClient:
             ) from exc
 
         if not response.is_success:
-            code, message = "http_error", f"Memory request failed (HTTP {response.status_code})"
-            try:
-                detail = response.json()
-                if isinstance(detail, dict):
-                    detail = detail.get("detail", detail.get("error", detail))
-                    if isinstance(detail, dict):
-                        if isinstance(detail.get("code"), str):
-                            code = detail["code"]
-                        if isinstance(detail.get("message"), str):
-                            message = detail["message"]
-            except ValueError:
-                pass
-            raise MemoryClientError(code, message, response.status_code)
+            raise _remote_error(response, f"Memory request failed (HTTP {response.status_code})")
         try:
             return MemoryResponse.model_validate(response.json())
         except ValueError as exc:
@@ -202,6 +210,56 @@ class MemoryClient:
         path: str | None = None,
     ) -> MemoryResponse:
         return self._execute("changes", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+
+    def feed(
+        self,
+        corpus: str | None = None,
+        *,
+        page_size: int = 50,
+        cursor: str | None = None,
+    ) -> FeedResponse:
+        """Consume the durable corpus-scoped operational change feed."""
+        corpus_name = self._corpus_name(corpus)
+        if corpus_name is None:
+            raise ValueError("a corpus name is required")
+        if self._client.base_url is None:
+            _require_sync()
+            from api.services.db import session_scope
+            from api.services.memory_feed import feed
+
+            async def run() -> FeedResponse:
+                async with session_scope() as db:
+                    return await feed(db, corpus_name, cursor, page_size)
+
+            return asyncio.run(run())
+        import httpx
+
+        params = {"corpus": corpus_name, "page_size": page_size}
+        if cursor is not None:
+            params["cursor"] = cursor
+        try:
+            response = httpx.get(
+                f"{self._client.base_url}/api/memory/feed",
+                params=params,
+                headers=self._client.headers,
+                timeout=self._client.timeout,
+            )
+        except httpx.TimeoutException as exc:
+            raise MemoryClientError("timeout", "Memory feed request timed out", 504) from exc
+        except httpx.RequestError as exc:
+            raise MemoryClientError(
+                "transport_error", "Memory service is unavailable", 503
+            ) from exc
+        if not response.is_success:
+            raise _remote_error(response, f"Memory feed failed (HTTP {response.status_code})")
+        from api.models.memory import FeedResponse
+
+        try:
+            return FeedResponse.model_validate(response.json())
+        except (TypeError, ValueError) as exc:
+            raise MemoryClientError(
+                "invalid_response", "Memory feed returned an invalid response", 502
+            ) from exc
 
     def evidence(
         self,
@@ -324,13 +382,15 @@ class MindPalace:
         finally:
             try:
                 asyncio.run(async_engine.dispose())
-            except Exception:
+            except (RuntimeError, OSError):
                 pass
 
     async def _ensure_corpus(self):
         from api.services.corpora import get_or_create_corpus
         from api.services.db import session_scope
 
+        if self.name is None:
+            raise ValueError("a corpus name is required")
         async with session_scope() as db:
             await get_or_create_corpus(db, self.name)
 
@@ -421,9 +481,13 @@ class MindPalace:
         from api.services.corpora import get_corpus_by_name
         from api.services.db import session_scope
 
+        if self.name is None:
+            raise ValueError("a corpus name is required")
+        name = self.name
+
         async def _get():
             async with session_scope() as db:
-                return await get_corpus_by_name(db, self.name)
+                return await get_corpus_by_name(db, name)
 
         corpus = self._run(_get())
         if not corpus:

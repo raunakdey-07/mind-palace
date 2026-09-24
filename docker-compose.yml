@@ -51,8 +51,16 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       EMBEDDING_MODEL: all-MiniLM-L6-v2
       LLM_MODEL: llama3.3:3b-instruct
+      MIND_PALACE_CURSOR_SECRET: ${MIND_PALACE_CURSOR_SECRET:?set MIND_PALACE_CURSOR_SECRET to a 32+ character secret}
+      MIND_PALACE_READINESS_TIMEOUT_SECONDS: "2"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

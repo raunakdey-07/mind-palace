@@ -75,6 +75,10 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Local human/AI review outputs; never include in product releases
+/reviewer_A.jsonl
+/reviewer_B.jsonl
+
 # Data
 data/
 # Ignore placeholder infra/docs folders
@@ -83,12 +87,19 @@ helm/
 !/docs/evaluation/
 /docs/evaluation/*
 !/docs/evaluation/m006.md
+!/docs/operations.md
+!/docs/m009/
+!/docs/m009/**
 monitoring/
 
 # Keep project documentation; ignore stray personal notes
 *.md
 !README.md
 !NOTICE.md
+!AGENTS.md
+!docs/operations.md
+!docs/m009/
+!docs/m009/**
 !content_eval/*.md
 !eval/EVALUATION.md
 !examples/MEMORY.md

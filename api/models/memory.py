@@ -100,6 +100,36 @@ class Snapshot(Contract):
     version_ids: list[str]
 
 
+class FeedItem(Contract):
+    version_id: str
+    document_id: str
+    corpus: str
+    path: str
+    version_number: int
+    status: Literal["NEW", "MODIFIED", "DELETED", "RESTORED"]
+    observed_at: AwareDatetime
+    predecessor_id: str | None = None
+
+
+class FeedResponse(Contract):
+    schema_version: Literal[1] = 1
+    corpus: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$")
+    items: list[FeedItem]
+    has_more: bool
+    next_cursor: str | None = None
+    page_size: int = Field(ge=1, le=500, strict=True)
+
+    def canonical_json(self) -> str:
+        """Return the stable compact JSON representation used by the CLI."""
+        return json.dumps(
+            self.model_dump(mode="json"),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+
+
 class MemoryResponse(Contract):
     schema_version: int = 1
     query: str

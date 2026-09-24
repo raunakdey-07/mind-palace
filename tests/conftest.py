@@ -1,6 +1,12 @@
 """Shared test fixtures for Mind Palace."""
 
+import os
+
 import pytest
+
+# M009 cursor tests exercise the real HMAC boundary. Production configuration
+# supplies this value explicitly; tests use a deterministic non-secret value.
+os.environ.setdefault("MIND_PALACE_CURSOR_SECRET", "m009-test-cursor-secret-" + "x" * 48)
 
 
 @pytest.fixture

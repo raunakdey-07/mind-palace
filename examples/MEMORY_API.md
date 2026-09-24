@@ -3,15 +3,19 @@
 The implemented contract is `api/models/memory.py`, with operation validation,
 transaction ownership, projection, and packing in `api/services/memory_public.py`.
 REST (`api/routers/memory.py`), SDK (`mindpalace_sdk.py`), MCP (`mcp_server.py`),
-and CLI (`cli/memory.py`) delegate to that boundary. This is persistent,
-evidence-backed **source assertion memory**, not perfect truth or semantic
-contradiction detection. See [the evolving demo](MEMORY.md).
+and CLI (`cli/memory.py`) delegate ordinary memory operations to that boundary.
+The M009 feed is a separate operational read contract over the same archive and
+is exposed through REST, SDK, and CLI. This is persistent, evidence-backed
+**source assertion memory**, not perfect truth or semantic contradiction
+detection. See [the evolving demo](MEMORY.md).
 
 ## Operations and selectors
 
-All REST operations below are **POST** with a JSON request, including reads.
-All require `corpus`; `query` defaults to `""` (all memories) except that the
-`query` operation requires a nonempty question in that field. Names must match
+The ordinary memory REST operations below are **POST** requests with a JSON
+request, including reads. The M009 operational feed is the one GET memory
+contract described in its own section below. All operations require `corpus`;
+`query` defaults to `""` (all memories) except that the `query` operation
+requires a nonempty question in that field. Names must match
 `[A-Za-z0-9._-]+`, length 1–128. Memory reads do not create missing corpora.
 
 | REST path | Meaning | Additional accepted selectors |
@@ -25,6 +29,54 @@ All require `corpus`; `query` defaults to `""` (all memories) except that the
 | `/api/memory/snapshot` | Commit immutable whole-corpus version references | `as_of` only; `query` must be empty |
 | `/api/memory/replay` | Replay saved references, including history | **`snapshot_id` required**, `path` |
 | `/api/memory/pack` | Bounded evidence-backed selection | `path`, `as_of`, `valid_at`, `snapshot_id`, `budget` |
+
+### M009 operational feed (GET)
+
+`GET /api/memory/feed` is a separate corpus-scoped read contract over immutable
+`memory_versions` rows. It is not one of the ordinary `MemoryRequest` POST
+operations and is intentionally not exposed as an MCP tool.
+
+```text
+GET /api/memory/feed?corpus=my-corpus&page_size=50&cursor=<opaque>
+```
+
+The response contains `schema_version`, `corpus`, `items`, `has_more`,
+`next_cursor`, and `page_size`. Items are ordered by
+`(observed_at ASC, version_id ASC)` and contain the archive version ID,
+document identity, path, version number, lifecycle status, observation time,
+and predecessor ID. Page sizes are 1–500.
+
+Cursors are opaque, HMAC-integrity-protected, versioned, corpus-bound, and
+usable across independent database sessions when the same
+`MIND_PALACE_CURSOR_SECRET` is configured. They are not encrypted. Malformed,
+tampered, wrong-corpus, and semantically incompatible cursors are rejected with
+`422 invalid_cursor` or `422 cursor_corpus_mismatch`.
+
+The query is keyset-based and requests `page_size + 1`; it does not use
+`OFFSET`, load full history into Python, or keep process-local cursor state.
+Each HTTP request observes its own PostgreSQL MVCC statement snapshot. Rows
+committed after a cursor with a strictly later `(observed_at, version_id)` may
+appear in a later page, but late commits at or before an issued boundary can be
+missed by that continuation. This is not exactly-once, broker, CDC, or
+transactional-delivery semantics. See [`docs/operations.md`](../docs/operations.md)
+for the complete consistency model and polling limitation at the final page.
+
+The SDK and CLI expose the same method/command:
+
+```python
+from mindpalace_sdk import MindPalace
+page = MindPalace(base_url="http://127.0.0.1:8000").memory.feed(
+    corpus="my-corpus", page_size=50
+)
+```
+
+```bash
+mindpalace memory feed --corpus my-corpus --page-size 50
+```
+
+M009 deliberately excludes `memory_feed` from MCP to avoid creating a second
+unversioned cursor contract. The feed requires a configured signing secret of
+at least 32 bytes; there is no predictable release fallback.
 
 Non-default unsupported selectors are rejected, even if an adapter exposes them.
 In particular, **evidence rejects `path`**, and **snapshot rejects nonempty
@@ -177,6 +229,19 @@ calls: default validity timestamps differ, and concurrent ingestion can change
 state. Use `snapshot_id` to fix observation and validity for repeatable selection.
 Query additionally requires the same embedding model/runtime, question, and intent.
 
+## Health endpoints
+
+```text
+GET /health/live
+GET /health/ready
+```
+
+Liveness is process-only and does not query PostgreSQL. Readiness checks
+PostgreSQL connectivity and the required archive relations, returning `200`
+when ready and a sanitized `503` when the database, schema, or transport is
+unavailable. The container health check uses readiness; the legacy `/health`
+route is not a dependency-aware substitute.
+
 ## Python SDK
 
 Install the project (`pip install -e .`) and its requirements first. Named local
@@ -264,6 +329,7 @@ python -m cli.main memory replay --corpus my-corpus --snapshot-id SNAPSHOT_ID
 python -m cli.main memory pack --corpus my-corpus --query streaming --budget 8000
 python -m cli.main memory query --corpus my-corpus \
   --query "What carries Dispatch events now?" --intent current --budget 8000
+mindpalace memory feed --corpus my-corpus --page-size 50
 ```
 
 CLI selector flags follow the contract table, with the SDK differences noted
@@ -290,6 +356,8 @@ Success includes structured content and canonical JSON text. Service failures
 return `isError: true` with structured/text `detail` containing code and message.
 Snapshot is advertised as non-read-only; other memory tools are read-only.
 Existing `context`, `search`, `sync`, and `list_corpora` tools remain separate.
+M009 intentionally does not add `memory_feed`; its cursor-based operational
+contract is available through REST, SDK, and CLI only.
 
 ## Explicit memory-aware generation
 
@@ -474,7 +542,7 @@ exercise and `examples/evolving-project/runs/` for local demo reports.
 - Shared public-service suite: 44 tests, including real PostgreSQL semantics,
   all-eight-operation cross-interface parity, foreign-corpus rejection, strict
   JSON budgets, transitive conflicts, and sanitized real database failures.
-- MCP stdio smoke test spawns the actual server and exercises protocol discovery,
+- MCP stdio quick check spawns the actual server and exercises protocol discovery,
   typed current/pack responses, budget validation, and missing-claim errors.
 - Black checked 74 Python files; Flake8 and `git diff --check` passed.
 - Existing database upgrade 003→004 and repeated `upgrade head` succeeded;

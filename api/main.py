@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -13,23 +15,21 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
+from sqlalchemy.exc import SQLAlchemyError
 
 from api.routers import context, corpora, ingest, memory, query, search
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifecycle: verify DB connectivity on startup."""
-    from api.services.db import init_db
-
-    await init_db()
+    """Keep process startup independent of PostgreSQL connectivity."""
     yield
 
 
 app = FastAPI(
     title="Mind Palace API",
     description="RAG and agent APIs for the Mind Palace AI-Research OS",
-    version="0.2.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -67,7 +67,44 @@ app.add_middleware(
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
-# Health check
+@app.get("/health/live")
+async def liveness() -> dict:
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+async def readiness() -> JSONResponse:
+    from sqlalchemy import text
+
+    from api.services.db import session_scope
+
+    timeout_seconds = float(os.getenv("MIND_PALACE_READINESS_TIMEOUT_SECONDS", "2"))
+    try:
+        async with asyncio.timeout(timeout_seconds):
+            async with session_scope() as db:
+                result = await db.execute(
+                    text(
+                        "SELECT to_regclass('corpora') IS NOT NULL, "
+                        "to_regclass('memory_documents') IS NOT NULL, "
+                        "to_regclass('memory_versions') IS NOT NULL"
+                    )
+                )
+                if not all(result.one()):
+                    return JSONResponse(
+                        status_code=503,
+                        content={"status": "not_ready", "checks": {"database": "unavailable"}},
+                    )
+    except (SQLAlchemyError, OSError, TimeoutError, ValueError):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "checks": {"database": "unavailable"}},
+        )
+    return JSONResponse(
+        status_code=200,
+        content={"status": "ready", "checks": {"database": "ok"}},
+    )
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}

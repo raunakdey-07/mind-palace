@@ -1,0 +1,89 @@
+{
+  "archive_fingerprint": "72afaa3146a06abb6984615710e5b6a151cade27855d2443c62d235b1cb69680",
+  "checks": {
+    "boundary_sha256": "c4af8a78e40653f06e42554c48505d7e3a248099c59270acf5a915f23fd68f92",
+    "continuation_sequence_sha256": "ad82eb02150964d8e6b3dee16cd926cf6405becf88ce80cdbeadecaf1a236e30",
+    "continuation_sql_ms": 7.815196,
+    "equal_timestamp_group_count": 2,
+    "first_page_sql_ms": 3.061367,
+    "fresh_sequence_sha256": "17e31d13435deb6f6ed6f5b7a571ddda11d2f0ee709bd6b5b0655237d63d6ff5",
+    "fresh_sql_ms": 11.536299,
+    "late_version_count": 4
+  },
+  "continuation_item_count": 28,
+  "continuation_page_count": 6,
+  "corpus": "m009-concurrency",
+  "equal_timestamp_tie_break": true,
+  "expected_live_continuation": true,
+  "first_page_count": 5,
+  "fresh_item_count": 34,
+  "fresh_page_count": 7,
+  "initial_version_count": 30,
+  "inserted_between_pages": 4,
+  "isolation": true,
+  "late_before_cursor_excluded": true,
+  "mode": "concurrency",
+  "no_duplicates": true,
+  "ordered": true,
+  "other_corpus": "m009-concurrency-other",
+  "other_corpus_inserted_between_pages": 4,
+  "page_size": 5,
+  "reproducibility": {
+    "database": {
+      "backend": "postgresql",
+      "credentials": "redacted",
+      "disposable": true,
+      "name": "<created-and-dropped>"
+    },
+    "dependencies": {
+      "alembic": "1.19.1",
+      "asyncpg": "0.30.0",
+      "fastapi": "0.141.1",
+      "httpx": "0.28.1",
+      "psycopg2-binary": "2.9.12",
+      "sqlalchemy": "2.0.51",
+      "uvicorn": "0.52.1"
+    },
+    "excluded_live_tables": [
+      "documents",
+      "chunks",
+      "ingestion_manifest",
+      "memory_chunks",
+      "memory_claims",
+      "memory_evidence",
+      "memory_snapshots",
+      "memory_snapshot_versions"
+    ],
+    "fixture": {
+      "events": [
+        "NEW"
+      ],
+      "initial_versions": 30,
+      "late_versions": 4,
+      "other_corpus_versions": 4
+    },
+    "migrations": {
+      "command": [
+        "python",
+        "-m",
+        "alembic",
+        "-c",
+        "migrations/alembic.ini",
+        "upgrade",
+        "head"
+      ],
+      "head": "005_multiple_evidence"
+    },
+    "page_size": 5,
+    "platform": "Linux-7.2.7-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.14.7",
+    "seed_tables": [
+      "corpora",
+      "memory_documents",
+      "memory_versions"
+    ]
+  },
+  "schema_version": 1,
+  "total_target_versions": 34,
+  "validated_at": "2026-09-24T10:50:55.878264Z"
+}

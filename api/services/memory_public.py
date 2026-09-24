@@ -34,6 +34,18 @@ class MemoryError(Exception):
         super().__init__(message)
 
 
+def translate_database_error(exc: Exception) -> MemoryError:
+    """Return a sanitized public error for a database or transport failure."""
+    if isinstance(exc, DBAPIError):
+        code = getattr(exc.orig, "sqlstate", None)
+        if code in {"42P01", "42703"}:
+            return MemoryError(
+                "memory_unavailable", "Memory schema unavailable; apply migrations", 503
+            )
+        return MemoryError("database_unavailable", "Memory database request failed", 503)
+    return MemoryError("database_unavailable", "Memory database unavailable", 503)
+
+
 OPERATIONS = frozenset(
     {"current", "history", "changes", "evidence", "as-of", "snapshot", "replay", "pack", "query"}
 )
@@ -371,12 +383,5 @@ async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:
                 return await execute_in_session(db, operation, request)
     except MemoryError:
         raise
-    except DBAPIError as exc:
-        code = getattr(exc.orig, "sqlstate", None)
-        if code in {"42P01", "42703"}:
-            raise MemoryError(
-                "memory_unavailable", "Memory schema unavailable; apply migrations", 503
-            ) from exc
-        raise MemoryError("database_unavailable", "Memory database request failed", 503) from exc
-    except (SQLAlchemyError, OSError, TimeoutError) as exc:
-        raise MemoryError("database_unavailable", "Memory database unavailable", 503) from exc
+    except (DBAPIError, SQLAlchemyError, OSError, TimeoutError) as exc:
+        raise translate_database_error(exc) from exc

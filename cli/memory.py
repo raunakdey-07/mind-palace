@@ -11,7 +11,13 @@ import typer
 
 from mindpalace_sdk import MemoryClientError, MindPalace
 
-app = typer.Typer(name="memory", help="Query and capture corpus memory.")
+app = typer.Typer(
+    name="memory",
+    help=(
+        "Authoritative persistent corpus memory operations "
+        "(current, history, evidence, feed, snapshots, packs)."
+    ),
+)
 
 Corpus = Annotated[str, typer.Option("--corpus", help="Corpus name (required).")]
 Query = Annotated[str, typer.Option("--query")]
@@ -106,6 +112,26 @@ def changes(
 ) -> None:
     """Read memory changes."""
     _dispatch("changes", corpus, query, base_url, as_of=as_of, valid_at=valid_at, path=path)
+
+
+@app.command()
+def feed(
+    corpus: Corpus,
+    page_size: Annotated[
+        int, typer.Option("--page-size", "--limit", min=1, max=500, help="Items per page (1-500).")
+    ] = 50,
+    cursor: Annotated[str | None, typer.Option("--cursor")] = None,
+    base_url: BaseURL = DEFAULT_BASE_URL,
+) -> None:
+    """Consume the durable corpus-scoped change feed."""
+    try:
+        response = MindPalace(base_url=base_url).memory.feed(
+            corpus=corpus, page_size=page_size, cursor=cursor
+        )
+        typer.echo(response.canonical_json())
+    except MemoryClientError as exc:
+        typer.echo(f"{exc.code}: {exc.message}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()

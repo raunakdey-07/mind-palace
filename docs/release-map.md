@@ -13,12 +13,15 @@ relationship between the two numbering systems.
 | M006.5 | Natural-language memory query and relevance layer | `v0.5.0` |
 | M006.75 | Frozen reproducible memory-query benchmark | `v0.5.0` |
 | M007 / M007.1 | Independent-adjudication handoff infrastructure | `v0.5.1` |
+| M009 | Durable corpus-scoped operational memory feed | `v0.6.0` |
 
 ## Current release
 
-`v0.5.1` is the current public release. It packages the M007.1
-independent-adjudication handoff while leaving M007 scientific evaluation and
-M008 downstream work pending.
+`v0.6.0` is the current public release. It packages the M009 durable
+operational memory feed while leaving M007 scientific evaluation and M008
+downstream work pending. M006.75 remains the frozen empirical benchmark. M009
+release evidence is under [`docs/m009/RELEASE_READINESS.md`](m009/RELEASE_READINESS.md);
+the release does not alter M006.75, M007, or M008 research artifacts.
 
 ## Numbering rules
 

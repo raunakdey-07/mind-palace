@@ -1,0 +1,19 @@
+# M009 CLI/SDK validation report
+
+Validated: 2026-09-24
+
+Executed successfully:
+
+```text
+./venvmp/bin/mindpalace --help
+./venvmp/bin/mindpalace memory --help
+./venvmp/bin/mindpalace memory feed --help
+./venvmp/bin/python -c "from mindpalace_sdk import MindPalace; print('SDK import ok')"
+```
+
+Results:
+
+- Root CLI help: PASS
+- Memory group help: PASS; includes `feed`
+- Feed command help: PASS; page size is constrained to 1–500
+- Public SDK import: PASS (`SDK import ok`)

@@ -114,7 +114,7 @@ def ask(
     ),
     tags: Optional[str] = typer.Option(None, "--tags", help="Comma-separated tags to filter by"),
 ) -> None:
-    """Ask a question using RAG (requires Ollama running)."""
+    """Optional LLM-backed answer generation; use `memory` for authoritative corpus memory."""
     import httpx
 
     url = "http://localhost:8000/api/query/ask"
@@ -233,7 +233,7 @@ def timeline(
     import httpx
 
     url = "http://localhost:8000/api/query/timeline"
-    params = {"limit": limit}
+    params: dict[str, int | str] = {"limit": limit}
     if document_type:
         params["document_type"] = document_type
     if start_date:
@@ -271,26 +271,39 @@ def doctor() -> None:
             if fix_hint:
                 typer.echo(f"   - Hint: {fix_hint}")
 
-    # Check 1: API health
+    # Check 1: API liveness
     try:
-        resp = httpx.get("http://localhost:8000/health", timeout=5)
+        resp = httpx.get("http://localhost:8000/health/live", timeout=5)
         check(
-            "API health",
+            "API liveness",
             resp.status_code == 200,
             "Start the API with: uvicorn api.main:app --reload",
         )
     except Exception:
-        check("API health", False, "Start the API with: uvicorn api.main:app --reload")
+        check("API liveness", False, "Start the API with: uvicorn api.main:app --reload")
 
-    # Check 2: Postgres connectivity
+    # Check 2: API readiness (the database-aware health signal)
+    try:
+        resp = httpx.get("http://localhost:8000/health/ready", timeout=5)
+        check(
+            "API readiness",
+            resp.status_code == 200,
+            "Check PostgreSQL connectivity and run migrations",
+        )
+    except Exception:
+        check("API readiness", False, "Check PostgreSQL connectivity and run migrations")
+
+    # Check 3: Postgres connectivity
     try:
         import asyncio
+
+        from sqlalchemy import text
 
         from api.services.db import async_engine
 
         async def check_pg():
             async with async_engine.begin() as conn:
-                await conn.execute("SELECT 1")
+                await conn.execute(text("SELECT 1"))
             return True
 
         result = asyncio.run(check_pg())
@@ -306,7 +319,7 @@ def doctor() -> None:
             f"Check docker-compose is running: docker-compose ps. Error: {e}",
         )
 
-    # Check 3: Ollama availability
+    # Check 4: Ollama availability
     try:
         resp = httpx.get("http://localhost:11434/api/tags", timeout=5)
         check(
@@ -321,7 +334,7 @@ def doctor() -> None:
             "Start Ollama: docker exec ollama ollama serve",
         )
 
-    # Check 4: Embedding model
+    # Check 5: Embedding model
     try:
         from api.services.embedder import Embedder
 
@@ -338,7 +351,7 @@ def doctor() -> None:
             f"Check sentence-transformers is installed. Error: {e}",
         )
 
-    # Check 5: Content directory
+    # Check 6: Content directory
     import os
 
     content_exists = os.path.exists("./content") and len(os.listdir("./content")) > 0
@@ -348,7 +361,7 @@ def doctor() -> None:
         "Add Markdown files to ./content/",
     )
 
-    # Check 6: Migrations (simplified)
+    # Check 7: Migrations (simplified)
     try:
         from alembic.config import Config
 

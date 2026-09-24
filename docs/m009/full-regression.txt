@@ -1,0 +1,47 @@
+...................................................sssss................ [  6%]
+...............ss....ssssssss............................ss............. [ 12%]
+..................s........sssssssssss.................................. [ 19%]
+........................................................................ [ 25%]
+.....................................................................sss [ 32%]
+sssssssssss............................................................. [ 38%]
+........................................................................ [ 45%]
+........................................................................ [ 51%]
+.........................................sssss.......................... [ 58%]
+........................................................................ [ 64%]
+................sssss.............sssss...........sssssssssssssss......s [ 71%]
+ssssssssssssssssssssss.................................................. [ 77%]
+......................................ssssssssssssssssssssssssssss...... [ 84%]
+...........................sss.......................................... [ 90%]
+.................................................sssssss................ [ 97%]
+..ss..sssssssss...ss............                                         [100%]
+=============================== warnings summary ===============================
+tests/test_memory_query_adapters.py::test_sdk_remote_query[None]
+tests/test_memory_query_adapters.py::test_sdk_remote_query[other-docs]
+tests/test_memory_query_adapters.py::test_cli_query[None]
+tests/test_memory_query_adapters.py::test_cli_query[change]
+tests/test_memory_query_adapters.py::test_sdk_and_cli_query_errors
+  /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/httpx2/_client.py:1204: StarletteDeprecationWarning: You should not use the 'timeout' argument with the TestClient. See https://github.com/Kludex/starlette/issues/1108 for more information.
+    return self.request(
+
+tests/test_search_semantics.py::test_rrf_scores_descending_contract
+  tests/test_search_semantics.py:177: PytestWarning: The test <Function test_rrf_scores_descending_contract> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_rrf_scores_descending_contract():
+
+tests/test_search_semantics.py::test_metrics_on_ranked_results
+  tests/test_search_semantics.py:184: PytestWarning: The test <Function test_metrics_on_ranked_results> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_metrics_on_ranked_results():
+
+tests/test_security.py::test_sync_paths_are_relative_to_root
+  tests/test_security.py:46: PytestWarning: The test <Function test_sync_paths_are_relative_to_root> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_sync_paths_are_relative_to_root(tmp_path):
+
+tests/test_security.py::test_unsupported_extension_rejected_not_executed
+  tests/test_security.py:61: PytestWarning: The test <Function test_unsupported_extension_rejected_not_executed> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_unsupported_extension_rejected_not_executed(tmp_path):
+
+tests/test_security.py::test_oversized_document_is_chunked_not_crashed
+  tests/test_security.py:70: PytestWarning: The test <Function test_oversized_document_is_chunked_not_crashed> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_oversized_document_is_chunked_not_crashed():
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+965 passed, 147 skipped, 10 warnings in 57.82s

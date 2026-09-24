@@ -4,6 +4,29 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.6.0] - 2026-09-24
+
+### Added
+
+- Durable PostgreSQL-backed corpus-scoped memory feed with keyset ordering,
+  integrity-protected corpus-bound cursors, REST/Python SDK/CLI interfaces, and
+  dependency-aware health endpoints.
+- Isolated M009 release validation for live interface equivalence, concurrent
+  insertion semantics, exact 100/1,000/10,000-version fixtures, p50/p95 timing,
+  and PostgreSQL query plans.
+- Explicit MCP exclusion decision for the operational feed.
+
+### Guarantees and limitations
+
+The feed provides bounded keyset continuation over `(observed_at, version_id)`
+and documents its MVCC/late-commit behavior. It is not exactly-once messaging,
+a broker, CDC, or transactional event delivery. The final page has no implicit
+continuation cursor; polling clients must restart and deduplicate or maintain a
+separate boundary policy. M009 does not change any M006.75/M007/M008 research
+inputs, results, or claims.
+
+Validation evidence is recorded in [`docs/m009/RELEASE_READINESS.md`](docs/m009/RELEASE_READINESS.md).
+
 ## [v0.5.1] - 2026-09-24
 
 ### Added
@@ -106,6 +129,8 @@ decision-provider and Jev research is intentionally unreleased.
 
 - Exposed persistent memory through the public developer interfaces.
 
+[v0.6.0]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.6.0
+[v0.5.1]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.5.1
 [v0.5.0]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.5.0
 [v0.4.1]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.4.1
 [v0.4.0]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.4.0

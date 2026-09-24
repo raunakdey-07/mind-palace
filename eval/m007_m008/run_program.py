@@ -13,10 +13,9 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from api.services.memory_evaluation_lab import run_all  # noqa: E402
-
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
 REVIEW = ROOT / "eval/m007/adjudication/review_set.jsonl"
 MANIFEST = ROOT / "eval/m007/research-manifest.json"
 ADJUDICATED = ROOT / "eval/m007/adjudication/adjudicated.jsonl"
@@ -153,7 +152,7 @@ def validate_reviewer_file(path: Path) -> dict:
             "gold",
             "expected_answer",
         }
-        if any(field.lower() in forbidden for field in row):
+        if any(token in field.lower() for field in row for token in forbidden):
             errors.append(f"record {index}: prohibited metadata")
         if (
             not str(row.get("rationale", "")).strip()
@@ -249,12 +248,19 @@ def main() -> None:
         )
         return
     data = adjudication_state()
-    semantic = (
-        run_all()
-        if args.command
-        in {"synthetic", "temporal", "longitudinal", "conflict", "security", "full", "report"}
-        else None
-    )
+    semantic = None
+    if args.command in {
+        "synthetic",
+        "temporal",
+        "longitudinal",
+        "conflict",
+        "security",
+        "full",
+        "report",
+    }:
+        from api.services.memory_evaluation_lab import run_all  # noqa: PLC0415
+
+        semantic = run_all()
     write_report(args.command, data, semantic)
 
 

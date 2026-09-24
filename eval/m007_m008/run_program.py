@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 REVIEW = ROOT / "eval/m007/adjudication/review_set.jsonl"
+REVIEWER_CONTEXT = ROOT / "eval/m007/adjudication/reviewer_context.jsonl"
 MANIFEST = ROOT / "eval/m007/research-manifest.json"
 ADJUDICATED = ROOT / "eval/m007/adjudication/adjudicated.jsonl"
 
@@ -168,6 +169,178 @@ def validate_reviewer_file(path: Path) -> dict:
     }
 
 
+def _atomic_write_jsonl(path: Path, rows: list[dict]) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
+def _review_paths(reviewer: str) -> Path:
+    aliases = {"reviewer-A": "reviewer_A.jsonl", "reviewer-B": "reviewer_B.jsonl"}
+    if reviewer not in aliases:
+        raise ValueError("reviewer must be reviewer-A or reviewer-B")
+    return ROOT / "eval/m007/adjudication" / aliases[reviewer]
+
+
+def _review_allowed_context(item: dict) -> dict:
+    allowed = {
+        "review_id",
+        "question_id",
+        "candidate_id",
+        "candidate_path",
+        "claim_key",
+        "candidate_claim",
+        "evidence",
+        "stage",
+        "intent",
+        "information_need",
+        "traceability_status",
+        "authoritative_matches",
+    }
+    if set(item) - allowed:
+        raise ValueError(
+            f"reviewer context contains prohibited fields: {sorted(set(item) - allowed)}"
+        )
+    return item
+
+
+def _render_review(item: dict, number: int, total: int) -> str:
+    lines = [
+        "=" * 60,
+        "M007 HUMAN REVIEW",
+        "=" * 60,
+        f"Case {number} / {total}",
+        f"Review ID: {item['review_id']}",
+        f"Question: {item['question_id']}",
+        f"Candidate claim: {item['candidate_claim']}",
+        f"Candidate key: {item['claim_key']}",
+        f"Source path: {item['candidate_path']}",
+        f"Evidence: {item.get('evidence', ())}",
+        f"Stage: {item.get('stage', '')}",
+        f"Intent: {item.get('intent', '')}",
+        f"Information need: {item.get('information_need', '')}",
+        "-" * 60,
+        "AUTHORITATIVE CONTEXT",
+        "-" * 60,
+        f"Traceability: {item.get('traceability_status', 'UNAVAILABLE')}",
+        f"Authoritative matches: {len(item.get('authoritative_matches', []))}",
+    ]
+    if item.get("traceability_status") == "AMBIGUOUS":
+        lines.append(
+            "WARNING: multiple authoritative matches are preserved; do not resolve by ordering."
+        )
+    lines.extend(["-" * 60, "Enter choices; use 'quit' to save and exit."])
+    return "\n".join(lines)
+
+
+def _ask(allowed: list[str], label: str) -> str:
+    for index, value in enumerate(allowed, 1):
+        print(f"  {index}. {value}")
+    while True:
+        answer = input(f"{label}: ").strip()
+        if answer in allowed:
+            return answer
+        if answer.isdigit() and 1 <= int(answer) <= len(allowed):
+            return allowed[int(answer) - 1]
+        print("Enter a listed value or its number.")
+
+
+def review_workflow(reviewer: str, *, dry_run: bool = False) -> dict:
+    path = _review_paths(reviewer)
+    review_items = [_review_allowed_context(item) for item in load_jsonl(REVIEWER_CONTEXT)]
+    expected_ids = [item["review_id"] for item in load_jsonl(REVIEW)]
+    if [item["review_id"] for item in review_items] != expected_ids:
+        raise ValueError("reviewer context does not exactly cover the frozen review set")
+    existing = load_jsonl(path) if path.exists() else []
+    existing_by_id = {row.get("review_id"): row for row in existing}
+    if any(row.get("reviewer_id") != reviewer for row in existing):
+        raise ValueError("reviewer file contains records for a different reviewer")
+    if any(review_id not in set(expected_ids) for review_id in existing_by_id):
+        raise ValueError("reviewer file contains unknown review IDs")
+    if dry_run:
+        for index, item in enumerate(review_items, 1):
+            print(_render_review(item, index, len(review_items)))
+        return {"reviewer": reviewer, "dry_run": True, "cases": len(review_items), "created": False}
+    print(f"Reviewing {len(review_items)} cases. Output: {path}")
+    for index, item in enumerate(review_items, 1):
+        if item["review_id"] in existing_by_id:
+            print(f"Completed: {index} / {len(review_items)}; skipping already saved case")
+            continue
+        print(_render_review(item, index, len(review_items)))
+        answer = input("Command [next/quit]: ").strip().lower()
+        if answer == "quit":
+            _atomic_write_jsonl(path, list(existing_by_id.values()))
+            return {
+                "reviewer": reviewer,
+                "completed": len(existing_by_id),
+                "remaining": len(review_items) - len(existing_by_id),
+                "created": path.exists(),
+            }
+        if answer not in {"", "next"}:
+            print("Use next or quit.")
+            continue
+        row = {
+            "review_id": item["review_id"],
+            "reviewer_id": reviewer,
+            "reviewed_at": input("Reviewed at (ISO-8601): ").strip(),
+            "relevance": _ask(["relevant", "irrelevant", "uncertain"], "Relevance"),
+            "subject_compatibility": _ask(
+                ["compatible", "incompatible", "uncertain"], "Subject compatibility"
+            ),
+            "temporal_applicability": _ask(
+                ["applicable", "not_applicable", "uncertain", "not_temporal"],
+                "Temporal applicability",
+            ),
+            "evidence_sufficiency": _ask(
+                ["sufficient", "insufficient", "uncertain", "conflicting"], "Evidence sufficiency"
+            ),
+            "authority_compatibility": _ask(
+                [
+                    "current",
+                    "historical",
+                    "superseded",
+                    "conflicted",
+                    "deleted",
+                    "restored",
+                    "uncertain",
+                    "not_applicable",
+                ],
+                "Authority compatibility",
+            ),
+            "conflict_status": _ask(
+                [
+                    "none",
+                    "open",
+                    "acknowledged",
+                    "resolved",
+                    "reopened",
+                    "superseded",
+                    "rejected",
+                    "unknown",
+                    "not_applicable",
+                ],
+                "Conflict status",
+            ),
+            "overall_decision": _ask(["accept", "reject", "abstain"], "Overall decision"),
+            "rationale": input("Rationale: ").strip(),
+            "source_reference": "reviewer_context.jsonl",
+        }
+        existing_by_id[item["review_id"]] = row
+        _atomic_write_jsonl(path, list(existing_by_id.values()))
+        remaining = len(review_items) - len(existing_by_id)
+        print(f"Completed: {index} / {len(review_items)}; Remaining: {remaining}")
+    return {
+        "reviewer": reviewer,
+        "dry_run": False,
+        "cases": len(review_items),
+        "completed": len(existing_by_id),
+        "created": path.exists(),
+    }
+
+
 def stage_states(data: dict) -> list[dict]:
     ready = data["status"] in {"PARTIAL_DATA", "DATA_READY"}
     return [
@@ -225,6 +398,7 @@ def main() -> None:
             "audit",
             "adjudication",
             "validate-reviewer",
+            "review",
             "synthetic",
             "temporal",
             "longitudinal",
@@ -239,7 +413,18 @@ def main() -> None:
         ),
     )
     parser.add_argument("reviewer_file", nargs="?")
+    parser.add_argument("--reviewer", choices=("reviewer-A", "reviewer-B"))
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    if args.command == "review":
+        if not args.reviewer:
+            parser.error("review requires --reviewer reviewer-A or --reviewer reviewer-B")
+        print(
+            json.dumps(
+                review_workflow(args.reviewer, dry_run=args.dry_run), indent=2, sort_keys=True
+            )
+        )
+        return
     if args.command == "validate-reviewer":
         if not args.reviewer_file:
             parser.error("validate-reviewer requires a JSONL path")

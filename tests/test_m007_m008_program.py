@@ -4,6 +4,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from eval.m007_m008.run_program import review_workflow
+
 ROOT = Path(__file__).parents[1]
 RUNNER = ROOT / "eval/m007_m008/run_program.py"
 
@@ -75,6 +77,14 @@ def test_validate_reviewer_rejects_forbidden_metadata():
         assert "record 1: prohibited metadata" in payload["errors"]
     finally:
         path.unlink()
+
+
+def test_review_dry_run_covers_all_cases_without_creating_output(capsys):
+    result = review_workflow("reviewer-A", dry_run=True)
+    assert result["dry_run"] is True
+    assert result["cases"] == 118
+    assert result["created"] is False
+    assert "M007 HUMAN REVIEW" in capsys.readouterr().out
 
 
 def test_required_input_is_machine_readable():

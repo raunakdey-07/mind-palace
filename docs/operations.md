@@ -188,9 +188,10 @@ Container health checks and `mindpalace doctor` use the readiness endpoint,
 or liveness plus readiness where appropriate, rather than the always-green
 legacy route.
 
-The backend image is deliberately API-focused. It contains the API, migrations,
-and mounted content, but not the CLI, MCP server, tests, evaluation data, or
-local virtual environments. It uses the CPU-only Torch constraint in
+The backend image is deliberately API-focused. It contains the API runtime
+modules, migrations, and mounted content, but not the CLI, MCP server, tests,
+evaluation data, research-only service modules, or local virtual environments.
+It uses the CPU-only Torch constraint in
 `requirements-docker.txt` and runs as UID `10001`; model downloads use the
 writable temporary `HF_HOME` configured in the image. Run `requirements.txt`
 for a development checkout; use the API image only for the HTTP service, and run

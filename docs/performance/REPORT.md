@@ -233,10 +233,10 @@ The post-hygiene API image was rebuilt after the performance changes:
 - no Git, tests, local virtualenv, CLI, MCP server, research modules, reviewer
   files, or evaluation data in `/app`.
 
-`docker compose build backend` passes. The current image imports the API without
-loading Torch. The release-time no-cache build and in-container health checks
-also passed in the post-hygiene audit; the performance code does not alter the
-image dependency boundary.
+`docker compose build backend` passes. API import completes without loading
+Torch. The release-time no-cache build and in-container health checks also
+passed in the post-hygiene audit; the performance code does not alter the image
+dependency boundary.
 
 The base image remains tag-based rather than digest-pinned. A digest policy is
 deferred until the repository has a multi-architecture update process.

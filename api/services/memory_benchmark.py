@@ -756,9 +756,11 @@ async def _capture_generation_baseline(workload, q, enabled):
 async def _ask_route_baseline(workload, q):
     """Standalone harness ONLY: scoped bindings around the real router function.
 
-    The default route is not corpus-scoped. Its session sees only this isolated
-    schema's live documents. The lock rejects overlapping harness calls; it does
-    NOT protect unrelated server requests, so never use in a serving process.
+    The harness passes the workload corpus explicitly because the production
+    route requires a scope when more than one corpus exists. Its session sees
+    only this isolated schema's live documents. The lock rejects overlapping
+    harness calls. It does not protect unrelated server requests, so never use
+    this harness in a serving process.
     Constructors are bound during import too, preventing an extra singleton model
     initialization/download. All bindings restore even on cancellation or errors.
     """
@@ -779,7 +781,11 @@ async def _ask_route_baseline(workload, q):
             embedder=workload.embedder,
             llm_service=provider,
         ):
-            response = await route.ask(AskRequest(question=q["question"]), Response(), debug=False)
+            response = await route.ask(
+                AskRequest(question=q["question"], corpus=workload.corpus),
+                Response(),
+                debug=False,
+            )
         return {
             "status": "RUN",
             "mode": "default_rag",

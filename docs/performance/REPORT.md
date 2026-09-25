@@ -123,12 +123,21 @@ semantic request pays the model load.
 conflict pairs. Pair ordering, value comparison, cross-document requirements,
 and conflict IDs remain unchanged.
 
+### Runtime packaging fix
+
+A fresh Python 3.11 image initially resolved SQLAlchemy without `greenlet`,
+which made `api.main` import fail even though the source virtualenv passed.
+The runtime manifest now declares `sqlalchemy[asyncio]`, ensuring the async
+adapter dependency is installed in a clean image. The rebuilt image imports and
+answers liveness/readiness successfully.
+
 ### Regression coverage
 
 `tests/test_embedder.py` proves construction does not invoke the model and
-first use does. `tests/test_memory_public.py` proves an empty query invokes the
-archive resolver once. Existing conflict, provenance, pack, Unicode, and
-benchmark tests provide the semantic correctness gate.
+first use does, including concurrent single-flight loading.
+`tests/test_memory_public.py` proves an empty query invokes the archive resolver
+once. Existing conflict, provenance, pack, Unicode, and benchmark tests provide
+the semantic correctness gate.
 
 ## Before / After Measurements
 

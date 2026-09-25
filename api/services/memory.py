@@ -509,22 +509,25 @@ def _query_result(versions, query_text, valid_at=None):
         )
         claim["validity_known"] = start is not None or end is not None
     active = [claim for claim in claims if claim["status"] == "CURRENT"]
+    active_by_key: dict[str, list[dict]] = {}
+    for claim in sorted(active, key=lambda c: (c["key"], c["id"])):
+        active_by_key.setdefault(claim["key"], []).append(claim)
     conflicts = []
-    for left, right in combinations(sorted(active, key=lambda c: (c["key"], c["id"])), 2):
-        if (
-            left["key"] == right["key"]
-            and left["memory_document_id"] != right["memory_document_id"]
-            and _canonical(left["value"]) != _canonical(right["value"])
-            and (matches(left) or matches(right))
-        ):
-            left["status"] = right["status"] = "CONFLICTING"
-            conflicts.append(
-                {
-                    "id": _hash("conflict", left["id"], right["id"]),
-                    "key": left["key"],
-                    "claims": [left, right],
-                }
-            )
+    for key_claims in active_by_key.values():
+        for left, right in combinations(key_claims, 2):
+            if (
+                left["memory_document_id"] != right["memory_document_id"]
+                and _canonical(left["value"]) != _canonical(right["value"])
+                and (matches(left) or matches(right))
+            ):
+                left["status"] = right["status"] = "CONFLICTING"
+                conflicts.append(
+                    {
+                        "id": _hash("conflict", left["id"], right["id"]),
+                        "key": left["key"],
+                        "claims": [left, right],
+                    }
+                )
     superseded_ids = {claim["supersedes_id"] for claim in claims if claim["supersedes_id"]}
     current = [claim for claim in active if matches(claim) and claim["status"] == "CURRENT"]
     historical = [

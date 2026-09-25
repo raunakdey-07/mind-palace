@@ -824,3 +824,18 @@ async def test_performance_100_documents_three_versions(public_db, record_proper
     assert len(canonical(results["pack"])) <= 16000
     for response in results.values():
         assert_grounded(response)
+
+
+def test_empty_query_resolves_archive_once(monkeypatch):
+    calls = 0
+    original = memory._query_result
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(memory, "_query_result", counted)
+    response = memory_public.project([], MemoryRequest(corpus="empty-corpus"), "current", State())
+    assert response.current_memories == []
+    assert calls == 1

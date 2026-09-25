@@ -136,7 +136,11 @@ def project(
 ) -> MemoryResponse:
     """Project one coherent archive view without exposing database rows or raw files."""
     resolved = memory._query_result(versions, "", state.valid_at or state.as_of)
-    matched = memory._query_result(versions, request.query, state.valid_at or state.as_of)
+    matched = (
+        resolved
+        if not request.query
+        else memory._query_result(versions, request.query, state.valid_at or state.as_of)
+    )
     raw_claims = {
         c["id"]: c
         for key in ("current_memories", "historical_memories", "uncertain_memories")

@@ -90,6 +90,8 @@ helm/
 !/docs/operations.md
 !/docs/m009/
 !/docs/m009/**
+!/docs/performance/
+!/docs/performance/**
 monitoring/
 
 # Keep project documentation; ignore stray personal notes
@@ -100,6 +102,8 @@ monitoring/
 !docs/operations.md
 !docs/m009/
 !docs/m009/**
+!docs/performance/
+!docs/performance/**
 !content_eval/*.md
 !eval/EVALUATION.md
 !examples/MEMORY.md

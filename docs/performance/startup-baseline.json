@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "dependencies": {
+      "asyncpg": "0.30.0",
+      "fastapi": "0.141.1",
+      "pydantic": "2.13.4",
+      "sentence-transformers": "5.7.0",
+      "sqlalchemy": "2.0.51",
+      "torch": "2.13.0"
+    },
+    "git_commit": "b2129e76897a8bda2cb2c7308718d037632bac74",
+    "git_tag": "v0.6.0-2-gb2129e7",
+    "platform": "Linux-7.2.7-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.14.7 (main, Aug 10 2026, 00:00:00) [GCC 16.1.1 20260515 (Red Hat 16.1.1-2)]",
+    "timestamp": "2026-09-25T08:12:00.510304+00:00"
+  },
+  "mode": "startup",
+  "processes": {
+    "api_main_import": {
+      "module_count": 4221,
+      "process_wall_ms": 6783.009,
+      "returncode": 0,
+      "rss_kb": 861428,
+      "sentence_transformers_loaded": true,
+      "torch_loaded": true,
+      "transformers_loaded": true,
+      "wall_ms": 5534.272268999985
+    },
+    "cli_feed_help": {
+      "output_bytes": 1297,
+      "returncode": 0,
+      "wall_ms": 266.4
+    },
+    "cli_memory_help": {
+      "output_bytes": 1702,
+      "returncode": 0,
+      "wall_ms": 264.682
+    },
+    "cli_root_help": {
+      "output_bytes": 2188,
+      "returncode": 0,
+      "wall_ms": 265.914
+    },
+    "mindpalace_import": {
+      "process_wall_ms": 49.923,
+      "returncode": 1,
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import json,resource,sys,time; s=time.perf_counter(); import mindpalace; print(json.dumps({'wall_ms':(time.perf_counter()-s)*1000,'module_count':len(sys.modules),'rss_kb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}))\n                                                          ^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'mindpalace'\n"
+    },
+    "sdk_import": {
+      "module_count": 165,
+      "process_wall_ms": 123.614,
+      "returncode": 0,
+      "rss_kb": 27104,
+      "sentence_transformers_loaded": false,
+      "torch_loaded": false,
+      "transformers_loaded": false,
+      "wall_ms": 67.184267000016
+    }
+  }
+}

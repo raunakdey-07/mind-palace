@@ -1,0 +1,12 @@
+{
+  "mode": "feed-scale",
+  "dataset_size": 100000,
+  "status": "deferred",
+  "reason": "The disposable 100,000-version direct fixture and repeated full traversals exceeded the 20-minute measurement bound. No result is claimed.",
+  "page_size": 50,
+  "warmups": 2,
+  "iterations": 10,
+  "temporary_database_cleaned": true,
+  "real_archive_modified": false,
+  "m009_evidence_modified": false
+}

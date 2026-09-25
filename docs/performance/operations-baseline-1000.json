@@ -1,0 +1,83 @@
+{
+  "database": "existing PostgreSQL via memory_benchmark_workload",
+  "fixture": "one unique claim per document with exact evidence",
+  "iterations": 3,
+  "metadata": {
+    "dependencies": {
+      "asyncpg": "0.30.0",
+      "fastapi": "0.141.1",
+      "pydantic": "2.13.4",
+      "sentence-transformers": "5.7.0",
+      "sqlalchemy": "2.0.51",
+      "torch": "2.13.0"
+    },
+    "git_commit": "b2129e76897a8bda2cb2c7308718d037632bac74",
+    "git_tag": "v0.6.0-2-gb2129e7",
+    "platform": "Linux-7.2.7-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.14.7 (main, Aug 10 2026, 00:00:00) [GCC 16.1.1 20260515 (Red Hat 16.1.1-2)]",
+    "timestamp": "2026-09-25T08:13:59.789786+00:00"
+  },
+  "mode": "operations",
+  "results": {
+    "1000": {
+      "ingest_ms": 15712.213,
+      "operations": {
+        "as-of": {
+          "response_chars": 1408888,
+          "sql_ms_p50": 3.588,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 1717.028
+        },
+        "changes": {
+          "response_chars": 1674863,
+          "sql_ms_p50": 3.515,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 1762.545
+        },
+        "current": {
+          "response_chars": 1408863,
+          "sql_ms_p50": 3.576,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 1831.301
+        },
+        "evidence": {
+          "response_chars": 1812,
+          "sql_ms_p50": 3.986,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 1698.795
+        },
+        "feed": {
+          "sql_ms_p50": 0.546,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 38.0
+        },
+        "history": {
+          "response_chars": 2132532,
+          "sql_ms_p50": 3.604,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 1769.214
+        },
+        "pack": {
+          "response_chars": 7407,
+          "sql_ms_p50": 2.67,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 937.535
+        },
+        "replay": {
+          "response_chars": 2199786,
+          "sql_ms_p50": 4.115,
+          "statements_p50": 5.0,
+          "wall_ms_p50": 1772.593
+        },
+        "snapshot": {
+          "response_chars": 2199786,
+          "sql_ms_p50": 0.962,
+          "statements_p50": 11.0,
+          "wall_ms_p50": 1830.774
+        }
+      },
+      "versions": 1000
+    }
+  },
+  "warmups": 1
+}

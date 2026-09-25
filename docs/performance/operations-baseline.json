@@ -1,0 +1,201 @@
+{
+  "database": "existing PostgreSQL via memory_benchmark_workload",
+  "fixture": "one unique claim per document with exact evidence",
+  "iterations": 3,
+  "metadata": {
+    "dependencies": {
+      "asyncpg": "0.30.0",
+      "fastapi": "0.141.1",
+      "pydantic": "2.13.4",
+      "sentence-transformers": "5.7.0",
+      "sqlalchemy": "2.0.51",
+      "torch": "2.13.0"
+    },
+    "git_commit": "b2129e76897a8bda2cb2c7308718d037632bac74",
+    "git_tag": "v0.6.0-2-gb2129e7",
+    "platform": "Linux-7.2.7-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.14.7 (main, Aug 10 2026, 00:00:00) [GCC 16.1.1 20260515 (Red Hat 16.1.1-2)]",
+    "timestamp": "2026-09-25T08:10:35.972709+00:00"
+  },
+  "mode": "operations",
+  "results": {
+    "100": {
+      "ingest_ms": 1085.337,
+      "operations": {
+        "as-of": {
+          "response_chars": 140788,
+          "sql_ms_p50": 0.644,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 18.199
+        },
+        "changes": {
+          "response_chars": 167363,
+          "sql_ms_p50": 0.754,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 19.308
+        },
+        "current": {
+          "response_chars": 140763,
+          "sql_ms_p50": 0.799,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 18.066
+        },
+        "evidence": {
+          "response_chars": 1812,
+          "sql_ms_p50": 0.793,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 17.443
+        },
+        "feed": {
+          "sql_ms_p50": 0.56,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 4.169
+        },
+        "history": {
+          "response_chars": 212832,
+          "sql_ms_p50": 0.696,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 18.951
+        },
+        "pack": {
+          "response_chars": 7407,
+          "sql_ms_p50": 0.899,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 44.879
+        },
+        "replay": {
+          "response_chars": 219786,
+          "sql_ms_p50": 0.779,
+          "statements_p50": 5.0,
+          "wall_ms_p50": 22.104
+        },
+        "snapshot": {
+          "response_chars": 219786,
+          "sql_ms_p50": 0.521,
+          "statements_p50": 11.0,
+          "wall_ms_p50": 28.552
+        }
+      },
+      "versions": 100
+    },
+    "1000": {
+      "ingest_ms": 14488.517,
+      "operations": {
+        "as-of": {
+          "response_chars": 1408888,
+          "sql_ms_p50": 2.344,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 723.31
+        },
+        "changes": {
+          "response_chars": 1674863,
+          "sql_ms_p50": 2.28,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 676.553
+        },
+        "current": {
+          "response_chars": 1408863,
+          "sql_ms_p50": 2.279,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 658.085
+        },
+        "evidence": {
+          "response_chars": 1812,
+          "sql_ms_p50": 2.337,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 751.549
+        },
+        "feed": {
+          "sql_ms_p50": 0.757,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 39.84
+        },
+        "history": {
+          "response_chars": 2132532,
+          "sql_ms_p50": 2.265,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 698.177
+        },
+        "pack": {
+          "response_chars": 7407,
+          "sql_ms_p50": 2.411,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 933.323
+        },
+        "replay": {
+          "response_chars": 2199786,
+          "sql_ms_p50": 1.81,
+          "statements_p50": 5.0,
+          "wall_ms_p50": 686.717
+        },
+        "snapshot": {
+          "response_chars": 2199786,
+          "sql_ms_p50": 0.434,
+          "statements_p50": 11.0,
+          "wall_ms_p50": 702.939
+        }
+      },
+      "versions": 1000
+    },
+    "500": {
+      "ingest_ms": 5950.331,
+      "operations": {
+        "as-of": {
+          "response_chars": 704388,
+          "sql_ms_p50": 1.466,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 243.589
+        },
+        "changes": {
+          "response_chars": 837363,
+          "sql_ms_p50": 1.536,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 234.166
+        },
+        "current": {
+          "response_chars": 704363,
+          "sql_ms_p50": 1.513,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 243.648
+        },
+        "evidence": {
+          "response_chars": 1812,
+          "sql_ms_p50": 1.513,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 224.068
+        },
+        "feed": {
+          "sql_ms_p50": 0.633,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 8.067
+        },
+        "history": {
+          "response_chars": 1066032,
+          "sql_ms_p50": 1.451,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 235.638
+        },
+        "pack": {
+          "response_chars": 7407,
+          "sql_ms_p50": 1.411,
+          "statements_p50": 4.0,
+          "wall_ms_p50": 378.371
+        },
+        "replay": {
+          "response_chars": 1099786,
+          "sql_ms_p50": 1.081,
+          "statements_p50": 5.0,
+          "wall_ms_p50": 242.698
+        },
+        "snapshot": {
+          "response_chars": 1099786,
+          "sql_ms_p50": 0.499,
+          "statements_p50": 11.0,
+          "wall_ms_p50": 274.512
+        }
+      },
+      "versions": 500
+    }
+  },
+  "warmups": 1
+}

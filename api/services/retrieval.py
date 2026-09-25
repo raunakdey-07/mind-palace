@@ -238,19 +238,27 @@ class RetrievalService:
             doc_id=row[8],
         )
 
-    async def get_document_chunks(self, doc_id: str) -> List[RetrievalResult]:
-        """Get all chunks for a document (for summarization)."""
+    async def get_document_chunks(
+        self, doc_id: str, corpus_id: Optional[str] = None
+    ) -> List[RetrievalResult]:
+        """Get all chunks for a document, optionally restricted to one corpus."""
+        where_clauses = ["c.doc_id = :doc_id"]
+        params: dict = {"doc_id": doc_id}
+        if corpus_id is not None:
+            where_clauses.append("d.corpus_id = :corpus_id")
+            params["corpus_id"] = corpus_id
+        where_sql = " AND ".join(where_clauses)
         result = await self.db.execute(
-            text("""
+            text(f"""
                 SELECT c.text, c.heading_path, c.document_type, c.source_url, c.tags,
                        d.title, d.path, d.document_type as doc_type, d.id as doc_id,
                        1.0 as score
                 FROM chunks c
                 JOIN documents d ON c.doc_id = d.id
-                WHERE c.doc_id = :doc_id
+                WHERE {where_sql}
                 ORDER BY c.order_index
             """),
-            {"doc_id": doc_id},
+            params,
         )
         rows = result.fetchall()
         return [
@@ -269,21 +277,34 @@ class RetrievalService:
             for row in rows
         ]
 
-    async def get_related_documents(self, doc_id: str, k: int = 5) -> List[dict]:
+    async def get_related_documents(
+        self, doc_id: str, k: int = 5, corpus_id: Optional[str] = None
+    ) -> List[dict]:
         """Find related documents via shared tags and document type."""
+        where_clauses = ["d.id != :doc_id"]
+        params: dict = {"doc_id": doc_id, "k": k}
+        source_scope = ""
+        if corpus_id is not None:
+            where_clauses.append("d.corpus_id = :corpus_id")
+            params["corpus_id"] = corpus_id
+            source_scope = " AND corpus_id = :corpus_id"
+        where_sql = " AND ".join(where_clauses)
         result = await self.db.execute(
-            text("""
+            text(f"""
                 SELECT d.id, d.title, d.path, d.document_type, d.tags,
                        COUNT(*) as shared_tags
                 FROM documents d
                 JOIN chunks c ON c.doc_id = d.id
-                WHERE d.id != :doc_id
-                  AND d.tags && (SELECT tags FROM documents WHERE id = :doc_id)
+                WHERE {where_sql}
+                  AND d.tags && (
+                      SELECT tags FROM documents
+                      WHERE id = :doc_id{source_scope}
+                  )
                 GROUP BY d.id, d.title, d.path, d.document_type, d.tags
                 ORDER BY shared_tags DESC, d.updated_at DESC
                 LIMIT :k
             """),
-            {"doc_id": doc_id, "k": k},
+            params,
         )
         return [
             {
@@ -303,10 +324,14 @@ class RetrievalService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         limit: int = 50,
+        corpus_id: Optional[str] = None,
     ) -> List[dict]:
         """Get chronological document view."""
         where_clauses = ["1=1"]
         params: dict = {"limit": limit}
+        if corpus_id is not None:
+            where_clauses.append("corpus_id = :corpus_id")
+            params["corpus_id"] = corpus_id
 
         if document_type:
             where_clauses.append("document_type = :doc_type")

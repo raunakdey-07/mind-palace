@@ -8,7 +8,8 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Response
+from sqlalchemy.exc import OperationalError
 
 from api.models.schemas import (
     AskRequest,
@@ -20,6 +21,11 @@ from api.models.schemas import (
     SummarizeRequest,
 )
 from api.routers.memory import execute_memory
+from api.services.corpora import (
+    CorpusScopeNotFound,
+    CorpusScopeRequired,
+    resolve_corpus_scope,
+)
 from api.services.db import session_scope
 from api.services.embedder import Embedder
 from api.services.llm_service import LLMService
@@ -34,6 +40,18 @@ MAX_CONTEXT_CHARS = 32000
 router = APIRouter()
 embedder = Embedder()
 llm_service = LLMService()
+
+
+async def _resolve_live_scope(db, corpus: str | None) -> tuple[str | None, str | None]:
+    """Resolve a live corpus or return the route's public error response."""
+    try:
+        return await resolve_corpus_scope(db, corpus)
+    except CorpusScopeNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorpusScopeRequired as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OperationalError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
 
 
 async def _ask_memory(request: AskRequest, start: float) -> MemoryAskResponse:
@@ -89,20 +107,27 @@ async def ask(
     start = time.perf_counter()
     if request.mode == "memory":
         return await _ask_memory(request, start)
-    query_vector = embedder.embed_single(request.question)
-
     async with session_scope() as db:
-        retrieval = RetrievalService(db)
-        results = await retrieval.search(
-            query_vector,
-            k=request.k,
-            document_type=request.document_type,
-            tags=request.tags,
-            hybrid=True,
-            query_text=request.question,
-            rrf=True,
-            debug=debug,
-        )
+        corpus_id, _ = await _resolve_live_scope(db, request.corpus)
+        if corpus_id is None:
+            results = []
+        else:
+            query_vector = embedder.embed_single(request.question)
+            retrieval = RetrievalService(db)
+            try:
+                results = await retrieval.search(
+                    query_vector,
+                    k=request.k,
+                    document_type=request.document_type,
+                    tags=request.tags,
+                    hybrid=True,
+                    query_text=request.question,
+                    rrf=True,
+                    debug=debug,
+                    corpus_id=corpus_id,
+                )
+            except OperationalError as exc:
+                raise HTTPException(status_code=503, detail="Search backend unavailable") from exc
 
     if not results:
         return StructuredResponse(
@@ -182,8 +207,12 @@ async def summarize(request: SummarizeRequest, response: Response) -> Structured
     start = time.perf_counter()
 
     async with session_scope() as db:
-        retrieval = RetrievalService(db)
-        chunks = await retrieval.get_document_chunks(request.document_id)
+        corpus_id, _ = await _resolve_live_scope(db, request.corpus)
+        if corpus_id is None:
+            chunks = []
+        else:
+            retrieval = RetrievalService(db)
+            chunks = await retrieval.get_document_chunks(request.document_id, corpus_id=corpus_id)
 
     if not chunks:
         return StructuredResponse(
@@ -234,8 +263,12 @@ async def interview(request: InterviewRequest, response: Response) -> Structured
     start = time.perf_counter()
 
     async with session_scope() as db:
-        retrieval = RetrievalService(db)
-        chunks = await retrieval.get_document_chunks(request.document_id)
+        corpus_id, _ = await _resolve_live_scope(db, request.corpus)
+        if corpus_id is None:
+            chunks = []
+        else:
+            retrieval = RetrievalService(db)
+            chunks = await retrieval.get_document_chunks(request.document_id, corpus_id=corpus_id)
 
     if not chunks:
         return StructuredResponse(
@@ -290,8 +323,14 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
     start = time.perf_counter()
 
     async with session_scope() as db:
-        retrieval = RetrievalService(db)
-        related_docs = await retrieval.get_related_documents(request.document_id, k=request.k)
+        corpus_id, _ = await _resolve_live_scope(db, request.corpus)
+        if corpus_id is None:
+            related_docs = []
+        else:
+            retrieval = RetrievalService(db)
+            related_docs = await retrieval.get_related_documents(
+                request.document_id, k=request.k, corpus_id=corpus_id
+            )
 
     if not related_docs:
         return StructuredResponse(
@@ -310,8 +349,8 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
         from sqlalchemy import text
 
         result = await db.execute(
-            text("SELECT title FROM documents WHERE id = :id"),
-            {"id": request.document_id},
+            text("SELECT title FROM documents WHERE id = :id AND corpus_id = :corpus_id"),
+            {"id": request.document_id, "corpus_id": corpus_id},
         )
         row = result.first()
         doc_title = row[0] if row else "Unknown"
@@ -342,14 +381,23 @@ async def timeline(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     limit: int = Query(50, ge=1, le=200),
+    corpus: str | None = Query(
+        None, description="Corpus name; required when multiple corpora exist"
+    ),
     response: Response = None,
 ) -> StructuredResponse:
     """Chronological view of documents."""
     start = time.perf_counter()
 
     async with session_scope() as db:
-        retrieval = RetrievalService(db)
-        docs = await retrieval.get_timeline(document_type, start_date, end_date, limit)
+        corpus_id, _ = await _resolve_live_scope(db, corpus)
+        if corpus_id is None:
+            docs = []
+        else:
+            retrieval = RetrievalService(db)
+            docs = await retrieval.get_timeline(
+                document_type, start_date, end_date, limit, corpus_id=corpus_id
+            )
 
     if not docs:
         return StructuredResponse(

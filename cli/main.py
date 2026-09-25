@@ -66,6 +66,9 @@ def ingest_repo(
 @app.command()
 def search(
     query: str = typer.Argument(..., help="Search query"),
+    corpus: Optional[str] = typer.Option(
+        None, "--corpus", help="Corpus name (required when multiple corpora exist)"
+    ),
     k: int = typer.Option(5, "--k", "-k", help="Number of results"),
     document_type: Optional[str] = typer.Option(
         None, "--type", "-t", help="Filter by document type"
@@ -78,6 +81,8 @@ def search(
 
     url = "http://localhost:8000/api/search"
     params = {"q": query, "k": k}
+    if corpus:
+        params["corpus"] = corpus
     if document_type:
         params["document_type"] = document_type
     if tags:
@@ -108,6 +113,9 @@ def search(
 @app.command()
 def ask(
     question: str = typer.Argument(..., help="Question to ask"),
+    corpus: Optional[str] = typer.Option(
+        None, "--corpus", help="Corpus name (required when multiple corpora exist)"
+    ),
     k: int = typer.Option(5, "--k", "-k", help="Number of retrieved chunks"),
     document_type: Optional[str] = typer.Option(
         None, "--type", "-t", help="Filter by document type"
@@ -119,6 +127,8 @@ def ask(
 
     url = "http://localhost:8000/api/query/ask"
     payload = {"question": question, "k": k}
+    if corpus:
+        payload["corpus"] = corpus
     if document_type:
         payload["document_type"] = document_type
     if tags:
@@ -145,6 +155,9 @@ def ask(
 @app.command()
 def summarize(
     document_id: str = typer.Argument(..., help="Document ID to summarize"),
+    corpus: Optional[str] = typer.Option(
+        None, "--corpus", help="Corpus name (required when multiple corpora exist)"
+    ),
     max_length: int = typer.Option(500, "--max-length", help="Max summary length"),
 ) -> None:
     """Summarize a specific document."""
@@ -154,7 +167,7 @@ def summarize(
     try:
         resp = httpx.post(
             url,
-            json={"document_id": document_id, "max_length": max_length},
+            json={"document_id": document_id, "corpus": corpus, "max_length": max_length},
             timeout=120,
         )
         resp.raise_for_status()
@@ -170,6 +183,9 @@ def summarize(
 @app.command()
 def interview(
     document_id: str = typer.Argument(..., help="Document ID to generate questions from"),
+    corpus: Optional[str] = typer.Option(
+        None, "--corpus", help="Corpus name (required when multiple corpora exist)"
+    ),
     num_questions: int = typer.Option(5, "--num", "-n", help="Number of questions"),
     difficulty: str = typer.Option(
         "medium", "--difficulty", "-d", help="Difficulty: easy, medium, hard"
@@ -184,6 +200,7 @@ def interview(
             url,
             json={
                 "document_id": document_id,
+                "corpus": corpus,
                 "num_questions": num_questions,
                 "difficulty": difficulty,
             },
@@ -204,6 +221,9 @@ def interview(
 @app.command()
 def related(
     document_id: str = typer.Argument(..., help="Document ID to find related docs for"),
+    corpus: Optional[str] = typer.Option(
+        None, "--corpus", help="Corpus name (required when multiple corpora exist)"
+    ),
     k: int = typer.Option(5, "--k", "-k", help="Number of related documents"),
 ) -> None:
     """Find documents related to a given document."""
@@ -211,7 +231,11 @@ def related(
 
     url = "http://localhost:8000/api/query/related"
     try:
-        resp = httpx.post(url, json={"document_id": document_id, "k": k}, timeout=30)
+        resp = httpx.post(
+            url,
+            json={"document_id": document_id, "corpus": corpus, "k": k},
+            timeout=30,
+        )
         resp.raise_for_status()
         data = resp.json()
         typer.echo(f"\n[RELATED] Related Documents ({data['latency_ms']}ms):\n{data['answer']}\n")
@@ -222,6 +246,9 @@ def related(
 
 @app.command()
 def timeline(
+    corpus: Optional[str] = typer.Option(
+        None, "--corpus", help="Corpus name (required when multiple corpora exist)"
+    ),
     document_type: Optional[str] = typer.Option(
         None, "--type", "-t", help="Filter by document type"
     ),
@@ -234,6 +261,8 @@ def timeline(
 
     url = "http://localhost:8000/api/query/timeline"
     params: dict[str, int | str] = {"limit": limit}
+    if corpus:
+        params["corpus"] = corpus
     if document_type:
         params["document_type"] = document_type
     if start_date:

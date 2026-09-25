@@ -26,10 +26,17 @@ async def test_health_endpoint():
 async def test_search_endpoint_no_results():
     transport = ASGITransport(app=app)
 
-    with patch(
-        "api.routers.search.RetrievalService.search",
-        new_callable=AsyncMock,
-    ) as mock_search:
+    with (
+        patch(
+            "api.routers.search.resolve_corpus_scope",
+            new_callable=AsyncMock,
+            return_value=("c1", "docs"),
+        ),
+        patch(
+            "api.routers.search.RetrievalService.search",
+            new_callable=AsyncMock,
+        ) as mock_search,
+    ):
         mock_search.return_value = []
 
         async with AsyncClient(
@@ -42,6 +49,8 @@ async def test_search_endpoint_no_results():
             )
 
     assert response.status_code == 200
+    mock_search.assert_awaited_once()
+    assert mock_search.await_args.kwargs["corpus_id"] == "c1"
 
     data = response.json()
 
@@ -57,10 +66,17 @@ async def test_search_backend_unavailable_is_503_not_empty():
     """
     transport = ASGITransport(app=app)
 
-    with patch(
-        "api.routers.search.RetrievalService.search",
-        new_callable=AsyncMock,
-    ) as mock_search:
+    with (
+        patch(
+            "api.routers.search.resolve_corpus_scope",
+            new_callable=AsyncMock,
+            return_value=("c1", "docs"),
+        ),
+        patch(
+            "api.routers.search.RetrievalService.search",
+            new_callable=AsyncMock,
+        ) as mock_search,
+    ):
         mock_search.side_effect = OperationalError("SELECT 1", {}, Exception("connection refused"))
 
         async with AsyncClient(

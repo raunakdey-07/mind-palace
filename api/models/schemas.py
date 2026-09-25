@@ -171,7 +171,10 @@ class AskRequest(BaseModel):
     document_type: str | None = Field(None, description="Filter by document type")
     tags: list[str] | None = Field(None, description="Filter by tags")
     mode: Literal["rag", "memory"] = "rag"
-    corpus: str | None = Field(None, description="Required in explicit memory mode")
+    corpus: str | None = Field(
+        None,
+        description=("Corpus name; required in memory mode and when multiple live corpora exist"),
+    )
     budget: int = Field(
         8000,
         ge=512,
@@ -214,6 +217,9 @@ class SummarizeRequest(BaseModel):
     """Request body for POST /api/summarize - document summarization."""
 
     document_id: str = Field(..., description="Document ID to summarize")
+    corpus: str | None = Field(
+        None, description="Corpus name; required when multiple corpora exist"
+    )
     max_length: int = Field(500, ge=100, le=2000, description="Max summary length")
 
 
@@ -221,6 +227,9 @@ class InterviewRequest(BaseModel):
     """Request body for POST /api/interview - interview question generation."""
 
     document_id: str = Field(..., description="Document ID to generate questions from")
+    corpus: str | None = Field(
+        None, description="Corpus name; required when multiple corpora exist"
+    )
     num_questions: int = Field(5, ge=1, le=15, description="Number of questions")
     difficulty: str = Field("medium", pattern=r"^(easy|medium|hard)$")
 
@@ -229,12 +238,18 @@ class RelatedRequest(BaseModel):
     """Request body for POST /api/related - find related documents."""
 
     document_id: str = Field(..., description="Document ID to find related docs for")
+    corpus: str | None = Field(
+        None, description="Corpus name; required when multiple corpora exist"
+    )
     k: int = Field(5, ge=1, le=20, description="Number of related documents")
 
 
 class TimelineRequest(BaseModel):
     """Request body for GET /api/timeline - chronological document view."""
 
+    corpus: str | None = Field(
+        None, description="Corpus name; required when multiple corpora exist"
+    )
     document_type: str | None = Field(None, description="Filter by document type")
     start_date: str | None = Field(None, description="Start date (YYYY-MM-DD)")
     end_date: str | None = Field(None, description="End date (YYYY-MM-DD)")

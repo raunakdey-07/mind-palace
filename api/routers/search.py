@@ -12,6 +12,11 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.schemas import SearchResponse, SearchResult
+from api.services.corpora import (
+    CorpusScopeNotFound,
+    CorpusScopeRequired,
+    resolve_corpus_scope,
+)
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
 from api.services.retrieval import RetrievalService
@@ -25,6 +30,9 @@ DbSession = Annotated[AsyncSession, Depends(get_async_db)]
 @router.get("", response_model=SearchResponse)
 async def search(
     q: str = Query(..., description="Search query"),
+    corpus: str | None = Query(
+        None, description="Corpus name; required when multiple corpora exist"
+    ),
     k: int = Query(5, ge=1, le=50, description="Number of results"),
     document_type: str | None = Query(
         None, description="Filter by document type (kaggle, project, note, paper)"
@@ -36,6 +44,18 @@ async def search(
     db: DbSession = None,
 ) -> SearchResponse:
     """Semantic search over ingested Markdown content with optional metadata filters."""
+
+    try:
+        corpus_id, _ = await resolve_corpus_scope(db, corpus)
+    except CorpusScopeNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorpusScopeRequired as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OperationalError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
+
+    if corpus_id is None:
+        return SearchResponse(query=q, results=[], total=0)
 
     query_vector = embedder.embed_single(q)
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
@@ -51,6 +71,7 @@ async def search(
             hybrid=hybrid,
             rrf=rrf,
             rerank=rerank,
+            corpus_id=corpus_id,
         )
     except OperationalError as e:
         # Backend unavailable must NOT masquerade as "no results": clients

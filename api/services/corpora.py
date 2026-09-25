@@ -84,6 +84,37 @@ async def get_corpus_by_name(db: AsyncSession, name: str) -> Optional[dict]:
     return {"id": row[0], "name": row[1], "description": row[2]}
 
 
+class CorpusScopeNotFound(LookupError):
+    """The explicitly requested corpus does not exist."""
+
+
+class CorpusScopeRequired(ValueError):
+    """An operation cannot choose safely among multiple corpora."""
+
+
+async def resolve_corpus_scope(
+    db: AsyncSession, corpus: str | None
+) -> tuple[Optional[str], Optional[str]]:
+    """Resolve a safe corpus scope for live retrieval routes.
+
+    A single corpus remains ergonomic when the caller omits the name. Multiple
+    corpora require an explicit name so retrieval cannot cross namespaces.
+    """
+    if corpus is not None:
+        row = await get_corpus_by_name(db, corpus)
+        if row is None:
+            raise CorpusScopeNotFound(f"corpus '{corpus}' not found")
+        return row["id"], row["name"]
+
+    result = await db.execute(text("SELECT id, name FROM corpora ORDER BY name LIMIT 2"))
+    rows = result.fetchall()
+    if len(rows) > 1:
+        raise CorpusScopeRequired("corpus is required when multiple corpora exist")
+    if rows:
+        return rows[0][0], rows[0][1]
+    return None, None
+
+
 async def get_or_create_corpus(db: AsyncSession, name: str) -> dict:
     """Return the corpus, creating it if needed. Used by sync-style flows."""
     existing = await get_corpus_by_name(db, name)

@@ -15,6 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.exc import OperationalError
 
 from api.main import app
+from api.services.corpora import CorpusScopeNotFound
 
 
 @pytest.mark.asyncio
@@ -159,11 +160,18 @@ async def test_context_endpoint_contract():
     transport = ASGITransport(app=app)
     import api.routers.context as cmod
 
-    with patch.object(
-        cmod.RetrievalService,
-        "search",
-        new_callable=AsyncMock,
-        return_value=results,
+    with (
+        patch(
+            "api.routers.context.resolve_corpus_scope",
+            new_callable=AsyncMock,
+            return_value=("c1", "docs"),
+        ),
+        patch.object(
+            cmod.RetrievalService,
+            "search",
+            new_callable=AsyncMock,
+            return_value=results,
+        ) as mock_search,
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get(
@@ -183,6 +191,7 @@ async def test_context_endpoint_contract():
     assert data["token_estimate"] > 0
     assert data["strategy"] == "hybrid_rrf"
     assert isinstance(data["truncated"], bool)
+    assert mock_search.await_args.kwargs["corpus_id"] == "c1"
     # attribution must reference retrieved docs
     titles = {s["title"] for s in data["sources"]}
     assert {"DocA", "DocB"} <= titles
@@ -200,9 +209,9 @@ async def test_context_invalid_strategy_422():
 async def test_context_unknown_corpus_404():
     transport = ASGITransport(app=app)
     with patch(
-        "api.routers.context.get_corpus_by_name",
+        "api.routers.context.resolve_corpus_scope",
         new_callable=AsyncMock,
-        return_value=None,
+        side_effect=CorpusScopeNotFound("corpus 'ghost' not found"),
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get("/api/context", params={"q": "x", "corpus": "ghost"})

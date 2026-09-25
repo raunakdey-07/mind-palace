@@ -10,7 +10,7 @@ receives bounded, attributable context ready for prompt insertion.
 from __future__ import annotations
 
 import time
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import OperationalError
@@ -18,7 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.schemas import ContextPackResponse
 from api.services.context_packer import pack_context
-from api.services.corpora import get_corpus_by_name
+from api.services.corpora import (
+    CorpusScopeNotFound,
+    CorpusScopeRequired,
+    resolve_corpus_scope,
+)
 from api.services.db import get_async_db
 from api.services.embedder import Embedder
 from api.services.observability import OperationTrace
@@ -58,17 +62,25 @@ async def get_context(
             detail=f"invalid strategy '{strategy}'; expected one of {sorted(VALID_STRATEGIES)}",
         )
 
-    corpus_id: Optional[str] = None
-    if corpus:
-        try:
-            c = await get_corpus_by_name(db, corpus)
-        except OperationalError as e:
-            raise HTTPException(status_code=503, detail="Database unavailable") from e
-        if not c:
-            raise HTTPException(status_code=404, detail=f"corpus '{corpus}' not found")
-        corpus_id = c["id"]
+    try:
+        corpus_id, selected_corpus = await resolve_corpus_scope(db, corpus)
+    except CorpusScopeNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorpusScopeRequired as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OperationalError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
 
-    trace = OperationTrace(operation="context", corpus=corpus, strategy=strategy)
+    if corpus_id is None:
+        trace = OperationTrace(operation="context", corpus=selected_corpus, strategy=strategy)
+        trace.emit()
+        return ContextPackResponse(
+            query=q,
+            context="",
+            strategy=strategy,
+        )
+
+    trace = OperationTrace(operation="context", corpus=selected_corpus, strategy=strategy)
     t0 = time.perf_counter()
     query_vector = embedder.embed_single(q)
     trace.embedding_ms = (time.perf_counter() - t0) * 1000

@@ -246,6 +246,11 @@ async def test_ordinary_rag_unchanged(client, service, monkeypatch):
     retrieval = Mock()
     retrieval.search = AsyncMock(return_value=[result])
     monkeypatch.setattr(query, "session_scope", session)
+    monkeypatch.setattr(
+        query,
+        "resolve_corpus_scope",
+        AsyncMock(return_value=("c1", "docs")),
+    )
     monkeypatch.setattr(query, "RetrievalService", Mock(return_value=retrieval))
     embed = Mock(return_value=[0.1])
     generate = AsyncMock(return_value="ordinary answer")
@@ -266,6 +271,7 @@ async def test_ordinary_rag_unchanged(client, service, monkeypatch):
         query_text="ordinary question",
         rrf=True,
         debug=False,
+        corpus_id="c1",
     )
     assert generate.await_args.args[0] == (
         "Answer the following question using only the provided context. "

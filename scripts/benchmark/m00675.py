@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
 import platform
 import subprocess
 import sys
-import importlib.metadata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,10 +24,20 @@ SOURCES = (
     ROOT / "api/services/memory_benchmark.py",
     ROOT / "api/models/memory.py",
 )
+# The held-out artifact is frozen at the M006.75 schema boundary. Later
+# post-release migrations are deliberately excluded so infrastructure changes do
+# not rewrite the released research result or its fixture identity.
+FROZEN_MIGRATIONS = (
+    ROOT / "migrations/versions/001_initial_schema.py",
+    ROOT / "migrations/versions/002_corpora.py",
+    ROOT / "migrations/versions/003_manifest_corpus.py",
+    ROOT / "migrations/versions/004_memory.py",
+    ROOT / "migrations/versions/005_multiple_evidence.py",
+)
 FIXTURE_FILES = (
     ROOT / "eval/memory_benchmarks.yaml",
     *sorted((ROOT / "examples/evaluation/corpus").rglob("*.md")),
-    *sorted((ROOT / "migrations/versions").glob("*.py")),
+    *FROZEN_MIGRATIONS,
 )
 
 
@@ -48,10 +58,7 @@ def canonical(value, key=None):
 
 
 def source_manifest():
-    return {
-        str(path.relative_to(ROOT)): sha256(path)
-        for path in SOURCES
-    }
+    return {str(path.relative_to(ROOT)): sha256(path) for path in SOURCES}
 
 
 def source_fingerprint():
@@ -101,8 +108,17 @@ def model_fingerprint(model_name: str) -> dict:
 
 
 def dependency_manifest():
-    names = ("asyncpg", "numpy", "psycopg2-binary", "pytest", "sentence-transformers",
-             "sqlalchemy", "torch", "transformers", "pyyaml")
+    names = (
+        "asyncpg",
+        "numpy",
+        "psycopg2-binary",
+        "pytest",
+        "sentence-transformers",
+        "sqlalchemy",
+        "torch",
+        "transformers",
+        "pyyaml",
+    )
     result = {}
     for name in names:
         try:
@@ -177,7 +193,9 @@ def build_artifact(result):
             for row in rows
         ],
     }
-    encoded = json.dumps(artifact, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    encoded = json.dumps(
+        artifact, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode()
     artifact["result_sha256"] = hashlib.sha256(encoded).hexdigest()
     return artifact
 
@@ -185,7 +203,9 @@ def build_artifact(result):
 def verify_artifact(path: Path):
     artifact = json.loads(path.read_text(encoding="utf-8"))
     expected = artifact.pop("result_sha256", None)
-    encoded = json.dumps(artifact, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    encoded = json.dumps(
+        artifact, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode()
     actual = hashlib.sha256(encoded).hexdigest()
     if expected != actual:
         raise ValueError("BENCHMARK INTEGRITY FAILURE: result hash mismatch")

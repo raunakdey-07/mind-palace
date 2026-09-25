@@ -597,6 +597,8 @@ async def snapshot(db: AsyncSession, corpus_id: str, as_of=None) -> dict:
     References include all history through the cutoff (including tombstones), so
     replay preserves historical/superseded claims as well as the current state.
     Future cutoffs are rejected: a snapshot cannot include unobserved changes.
+    On migration 006+, the seal is written last in the same transaction and blocks
+    later membership inserts. The schema check preserves the isolated 004 contract.
     """
     await lock_corpus(db, corpus_id)
     observed = (await db.execute(text("SELECT clock_timestamp()"))).scalar_one()
@@ -622,6 +624,22 @@ async def snapshot(db: AsyncSession, corpus_id: str, as_of=None) -> dict:
     """),
         {"c": corpus_id, "id": snapshot_id, "at": cutoff},
     )
+    seal_available = (
+        await db.execute(
+            text(
+                "SELECT to_regclass(format('%I.memory_snapshot_seals', "
+                "current_schema())) IS NOT NULL"
+            )
+        )
+    ).scalar_one()
+    if seal_available:
+        await db.execute(
+            text("""
+            INSERT INTO memory_snapshot_seals(corpus_id, snapshot_id)
+            VALUES (:c, :id)
+        """),
+            {"c": corpus_id, "id": snapshot_id},
+        )
     return await get_snapshot(db, corpus_id, snapshot_id)
 
 

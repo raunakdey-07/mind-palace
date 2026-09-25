@@ -237,16 +237,16 @@ venvmp/bin/python scripts/m009_release_validation.py benchmark
 
 Artifacts:
 
-- [`live-interface-validation.json`](live-interface-validation.json) — real
+- [`live-interface-validation.json`](m009/live-interface-validation.json) — real
   Uvicorn REST, public SDK-over-HTTP, and installed CLI traversal equivalence;
-- [`concurrency-validation.json`](concurrency-validation.json) — isolated
+- [`concurrency-validation.json`](m009/concurrency-validation.json) — isolated
   insertion during continuation, ordering, tie-break, and corpus-isolation
   evidence;
-- [`scale-benchmark.json`](scale-benchmark.json) — exact 100/1,000/10,000
+- [`scale-benchmark.json`](m009/scale-benchmark.json) — exact 100/1,000/10,000
   version fixtures, a separately recorded first post-fixture traversal, 20
   measured iterations after warm-up, rows/page, SQL timing, and wall-clock
   p50/p95;
-- [`query-plans.md`](query-plans.md) — real 10,000-row `EXPLAIN (ANALYZE,
+- [`query-plans.md`](m009/query-plans.md) — real 10,000-row `EXPLAIN (ANALYZE,
   BUFFERS, FORMAT JSON)` plans for first, middle, and tail queries.
 
 The scale fixture uses direct relational insertion because the feed contract

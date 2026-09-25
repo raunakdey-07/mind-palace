@@ -1,20 +1,25 @@
-# M010 Performance & Architecture Report
+# Post-v0.6.0 performance and architecture audit
 
-This is a post-release engineering audit report, not a new product milestone or
+This is a post-release engineering audit, not a new product milestone or
 release. The released `v0.6.0` tag remains the correctness authority for M009.
 All measurements below use disposable PostgreSQL schemas or databases unless
 stated otherwise.
 
 ## Executive Decision
 
-Keep the two bounded changes implemented in this audit:
+Keep the measured performance changes and the bounded correctness follow-up:
 
 1. `Embedder` construction is cheap, and the SentenceTransformer import/model
    load happens on first actual embedding use, protected by a single-flight lock.
 2. Empty-query public memory projection resolves the archive once instead of
    twice, and conflict detection compares claims grouped by key.
+3. Live retrieval routes resolve a corpus before embedding and pass the resolved
+   ID through the search layer. A missing corpus returns an empty result; several
+   corpora require an explicit name.
+4. Migration `006` seals snapshot membership so a later direct insert cannot
+   change a committed snapshot's replay set.
 
-Keep the M009 feed unchanged. Its keyset query, cursor contract, and released
+The M009 feed is unchanged. Its keyset query, cursor contract, and released
 benchmarks are not the bottleneck identified here. The larger remaining cost is
 the public memory projection, which still loads and assembles a complete archive
 before applying some selectors.
@@ -25,8 +30,10 @@ introduced.
 
 ## Current Baseline
 
-The baseline revision was `b2129e7`, the post-hygiene `main` tip. The immutable
-release tag remained `v0.6.0` at `033c1484dca53fbb40dbf82904aacf5f2834142a`.
+The performance baseline revision was `b2129e7`, the post-hygiene `main` tip.
+The immutable release tag remained `v0.6.0` at
+`033c1484dca53fbb40dbf82904aacf5f2834142a`. The corpus-scope and snapshot-seal
+changes in this report are post-release follow-up changes, not edits to M009.
 
 ### Startup
 
@@ -189,18 +196,28 @@ terminated. The temporary database was removed. No 100k result is claimed; see
 
 ## Correctness Results
 
-Final project-runtime regression after the changes:
+Final project-runtime regression for the follow-up changes:
 
 ```text
-968 passed, 147 skipped, 10 warnings
+988 passed, 151 skipped, 10 warnings
 ```
+
+The first full run exposed one reproducibility issue: the frozen M006.75
+fixture hash included every migration file, so the new post-release migration
+changed the hash even though the frozen dataset, policy, and result were
+unchanged. `scripts/benchmark/m00675.py` now fixes the fingerprint boundary to
+migrations `001` through `005`. The released `eval/m00675/result.json` and
+`manifest.json` were not changed; their integrity check now passes.
 
 Focused results included:
 
 - memory public/pack/conflict suite: `51 passed, 47 skipped`;
 - embedding suite: `7 passed`;
 - semantic/corpus/retrieval focused suite: `50 passed, 7 skipped`;
-- M009 adapter/security/health tests remained passing.
+- M009 adapter/security/health tests remained passing;
+- corpus-scope tests: `19 passed`;
+- snapshot-seal tests: `56 passed, 66 skipped` in the no-database run;
+  all 5 database-backed seal tests passed against local PostgreSQL 15.4.
 
 The full suite includes the existing Starlette TestClient deprecation and
 asyncio-mark warnings. No new warning category was introduced.
@@ -299,9 +316,10 @@ an MCP feed surface based on this audit.
 - Complete a reproducible 100k feed benchmark with a faster disposable fixture
   loader or a dedicated DB-only benchmark database.
 
-## Recommended Next Milestone
+## Recommended next engineering objective
 
-No new milestone is recommended from this audit alone. First land and observe
-the two measured changes. The next architecture decision should be a separately
-scoped database projection and Memory Pack work, justified by production-shaped
-workloads, rather than a new infrastructure or model feature.
+No new milestone is recommended from this audit alone. Keep the follow-up
+small: land and observe the corpus scope and snapshot seal, then decide whether
+a projection-specific archive loader or exact Memory Pack accounting is worth
+its correctness cost. Do not add Redis, a queue, a graph layer, or a semantic
+service without a measured requirement.

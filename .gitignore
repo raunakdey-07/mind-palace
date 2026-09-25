@@ -84,6 +84,12 @@ data/
 # Ignore placeholder infra/docs folders
 helm/
 /docs/*
+!/docs/architecture/
+!/docs/architecture/**
+!/docs/research/
+!/docs/research/**
+!/docs/operations/
+!/docs/operations/**
 !/docs/evaluation/
 /docs/evaluation/*
 !/docs/evaluation/m006.md
@@ -100,6 +106,12 @@ monitoring/
 !NOTICE.md
 !AGENTS.md
 !docs/operations.md
+!docs/architecture/
+!docs/architecture/**
+!docs/research/
+!docs/research/**
+!docs/operations/
+!docs/operations/**
 !docs/m009/
 !docs/m009/**
 !docs/performance/

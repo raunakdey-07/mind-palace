@@ -20,25 +20,33 @@ means model-independent interfaces, not a promised archive export/import tool.
 
 ## Project status
 
-**Latest released baseline:** v0.5.0 / M006.75, empirically benchmarked at
-**47/60**. The current v0.5.1 engineering handoff packages M007.1 independent
-adjudication infrastructure; it does not claim M007 scientific results.
+### Current product
 
-| Phase | Status | Evidence |
-|---|---|---|
-| M004 persistent memory foundation | Complete | Released |
-| M005 developer/API surface | Complete | Released |
-| M006 real-world memory evaluation | Complete | Released |
-| M006.75 query/relevance evaluation | Complete | 47/60 benchmark |
-| M007.1 adjudication infrastructure | Ready | 118-case blinded package |
-| M007 scientific evaluation | Pending | Independent adjudication required |
-| M008 temporal/longitudinal evaluation | Pending | M007 gate required |
-| M009 durable operational feed | Released | [Validation evidence](docs/m009/RELEASE_READINESS.md) |
+`v0.6.0` is the current public release. It packages the released M009 operational
+memory feed and the existing persistent corpus-memory model. The current product
+also includes the live REST/Python/CLI retrieval surfaces, MCP for ordinary
+memory operations, and dependency-aware liveness and readiness checks.
 
-For operational consumers, Mind Palace also exposes a durable, corpus-scoped
-change feed over immutable memory versions. It uses an opaque, integrity-protected
-cursor for bounded keyset continuation; it is not a message broker, CDC stream,
-or exactly-once delivery system. See [operational memory](docs/operations.md).
+The durable feed is a corpus-scoped read interface over immutable
+`memory_versions` rows. It uses an opaque, integrity-protected cursor for bounded
+keyset continuation. It is not a message broker, CDC stream, or exactly-once
+delivery system. See [operational memory](docs/operations.md).
+
+### Released M009 capabilities
+
+M009 is released in `v0.6.0`. The feed is available through REST, the Python SDK,
+and the CLI. It orders rows by `(observed_at, version_id)`, bounds page size from
+1 through 500, and exposes the measured keyset and cursor contract. The released
+validation evidence is under [`docs/m009/`](docs/m009/). Liveness and readiness
+are separate from feed traversal: liveness checks the process, while readiness
+checks PostgreSQL connectivity and required archive relations.
+
+### Research and evaluation status
+
+M006.75 remains a released evaluation result at **47/60** on its frozen corpus.
+That result is separate from the product release and does not establish that M007
+has been scientifically validated. M007.1 remains adjudication-ready. M007 is
+blocked pending independent adjudication, and M008 has not been released.
 
 Implemented research infrastructure includes blind review generation,
 authoritative traceability, ambiguity preservation, reviewer schema/validation,
@@ -46,6 +54,15 @@ DecisionReceipt fingerprints and explanation, replay and structured drift
 detection, temporal/snapshot/conflict primitives, synthetic semantic/property
 suites, and the executable M007–M008 runner. These are not substitutes for
 independent human adjudication or empirical benchmarks.
+
+### Future work
+
+The next engineering work is deliberately bounded. The largest measured cost is
+the full-archive load used by ordinary memory projections. Other deferred items
+include snapshot-version replay joins, incremental Memory Pack accounting,
+bounded RRF candidates, a reproducible 100,000-version feed benchmark, and a
+dependency lock/base-image digest policy. None of these items changes the M009
+release contract or turns research results into product guarantees.
 
 ## Why memory beyond RAG?
 
@@ -280,7 +297,7 @@ GET    /api/corpora                  list corpora
 GET    /api/corpora/{name}           inspect one corpus
 DELETE /api/corpora/{name}           blocked when archive rows exist
 POST   /api/corpora/{name}/sync      sync with a directory
-GET    /api/search?q=&k=&hybrid&rrf&rerank   raw search
+GET    /api/search?q=&corpus=&k=&hybrid&rrf&rerank   raw search
 GET    /api/context?q=&corpus=&budget_tokens=  live context pack
 POST   /api/query/ask                default live RAG; explicit memory mode available
 POST   /api/memory/query             question retrieval with intent and bounded evidence

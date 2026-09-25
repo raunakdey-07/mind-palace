@@ -36,12 +36,12 @@ forced offline where available.
 
 | Probe | Before | After | Change |
 |---|---:|---:|---:|
-| `api.main` import wall time | 5,534.272 ms | 589.137 ms | 89.4% faster |
-| `api.main` process wall time | 6,783.009 ms | 798.901 ms | 88.2% faster |
-| Imported modules | 4,221 | 682 | 83.8% fewer |
-| Peak RSS | 861,428 KB | 80,696 KB | 90.6% smaller |
-| `mindpalace_sdk` import | 63.876 ms | 63.876 ms | unchanged |
-| CLI root help | 265.914 ms | 336.643 ms | noise-level variation |
+| `api.main` import wall time (ms) | 5,534.272 | 589.137 | 89.4% faster |
+| `api.main` process wall time (ms) | 6,783.009 | 798.901 | 88.2% faster |
+| Imported modules (count) | 4,221 | 682 | 83.8% fewer |
+| Peak RSS (KB) | 861,428 | 80,696 | 90.6% smaller |
+| `mindpalace_sdk` import (ms) | 63.876 | 63.876 | unchanged |
+| CLI root help (ms) | 265.914 | 336.643 | noise-level variation |
 
 After lazy loading, `api.main` imports without Torch,
 `sentence_transformers`, or `transformers`. The public `mindpalace_sdk` import
@@ -66,12 +66,14 @@ DB-only imports without changing semantic query behavior.
 
 ## Top Bottlenecks
 
+Numeric costs in this table are milliseconds unless the cell says otherwise.
+
 | Rank | Problem | Measured cost | Root cause | Decision |
 |---:|---|---|---|---|
 | 1 | Semantic dependency/model initialization on every API process | 5.53s import wall, 4,221 modules, 861 MB RSS | Router globals and `api.services` imported the model stack before request routing | **OPTIMIZE:** lazy import/load and single-flight lock implemented |
-| 2 | Empty-query public operations resolve and conflict-check the archive twice | 1,000-version current: 1,831.301 ms before, 722.755 ms after; evidence: 1,698.795 ms before, 655.854 ms after | `project()` called `_query_result` twice; conflict pairs compared all active claims | **OPTIMIZE:** reuse the empty result and group pairs by key |
+| 2 | Empty-query public operations resolve and conflict-check the archive twice | 1,000-version current: 1,831.301 before, 722.755 after; evidence: 1,698.795 before, 655.854 after | `project()` called `_query_result` twice; conflict pairs compared all active claims | **OPTIMIZE:** reuse the empty result and group pairs by key |
 | 3 | Public memory projection loads the full archive | 1,000-version current still returns about 1.4M characters and performs four statements; one-claim evidence cost nearly the same as full current | `_load()` selects raw content, metadata, chunks, claims, and evidence for every version | **DEFER:** requires a new projection loader and careful conflict-closure tests |
-| 4 | Memory Pack canonical budgeting serializes a growing response repeatedly | 1,000-version pack: 937.535 ms before, 927.356 ms after; no statement-count reduction | Every candidate rebuilds and serializes the accumulated response | **DEFER:** exact Unicode budget and atomic conflict/change semantics need a dedicated correctness gate |
+| 4 | Memory Pack canonical budgeting serializes a growing response repeatedly | 1,000-version pack: 937.535 before, 927.356 after; no statement-count reduction | Every candidate rebuilds and serializes the accumulated response | **DEFER:** exact Unicode budget and atomic conflict/change semantics need a dedicated correctness gate |
 | 5 | RRF ranks all eligible chunks before final `k` | Existing retrieval plans process the full eligible branch and sort before limiting | Ranking query shape, not feed code | **DEFER:** candidate-depth changes require retrieval-quality measurements |
 | 6 | Repeated corpus resolution in feed | Feed remains about 38 ms at 1,000 versions and uses four statements per measured page | One corpus lookup plus one bounded page query | **KEEP:** no demonstrated feed problem; combining queries would change empty-corpus semantics |
 
@@ -190,13 +192,13 @@ terminated. The temporary database was removed. No 100k result is claimed; see
 Final project-runtime regression after the changes:
 
 ```text
-967 passed, 147 skipped, 10 warnings
+968 passed, 147 skipped, 10 warnings
 ```
 
 Focused results included:
 
 - memory public/pack/conflict suite: `51 passed, 47 skipped`;
-- embedding suite: `6 passed`;
+- embedding suite: `7 passed`;
 - semantic/corpus/retrieval focused suite: `50 passed, 7 skipped`;
 - M009 adapter/security/health tests remained passing.
 
@@ -211,13 +213,13 @@ correctness baseline.
 
 - Cursor signing, corpus binding, malformed/tampered/wrong-corpus rejection,
   and sanitized database errors were not changed.
-- The model lock prevents duplicate first-use initialization without exposing
+- A model lock prevents duplicate first-use initialization without exposing
   model state or credentials.
 - No cursor, signature, database URL, or secret is logged by the new path.
-- The API image remains non-root (`10001:10001`) and exposes only port 8000.
-- The Docker build context excludes Git, virtual environments, tests, research
+- API image execution remains non-root (`10001:10001`) and exposes only port 8000.
+- Docker build context excludes Git, virtual environments, tests, research
   modules, reviewer files, evaluation data, and local caches.
-- The full regression includes the existing security tests.
+- Full regression includes the existing security tests.
 
 ## Docker / Runtime Results
 

@@ -172,7 +172,7 @@ async def test_context_endpoint_contract():
     ]
 
     transport = ASGITransport(app=app)
-    import api.routers.context as cmod
+    import api.services.context_service as cmod
 
     with (
         patch(
@@ -181,11 +181,15 @@ async def test_context_endpoint_contract():
             return_value=("c1", "docs"),
         ),
         patch.object(
-            cmod.RetrievalService,
-            "search",
+            cmod,
+            "get_corpus_by_name",
             new_callable=AsyncMock,
-            return_value=results,
-        ) as mock_search,
+            return_value={"id": "c1", "name": "docs"},
+        ),
+        # A corpus with no archive has no authority to assert absence, so
+        # retrieval is the pack. This is the retrieval-only rung.
+        patch.object(cmod, "archive_present", new_callable=AsyncMock, return_value=False),
+        patch.object(cmod, "_retrieve", new_callable=AsyncMock, return_value=results) as mock,
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get(
@@ -197,7 +201,20 @@ async def test_context_endpoint_contract():
     data = resp.json()
 
     # Contract fields from the milestone spec
-    for key in ("query", "context", "sources", "chunks", "token_estimate", "strategy", "truncated"):
+    for key in (
+        "query",
+        "context",
+        "sources",
+        "chunks",
+        "token_estimate",
+        "strategy",
+        "truncated",
+    ):
+        assert key in data, f"missing contract field: {key}"
+
+    # Authoritative structure. Absent on this path, but always present in the
+    # response so a caller can branch on status rather than on missing keys.
+    for key in ("status", "memories", "conflicts", "changes", "budget_unit"):
         assert key in data, f"missing contract field: {key}"
 
     assert data["query"] == "test question"
@@ -205,7 +222,9 @@ async def test_context_endpoint_contract():
     assert data["token_estimate"] > 0
     assert data["strategy"] == "hybrid_rrf"
     assert isinstance(data["truncated"], bool)
-    assert mock_search.await_args.kwargs["corpus_id"] == "c1"
+    assert data["status"] == "resolved"
+    assert data["memories"] == []
+    assert mock.await_args.args[1] == "c1"
     # attribution must reference retrieved docs
     titles = {s["title"] for s in data["sources"]}
     assert {"DocA", "DocB"} <= titles

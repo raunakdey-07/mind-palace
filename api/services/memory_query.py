@@ -111,7 +111,9 @@ def interpret(request: MemoryRequest) -> QueryIntent:
     elif re.search(r"\b(now|currently|current)\b", question):
         name = "current"
     elif re.search(
-        r"\b(before|after|previous|formerly|used to|historical|history|old|prior)\b", question
+        r"\b(before|after|previous(ly)?|former(ly)?|used to|histor(y|ical|ies)|"
+        r"history|earlier|old(er)?|prior)\b",
+        question,
     ):
         name = "historical"
     else:

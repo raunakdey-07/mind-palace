@@ -1,40 +1,40 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Context endpoint: model-ready context packs with attribution.
+"""Context endpoint: the product surface for feeding an AI system.
 
-This is the primary product surface: an AI application asks a question and
-receives bounded, attributable context ready for prompt insertion.
+``context()`` answers "what should this application know for this question?" and
+returns the smallest useful, evidence-backed representation. The archive decides
+what is true, what changed, what conflicts, and what is absent. Retrieval adds
+raw source material and is skipped when no model is available.
 """
 
 from __future__ import annotations
 
-import time
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.schemas import ContextPackResponse
-from api.services.context_packer import pack_context
+from api.services.context_packer import ContextPack
+from api.services.context_service import ContextError, build_context
 from api.services.corpora import (
     CorpusScopeNotFound,
     CorpusScopeRequired,
     resolve_corpus_scope,
 )
 from api.services.db import get_async_db
-from api.services.embedder import SEMANTIC_DEPENDENCY_ERRORS, Embedder
 from api.services.observability import OperationTrace
-from api.services.retrieval import RetrievalService
 
 router = APIRouter()
 
-embedder = Embedder()
-
 DbSession = Annotated[AsyncSession, Depends(get_async_db)]
 
-VALID_STRATEGIES = {"vector", "hybrid", "hybrid_rrf"}
+
+def _as_response(pack: ContextPack) -> ContextPackResponse:
+    return ContextPackResponse(**pack.to_dict())
 
 
 @router.get("", response_model=ContextPackResponse)
@@ -48,20 +48,25 @@ async def get_context(
         4096, ge=256, le=32768, description="Maximum tokens for the packed context"
     ),
     strategy: str = Query("hybrid_rrf", description="Retrieval strategy"),
+    as_of: Optional[str] = Query(
+        None, description="ISO-8601 instant; resolves what was known then"
+    ),
+    intent: Optional[str] = Query(
+        None,
+        description=(
+            "current, historical, temporal, change, conflict or provenance. "
+            "Inferred from the question when omitted."
+        ),
+    ),
     db: DbSession = None,
 ) -> ContextPackResponse:
-    """Retrieve evidence and pack it into model-ready context.
+    """Assemble bounded, evidence-backed context for ``q``.
 
-    The response ``context`` field is bounded by ``budget_tokens`` and carries
-    full source attribution in ``sources``/``chunks``. ``truncated`` reports
-    whether evidence was dropped to fit the budget.
+    ``status`` reports what happened: ``resolved``, ``conflicting``,
+    ``no_relevant_memory``, or ``empty_corpus``. When the archive holds no
+    relevant memory the pack is empty and says so, rather than returning the
+    nearest unrelated chunks.
     """
-    if strategy not in VALID_STRATEGIES:
-        raise HTTPException(
-            status_code=422,
-            detail=f"invalid strategy '{strategy}'; expected one of {sorted(VALID_STRATEGIES)}",
-        )
-
     try:
         corpus_id, selected_corpus = await resolve_corpus_scope(db, corpus)
     except CorpusScopeNotFound as exc:
@@ -72,40 +77,53 @@ async def get_context(
         raise HTTPException(status_code=503, detail="Database unavailable") from exc
 
     if corpus_id is None:
-        trace = OperationTrace(operation="context", corpus=selected_corpus, strategy=strategy)
-        trace.emit()
-        return ContextPackResponse(
-            query=q,
-            context="",
-            strategy=strategy,
-        )
+        return ContextPackResponse(query=q, context="", strategy=strategy, status="empty_corpus")
 
-    trace = OperationTrace(operation="context", corpus=selected_corpus, strategy=strategy)
-    t0 = time.perf_counter()
-    try:
-        query_vector = embedder.embed_single(q)
-    except SEMANTIC_DEPENDENCY_ERRORS as exc:
-        raise HTTPException(status_code=503, detail="Semantic model unavailable") from exc
-    trace.embedding_ms = (time.perf_counter() - t0) * 1000
+    if intent is not None and intent not in {
+        "auto",
+        "current",
+        "historical",
+        "temporal",
+        "change",
+        "conflict",
+        "provenance",
+    }:
+        raise HTTPException(status_code=422, detail=f"invalid intent '{intent}'")
+
+    from datetime import datetime
+
+    cutoff = None
+    if as_of:
+        try:
+            cutoff = datetime.fromisoformat(as_of)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Invalid as_of timestamp") from exc
+        if cutoff.tzinfo is None:
+            raise HTTPException(status_code=422, detail="as_of must include a timezone")
 
     try:
-        retrieval = RetrievalService(db)
-        results = await retrieval.search(
-            query_vector,
+        pack, trace = await build_context(
+            db,
+            selected_corpus,
+            q,
+            budget_tokens=budget_tokens,
             k=k,
-            hybrid=(strategy != "vector"),
-            rrf=(strategy == "hybrid_rrf"),
-            query_text=q if strategy != "vector" else None,
-            corpus_id=corpus_id,
+            strategy=strategy,
+            as_of=cutoff,
+            intent=intent,
         )
-        trace.retrieval_ms = (time.perf_counter() - t0) * 1000 - trace.embedding_ms
-        trace.candidate_count = len(results)
-    except (OperationalError, *SEMANTIC_DEPENDENCY_ERRORS) as e:
-        raise HTTPException(status_code=503, detail="Search backend unavailable") from e
+    except ContextError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    except OperationalError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
 
-    pack = pack_context(q, results, budget_tokens=budget_tokens, strategy=strategy)
-    trace.mark_pack(pack.token_estimate, pack.truncated)
-    trace.returned_count = len(pack.chunks)
-    trace.emit()
-
-    return ContextPackResponse(**pack.to_dict())
+    trace_out = OperationTrace(
+        operation="context",
+        corpus=selected_corpus,
+        strategy=strategy,
+        candidate_count=trace.get("candidate_count", 0),
+        returned_count=trace.get("returned_count", 0),
+    )
+    trace_out.mark_pack(pack.token_estimate, pack.truncated)
+    trace_out.emit()
+    return _as_response(pack)

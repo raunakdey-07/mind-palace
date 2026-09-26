@@ -442,6 +442,12 @@ def test_legacy_named_initialization_and_sync(monkeypatch, create):
 
 @pytest.mark.parametrize("strategy", ["vector", "hybrid", "hybrid_rrf"])
 def test_legacy_search_and_context(monkeypatch, strategy):
+    """``search`` stays raw retrieval; ``context`` now goes through the shared builder.
+
+    The two are deliberately different products: search returns ranked chunks,
+    context returns the archive's answer with retrieval as raw material.
+    """
+
     @asynccontextmanager
     async def session_scope():
         yield "session"
@@ -453,9 +459,15 @@ def test_legacy_search_and_context(monkeypatch, strategy):
     retrieval = ModuleType("api.services.retrieval")
     retrieval.RetrievalService = Mock()
     retrieval.RetrievalService.return_value.search = AsyncMock(return_value=["evidence"])
-    packer = ModuleType("api.services.context_packer")
-    packer.pack_context = Mock(return_value="packed")
-    for module in (db, corpora, retrieval, packer):
+    builder = ModuleType("api.services.context_service")
+    builder.ContextError = RuntimeError
+
+    async def build_context(_db, corpus, query, **kwargs):
+        builder.called_with = (corpus, query, kwargs)
+        return "packed", {"status": "resolved"}
+
+    builder.build_context = build_context
+    for module in (db, corpora, retrieval, builder):
         monkeypatch.setitem(sys.modules, module.__name__, module)
     monkeypatch.setattr(MindPalace, "_run", staticmethod(asyncio.run))
     mp = MindPalace()
@@ -463,6 +475,7 @@ def test_legacy_search_and_context(monkeypatch, strategy):
     mp._embedder = Mock()
     mp._embedder.embed_single.return_value = [0.5]
     assert mp.search("question", k=3, strategy=strategy) == ["evidence"]
+    embeds_after_search = mp._embedder.embed_single.call_count
     assert mp.context("question", k=3, strategy=strategy, budget_tokens=1000) == "packed"
     corpora.get_corpus_by_name.assert_awaited_with("session", "legacy")
     retrieval.RetrievalService.assert_called_with("session")
@@ -474,12 +487,17 @@ def test_legacy_search_and_context(monkeypatch, strategy):
         query_text="question" if strategy != "vector" else None,
         corpus_id="corpus-id",
     )
-    packer.pack_context.assert_called_once_with(
-        "question",
-        ["evidence"],
-        budget_tokens=1000,
-        strategy=strategy,
-    )
+    # context() must not embed on this path: the shared builder decides whether
+    # it needs a model, and only after the archive has answered.
+    assert mp._embedder.embed_single.call_count == embeds_after_search
+    assert builder.called_with[:2] == ("legacy", "question")
+    assert builder.called_with[2] == {
+        "budget_tokens": 1000,
+        "k": 3,
+        "strategy": strategy,
+        "as_of": None,
+        "intent": None,
+    }
     corpora.get_corpus_by_name.return_value = None
     from mindpalace_sdk import CorpusNotFoundError
 

@@ -424,30 +424,42 @@ class MindPalace:
         budget_tokens: int = 4096,
         k: int = 8,
         strategy: str = "hybrid_rrf",
+        as_of: str | None = None,
+        intent: str | None = None,
     ) -> ContextPack:
-        """Retrieve evidence for ``query`` and pack model-ready context."""
+        """Assemble bounded, evidence-backed context for ``query``.
+
+        The archive decides what is true, what changed, what conflicts and what
+        is absent. Retrieval only adds raw source material, and is skipped when
+        no embedding model is available, so this still answers without one.
+        """
         self._require_legacy()
-        from api.services.context_packer import pack_context
+        from api.services.context_service import ContextError, build_context
         from api.services.db import session_scope
-        from api.services.retrieval import RetrievalService
 
-        corpus_id = self._corpus_id(must_exist=True)
-        vector = self._embedder.embed_single(query)
+        corpus_name = self.name
+        if corpus_name is None:
+            raise ValueError("a corpus name is required")
+        cutoff = datetime.fromisoformat(as_of) if as_of else None
 
-        async def _search():
+        async def _build():
             async with session_scope() as db:
-                svc = RetrievalService(db)
-                return await svc.search(
-                    vector,
+                return await build_context(
+                    db,
+                    corpus_name,
+                    query,
+                    budget_tokens=budget_tokens,
                     k=k,
-                    hybrid=(strategy != "vector"),
-                    rrf=(strategy == "hybrid_rrf"),
-                    query_text=query if strategy != "vector" else None,
-                    corpus_id=corpus_id,
+                    strategy=strategy,
+                    as_of=cutoff,
+                    intent=intent,
                 )
 
-        results = self._run(_search())
-        return pack_context(query, results, budget_tokens=budget_tokens, strategy=strategy)
+        try:
+            pack, _ = self._run(_build())
+        except ContextError as exc:
+            raise MemoryClientError(exc.code, exc.message, exc.status_code) from exc
+        return pack
 
     def search(self, query: str, *, k: int = 5, strategy: str = "hybrid_rrf"):
         """Raw retrieval results (what is relevant), without packing."""

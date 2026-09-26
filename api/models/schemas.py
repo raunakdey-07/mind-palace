@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
@@ -144,12 +144,59 @@ class ContextChunkInfo(BaseModel):
     source: ContextSourceInfo
 
 
-class ContextPackResponse(BaseModel):
-    """Model-ready context with full attribution.
+class ContextEvidenceInfo(BaseModel):
+    """One exact quote from one immutable document version."""
 
-    The ``context`` field is ready to be inserted into an LLM prompt.
-    ``sources`` and ``chunks`` carry provenance; ``truncated`` reports
-    whether evidence was dropped to satisfy the budget.
+    quote: str
+    path: str
+    version_id: str
+    observed_at: str
+    start_offset: int
+    end_offset: int
+
+
+class ContextMemoryInfo(BaseModel):
+    """One authoritative statement with the evidence that supports it."""
+
+    status: str
+    key: str
+    claim: str
+    value: Any = None
+    path: str = ""
+    observed_at: str = ""
+    valid_from: str | None = None
+    valid_until: str | None = None
+    supersedes_id: str | None = None
+    evidence: list[ContextEvidenceInfo] = Field(default_factory=list)
+
+
+class ContextConflictInfo(BaseModel):
+    """Authored keys whose sources disagree. Never silently flattened."""
+
+    key: str
+    options: list[ContextMemoryInfo] = Field(default_factory=list)
+
+
+class ContextChangeInfo(BaseModel):
+    """One recorded lifecycle or supersession event."""
+
+    event: str
+    path: str
+    observed_at: str
+    relationship: str
+    from_value: str | None = None
+    to_value: str | None = None
+
+
+class ContextPackResponse(BaseModel):
+    """Bounded, evidence-backed context with full attribution.
+
+    ``context`` is ready to be inserted into an LLM prompt. ``status`` reports
+    what the archive concluded: ``resolved``, ``conflicting``,
+    ``no_relevant_memory`` or ``empty_corpus``. ``memories``, ``conflicts`` and
+    ``changes`` carry the authoritative structure; ``chunks`` carries raw source
+    material, which never becomes a memory. ``truncated`` reports whether
+    anything was dropped to satisfy the budget.
     """
 
     query: str
@@ -159,6 +206,13 @@ class ContextPackResponse(BaseModel):
     token_estimate: int = 0
     strategy: str = "hybrid_rrf"
     truncated: bool = False
+    status: str = "resolved"
+    budget_unit: str = "token_estimate"
+    as_of: str | None = None
+    valid_at: str | None = None
+    memories: list[ContextMemoryInfo] = Field(default_factory=list)
+    conflicts: list[ContextConflictInfo] = Field(default_factory=list)
+    changes: list[ContextChangeInfo] = Field(default_factory=list)
 
 
 # --- RAG Query (Intent-Specific) ---

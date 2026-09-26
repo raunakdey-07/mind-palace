@@ -12,6 +12,7 @@ from sqlalchemy.exc import OperationalError
 import api.routers.context as context_router
 import api.routers.query as query_router
 import api.routers.search as search_router
+import api.services.context_service as context_service
 from api.models.schemas import (
     AskRequest,
     ContextPackResponse,
@@ -133,7 +134,9 @@ async def test_search_rejects_ambiguous_scope_before_embedding():
 
 @pytest.mark.asyncio
 async def test_context_rejects_ambiguous_scope_before_embedding():
-    embed = Mock(side_effect=AssertionError("embedding must not run"))
+    # The router owns no embedder any more; retrieval lives behind
+    # context_service._retrieve. Scope must resolve before it is reached.
+    retrieve = AsyncMock(side_effect=AssertionError("retrieval must not run"))
 
     with (
         patch.object(
@@ -141,7 +144,7 @@ async def test_context_rejects_ambiguous_scope_before_embedding():
             "resolve_corpus_scope",
             AsyncMock(side_effect=CorpusScopeRequired("corpus is required")),
         ),
-        patch.object(context_router.embedder, "embed_single", embed),
+        patch.object(context_service, "_retrieve", retrieve),
     ):
         with pytest.raises(HTTPException) as caught:
             await context_router.get_context(
@@ -154,7 +157,7 @@ async def test_context_rejects_ambiguous_scope_before_embedding():
             )
 
     assert caught.value.status_code == 422
-    embed.assert_not_called()
+    retrieve.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -183,8 +186,7 @@ async def test_ask_rejects_ambiguous_scope_before_embedding():
 
 @pytest.mark.asyncio
 async def test_context_with_no_corpus_does_not_embed_or_retrieve():
-    embed = Mock(side_effect=AssertionError("embedding must not run"))
-    search = AsyncMock(side_effect=AssertionError("retrieval must not run"))
+    retrieve = AsyncMock(side_effect=AssertionError("retrieval must not run"))
 
     with (
         patch.object(
@@ -192,8 +194,7 @@ async def test_context_with_no_corpus_does_not_embed_or_retrieve():
             "resolve_corpus_scope",
             AsyncMock(return_value=(None, None)),
         ),
-        patch.object(context_router.embedder, "embed_single", embed),
-        patch.object(context_router.RetrievalService, "search", search),
+        patch.object(context_service, "_retrieve", retrieve),
     ):
         result = await context_router.get_context(
             q="question",
@@ -207,8 +208,8 @@ async def test_context_with_no_corpus_does_not_embed_or_retrieve():
     assert isinstance(result, ContextPackResponse)
     assert result.context == ""
     assert result.token_estimate == 0
-    embed.assert_not_called()
-    search.assert_not_awaited()
+    assert result.status == "empty_corpus"
+    retrieve.assert_not_awaited()
 
 
 @pytest.mark.asyncio

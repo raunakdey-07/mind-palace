@@ -96,7 +96,7 @@ async def test_search_backend_unavailable_is_503_not_empty():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("operation", ["search", "context", "ask"])
+@pytest.mark.parametrize("operation", ["search", "ask"])
 async def test_semantic_dependency_failure_is_sanitized_503(operation):
     if operation == "search":
         module = search_router
@@ -112,14 +112,6 @@ async def test_semantic_dependency_failure_is_sanitized_503(operation):
                 rrf=True,
                 rerank=False,
                 db=object(),
-            )
-
-    elif operation == "context":
-        module = context_router
-
-        async def target():
-            return await module.get_context(
-                q="q", corpus="c", k=5, budget_tokens=512, strategy="vector", db=object()
             )
 
     else:
@@ -141,6 +133,42 @@ async def test_semantic_dependency_failure_is_sanitized_503(operation):
 
     assert caught.value.status_code == 503
     assert "missing local model" not in str(caught.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_context_degrades_instead_of_503_when_model_is_missing():
+    """A missing model must cost the pack its raw material, not the whole answer.
+
+    The endpoint stays 200, reports why, and leaks no dependency detail.
+    """
+    import api.services.context_service as cserv
+    import api.services.embedder as embedder_mod
+
+    transport = ASGITransport(app=app)
+    with (
+        patch.object(
+            context_router,
+            "resolve_corpus_scope",
+            AsyncMock(return_value=("c1", "docs")),
+        ),
+        patch.object(
+            cserv, "get_corpus_by_name", AsyncMock(return_value={"id": "c1", "name": "docs"})
+        ),
+        patch.object(cserv, "archive_present", AsyncMock(return_value=False)),
+        patch.object(
+            embedder_mod,
+            "Embedder",
+            Mock(side_effect=OSError("missing local model")),
+        ),
+    ):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/context", params={"q": "q", "corpus": "docs"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "empty_corpus"
+    assert body["context"] == ""
+    assert "missing local model" not in response.text
 
 
 @pytest.mark.asyncio

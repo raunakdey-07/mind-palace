@@ -42,7 +42,9 @@ mindpalace = "cli.main:app"
 
 [tool.setuptools]
 # Top-level single-file modules alongside the api/cli packages.
-py-modules = ["mindpalace_sdk", "mcp_server"]
+# memory_pack ships deliberately: it is the dependency-free reader a consumer
+# copies or imports to understand a pack without the server.
+py-modules = ["mindpalace_sdk", "mcp_server", "memory_pack"]
 
 [tool.setuptools.packages.find]
 where = ["."]

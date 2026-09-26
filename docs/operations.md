@@ -193,9 +193,24 @@ modules, migrations, and mounted content, but not the CLI, MCP server, tests,
 evaluation data, research-only service modules, or local virtual environments.
 It uses the CPU-only Torch constraint in
 `requirements-docker.txt` and runs as UID `10001`; model downloads use the
-writable temporary `HF_HOME` configured in the image. Run `requirements.txt`
-for a development checkout; use the API image only for the HTTP service, and run
-Alembic separately before starting a fresh database.
+writable temporary `HF_HOME` configured in the image. The optional reranker
+model is selected by `RERANKER_MODEL` and loads only when `rerank=true` is
+requested. Run `requirements.txt` for a development checkout; use the API image
+only for the HTTP service, and run Alembic separately before starting a fresh
+database.
+
+## Rebuilding the live index
+
+If the derived live index is lost, rebuild it from the authoritative archive:
+
+```bash
+mindpalace reindex --corpus my-corpus
+```
+
+The command acquires the corpus lock and writes only `documents`, `chunks`,
+and `ingestion_manifest`. It does not append a memory version, claim, or feed
+event. Paths that were never archived are left untouched. Provision the embedding
+model before running it in an offline environment.
 
 ## Cursor secret configuration
 

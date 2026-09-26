@@ -183,6 +183,10 @@ passed against the local PostgreSQL 15.4 service.
 The feed itself takes no writer lock. It is a single bounded read per page, so
 feed traffic does not contend with ingestion on the corpus advisory lock.
 
+The `reindex` operator command does take the corpus lock and writes only the
+live projection. It is intended for recovery and controlled maintenance, not for
+a request path or a second writer racing ingestion.
+
 ## Deferred work, with the reason
 
 `docs/performance/REPORT.md` lists these and they are unchanged here:

@@ -53,9 +53,13 @@ to a developer database.
 
 ```bash
 pytest --cache-clear tests/test_memory_heldout_labels.py
+./scripts/benchmark/m00675.sh --verify
 DATABASE_URL=postgresql+psycopg://USER:PASSWORD@localhost:5432/benchmark \
   ./scripts/benchmark/m00675.sh
 ```
+
+`--verify` is read-only. It checks the published artifact without overwriting it.
+Use the database-backed command only when you intend to create a new result.
 
 Run the command three times in the same environment and twice after restarting
 the PostgreSQL service. Compare `result_sha256` in `eval/m00675/result.json`.
@@ -81,7 +85,7 @@ false-current promotions: 0
 execution failures: 0
 ```
 
-The portable canonical artifact for the corrected release source tree hashes to:
+The canonical artifact for the corrected release source tree hashes to:
 
 ```text
 881530c7c6e7ba29fb38eb5b27609071463f733c6a8cd173aeff04173a5d8dc8

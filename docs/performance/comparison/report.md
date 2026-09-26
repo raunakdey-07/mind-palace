@@ -34,15 +34,16 @@ memory operations. The M009 feed is exposed through REST, SDK, and CLI. It is
 not exposed through MCP because it has a separate cursor, pagination, and error
 contract.
 
-The current audit base is `bb8ce0b`. The immutable release remains `v0.6.0` at
+This audit started from `bb8ce0b` and covers the follow-up commits stacked on
+top of it. The immutable release remains `v0.6.0` at
 `033c1484dca53fbb40dbf82904aacf5f2834142a`.
 
 ## 3. Competitive Capability Matrix
 
 The matrix in
 [`docs/architecture/competitive-analysis.md`](../../architecture/competitive-analysis.md)
-compares Mind Palace with Graphiti, Mem0 OSS, Letta/MemFS, and conventional
-RAG or vector search.
+compares Mind Palace with Graphiti, Mem0 OSS, Letta/MemFS, MemPalace, and
+conventional RAG or vector search.
 
 The important boundary is authority. Mind Palace makes source claims and exact
 evidence authoritative. Graphiti provides a temporal graph and incremental
@@ -393,7 +394,7 @@ remain in their original paths.
 | First embedding | process import path | 5,110.624 ms on first use | `semantic-after.json` |
 | Live corpus scope | omitted scope could reach unscoped retrieval | empty, single, or explicit scope only | 19 corpus-scope tests |
 | Snapshot membership | append-only rows, no membership seal | sealed membership set | 5 live PostgreSQL tests |
-| Full regression | prior committed baseline | 988 passed, 151 skipped, 10 warnings | final test run |
+| Full regression | prior committed baseline | **994 passed, 153 skipped, 10 warnings** | final test run |
 | Image | prior audit result | 1.294 GB, 10 layers, UID/GID 10001 | rebuilt image audit |
 
 The image import check reported `torch-loaded False` and

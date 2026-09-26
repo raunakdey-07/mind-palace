@@ -202,6 +202,11 @@ Final project-runtime regression for the follow-up changes:
 988 passed, 151 skipped, 10 warnings
 ```
 
+A later follow-up on the same release line supersedes this count with
+`994 passed, 153 skipped, 10 warnings`. See
+[`docs/architecture/durable-memory-substrate-report.md`](../architecture/durable-memory-substrate-report.md)
+for that pass.
+
 The first full run exposed one reproducibility issue: the frozen M006.75
 fixture hash included every migration file, so the new post-release migration
 changed the hash even though the frozen dataset, policy, and result were

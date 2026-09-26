@@ -62,10 +62,14 @@ relations, connection refusal, timeout, and other failures return a sanitized
 `MIND_PALACE_READINESS_TIMEOUT_SECONDS`, default 2 seconds.
 
 **A backend outage looks like an empty index.** The search router converts
-`OperationalError` to `503` rather than an empty result set, and the comment in
-`api/routers/search.py` says why: a client must be able to tell "nothing
-matched" from "the store is unreachable". The same distinction holds for the
-context route.
+`OperationalError` and semantic model failures to a sanitized `503` rather than
+an empty result set. The same distinction holds for the context and ask routes.
+A corpus with no live rows returns an empty success only when scope resolution
+itself succeeded and no corpus data exists.
+
+**A missing model is not an empty result.** Search, context, and ask return a
+sanitized `503` when the embedder or reranker cannot load. The reranker model is
+lazy and is only needed for `rerank=true`; `RERANKER_MODEL` selects its name.
 
 **A claim is returned without evidence.** `memory_public.project` raises
 `503 memory_unavailable` with "Archived claim has incomplete provenance" rather
@@ -110,8 +114,9 @@ purges orphaned manifest rows whose document no longer exists, so a manifest
 entry cannot make a file look indexed when it is not.
 
 **Sync is not a directory transaction.** It is per-document atomic. A failure
-partway through leaves earlier documents committed. Deletions require an
-explicit sync, and renames are new identities rather than moves.
+partway through leaves earlier documents committed. The summary includes a
+bounded `errors` list with the relative path and a sanitized reason. Deletions
+require an explicit sync, and renames are new identities rather than moves.
 
 ## Snapshot and replay
 
@@ -134,6 +139,11 @@ requiring the seal before a snapshot commits. It is not part of the immutable
 `v0.6.0` release. Its database-backed tests passed against the local PostgreSQL
 15.4 service. Without that migration, membership rows remain append-only but a
 direct writer can add another membership row for an existing snapshot.
+
+**A live index is missing.** The `mindpalace reindex --corpus NAME` command
+rebuilds `documents`, `chunks`, and `ingestion_manifest` from archived source
+versions. It never calls `record_version`, so it creates no archive version or
+feed event. Paths that were never archived remain untouched.
 
 **A pack is silently incomplete.** `truncated=true` marks it. A pack is
 `truncated=false` only when nothing was dropped, and `422 invalid_budget` is

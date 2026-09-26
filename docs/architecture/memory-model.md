@@ -1,10 +1,11 @@
 # Memory model
 
 Scope: the append-only archive behind every ordinary memory operation, as
-implemented at `bb8ce0b` (M009 released as `v0.6.0` at
-`033c1484dca53fbb40dbf82904aacf5f2834142a`). The M009 operational feed is a
-separate read contract over the same rows and is described in
-[`docs/operations.md`](../operations.md).
+implemented in the M009 release, `v0.6.0` at
+`033c1484dca53fbb40dbf82904aacf5f2834142a`. Post-release commits add live corpus
+scoping and a snapshot membership seal without changing these rows or their
+semantics. The M009 operational feed is a separate read contract over the same
+rows and is described in [`docs/operations.md`](../operations.md).
 
 ## What is stored
 

@@ -291,6 +291,29 @@ Remote SDK memory calls use HTTP. Remote `sync`, `search`, and `context` are not
 supported. Async local applications should use the async public service rather
 than call the synchronous local SDK inside an active event loop.
 
+### Reading a pack elsewhere (`memory_pack.py`)
+
+A Memory Pack is the interchange boundary. `memory_pack.py` reads one using only the
+standard library, with no database, model, network, or import from `api`. Copy that one
+file into a consuming project.
+
+```python
+from memory_pack import MemoryPack
+
+pack = MemoryPack.from_json(open("pack.json").read())
+
+pack.status                    # resolved | conflicting | uncertain | no_relevant_memory | empty
+pack.digest()                  # sha256 over the canonical bytes
+pack.verify()                  # [] when evidence, offsets and sources are consistent
+pack.conflicts                 # keys whose sources disagree, every side kept
+pack.evidence_for(claim.id)    # exact quote, path, chunk-relative offsets, observed time
+```
+
+`status` is derived from the pack's contents, so an empty list is never ambiguous: a
+question with no answer reports `no_relevant_memory` rather than returning nothing. The
+reader refuses a `schema_version` it does not implement instead of half-reading it.
+See the [API contract](examples/MEMORY_API.md#reading-a-pack-without-mind-palace).
+
 ### REST API
 
 ```text

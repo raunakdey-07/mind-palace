@@ -1,0 +1,211 @@
+{
+  "meta": {
+    "python": "3.14.7",
+    "repeats": 20,
+    "valid_at": "2026-01-15T12:00:00+00:00"
+  },
+  "pipeline_ms": {
+    "authority": 63.602,
+    "digest": 0.121,
+    "interpret": 0.028,
+    "load": 4.702,
+    "pack": 0.181,
+    "serialize": 0.058
+  },
+  "poisoning": {
+    "claims": 2,
+    "injection_markers_as_memory": [],
+    "integrity_problems": [],
+    "paths": [
+      "adrs/adr-004-cache.md",
+      "docs/storage.md"
+    ],
+    "status": "conflicting",
+    "untrusted_path_in_memory": false
+  },
+  "questions": [
+    {
+      "bytes": 3463,
+      "changes": 0,
+      "claims": 2,
+      "conflicts": 1,
+      "digest": "e4ffc41d08a6b6d3",
+      "evidence": 2,
+      "question": "What is the current database?",
+      "status": "conflicting"
+    },
+    {
+      "bytes": 8873,
+      "changes": 3,
+      "claims": 4,
+      "conflicts": 1,
+      "digest": "d1125e204a773d55",
+      "evidence": 4,
+      "question": "What database was used previously?",
+      "status": "conflicting"
+    },
+    {
+      "bytes": 8868,
+      "changes": 3,
+      "claims": 4,
+      "conflicts": 1,
+      "digest": "497d45c8efd7fc60",
+      "evidence": 4,
+      "question": "When did the database change?",
+      "status": "conflicting"
+    },
+    {
+      "bytes": 12299,
+      "changes": 4,
+      "claims": 6,
+      "conflicts": 1,
+      "digest": "1d42e625f7279eef",
+      "evidence": 6,
+      "question": "Why was the database changed?",
+      "status": "conflicting"
+    },
+    {
+      "bytes": 3475,
+      "changes": 0,
+      "claims": 2,
+      "conflicts": 1,
+      "digest": "bff1f9ee8cea86d7",
+      "evidence": 2,
+      "question": "What sources disagree about the database?",
+      "status": "conflicting"
+    },
+    {
+      "bytes": 4898,
+      "changes": 0,
+      "claims": 3,
+      "conflicts": 1,
+      "digest": "f28cb348e42a713c",
+      "evidence": 3,
+      "question": "What evidence supports the current database?",
+      "status": "conflicting"
+    },
+    {
+      "bytes": 1883,
+      "changes": 0,
+      "claims": 1,
+      "conflicts": 0,
+      "digest": "925330c87f82da9a",
+      "evidence": 1,
+      "question": "What caused the November outage?",
+      "status": "resolved"
+    },
+    {
+      "bytes": 1832,
+      "changes": 0,
+      "claims": 1,
+      "conflicts": 0,
+      "digest": "98fca4879f88d974",
+      "evidence": 1,
+      "question": "What is the connection pool limit?",
+      "status": "resolved"
+    },
+    {
+      "bytes": 1856,
+      "changes": 0,
+      "claims": 1,
+      "conflicts": 0,
+      "digest": "816ee577dbf004cb",
+      "evidence": 1,
+      "question": "What does the API service depend on?",
+      "status": "resolved"
+    },
+    {
+      "bytes": 1829,
+      "changes": 0,
+      "claims": 1,
+      "conflicts": 0,
+      "digest": "1fb79cefed82b125",
+      "evidence": 1,
+      "question": "What did release 0.6 add?",
+      "status": "resolved"
+    },
+    {
+      "bytes": 409,
+      "changes": 0,
+      "claims": 0,
+      "conflicts": 0,
+      "digest": "49e498e487bab32b",
+      "evidence": 0,
+      "question": "What payroll provider does the company use?",
+      "status": "no_relevant_memory"
+    },
+    {
+      "bytes": 8897,
+      "changes": 3,
+      "claims": 4,
+      "conflicts": 1,
+      "digest": "15266415e82de628",
+      "evidence": 4,
+      "question": "What should an engineer know before changing the database?",
+      "status": "conflicting"
+    }
+  ],
+  "relationships": [
+    {
+      "answered": true,
+      "changes": 0,
+      "claims": 3,
+      "keys": [
+        "architecture.database",
+        "service.api.depends_on"
+      ],
+      "question": "Who owns the service that depends on the primary database?",
+      "status": "conflicting"
+    },
+    {
+      "answered": true,
+      "changes": 3,
+      "claims": 4,
+      "keys": [
+        "architecture.database",
+        "constraint.migrations"
+      ],
+      "question": "Which system replaced the previous database?",
+      "status": "conflicting"
+    },
+    {
+      "answered": false,
+      "changes": 0,
+      "claims": 0,
+      "keys": [],
+      "question": "What changed after the storage decision?",
+      "status": "no_relevant_memory"
+    },
+    {
+      "answered": true,
+      "changes": 0,
+      "claims": 1,
+      "keys": [
+        "incident.2024-11.root"
+      ],
+      "question": "What constraint was introduced because of the November outage?",
+      "status": "resolved"
+    },
+    {
+      "answered": true,
+      "changes": 0,
+      "claims": 1,
+      "keys": [
+        "constraint.pool.size"
+      ],
+      "question": "Which decisions depend on the connection pool limit?",
+      "status": "resolved"
+    },
+    {
+      "answered": true,
+      "changes": 3,
+      "claims": 4,
+      "keys": [
+        "architecture.database",
+        "constraint.migrations"
+      ],
+      "question": "What superseded the first database?",
+      "status": "conflicting"
+    }
+  ]
+}

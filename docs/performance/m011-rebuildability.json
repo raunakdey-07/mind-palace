@@ -1,0 +1,122 @@
+{
+  "counts": {
+    "after_destroy": {
+      "chunks": 0,
+      "claims": 10,
+      "documents": 0,
+      "embedded": 0,
+      "evidence": 10,
+      "manifest": 0,
+      "versions": 8
+    },
+    "after_rebuild": {
+      "chunks": 7,
+      "claims": 10,
+      "documents": 7,
+      "embedded": 7,
+      "evidence": 10,
+      "manifest": 7,
+      "versions": 8
+    },
+    "rebuild_stats": {
+      "archived_paths": 7,
+      "corpus_id": "954c7b496d9f25ec6fa4ce8d098c2ed470f7c2752adc3b3250d94c5941981662",
+      "deleted_archive_paths": 0,
+      "rebuilt_chunks": 7,
+      "rebuilt_documents": 7,
+      "removed_documents": 0
+    },
+    "with_l2": {
+      "chunks": 7,
+      "claims": 10,
+      "documents": 7,
+      "embedded": 7,
+      "evidence": 10,
+      "manifest": 7,
+      "versions": 8
+    }
+  },
+  "digests": {
+    "l2_destroyed": "85a05154115352fc1a169df23d48b39f63904329e0db0cec2b7c07430bda3f28",
+    "l2_rebuilt": "85a05154115352fc1a169df23d48b39f63904329e0db0cec2b7c07430bda3f28",
+    "with_l2": "85a05154115352fc1a169df23d48b39f63904329e0db0cec2b7c07430bda3f28"
+  },
+  "meta": {
+    "commit": "b00f5a716a4e3b9f96152304a2020a2c66aef778",
+    "python": "3.14.7"
+  },
+  "questions": [
+    {
+      "bytes": 3462,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What is the current database?"
+    },
+    {
+      "bytes": 8872,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What database was used previously?"
+    },
+    {
+      "bytes": 8867,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "When did the database change?"
+    },
+    {
+      "bytes": 12298,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "Why was the database changed?"
+    },
+    {
+      "bytes": 3474,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What sources disagree about the database?"
+    },
+    {
+      "bytes": 4897,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What evidence supports the current database?"
+    },
+    {
+      "bytes": 1882,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What caused the November outage?"
+    },
+    {
+      "bytes": 1831,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What is the connection pool limit?"
+    },
+    {
+      "bytes": 1855,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What does the API service depend on?"
+    },
+    {
+      "bytes": 1828,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What did release 0.6 add?"
+    },
+    {
+      "bytes": 408,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What payroll provider does the company use?"
+    },
+    {
+      "bytes": 8896,
+      "identical_after_rebuild": true,
+      "identical_without_l2": true,
+      "question": "What should an engineer know before changing the database?"
+    }
+  ]
+}

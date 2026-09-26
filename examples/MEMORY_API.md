@@ -178,7 +178,11 @@ Every success is a `MemoryResponse` with `schema_version: 1`, `query`, `corpus`,
 `state` (`as_of`, `valid_at`, `snapshot`), `current_memories`, `historical_memories`,
 `uncertain_memories`, `changes`, `conflicts`, `constraints`, `evidence`, `sources`,
 `snapshot`, `truncated`, and `budget_unit: "unicode_characters"`.
-`constraints` currently defaults to an empty list; do not infer a policy engine.
+`constraints` carries stated answers that are not claims. It is not a policy
+engine, but it is not always empty: when relevance selects nothing, the authoritative
+layer writes `NO_RELEVANT_MEMORY` there and selection preserves it. Without that marker a
+bounded pack would be indistinguishable from an empty envelope, and a consumer would
+read "nothing sent" as "nothing known".
 
 Claims include `id`, `key`, JSON `value`, `claim` text, `status`, `version_id`,
 `path`, `observed_at`, validity bounds, `supersedes_id`, and `evidence_ids`.
@@ -228,6 +232,41 @@ canonical pack is identical. This is not a guarantee about independent wall-cloc
 calls: default validity timestamps differ, and concurrent ingestion can change
 state. Use `snapshot_id` to fix observation and validity for repeatable selection.
 Query additionally requires the same embedding model/runtime, question, and intent.
+
+### Reading a pack without Mind Palace
+
+A pack is an interchange format. `memory_pack.py` at the repository root reads one
+using only the standard library: no database, no model, no network, and no import from
+`api`. Copy that single file into a consuming project.
+
+```python
+from memory_pack import MemoryPack
+
+pack = MemoryPack.from_json(open("pack.json").read())
+
+pack.status                    # resolved | conflicting | uncertain | no_relevant_memory | empty
+pack.digest()                  # sha256 of the canonical bytes
+pack.verify()                  # [] when the pack is internally consistent
+pack.current                   # claims believed true now
+pack.conflicts                 # keys whose sources disagree, every side kept
+pack.evidence_for(claim.id)    # exact quote, path, chunk-relative offsets, observed time
+pack.state.describe()          # which instant the pack resolved
+```
+
+`status` is derived from the pack's own contents, not stored, because the pack already
+carries what is needed to compute it. An empty list is therefore never ambiguous: a
+question with no answer reports `no_relevant_memory` rather than returning nothing.
+
+`digest()` is taken over `canonical_json()`, which is the same byte string the `budget`
+counts and the same bytes the server produces. Two packs with one digest are the same
+answer to the same question over the same authoritative state, whatever produced them.
+`verify()` returns human-readable problems rather than raising, so a caller can decide:
+missing evidence, orphaned evidence, offsets that do not span their quote, a claim with
+no source, and a truncated pack that retained no authority.
+
+The reader refuses a `schema_version` it does not implement rather than half-reading it.
+`schema_version` describes the wire contract, not the application release, so it is
+unrelated to `v0.6.0`, a milestone name, or a commit.
 
 ## Health endpoints
 

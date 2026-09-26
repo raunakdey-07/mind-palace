@@ -28,7 +28,10 @@ deliberately absent from MCP.
 The authoritative path is model-free at import. Current, history, changes,
 evidence, as-of, snapshot, replay, feed, pack, and provenance operations read
 archive tables and do not require Torch, sentence-transformers, an LLM, Redis, or
-MCP.
+MCP. The intent-resolved `query` operation reads the same tables and needs the
+model only to rank candidates; when the model cannot load it falls back to
+lexical ranking rather than failing. See
+[`docs/research/memory-bakeoff.md`](../research/memory-bakeoff.md).
 
 ## 3. Competitive Landscape
 
@@ -402,7 +405,12 @@ model lock.
 
 The semantic extension is optional for the authoritative core. Removing the
 embedding stack does not remove current, history, evidence, snapshot, replay,
-feed, pack, or provenance operations.
+feed, pack, or provenance operations. It does not remove `query` either, which
+degrades to lexical relevance instead of returning 503.
+
+It does still remove `context()` and `search()`, which are live-index surfaces
+with no model-free path. Measured, not assumed: with a model that cannot load,
+4 of 5 public memory surfaces still answer.
 
 The container still ships the semantic dependency stack. Splitting the DB-only
 runtime from the semantic runtime is deferred until deployment evidence makes

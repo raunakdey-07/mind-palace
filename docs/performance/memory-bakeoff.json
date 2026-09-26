@@ -1,0 +1,187 @@
+{
+  "cases": [
+    {
+      "authoritative": {
+        "budget_chars": 3492,
+        "keys": [
+          "architecture.database"
+        ],
+        "pass": true
+      },
+      "authoritative_ms": 61.75636200350709,
+      "class": "current-state",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 17.27836400095839,
+      "id": "current",
+      "question": "What is the current database?"
+    },
+    {
+      "as_of": {
+        "cutoff": "2026-09-26 08:21:30.877117+00:00",
+        "saw_mysql": true,
+        "saw_postgresql": false
+      },
+      "authoritative": {
+        "budget_chars": 7800,
+        "historical": 1,
+        "pass": true
+      },
+      "authoritative_asof_ms": 17.836282000644132,
+      "authoritative_ms": 44.136496995633934,
+      "class": "historical",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 14.42316299653612,
+      "id": "historical",
+      "question": "What database did the project use previously?"
+    },
+    {
+      "authoritative": {
+        "budget_chars": 7784,
+        "changes": 3,
+        "pass": true
+      },
+      "authoritative_ms": 39.633551001315936,
+      "class": "change",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": false,
+        "token_estimate": 135
+      },
+      "context_ms": 14.148137001029681,
+      "id": "change",
+      "question": "When did the database change?"
+    },
+    {
+      "authoritative": {
+        "budget_chars": 3504,
+        "conflicts": 1,
+        "pass": true
+      },
+      "authoritative_ms": 39.09527100040577,
+      "class": "conflict",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 15.173362000496127,
+      "id": "conflict",
+      "question": "What sources disagree about the database?"
+    },
+    {
+      "authoritative": {
+        "budget_chars": 4927,
+        "evidence": 3,
+        "pass": true
+      },
+      "authoritative_ms": 37.16483600146603,
+      "class": "provenance",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 12.68148300005123,
+      "id": "provenance",
+      "question": "What evidence supports the current database?"
+    },
+    {
+      "authoritative": {
+        "budget_chars": 6011,
+        "constraints": 0,
+        "current": 1,
+        "pass": true
+      },
+      "authoritative_ms": 37.9612510005245,
+      "class": "why",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 13.49695399403572,
+      "id": "why",
+      "question": "Why was the database changed?"
+    },
+    {
+      "authoritative": {
+        "abstained": true,
+        "budget_chars": 398,
+        "invented": false,
+        "pass": true
+      },
+      "authoritative_ms": 46.22103099973174,
+      "class": "abstention",
+      "context": {
+        "abstained": false,
+        "invented": true,
+        "pass": false,
+        "token_estimate": 135
+      },
+      "context_ms": 11.560838000150397,
+      "id": "abstention",
+      "question": "What payroll provider does the company use?"
+    }
+  ],
+  "corpus": {
+    "authored_claims": 6,
+    "conflict": "architecture.database: SQLite, authored valid from 2024-01-01, unreconciled",
+    "documents": 4,
+    "supersession": "architecture.database: MySQL -> PostgreSQL",
+    "versions": 5
+  },
+  "meta": {
+    "commit": "9847ad4ec8f1753d4991a4d21a70e4b3a3135749",
+    "dependencies": {
+      "asyncpg": "0.30.0",
+      "numpy": "2.5.2",
+      "sentence-transformers": "5.7.0",
+      "sqlalchemy": "2.0.51",
+      "torch": "2.13.0"
+    },
+    "dirty": true,
+    "generated_at": "2026-09-26T08:21:25.917608+00:00",
+    "hardware": "x86_64",
+    "iterations": 1,
+    "model": "all-MiniLM-L6-v2",
+    "note": "correctness comparison on a small authored corpus, not a latency benchmark",
+    "os": "Linux-7.2.7-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "postgres": "15.4",
+    "python": "3.14.7",
+    "warmup": "warm"
+  },
+  "summary": {
+    "authoritative_ms_mean": 43.71,
+    "authoritative_pass": 7,
+    "authoritative_total": 7,
+    "context_ms_mean": 19.75,
+    "context_pass": 5,
+    "context_total": 7
+  }
+}

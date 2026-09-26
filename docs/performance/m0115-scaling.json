@@ -1,0 +1,49 @@
+{
+  "points": [
+    {
+      "chunks": 5,
+      "claims": 15,
+      "documents_ingested": 10,
+      "lexical_p50": 5.64,
+      "lexical_p95": 6.08,
+      "ms_per_claim": 7.3,
+      "semantic_p50": 109.43,
+      "semantic_p95": 135.4,
+      "versions": 10
+    },
+    {
+      "chunks": 19,
+      "claims": 55,
+      "documents_ingested": 25,
+      "lexical_p50": 10.68,
+      "lexical_p95": 13.63,
+      "ms_per_claim": 6.66,
+      "semantic_p50": 366.08,
+      "semantic_p95": 403.55,
+      "versions": 25
+    },
+    {
+      "chunks": 39,
+      "claims": 74,
+      "documents_ingested": 45,
+      "lexical_p50": 14.8,
+      "lexical_p95": 17.67,
+      "ms_per_claim": 7.68,
+      "semantic_p50": 568.68,
+      "semantic_p95": 625.71,
+      "versions": 45
+    },
+    {
+      "chunks": 63,
+      "claims": 88,
+      "documents_ingested": 72,
+      "lexical_p50": 19.55,
+      "lexical_p95": 22.78,
+      "ms_per_claim": 7.38,
+      "semantic_p50": 649.44,
+      "semantic_p95": 684.78,
+      "versions": 72
+    }
+  ],
+  "repeats": 3
+}

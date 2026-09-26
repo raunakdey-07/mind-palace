@@ -84,6 +84,10 @@ async def get_corpus_by_name(db: AsyncSession, name: str) -> Optional[dict]:
     return {"id": row[0], "name": row[1], "description": row[2]}
 
 
+class CorpusArchiveConflict(RuntimeError):
+    """A corpus cannot be deleted while its durable archive references it."""
+
+
 class CorpusScopeNotFound(LookupError):
     """The explicitly requested corpus does not exist."""
 
@@ -148,6 +152,24 @@ async def delete_corpus(db: AsyncSession, name: str) -> bool:
     corpus = await get_corpus_by_name(db, name)
     if not corpus:
         return False
+    archive_exists = (
+        await db.execute(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM memory_documents WHERE corpus_id = :cid) "
+                "OR EXISTS (SELECT 1 FROM memory_snapshots WHERE corpus_id = :cid)"
+            ),
+            {"cid": corpus["id"]},
+        )
+    ).scalar_one()
+    if archive_exists:
+        raise CorpusArchiveConflict("corpus contains durable archive history")
+
+    # Remove the derived manifest before documents. The manifest's document
+    # foreign key is nullable, so deleting documents alone would leave a
+    # corpus-less row behind.
+    await db.execute(
+        text("DELETE FROM ingestion_manifest WHERE corpus_id = :cid"), {"cid": corpus["id"]}
+    )
     # chunks cascade from documents; documents cascade from the corpus
     await db.execute(text("DELETE FROM documents WHERE corpus_id = :cid"), {"cid": corpus["id"]})
     await db.execute(text("DELETE FROM corpora WHERE id = :cid"), {"cid": corpus["id"]})

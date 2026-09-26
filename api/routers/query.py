@@ -27,7 +27,7 @@ from api.services.corpora import (
     resolve_corpus_scope,
 )
 from api.services.db import session_scope
-from api.services.embedder import Embedder
+from api.services.embedder import SEMANTIC_DEPENDENCY_ERRORS, Embedder
 from api.services.llm_service import LLMService
 from api.services.retrieval import RetrievalService
 
@@ -112,7 +112,10 @@ async def ask(
         if corpus_id is None:
             results = []
         else:
-            query_vector = embedder.embed_single(request.question)
+            try:
+                query_vector = embedder.embed_single(request.question)
+            except SEMANTIC_DEPENDENCY_ERRORS as exc:
+                raise HTTPException(status_code=503, detail="Semantic model unavailable") from exc
             retrieval = RetrievalService(db)
             try:
                 results = await retrieval.search(
@@ -126,7 +129,7 @@ async def ask(
                     debug=debug,
                     corpus_id=corpus_id,
                 )
-            except OperationalError as exc:
+            except (OperationalError, *SEMANTIC_DEPENDENCY_ERRORS) as exc:
                 raise HTTPException(status_code=503, detail="Search backend unavailable") from exc
 
     if not results:

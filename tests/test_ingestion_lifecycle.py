@@ -372,6 +372,7 @@ async def test_ingest_repo_reports_failures(tmp_path):
 
     assert result["success"] is False  # one file failed
     assert result["failed"] >= 1
+    assert any("unreadable.md" in error for error in result["errors"])
 
     # Ingested rows must be inside the namespaced path and are removed by
     # the fixture; verify no stray top-level entries remain.

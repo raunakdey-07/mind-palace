@@ -18,7 +18,7 @@ from api.services.corpora import (
     resolve_corpus_scope,
 )
 from api.services.db import get_async_db
-from api.services.embedder import Embedder
+from api.services.embedder import SEMANTIC_DEPENDENCY_ERRORS, Embedder
 from api.services.retrieval import RetrievalService
 
 router = APIRouter()
@@ -57,7 +57,11 @@ async def search(
     if corpus_id is None:
         return SearchResponse(query=q, results=[], total=0)
 
-    query_vector = embedder.embed_single(q)
+    try:
+        query_vector = embedder.embed_single(q)
+    except SEMANTIC_DEPENDENCY_ERRORS as exc:
+        raise HTTPException(status_code=503, detail="Semantic model unavailable") from exc
+
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
 
     try:
@@ -73,7 +77,7 @@ async def search(
             rerank=rerank,
             corpus_id=corpus_id,
         )
-    except OperationalError as e:
+    except (OperationalError, *SEMANTIC_DEPENDENCY_ERRORS) as e:
         # Backend unavailable must NOT masquerade as "no results": clients
         # need to distinguish an empty index from an outage.
         raise HTTPException(

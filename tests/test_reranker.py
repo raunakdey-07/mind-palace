@@ -17,13 +17,17 @@ def _reset_singleton():
 
 
 def test_reranker_singleton():
-    """Test that Reranker follows singleton pattern."""
+    """Construction is cheap; the model loads on first scoring call."""
     with patch("api.services.reranker.CrossEncoder") as mock_ce:
         mock_ce.return_value = MagicMock()
+        mock_ce.return_value.predict.return_value = [0.5]
         r1 = Reranker()
         r2 = Reranker()
         assert r1 is r2
-        # Model should only be loaded once
+        mock_ce.assert_not_called()
+
+        r1.score("query", ["document"])
+        r2.score("query", ["document"])
         mock_ce.assert_called_once()
 
 
@@ -67,7 +71,8 @@ def test_reranker_uses_env_model():
     with patch.dict(os.environ, {"RERANKER_MODEL": "custom-model"}):
         with patch("api.services.reranker.CrossEncoder") as mock_ce:
             mock_ce.return_value = MagicMock()
-            Reranker()
+            mock_ce.return_value.predict.return_value = [0.5]
+            Reranker().score("query", ["document"])
             mock_ce.assert_called_once_with("custom-model")
 
 
@@ -77,5 +82,6 @@ def test_reranker_default_model():
     with patch.dict(os.environ, env, clear=True):
         with patch("api.services.reranker.CrossEncoder") as mock_ce:
             mock_ce.return_value = MagicMock()
-            Reranker()
+            mock_ce.return_value.predict.return_value = [0.5]
+            Reranker().score("query", ["document"])
             mock_ce.assert_called_once_with("cross-encoder/ms-marco-MiniLM-L-6-v2")

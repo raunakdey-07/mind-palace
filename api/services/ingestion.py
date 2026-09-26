@@ -30,6 +30,13 @@ from api.services.repository import (
 
 # Fallback document type when frontmatter is missing or invalid.
 DEFAULT_DOC_TYPE = "note"
+MAX_SYNC_ERRORS = 50
+
+
+def _sync_error(path: str, exc: Exception) -> str:
+    """Return a bounded, non-sensitive sync failure description."""
+    reason = getattr(exc, "reason", None) or type(exc).__name__
+    return f"{path}: {reason}"
 
 
 class IngestionService:
@@ -265,6 +272,7 @@ class IngestionService:
 
         added = changed = unchanged = deleted = failed = 0
         total_chunks = 0
+        errors: list[str] = []
         md_files = sorted(repo_path.rglob("*.md"))
         source_paths: set[str] = set()
 
@@ -282,8 +290,12 @@ class IngestionService:
 
                 if not result["success"]:
                     failed += 1
+                    reason = str(result.get("message") or "ingestion failed")
+                    if len(errors) < MAX_SYNC_ERRORS:
+                        errors.append(f"{rel_path}: {reason}")
                     logging.getLogger(__name__).warning(
-                        "document_ingestion_failed", extra={"corpus_id": corpus_id}
+                        "document_ingestion_failed",
+                        extra={"corpus_id": corpus_id, "path": rel_path, "reason": reason},
                     )
                     continue
 
@@ -296,9 +308,17 @@ class IngestionService:
                 total_chunks += result.get("chunk_count", 0)
             except Exception as e:
                 failed += 1
+                reason = _sync_error(rel_path, e)
+                if len(errors) < MAX_SYNC_ERRORS:
+                    errors.append(reason)
                 logging.getLogger(__name__).warning(
                     "document_ingestion_failed",
-                    extra={"corpus_id": corpus_id, "error_type": type(e).__name__},
+                    extra={
+                        "corpus_id": corpus_id,
+                        "path": rel_path,
+                        "error_type": type(e).__name__,
+                        "reason": reason,
+                    },
                 )
 
         if delete_removed:
@@ -328,6 +348,7 @@ class IngestionService:
                 f"sync: +{added} ~{changed} ={unchanged} -{deleted} "
                 f"!{failed}, {total_chunks} chunks"
             ),
+            "errors": errors,
         }
 
     @staticmethod

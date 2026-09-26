@@ -119,6 +119,7 @@ class SyncResponse(BaseModel):
     chunk_count: int = 0
     duration_ms: int = 0
     message: str = ""
+    errors: list[str] = Field(default_factory=list)
 
 
 # --- Context packing ---

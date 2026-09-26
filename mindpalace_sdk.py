@@ -5,7 +5,7 @@
 
 Minimal, typed client over the Mind Palace core. The intended experience:
 
-    from mindpalace import MindPalace
+    from mindpalace_sdk import MindPalace
 
     mp = MindPalace("my-corpus")
     mp.sync("./docs")
@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
@@ -52,6 +52,7 @@ class SyncSummary:
     failed: int = 0
     chunk_count: int = 0
     duration_ms: int = 0
+    errors: list[str] = field(default_factory=list)
 
 
 class CorpusNotFoundError(Exception):
@@ -413,6 +414,7 @@ class MindPalace:
             failed=result["failed"],
             chunk_count=result["chunk_count"],
             duration_ms=result["duration_ms"],
+            errors=result.get("errors", []),
         )
 
     def context(

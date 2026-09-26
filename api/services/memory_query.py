@@ -197,6 +197,6 @@ async def query(full: MemoryResponse, request: MemoryRequest) -> MemoryResponse:
 
     try:
         result = await to_thread(retrieve)
-    except (OSError, RuntimeError, ValueError) as exc:
+    except (OSError, RuntimeError, ValueError, ImportError) as exc:
         raise MemoryError("memory_unavailable", "Memory embedding model unavailable", 503) from exc
     return bounded_pack(result, request.budget)

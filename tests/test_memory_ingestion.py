@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from api.services import ingestion, memory
+from api.services.rehydrate import rehydrate_corpus
 from api.services.retrieval import RetrievalService
 
 
@@ -176,6 +177,69 @@ async def test_memory_sync_deletion_restore_and_metadata_only(memory_ingestion_d
 
 
 @pytest.mark.asyncio
+async def test_rehydrate_rebuilds_live_projection_without_new_archive_version(
+    memory_ingestion_db, monkeypatch
+):
+    sessions, corpus = memory_ingestion_db
+    service = ingestion.IngestionService(memory_enabled=True)
+    first = await service.ingest_file(source("Redis"), "architecture.md", corpus)
+
+    async with sessions() as db:
+        await db.execute(text("DELETE FROM ingestion_manifest WHERE corpus_id = :c"), {"c": corpus})
+        await db.execute(text("DELETE FROM documents WHERE corpus_id = :c"), {"c": corpus})
+        await db.commit()
+
+    async def fail_record(*args, **kwargs):
+        raise AssertionError("rehydration must not append an archive version")
+
+    monkeypatch.setattr(memory, "record_version", fail_record)
+    async with sessions() as db, db.begin():
+        result = await rehydrate_corpus(db, corpus, embedder=FixedEmbedder())
+
+    assert result["rebuilt_documents"] == 1
+    assert result["rebuilt_chunks"] == 1
+    async with sessions() as db:
+        document = (
+            await db.execute(
+                text("SELECT id FROM documents WHERE corpus_id = :c AND path = :p"),
+                {"c": corpus, "p": "architecture.md"},
+            )
+        ).scalar_one()
+        assert document == first["document_id"]
+        live = await RetrievalService(db).search(
+            FixedEmbedder().embed(["database"])[0], corpus_id=corpus
+        )
+        assert [row.text for row in live] == ["The primary database is Redis."]
+        assert len(await memory.history(db, corpus)) == 1
+
+
+async def test_rehydrate_removes_deleted_paths_but_keeps_live_only_paths(memory_ingestion_db):
+    sessions, corpus = memory_ingestion_db
+    service = ingestion.IngestionService(memory_enabled=True)
+    await service.ingest_file(source("Redis"), "architecture.md", corpus)
+    await service.ingest_file(source("PostgreSQL"), "other.md", corpus)
+    async with sessions() as db, db.begin():
+        await memory.record_deletion(db, corpus, "architecture.md")
+
+    async with sessions() as db, db.begin():
+        result = await rehydrate_corpus(db, corpus, embedder=FixedEmbedder())
+
+    assert result["removed_documents"] == 1
+    async with sessions() as db:
+        assert not (
+            await db.execute(
+                text("SELECT 1 FROM documents WHERE corpus_id = :c AND path = :p"),
+                {"c": corpus, "p": "architecture.md"},
+            )
+        ).first()
+        assert (
+            await db.execute(
+                text("SELECT 1 FROM documents WHERE corpus_id = :c AND path = :p"),
+                {"c": corpus, "p": "other.md"},
+            )
+        ).first()
+
+
 async def test_failed_memory_write_rolls_back_live_chunks_manifest_and_archive(
     memory_ingestion_db, monkeypatch
 ):

@@ -24,7 +24,7 @@ from api.services.corpora import (
     resolve_corpus_scope,
 )
 from api.services.db import get_async_db
-from api.services.embedder import Embedder
+from api.services.embedder import SEMANTIC_DEPENDENCY_ERRORS, Embedder
 from api.services.observability import OperationTrace
 from api.services.retrieval import RetrievalService
 
@@ -82,7 +82,10 @@ async def get_context(
 
     trace = OperationTrace(operation="context", corpus=selected_corpus, strategy=strategy)
     t0 = time.perf_counter()
-    query_vector = embedder.embed_single(q)
+    try:
+        query_vector = embedder.embed_single(q)
+    except SEMANTIC_DEPENDENCY_ERRORS as exc:
+        raise HTTPException(status_code=503, detail="Semantic model unavailable") from exc
     trace.embedding_ms = (time.perf_counter() - t0) * 1000
 
     try:
@@ -97,8 +100,8 @@ async def get_context(
         )
         trace.retrieval_ms = (time.perf_counter() - t0) * 1000 - trace.embedding_ms
         trace.candidate_count = len(results)
-    except OperationalError as e:
-        raise HTTPException(status_code=503, detail="Database unavailable") from e
+    except (OperationalError, *SEMANTIC_DEPENDENCY_ERRORS) as e:
+        raise HTTPException(status_code=503, detail="Search backend unavailable") from e
 
     pack = pack_context(q, results, budget_tokens=budget_tokens, strategy=strategy)
     trace.mark_pack(pack.token_estimate, pack.truncated)

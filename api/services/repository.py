@@ -34,6 +34,7 @@ async def upsert_document(
     corpus_id: str = DEFAULT_CORPUS_ID,
     *,
     force: bool = False,
+    document_id: str | None = None,
 ) -> str:
     """Insert or update a document and return its (deterministic) ID.
 
@@ -43,7 +44,7 @@ async def upsert_document(
     references stay valid.
     """
     doc_hash = content_hash(body)
-    doc_id = (
+    doc_id = document_id or (
         deterministic_doc_id(path, body)
         if corpus_id == DEFAULT_CORPUS_ID
         else content_hash(f"{corpus_id}:{path}")

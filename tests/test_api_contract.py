@@ -15,7 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.exc import OperationalError
 
 from api.main import app
-from api.services.corpora import CorpusScopeNotFound
+from api.services.corpora import CorpusArchiveConflict, CorpusScopeNotFound
 
 
 @pytest.mark.asyncio
@@ -82,6 +82,20 @@ async def test_delete_missing_corpus_404():
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.delete("/api/corpora/nope")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_corpus_with_archive_is_409():
+    transport = ASGITransport(app=app)
+    with patch(
+        "api.services.corpora.delete_corpus",
+        new_callable=AsyncMock,
+        side_effect=CorpusArchiveConflict("corpus contains durable archive history"),
+    ):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.delete("/api/corpora/archived")
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "corpus contains durable archive history"
 
 
 @pytest.mark.asyncio

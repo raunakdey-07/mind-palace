@@ -19,6 +19,7 @@ from api.models.schemas import (
     SyncResponse,
 )
 from api.services import corpora
+from api.services.corpora import CorpusArchiveConflict
 from api.services.db import get_async_db
 from api.services.ingestion import IngestionService
 
@@ -66,6 +67,8 @@ async def delete_corpus(name: str, db: DbSession = None) -> None:
     """Delete a corpus and all its documents/chunks."""
     try:
         deleted = await corpora.delete_corpus(db, name)
+    except CorpusArchiveConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except OperationalError as e:
         raise HTTPException(status_code=503, detail="Database unavailable") from e
     if not deleted:

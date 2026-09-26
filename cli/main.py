@@ -281,6 +281,40 @@ def timeline(
 
 
 @app.command()
+def reindex(
+    corpus: str = typer.Argument(..., help="Corpus name to rebuild from the archive"),
+) -> None:
+    """Rebuild live search rows from archived source versions.
+
+    This writes only the derived live projection. It does not create memory
+    versions, claims, or feed events.
+    """
+    import asyncio
+    import json
+
+    from api.services.corpora import get_corpus_by_name
+    from api.services.db import async_engine, session_scope
+    from api.services.rehydrate import rehydrate_corpus
+
+    async def run() -> dict:
+        try:
+            async with session_scope() as db, db.begin():
+                corpus_row = await get_corpus_by_name(db, corpus)
+                if not corpus_row:
+                    raise ValueError(f"corpus '{corpus}' not found")
+                return await rehydrate_corpus(db, corpus_row["id"])
+        finally:
+            await async_engine.dispose()
+
+    try:
+        result = asyncio.run(run())
+    except (ValueError, OSError, RuntimeError) as exc:
+        typer.echo(f"[ERROR] Reindex failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, sort_keys=True))
+
+
+@app.command()
 def doctor() -> None:
     """Run system health checks."""
 

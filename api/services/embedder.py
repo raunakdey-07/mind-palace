@@ -14,6 +14,10 @@ from typing import Any, ClassVar, Self
 
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
 
+# Model and reranker failures share one public dependency-error contract. The
+# routes translate these to a sanitized 503 instead of exposing provider details.
+SEMANTIC_DEPENDENCY_ERRORS = (OSError, RuntimeError, ValueError, ImportError)
+
 
 class Embedder:
     """Singleton wrapper around a Sentence-Transformer model."""

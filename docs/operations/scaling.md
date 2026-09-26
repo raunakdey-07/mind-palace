@@ -136,6 +136,13 @@ After the change, `api.main` imports without Torch, `sentence_transformers`, or
 moved from 265.914 ms to 336.643 ms, which the report records as noise-level
 variation rather than a regression.
 
+A claim representation cache followed in migration `007_claim_embedding_cache`.
+It is L2: every row is derived from immutable claim text, it is filled by
+ingestion and by `mindpalace reindex`, and the read path only reads. Measured on
+the 202-question corpus, warm p50 falls from 502.94 ms to 43.24 ms at 88 claims
+and every authoritative pack digest is unchanged. See
+[`docs/research/retrieval-routing.md`](../research/retrieval-routing.md).
+
 The cost did not disappear; it moved to first use. `Embedder()` construction is
 0.015 ms, the first embedding is 5,110.624 ms, a warm embedding is 10.388 ms, and
 the dimension is 384. The model then stays resident, and `_model_lock` keeps

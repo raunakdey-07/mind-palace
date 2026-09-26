@@ -75,9 +75,15 @@ async def destroy_l2(schema: str, corpus_id: str) -> None:
                 text("DELETE FROM ingestion_manifest WHERE corpus_id = :c"), {"c": corpus_id}
             )
             await conn.execute(text("DELETE FROM documents WHERE corpus_id = :c"), {"c": corpus_id})
+            # The claim representation cache is L2 too, so destroying L2 means
+            # destroying it as well.
+            await conn.execute(
+                text("DELETE FROM memory_claim_embeddings WHERE corpus_id = :c"), {"c": corpus_id}
+            )
         rows = await conn.execute(
             text(
                 "SELECT (SELECT count(*) FROM documents WHERE corpus_id = :c) AS docs, "
+                "(SELECT count(*) FROM memory_claim_embeddings WHERE corpus_id = :c) AS cache, "
                 "(SELECT count(*) FROM memory_versions WHERE corpus_id = :c) AS versions, "
                 "(SELECT count(*) FROM memory_claims WHERE corpus_id = :c) AS claims"
             ),

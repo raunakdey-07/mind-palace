@@ -1,0 +1,49 @@
+{
+  "points": [
+    {
+      "cache_rows": 15,
+      "claims": 15,
+      "digests_identical": true,
+      "documents": 10,
+      "speedup": 4.68,
+      "uncached_ms_per_claim": 6.23,
+      "uncached_p50": 93.52,
+      "warm_ms_per_claim": 1.33,
+      "warm_p50": 19.99
+    },
+    {
+      "cache_rows": 55,
+      "claims": 55,
+      "digests_identical": true,
+      "documents": 25,
+      "speedup": 12.08,
+      "uncached_ms_per_claim": 6.3,
+      "uncached_p50": 346.63,
+      "warm_ms_per_claim": 0.52,
+      "warm_p50": 28.7
+    },
+    {
+      "cache_rows": 74,
+      "claims": 74,
+      "digests_identical": true,
+      "documents": 45,
+      "speedup": 14.24,
+      "uncached_ms_per_claim": 6.72,
+      "uncached_p50": 497.55,
+      "warm_ms_per_claim": 0.47,
+      "warm_p50": 34.94
+    },
+    {
+      "cache_rows": 88,
+      "claims": 88,
+      "digests_identical": true,
+      "documents": 72,
+      "speedup": 13.36,
+      "uncached_ms_per_claim": 6.56,
+      "uncached_p50": 577.65,
+      "warm_ms_per_claim": 0.49,
+      "warm_p50": 43.24
+    }
+  ],
+  "repeats": 3
+}

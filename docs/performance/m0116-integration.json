@@ -1,0 +1,43 @@
+{
+  "concepts_not_required": [
+    "database schema",
+    "embeddings",
+    "RRF",
+    "rerankers",
+    "MCP",
+    "claims",
+    "evidence offsets",
+    "snapshots",
+    "budget units"
+  ],
+  "concepts_required": [
+    "corpus: a named namespace the memory is written to",
+    "a question in natural language",
+    "the pack: current, historical, conflicting, and the evidence behind each"
+  ],
+  "fastapi_path": {
+    "lines": 15,
+    "non_blank": 15
+  },
+  "live": {
+    "claims": 1,
+    "conflicts": 0,
+    "evidence": 1,
+    "ms": 25.45176500279922,
+    "response_carries_status": false,
+    "status": "resolved"
+  },
+  "optional_env": [
+    "MEMORY_TEST_DATABASE_URL",
+    "DATABASE_URL",
+    "HF_HUB_OFFLINE"
+  ],
+  "python_path": {
+    "lines": 7,
+    "non_blank": 7
+  },
+  "required_env": [
+    "DATABASE_URL (or MEMORY_TEST_DATABASE_URL)"
+  ],
+  "sdk_import_loads": "none"
+}

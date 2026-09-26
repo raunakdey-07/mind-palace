@@ -279,6 +279,10 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
         query=full.query,
         corpus=full.corpus,
         state=full.state,
+        # Absence is a stated answer. It must survive selection, or a bounded
+        # pack looks identical to an empty envelope and a consumer cannot tell
+        # "nothing relevant" from "nothing sent".
+        constraints=list(full.constraints),
         truncated=True,
     )
     if len(result.canonical_json()) > budget:

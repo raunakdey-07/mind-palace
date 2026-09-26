@@ -16,8 +16,20 @@ from api.services.memory_public import MemoryError, _attach, _claims, bounded_pa
 
 
 def reference_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
-    """Frozen pre-optimization bounded_pack; do not delegate to production selection."""
-    result = MemoryResponse(query=full.query, corpus=full.corpus, state=full.state, truncated=True)
+    """Frozen pre-optimization bounded_pack; do not delegate to production selection.
+
+    Envelope note: the oracle carries ``constraints`` because production does.
+    The absence marker must survive selection, so a bounded answer to an
+    unanswerable question stays distinguishable from an empty envelope. The
+    selection algorithm below is unchanged and is what this oracle pins.
+    """
+    result = MemoryResponse(
+        query=full.query,
+        corpus=full.corpus,
+        state=full.state,
+        constraints=list(full.constraints),
+        truncated=True,
+    )
     if len(result.canonical_json()) > budget:
         raise MemoryError("invalid_budget", "Budget cannot fit the response envelope", 422)
     evidence = {e.id: e for e in full.evidence}

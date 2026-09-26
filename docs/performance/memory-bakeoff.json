@@ -8,7 +8,7 @@
         ],
         "pass": true
       },
-      "authoritative_ms": 61.75636200350709,
+      "authoritative_ms": 76.78526199742919,
       "class": "current-state",
       "context": {
         "chunks": 4,
@@ -18,13 +18,24 @@
         "pass": true,
         "token_estimate": 135
       },
-      "context_ms": 17.27836400095839,
+      "context_ms": 24.902367003960535,
       "id": "current",
-      "question": "What is the current database?"
+      "question": "What is the current database?",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 66
+      },
+      "unified_ms": 68.70003299991367
     },
     {
       "as_of": {
-        "cutoff": "2026-09-26 08:21:30.877117+00:00",
+        "cutoff": "2026-09-26 09:04:12.971672+00:00",
         "saw_mysql": true,
         "saw_postgresql": false
       },
@@ -33,8 +44,8 @@
         "historical": 1,
         "pass": true
       },
-      "authoritative_asof_ms": 17.836282000644132,
-      "authoritative_ms": 44.136496995633934,
+      "authoritative_asof_ms": 21.77797199692577,
+      "authoritative_ms": 46.96670600242214,
       "class": "historical",
       "context": {
         "chunks": 4,
@@ -44,9 +55,20 @@
         "pass": true,
         "token_estimate": 135
       },
-      "context_ms": 14.42316299653612,
+      "context_ms": 15.679623997129966,
       "id": "historical",
-      "question": "What database did the project use previously?"
+      "question": "What database did the project use previously?",
+      "unified": {
+        "changes": 3,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 128
+      },
+      "unified_ms": 64.4497949979268
     },
     {
       "authoritative": {
@@ -54,7 +76,7 @@
         "changes": 3,
         "pass": true
       },
-      "authoritative_ms": 39.633551001315936,
+      "authoritative_ms": 49.1908410040196,
       "class": "change",
       "context": {
         "chunks": 4,
@@ -64,9 +86,20 @@
         "pass": false,
         "token_estimate": 135
       },
-      "context_ms": 14.148137001029681,
+      "context_ms": 17.009679999318905,
       "id": "change",
-      "question": "When did the database change?"
+      "question": "When did the database change?",
+      "unified": {
+        "changes": 3,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 128
+      },
+      "unified_ms": 66.94790400069905
     },
     {
       "authoritative": {
@@ -74,7 +107,7 @@
         "conflicts": 1,
         "pass": true
       },
-      "authoritative_ms": 39.09527100040577,
+      "authoritative_ms": 47.999223999795504,
       "class": "conflict",
       "context": {
         "chunks": 4,
@@ -84,9 +117,20 @@
         "pass": true,
         "token_estimate": 135
       },
-      "context_ms": 15.173362000496127,
+      "context_ms": 17.222340000444092,
       "id": "conflict",
-      "question": "What sources disagree about the database?"
+      "question": "What sources disagree about the database?",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 66
+      },
+      "unified_ms": 78.62765000027139
     },
     {
       "authoritative": {
@@ -94,7 +138,7 @@
         "evidence": 3,
         "pass": true
       },
-      "authoritative_ms": 37.16483600146603,
+      "authoritative_ms": 62.46837499929825,
       "class": "provenance",
       "context": {
         "chunks": 4,
@@ -104,9 +148,20 @@
         "pass": true,
         "token_estimate": 135
       },
-      "context_ms": 12.68148300005123,
+      "context_ms": 15.44218799972441,
       "id": "provenance",
-      "question": "What evidence supports the current database?"
+      "question": "What evidence supports the current database?",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 87
+      },
+      "unified_ms": 76.39744300104212
     },
     {
       "authoritative": {
@@ -115,7 +170,7 @@
         "current": 1,
         "pass": true
       },
-      "authoritative_ms": 37.9612510005245,
+      "authoritative_ms": 53.49301700334763,
       "class": "why",
       "context": {
         "chunks": 4,
@@ -125,9 +180,20 @@
         "pass": true,
         "token_estimate": 135
       },
-      "context_ms": 13.49695399403572,
+      "context_ms": 14.063209993764758,
       "id": "why",
-      "question": "Why was the database changed?"
+      "question": "Why was the database changed?",
+      "unified": {
+        "changes": 4,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 1,
+        "memories": 1,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 193
+      },
+      "unified_ms": 61.72819600033108
     },
     {
       "authoritative": {
@@ -136,7 +202,7 @@
         "invented": false,
         "pass": true
       },
-      "authoritative_ms": 46.22103099973174,
+      "authoritative_ms": 45.33228699438041,
       "class": "abstention",
       "context": {
         "abstained": false,
@@ -144,9 +210,175 @@
         "pass": false,
         "token_estimate": 135
       },
-      "context_ms": 11.560838000150397,
+      "context_ms": 14.894018997438252,
       "id": "abstention",
-      "question": "What payroll provider does the company use?"
+      "question": "What payroll provider does the company use?",
+      "unified": {
+        "abstained": true,
+        "pass": true,
+        "status": "no_relevant_memory"
+      },
+      "unified_ms": 65.84682799439179
+    },
+    {
+      "authoritative": {
+        "budget_chars": 4971,
+        "constraints": 0,
+        "current": 1,
+        "pass": true
+      },
+      "authoritative_ms": 59.76929900498362,
+      "class": "multi-topic",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 14.812405999691691,
+      "id": "multi_topic",
+      "question": "What are the primary database and the deployment constraints?",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 1,
+        "memories": 1,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 112
+      },
+      "unified_ms": 69.0969280040008
+    },
+    {
+      "authoritative": {
+        "budget_chars": 4933,
+        "constraints": 0,
+        "current": 0,
+        "pass": true
+      },
+      "authoritative_ms": 45.70270299882395,
+      "class": "source-fidelity",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 17.54784099466633,
+      "id": "source_fidelity",
+      "question": "Quote the exact evidence for the current database.",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 87
+      },
+      "unified_ms": 60.70909299887717
+    },
+    {
+      "authoritative": {
+        "budget_chars": 3472,
+        "constraints": 0,
+        "current": 0,
+        "pass": true
+      },
+      "authoritative_ms": 45.925161000923254,
+      "class": "short-query",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 13.651095992827322,
+      "id": "short_query",
+      "question": "database?",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 66
+      },
+      "unified_ms": 59.24714900174877
+    },
+    {
+      "authoritative": {
+        "budget_chars": 7965,
+        "constraints": 0,
+        "current": 0,
+        "pass": true
+      },
+      "authoritative_ms": 74.2770630022278,
+      "class": "long-query",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 27.702132996637374,
+      "id": "long_query",
+      "question": "I am about to modify the storage layer of the API tier. Before I make that change I need to know which database the service currently talks to, what it used to talk to, and which document records that decision.",
+      "unified": {
+        "changes": 3,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 0,
+        "memories": 0,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 128
+      },
+      "unified_ms": 119.53380900376942
+    },
+    {
+      "authoritative": {
+        "budget_chars": 5066,
+        "constraints": 0,
+        "current": 1,
+        "pass": true
+      },
+      "authoritative_ms": 68.0319699968095,
+      "class": "noisy-query",
+      "context": {
+        "chunks": 4,
+        "has_conflict_field": false,
+        "has_evidence_field": false,
+        "has_validity_field": false,
+        "pass": true,
+        "token_estimate": 135
+      },
+      "context_ms": 20.703854999737814,
+      "id": "noisy_query",
+      "question": "database database database postgres postgres migrate migration rollback index vacuum table which what current",
+      "unified": {
+        "changes": 0,
+        "chunks": 4,
+        "conflicts": 1,
+        "evidence": 1,
+        "memories": 1,
+        "pass": true,
+        "status": "conflicting",
+        "token_estimate": 120
+      },
+      "unified_ms": 80.48123999469681
     }
   ],
   "corpus": {
@@ -157,7 +389,7 @@
     "versions": 5
   },
   "meta": {
-    "commit": "9847ad4ec8f1753d4991a4d21a70e4b3a3135749",
+    "commit": "4e2c3de818e0472d482b304409938137e6e259e6",
     "dependencies": {
       "asyncpg": "0.30.0",
       "numpy": "2.5.2",
@@ -166,7 +398,7 @@
       "torch": "2.13.0"
     },
     "dirty": true,
-    "generated_at": "2026-09-26T08:21:25.917608+00:00",
+    "generated_at": "2026-09-26T09:04:07.962192+00:00",
     "hardware": "x86_64",
     "iterations": 1,
     "model": "all-MiniLM-L6-v2",
@@ -177,11 +409,12 @@
     "warmup": "warm"
   },
   "summary": {
-    "authoritative_ms_mean": 43.71,
-    "authoritative_pass": 7,
-    "authoritative_total": 7,
-    "context_ms_mean": 19.75,
-    "context_pass": 5,
-    "context_total": 7
+    "A_context_pass": 10,
+    "A_ms_mean": 17.8,
+    "B_authoritative_pass": 12,
+    "B_ms_mean": 56.33,
+    "C_ms_mean": 72.65,
+    "C_unified_pass": 12,
+    "total": 12
   }
 }

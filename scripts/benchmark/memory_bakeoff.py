@@ -187,8 +187,49 @@ CASES = [
         "question": "What payroll provider does the company use?",
         "class": "abstention",
         "expect": None,
-        "absent": "payroll",
         "intent": "auto",
+    },
+    {
+        "id": "multi_topic",
+        "question": "What are the primary database and the deployment constraints?",
+        "class": "multi-topic",
+        "expect": "postgresql",
+        "intent": "current",
+    },
+    {
+        "id": "source_fidelity",
+        "question": "Quote the exact evidence for the current database.",
+        "class": "source-fidelity",
+        "expect": "primary database is postgresql",
+        "intent": "provenance",
+    },
+    {
+        "id": "short_query",
+        "question": "database?",
+        "class": "short-query",
+        "expect": "postgresql",
+        "intent": "current",
+    },
+    {
+        "id": "long_query",
+        "question": (
+            "I am about to modify the storage layer of the API tier. Before I make "
+            "that change I need to know which database the service currently talks "
+            "to, what it used to talk to, and which document records that decision."
+        ),
+        "class": "long-query",
+        "expect": "postgresql",
+        "intent": "auto",
+    },
+    {
+        "id": "noisy_query",
+        "question": (
+            "database database database postgres postgres migrate migration rollback "
+            "index vacuum table which what current"
+        ),
+        "class": "noisy-query",
+        "expect": "postgresql",
+        "intent": "current",
     },
 ]
 
@@ -299,10 +340,10 @@ def score_authoritative(response, case: dict) -> dict:
 
 
 def score_context(pack, case: dict) -> dict:
-    """`context()` returns ranked text. Score only whether the answer is present.
+    """Adapter A: ranked text. Score only whether the answer is present.
 
     It has no claims, conflicts, validity, or evidence fields at all, so the
-    structural dimensions are reported as unavailable rather than scored.
+    structural dimensions are recorded as unavailable rather than scored.
     """
     body = (pack.context or "").casefold()
     if case["class"] == "abstention":
@@ -321,6 +362,45 @@ def score_context(pack, case: dict) -> dict:
         "has_evidence_field": False,
         "has_validity_field": False,
     }
+
+
+def score_unified(pack, case: dict) -> dict:
+    """Adapter C: the unified context pack.
+
+    Scored on the same dimensions as the authoritative query, because the claim
+    is that one product now carries both the answer and the structure.
+    """
+    body = (pack.context or "").casefold()
+    if case["class"] == "abstention":
+        abstained = pack.status == "no_relevant_memory" and not pack.memories
+        return {"pass": abstained, "abstained": abstained, "status": pack.status}
+    got_expect = case["expect"] is None or case["expect"].casefold() in body
+    return {
+        "pass": got_expect,
+        "status": pack.status,
+        "memories": len(pack.memories),
+        "conflicts": len(pack.conflicts),
+        "changes": len(pack.changes),
+        "evidence": sum(len(m.evidence) for m in pack.memories),
+        "chunks": len(pack.chunks),
+        "token_estimate": pack.token_estimate,
+    }
+
+
+async def unified(db, corpus_name: str, case: dict, embedder) -> object:
+    """Adapter C: the new unified product surface."""
+    from api.services.context_service import build_context
+
+    pack, _ = await build_context(
+        db,
+        corpus_name,
+        case["question"],
+        budget_tokens=4096,
+        k=8,
+        strategy="hybrid_rrf",
+        intent=case["intent"],
+    )
+    return pack
 
 
 # -- run ----------------------------------------------------------------------
@@ -413,7 +493,7 @@ async def run(url: str, args) -> dict:
                 entry["authoritative"] = score_authoritative(response, case)
                 entry["authoritative"]["budget_chars"] = len(response.canonical_json())
 
-                # Product context path
+                # Product context path (adapter A, the previous behaviour)
                 if args.no_model:
                     entry["context"] = {"pass": False, "error": "embedding model unavailable"}
                 else:
@@ -425,6 +505,15 @@ async def run(url: str, args) -> dict:
                         entry["context_ms"] = (time.perf_counter() - t0) * 1000
                     entry["context"] = score_context(pack, case)
                     entry["context"]["token_estimate"] = pack.token_estimate
+
+                # Unified context path (adapter C, the new product)
+                async with AsyncSession(
+                    bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
+                ) as db:
+                    t0 = time.perf_counter()
+                    cpack = await unified(db, schema, case, embedder)
+                    entry["unified_ms"] = (time.perf_counter() - t0) * 1000
+                entry["unified"] = score_unified(cpack, case)
 
                 # As-of case: place the cutoff between the two storage versions.
                 if case["id"] == "historical":
@@ -446,15 +535,13 @@ async def run(url: str, args) -> dict:
                 report["cases"].append(entry)
                 auth_ok = "PASS" if entry["authoritative"]["pass"] else "fail"
                 ctx_ok = "PASS" if entry.get("context", {}).get("pass") else "fail"
+                uni_ok = "PASS" if entry["unified"]["pass"] else "fail"
                 print(
-                    f"  {case['id']:<12} authoritative={auth_ok} "
-                    f"({entry['authoritative_ms']:.0f} ms)  "
-                    f"context={ctx_ok}"
-                    + (
-                        f" ({entry.get('context_ms', 0):.0f} ms)"
-                        if not args.no_model
-                        else " (no model)"
-                    ),
+                    f"  {case['id']:<15} A={ctx_ok:<4} B={auth_ok:<4} C={uni_ok:<4}"
+                    f"  A={entry.get('context_ms', 0):.0f}ms"
+                    f" B={entry['authoritative_ms']:.0f}ms"
+                    f" C={entry['unified_ms']:.0f}ms"
+                    f"  status={entry['unified'].get('status')}",
                     flush=True,
                 )
 
@@ -467,21 +554,21 @@ async def run(url: str, args) -> dict:
 
 def summarise(report: dict) -> dict:
     cases = report["cases"]
-    auth = [c for c in cases if c["authoritative"]["pass"]]
-    ctx = [c for c in cases if c.get("context", {}).get("pass")]
     report["summary"] = {
-        "authoritative_pass": len(auth),
-        "authoritative_total": len(cases),
-        "context_pass": len(ctx),
-        "context_total": len(cases),
-        "authoritative_ms_mean": round(sum(c["authoritative_ms"] for c in cases) / len(cases), 2),
-        "context_ms_mean": (
-            round(sum(c["context_ms"] for c in cases if "context_ms" in c) / len(ctx), 2)
-            if any("context_ms" in c for c in cases)
-            else None
-        ),
+        "A_context_pass": sum(1 for c in cases if c.get("context", {}).get("pass")),
+        "B_authoritative_pass": sum(1 for c in cases if c["authoritative"]["pass"]),
+        "C_unified_pass": sum(1 for c in cases if c["unified"]["pass"]),
+        "total": len(cases),
+        "A_ms_mean": _mean(cases, "context_ms"),
+        "B_ms_mean": _mean(cases, "authoritative_ms"),
+        "C_ms_mean": _mean(cases, "unified_ms"),
     }
     return report
+
+
+def _mean(cases, key) -> float | None:
+    values = [c[key] for c in cases if key in c]
+    return round(sum(values) / len(values), 2) if values else None
 
 
 def environment(args) -> dict:
@@ -539,9 +626,13 @@ def main() -> int:
     Path(args.out).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     s = report["summary"]
     print()
-    print(f"authoritative : {s['authoritative_pass']}/{s['authoritative_total']} cases pass")
-    print(f"context()     : {s['context_pass']}/{s['context_total']} cases pass")
-    print(f"written       : {args.out}")
+    print(f"A  old context()      : {s['A_context_pass']}/{s['total']} pass  {s['A_ms_mean']} ms")
+    print(
+        f"B  authoritative query: {s['B_authoritative_pass']}/{s['total']} pass"
+        f"  {s['B_ms_mean']} ms"
+    )
+    print(f"C  unified context()  : {s['C_unified_pass']}/{s['total']} pass  {s['C_ms_mean']} ms")
+    print(f"written               : {args.out}")
     return 0
 
 

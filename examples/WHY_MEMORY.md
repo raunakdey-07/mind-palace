@@ -27,10 +27,13 @@ Corpus memory adds a different set of questions:
 | Which sources disagree, without silently choosing a winner? | Conflict groups in memory responses |
 | Can I replay the same captured state after later syncs? | `snapshot`, `replay` |
 | What evidence-backed selection fits this envelope budget? | `pack` |
+| What should my agent know right now, with evidence and conflicts? | `context()` |
 
-`/search`, `context()`, and default `/api/query/ask` still use the live index.
-`memory.pack()` does not replace semantic retrieval: it projects explicitly
-authored claims using lexical AND matching. See the [API contract](MEMORY_API.md).
+`/search` and default `/api/query/ask` use the live index. `context()` resolves the
+question against the archive first and adds ranked live chunks as raw material, so a
+conflicted key arrives as a conflict rather than as the latest writer's text.
+`memory.pack()` remains the exact character-bounded canonical envelope for explicitly
+authored claims. See the [API contract](MEMORY_API.md).
 
 ## A concrete evolving corpus, not invented output
 

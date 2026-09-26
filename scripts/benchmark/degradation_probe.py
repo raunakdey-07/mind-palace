@@ -95,6 +95,7 @@ async def probe(schema: str) -> int:
 
     from api.models.memory import MemoryRequest
     from api.services.context_packer import pack_context
+    from api.services.context_service import build_context
     from api.services.corpora import get_corpus_by_name
     from api.services.embedder import SEMANTIC_DEPENDENCY_ERRORS, Embedder
     from api.services.memory_public import execute_in_session
@@ -171,6 +172,13 @@ async def probe(schema: str) -> int:
                 pack = pack_context(question, found, 4096, "hybrid_rrf")
                 return f"{len(pack.chunks)} chunks, {pack.token_estimate} tokens"
 
+            async def unified_context(db):
+                pack, _ = await build_context(db, schema, question, budget_tokens=4096)
+                return (
+                    f"status={pack.status}, {len(pack.memories)} memories, "
+                    f"{len(pack.conflicts)} conflicts, {len(pack.chunks)} chunks"
+                )
+
             print(f"model requested: {os.getenv('EMBEDDING_MODEL')}")
             print(f"question       : {question}\n")
             print("authoritative projections (no model expected):")
@@ -182,7 +190,8 @@ async def probe(schema: str) -> int:
                 await run(name, factory)
             print("\nquestion-answering surfaces:")
             await run("authoritative query", authoritative_query)
-            await run("context() [product]", product_context)
+            await run("context() [old product]", product_context)
+            await run("context() [unified]", unified_context)
 
         survived = sum(results.values())
         print(f"\n{survived}/{len(results)} surfaces still answered without a model")

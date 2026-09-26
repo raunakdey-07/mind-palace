@@ -73,7 +73,9 @@ scores are not version history or a record of supersession.
 
 Mind Palace keeps live retrieval and explicit assertion memory separate:
 
-- `/search`, `context()`, and default `/api/query/ask` retrieve from the live index.
+- `/search` and default `/api/query/ask` retrieve from the live index.
+- `context()` resolves the question against the archive first, then adds ranked live
+  chunks as raw source material. See [Context: the product surface](#context-the-product-surface).
 - Memory operations read an append-only archive of authored claims and evidence.
 - An old claim can remain historical after its source is updated or deleted.
 - Different active sources can disagree without the latest writer silently winning.
@@ -298,7 +300,7 @@ GET    /api/corpora/{name}           inspect one corpus
 DELETE /api/corpora/{name}           blocked when archive rows exist
 POST   /api/corpora/{name}/sync      sync with a directory
 GET    /api/search?q=&corpus=&k=&hybrid&rrf&rerank   raw search
-GET    /api/context?q=&corpus=&budget_tokens=  live context pack
+GET    /api/context?q=&corpus=&budget_tokens=&as_of=&intent=  authoritative context pack
 POST   /api/query/ask                default live RAG; explicit memory mode available
 POST   /api/memory/query             question retrieval with intent and bounded evidence
 POST   /api/memory/current           current assertions and conflicts
@@ -407,9 +409,10 @@ EOF
 
 Normal sync uses sentence-transformer embeddings (`all-MiniLM-L6-v2` by default).
 Weights may need an initial Hugging Face download; cached weights can run with
-`HF_HUB_OFFLINE=1`. No paid LLM is needed for ingestion or memory reads.
-`context()` is token-estimated live retrieval; `memory.pack()` is character-bounded
-archived assertion memory. Their budget units are not interchangeable.
+`HF_HUB_OFFLINE=1`. No paid LLM is needed for ingestion or memory reads. `context()` resolves against the
+archive and then adds ranked live chunks, so it needs no model at all: with no embedding
+model available it still returns claims, evidence, conflicts and changes, and simply
+returns no chunks. `search()` is the raw live-index surface and does need one.
 
 ## Run the real evolving-corpus demo
 
@@ -585,25 +588,76 @@ is not a corpus-scoped memory operation.
 
 A failed document does not leave a false successfully-indexed state.
 
-### Live context packing
+### Context: the product surface
 
-`context()` returns a structured pack (illustrative envelope, not a measured result):
+`context()` answers “what should this application know for this question?” and returns
+the smallest useful, evidence-backed representation. The archive decides what is true,
+what changed, what conflicts, and what is absent. Retrieval only adds raw source
+material, and is skipped when no model is available.
+
+```text
+corpus
+  ↓  does this corpus have an archive?
+  ↓  yes → resolve the question: current, history, changes, conflicts, evidence
+  ↓        no relevant memory → return empty and say so, never pad with chunks
+  ↓        relevant memory    → add ranked chunks as raw material, then bound
+  ↓  no  → retrieval is the only source, and status says so
+```
+
+Illustrative envelope, not a measured result:
 
 ```json
 {
   "query": "...",
-  "context": "...bounded evidence text...",
-  "sources": [{"title": "...", "path": "...", "doc_id": "..."}],
-  "chunks": [{"text": "...", "score": 0.87, "rank": 1, "source": {}}],
-  "token_estimate": 1234,
-  "strategy": "hybrid_rrf",
+  "context": "CURRENT\n- The primary database is PostgreSQL. [CURRENT]\n  evidence: ...",
+  "status": "conflicting",
+  "memories": [
+    {
+      "status": "CURRENT",
+      "key": "architecture.database",
+      "claim": "The primary database is PostgreSQL.",
+      "value": "The primary database is PostgreSQL.",
+      "valid_from": null,
+      "supersedes_id": null,
+      "evidence": [
+        {
+          "quote": "The primary database is PostgreSQL.",
+          "path": "docs/storage.md",
+          "version_id": "...",
+          "observed_at": "2024-06-01T00:00:00+00:00",
+          "start_offset": 0,
+          "end_offset": 35
+        }
+      ]
+    }
+  ],
+  "conflicts": [{"key": "architecture.database", "options": []}],
+  "changes": [{"event": "MODIFIED", "path": "docs/storage.md", "relationship": "SUPERSEDES"}],
+  "chunks": [],
+  "sources": [],
+  "token_estimate": 412,
+  "budget_unit": "token_estimate",
+  "as_of": null,
   "truncated": false
 }
 ```
 
-Strongest ranked evidence is kept first; overflow drops from the bottom. Sources
-derive from retained evidence. This is separate from memory's exact complete-JSON
-character bound.
+`status` is the contract a caller branches on:
+
+| Status | Meaning |
+|---|---|
+| `resolved` | Relevant memory found, no conflict among the selected keys |
+| `conflicting` | Relevant memory found and its sources disagree; both sides are returned |
+| `no_relevant_memory` | The archive holds material but none of it is relevant. The pack is empty |
+| `empty_corpus` | No archive and no retrieval results |
+
+A conflicted key is never silently flattened to the latest writer. Retrieval results are
+raw material only: they appear in `chunks`, attributed, and never become a `memories`
+entry. `truncated` reports that something was dropped to fit `budget_tokens`.
+
+`memory.pack()` remains available for the exact character-bounded canonical envelope.
+The two budget units are different: `context()` bounds delivered text by
+`budget_tokens`, `pack()` bounds the complete canonical JSON by characters.
 
 ### Retrieval architecture and prior findings
 

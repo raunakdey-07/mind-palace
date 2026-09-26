@@ -408,9 +408,14 @@ embedding stack does not remove current, history, evidence, snapshot, replay,
 feed, pack, or provenance operations. It does not remove `query` either, which
 degrades to lexical relevance instead of returning 503.
 
-It does still remove `context()` and `search()`, which are live-index surfaces
-with no model-free path. Measured, not assumed: with a model that cannot load,
-4 of 5 public memory surfaces still answer.
+It does still remove `search()`, which is a live-index surface with no model-free
+path. Measured, not assumed: with a model that cannot load, 5 of 6 public memory
+surfaces still answer, and the one that fails is `search()`.
+
+That count moved when `context()` was unified with the authoritative path. It now
+resolves against the archive first and adds ranked chunks as raw material, so it
+answers with no model at all. `docs/research/m010-unified-context.md` records the
+measurement.
 
 The container still ships the semantic dependency stack. Splitting the DB-only
 runtime from the semantic runtime is deferred until deployment evidence makes

@@ -76,9 +76,17 @@ async def insert_membership(db, corpus: str, snapshot_id: str, version_id: str) 
     )
 
 
-def test_snapshot_seal_is_the_single_alembic_head():
+def test_snapshot_seal_is_applied_but_a_later_migration_may_be_head():
+    """The seal is still on the chain; it need not be the newest revision.
+
+    007 adds the claim embedding cache, so pinning head to the seal would make
+    this test fail for a correct change. The chain position is what matters.
+    """
     script = ScriptDirectory.from_config(Config(str(ROOT / "migrations" / "alembic.ini")))
-    assert script.get_current_head() == "006_snapshot_membership_seal"
+    head = script.get_current_head()
+    assert head == "007_claim_embedding_cache"
+    revisions = {r.revision for r in script.walk_revisions("base", head)}
+    assert {"004_memory", "005_multiple_evidence", "006_snapshot_membership_seal"} <= revisions
 
 
 async def test_service_seals_snapshot_and_rejects_late_same_corpus_membership(sealed_db):

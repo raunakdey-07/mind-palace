@@ -525,6 +525,7 @@ async def test_lexical_scorer_never_embeds_and_reports_itself(offline_embedder):
         "embedding_texts": 0,
         "topics": 1,
         "scorer": "lexical",
+        "claim_vectors_cached": 0,
     }
     assert scores == {"architecture.database": 1.0}
 

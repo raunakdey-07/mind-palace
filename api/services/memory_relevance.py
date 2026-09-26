@@ -132,10 +132,21 @@ def plan(request: MemoryRequest, intent: str, policy: RelevancePolicy) -> QueryP
     variants = [text]
     if policy.approach in {"D", "E"}:
         parts = re.split(r"\s+(?:and|or|as well as)\s+|[,;]", text, maxsplit=policy.max_topics - 1)
-        meaningful = [part.strip(" ,;") for part in parts if terms(part)]
         # Do not turn alternatives inside a question into independent requests.
-        if re.search(r"\bor\b", text) or any(len(terms(p)) < 2 for p in meaningful):
+        if re.search(r"\bor\b", text):
             meaningful = [text]
+        else:
+            # A part with too few distinct words cannot identify anything, so it
+            # is dropped on its own. It must not cancel decomposition for the
+            # parts that are specific, or one trailing conjunction silently
+            # collapses a three-part question into a single topic.
+            meaningful = [part.strip(" ,;") for part in parts if len(terms(part)) >= 2]
+            if len(meaningful) > 1:
+                # The whole question stays as a topic. A sub-part such as "what
+                # tier does it run at" has no subject of its own, so scoring it
+                # alone loses which service is meant. Keeping the unsplit form
+                # preserves subject resolution; the parts add attribute detail.
+                meaningful = [text] + meaningful[: policy.max_topics - 1]
         if len(meaningful) > 1:
             variants = meaningful[: policy.max_topics]
     return QueryPlan(
@@ -155,6 +166,7 @@ def relevance(
     policy: RelevancePolicy,
     *,
     lexical: bool = False,
+    claim_vectors: dict[str, list[float]] | None = None,
 ) -> tuple[dict[str, float], QueryPlan, dict]:
     """Score authored keys against the question, then apply the acceptance gates.
 
@@ -162,7 +174,13 @@ def relevance(
     Both scores live in [0, 1], so the same minimum/strong/relative gates apply
     unchanged. This is the model-free rung: it only chooses which authored keys are
     relevant, and never touches claim status, validity, conflicts or evidence.
+
+    ``claim_vectors`` supplies pre-computed vectors for claims, keyed by claim id.
+    Only a claim present in the mapping is served from it; anything missing is
+    embedded here, so a partial or empty cache costs latency and never changes the
+    answer. Vectors are consumed read-only.
     """
+    from api.services.claim_embeddings import representation
     from api.services.memory_public import _claims
 
     interpreted = plan(request, intent, policy)
@@ -170,21 +188,29 @@ def relevance(
     ids = sorted(claims)
     if not ids:
         return {}, interpreted, {"candidates": 0, "embedding_calls": 0, "embedding_texts": 0}
-    representations = [f"{claims[c].claim} {claims[c].key} {claims[c].path}" for c in ids]
+    representations = [representation(claims[c]) for c in ids]
     documents = [terms(text) for text in representations]
     # Terms occurring in every candidate (e.g. project name) cannot support relevance.
     common = set.intersection(*documents) if len(documents) > 1 else set()
     topic_terms = [terms(topic) - common for topic in interpreted.topics]
 
     embedding_calls, embedding_texts = 0, 0
-    vectors = None
+    topic_vectors = None
+    cached = dict(claim_vectors or {})
+    missing = [position for position, cid in enumerate(ids) if cid not in cached]
     if not lexical:
-        # One batch across all topics and claims, not one full archive encoding per topic.
-        texts = list(interpreted.topics) + representations
+        # One batch, question first, and only the claims the cache did not supply.
+        # The ordering convention is unchanged from the uncached path, so any
+        # embedder that treats the first text as the query still works.
+        topics = list(interpreted.topics)
+        texts = topics + [representations[p] for p in missing]
         vectors = embedder.embed(texts)
         embedding_calls, embedding_texts = 1, len(texts)
         if len(vectors) != len(texts) or not vectors or not vectors[0]:
             raise ValueError("Embedding output count/dimension mismatch")
+        topic_vectors = vectors[: len(topics)]
+        for position, vector in zip(missing, vectors[len(topics) :]):
+            cached[ids[position]] = vector
         dimension = len(vectors[0])
         if any(len(v) != dimension or not all(math.isfinite(x) for x in v) for v in vectors):
             raise ValueError("Invalid embedding vectors")
@@ -195,9 +221,7 @@ def relevance(
             if not query_terms:
                 return 0.0
             return len(query_terms & (documents[position] - common)) / len(query_terms)
-        topic_vector = vectors[i]
-        claim_vector = vectors[len(interpreted.topics) + position]
-        return sum(a * b for a, b in zip(topic_vector, claim_vector))
+        return sum(a * b for a, b in zip(topic_vectors[i], cached[ids[position]]))
 
     chosen = {}
     for i in range(len(interpreted.topics)):
@@ -234,5 +258,6 @@ def relevance(
             "embedding_texts": embedding_texts,
             "topics": len(interpreted.topics),
             "scorer": "lexical" if lexical else "embedding",
+            "claim_vectors_cached": 0 if lexical else len(ids) - len(missing),
         },
     )

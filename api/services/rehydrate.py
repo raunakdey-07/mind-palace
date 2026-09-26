@@ -2,7 +2,9 @@
 
 The archive is the source of truth for rehydration. This service writes only
 ``documents``, ``chunks``, and ``ingestion_manifest``; it never calls
-``record_version`` and therefore creates no new observation or feed event.
+``record_version`` and therefore creates no new observation or feed event. It
+also rebuilds the claim representation cache, which is derived from immutable
+claim text.
 
 A caller owns the transaction. The service acquires the corpus lock, replaces the
 live projection for archived paths, and leaves live-only paths untouched. That
@@ -12,6 +14,7 @@ delete documents that have never been observed by the archive.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from sqlalchemy import text
@@ -30,6 +33,8 @@ from api.services.repository import (
     update_manifest,
     upsert_document,
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def _archived_documents(db: AsyncSession, corpus_id: str) -> list[dict[str, Any]]:
@@ -76,6 +81,7 @@ async def rehydrate_corpus(
     rebuilt_chunks = 0
     removed_documents = 0
     deleted_archive_paths = 0
+    cached_claims = await backfill_claim_embeddings(db, corpus_id)
 
     for row in archived:
         path = row["path"]
@@ -175,4 +181,37 @@ async def rehydrate_corpus(
         "rebuilt_chunks": rebuilt_chunks,
         "removed_documents": removed_documents,
         "deleted_archive_paths": deleted_archive_paths,
+        "cached_claims": cached_claims,
     }
+
+
+async def backfill_claim_embeddings(db: AsyncSession, corpus_id: str) -> int:
+    """Rebuild the L2 claim representation cache from the archive.
+
+    Pure L2: the rows are derived from immutable claim text, so deleting them
+    and running this again produces the same cache. A failure is reported, not
+    raised, because the cache is an optimization and rehydration itself is what
+    the caller actually needs.
+    """
+    from api.services.claim_embeddings import pending, store
+    from api.services.embedder import Embedder
+
+    try:
+        wanted, texts = await pending(db, corpus_id)
+        if not wanted:
+            return 0
+        embedder = Embedder()
+        vectors = dict(zip(wanted, embedder.embed(texts)))
+        return await store(
+            db,
+            corpus_id,
+            wanted,
+            vectors,
+            embedder.model_name,
+            embedder.dimension,
+            getattr(embedder, "version", "rehydrate"),
+            commit=False,
+        )
+    except Exception:  # noqa: BLE001 - L2 backfill must not break rehydration
+        logger.warning("claim_embedding_backfill_failed", exc_info=True)
+        return 0

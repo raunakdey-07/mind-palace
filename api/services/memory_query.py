@@ -132,6 +132,7 @@ def select(
     embedder: ClaimEmbedder,
     policy=None,
     lexical: bool = False,
+    claim_vectors: dict[str, list[float]] | None = None,
 ) -> MemoryResponse:
     """Resolve first, then select relevant authored keys and complete conflict groups.
 
@@ -151,6 +152,7 @@ def select(
         embedder,
         policy or RelevancePolicy.configured(),
         lexical=lexical,
+        claim_vectors=claim_vectors,
     )
     keys = set(key_scores)
     selected = {
@@ -191,22 +193,60 @@ def select(
     return result
 
 
-async def query(full: MemoryResponse, request: MemoryRequest) -> MemoryResponse:
+async def query(
+    full: MemoryResponse,
+    request: MemoryRequest,
+    *,
+    db=None,
+    corpus_id: str | None = None,
+) -> MemoryResponse:
     """Keep model inference off the async database/event-loop thread.
 
     If the embedding model cannot load, fall back to lexical relevance instead of
     failing. Ranking degrades; authority does not. Claim status, validity, conflicts
     and evidence all still come from the persistence projection.
+
+    When a session and corpus are supplied, claim representations are read from the
+    L2 cache so a warm corpus embeds only the question. The read is done here, on
+    the async side, so the scoring thread does no I/O. This path never writes.
+
+    The cache is filled by ingestion and by `mindpalace reindex`, never by a
+    query. That is deliberate: a read that writes can poison the caller's
+    transaction, and it would make a read-only connection fail a query it could
+    have answered. A corpus with no cache still answers, just more slowly.
     """
     from asyncio import to_thread
 
-    from api.services.embedder import Embedder
     from api.services.memory_public import MemoryError, bounded_pack
 
     intent = interpret(request)
 
+    embedder = None
+    cached: dict[str, list[float]] = {}
+    if db is not None and corpus_id is not None:
+        try:
+            from api.services.claim_embeddings import (
+                load_cached,
+                representation,
+                representation_hash,
+            )
+            from api.services.embedder import Embedder
+            from api.services.memory_public import _claims
+
+            embedder = Embedder()
+            wanted = {c.id: representation_hash(representation(c)) for c in _claims(full)}
+            cached = await load_cached(
+                db, corpus_id, wanted, embedder.model_name, embedder.dimension
+            )
+        except Exception:  # noqa: BLE001 - a cache miss or a dead model is not a failure
+            embedder, cached = None, {}
+
     def retrieve():
-        return select(full, request, intent, Embedder())
+        if embedder is None:
+            from api.services.embedder import Embedder as Lazy
+
+            return select(full, request, intent, Lazy(), claim_vectors=cached or None)
+        return select(full, request, intent, embedder, claim_vectors=cached or None)
 
     def retrieve_lexically():
         return select(full, request, intent, None, lexical=True)
@@ -218,4 +258,5 @@ async def query(full: MemoryResponse, request: MemoryRequest) -> MemoryResponse:
             result = await to_thread(retrieve_lexically)
         except (OSError, RuntimeError, ValueError, ImportError) as exc:
             raise MemoryError("memory_unavailable", "Memory retrieval unavailable", 503) from exc
+
     return bounded_pack(result, request.budget)

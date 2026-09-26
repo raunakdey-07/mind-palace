@@ -377,7 +377,7 @@ async def execute_in_session(db, operation: str, request: MemoryRequest) -> Memo
         full = project(
             versions, request.model_copy(update={"query": "", "path": None}), "pack", state, saved
         )
-        return await query(full, request)
+        return await query(full, request, db=db, corpus_id=corpus["id"])
     result = project(versions, request, operation, state, saved)
     return bounded_pack(result, request.budget) if operation == "pack" else result
 

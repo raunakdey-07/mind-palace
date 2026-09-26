@@ -28,6 +28,8 @@ from api.services.repository import (
     upsert_document,
 )
 
+logger = logging.getLogger(__name__)
+
 # Fallback document type when frontmatter is missing or invalid.
 DEFAULT_DOC_TYPE = "note"
 MAX_SYNC_ERRORS = 50
@@ -219,6 +221,10 @@ class IngestionService:
         await update_manifest(
             db, path, content_hash(content), doc_id, count, corpus_id, commit=False
         )
+        # L2 follows L1. Populate the claim representation cache here rather
+        # than during a read, so a query never writes and a read path that
+        # cannot write still answers correctly, just more slowly.
+        await self._cache_claim_vectors(db, corpus_id, [version["id"]])
         return {
             "success": True,
             "document_id": doc_id,
@@ -227,6 +233,33 @@ class IngestionService:
             "event": version["event"],
             "message": f"Ingested {count} chunks with version history",
         }
+
+    async def _cache_claim_vectors(self, db, corpus_id: str, version_ids: list[str]) -> int:
+        """Best-effort fill of the L2 claim representation cache.
+
+        A failure here is not an ingestion failure: the claim is already
+        authoritative, and the cache can always be rebuilt.
+        """
+        try:
+            from api.services.claim_embeddings import pending, store
+
+            wanted, texts = await pending(db, corpus_id, list(version_ids))
+            if not wanted:
+                return 0
+            vectors = dict(zip(wanted, self.embedder.embed(texts)))
+            return await store(
+                db,
+                corpus_id,
+                wanted,
+                vectors,
+                self.embedder.model_name,
+                self.embedder.dimension,
+                getattr(self.embedder, "version", "ingest"),
+                commit=False,
+            )
+        except Exception:  # noqa: BLE001 - the cache is L2, never a contract
+            logger.warning("claim_embedding_cache_fill_failed", exc_info=True)
+            return 0
 
     async def ingest_file(
         self,

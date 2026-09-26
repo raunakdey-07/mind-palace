@@ -129,6 +129,7 @@ def select(
     intent: QueryIntent,
     embedder: ClaimEmbedder,
     policy=None,
+    lexical: bool = False,
 ) -> MemoryResponse:
     """Resolve first, then select relevant authored keys and complete conflict groups.
 
@@ -142,7 +143,12 @@ def select(
     from api.services.memory_relevance import RelevancePolicy, relevance
 
     key_scores, _, _ = relevance(
-        full, request, intent.name, embedder, policy or RelevancePolicy.configured()
+        full,
+        request,
+        intent.name,
+        embedder,
+        policy or RelevancePolicy.configured(),
+        lexical=lexical,
     )
     keys = set(key_scores)
     selected = {
@@ -184,7 +190,12 @@ def select(
 
 
 async def query(full: MemoryResponse, request: MemoryRequest) -> MemoryResponse:
-    """Keep model inference off the async database/event-loop thread."""
+    """Keep model inference off the async database/event-loop thread.
+
+    If the embedding model cannot load, fall back to lexical relevance instead of
+    failing. Ranking degrades; authority does not. Claim status, validity, conflicts
+    and evidence all still come from the persistence projection.
+    """
     from asyncio import to_thread
 
     from api.services.embedder import Embedder
@@ -195,8 +206,14 @@ async def query(full: MemoryResponse, request: MemoryRequest) -> MemoryResponse:
     def retrieve():
         return select(full, request, intent, Embedder())
 
+    def retrieve_lexically():
+        return select(full, request, intent, None, lexical=True)
+
     try:
         result = await to_thread(retrieve)
-    except (OSError, RuntimeError, ValueError, ImportError) as exc:
-        raise MemoryError("memory_unavailable", "Memory embedding model unavailable", 503) from exc
+    except (OSError, RuntimeError, ValueError, ImportError):
+        try:
+            result = await to_thread(retrieve_lexically)
+        except (OSError, RuntimeError, ValueError, ImportError) as exc:
+            raise MemoryError("memory_unavailable", "Memory retrieval unavailable", 503) from exc
     return bounded_pack(result, request.budget)

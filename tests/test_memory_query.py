@@ -449,17 +449,98 @@ async def test_offline_query_budgets_preserve_atomic_closure_and_determinism(
 
 
 @pytest.mark.parametrize("failure", [OSError, RuntimeError, ValueError])
-async def test_query_sanitizes_embedding_failures(monkeypatch, offline_embedder, failure):
+async def test_query_falls_back_to_lexical_when_embedding_fails(
+    monkeypatch, offline_embedder, failure
+):
+    """A model that cannot load must degrade ranking, never authority.
+
+    The claim, its status and its evidence are decided by the persistence
+    projection before relevance runs, so a model failure cannot change them.
+    """
+
+    def fail(texts):
+        offline_embedder.calls.append(list(texts))
+        raise failure("private model location")
+
+    monkeypatch.setattr(offline_embedder, "embed", fail)
+    full = make_response(current_memories=[make_claim("a", "database")])
+    before = full.model_dump()
+    result = await memory_query.query(full, MemoryRequest(corpus="test", query="database"))
+    assert offline_embedder.calls, "the embedding path should be tried first"
+    assert [c.id for c in result.current_memories] == ["a"]
+    assert result.current_memories[0].status == "CURRENT"
+    assert [e.id for e in result.evidence] == [e.id for e in full.evidence]
+    assert full.model_dump() == before
+
+
+@pytest.mark.parametrize("failure", [OSError, RuntimeError, ValueError])
+async def test_lexical_fallback_does_not_invent_irrelevant_claims(
+    monkeypatch, offline_embedder, failure
+):
     def fail(texts):
         raise failure("private model location")
 
     monkeypatch.setattr(offline_embedder, "embed", fail)
+    full = make_response(
+        current_memories=[
+            make_claim("a", "database", key="architecture.database"),
+            make_claim("b", "payroll provider", key="hr.payroll"),
+        ]
+    )
+    result = await memory_query.query(full, MemoryRequest(corpus="test", query="database"))
+    assert [c.id for c in result.current_memories] == ["a"]
+
+
+@pytest.mark.parametrize("failure", [OSError, RuntimeError, ValueError])
+async def test_query_sanitizes_failures_when_lexical_also_fails(monkeypatch, failure):
+    """If ranking itself is broken, fail closed with a message that leaks nothing."""
+
+    def fail(*args, **kwargs):
+        raise failure("private model location")
+
+    monkeypatch.setattr(memory_relevance, "relevance", fail)
     full = make_response(current_memories=[make_claim("a", "database")])
     with pytest.raises(memory_public.MemoryError) as error:
         await memory_query.query(full, MemoryRequest(corpus="test", query="database"))
     assert (error.value.code, error.value.status_code) == ("memory_unavailable", 503)
     assert "private" not in error.value.message
     assert isinstance(error.value.__cause__, failure)
+
+
+async def test_lexical_scorer_never_embeds_and_reports_itself(offline_embedder):
+    full = make_response(
+        current_memories=[
+            make_claim("a", "database", key="architecture.database"),
+            make_claim("b", "payroll provider", key="hr.payroll"),
+        ]
+    )
+    request = MemoryRequest(corpus="test", query="database")
+    scores, _, work = memory_relevance.relevance(
+        full, request, "current", None, memory_relevance.RelevancePolicy(), lexical=True
+    )
+    assert offline_embedder.calls == []
+    assert work == {
+        "candidates": 2,
+        "embedding_calls": 0,
+        "embedding_texts": 0,
+        "topics": 1,
+        "scorer": "lexical",
+    }
+    assert scores == {"architecture.database": 1.0}
+
+
+async def test_lexical_and_embedding_scorers_agree_on_an_obvious_match(offline_embedder):
+    claims = [
+        make_claim("a", "database", key="architecture.database"),
+        make_claim("b", "payroll provider", key="hr.payroll"),
+    ]
+    full = make_response(current_memories=claims)
+    offline_embedder.scores = {representation(claims[0]): 0.9, representation(claims[1]): 0.0}
+    request = MemoryRequest(corpus="test", query="database")
+    policy = memory_relevance.RelevancePolicy()
+    embedded, _, _ = memory_relevance.relevance(full, request, "current", offline_embedder, policy)
+    lexical, _, _ = memory_relevance.relevance(full, request, "current", None, policy, lexical=True)
+    assert set(embedded) == set(lexical) == {"architecture.database"}
 
 
 @pytest.mark.parametrize("intent", ["current", "historical", "change", "provenance"])

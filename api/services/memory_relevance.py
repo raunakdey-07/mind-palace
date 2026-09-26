@@ -148,8 +148,21 @@ def plan(request: MemoryRequest, intent: str, policy: RelevancePolicy) -> QueryP
 
 
 def relevance(
-    full: MemoryResponse, request: MemoryRequest, intent: str, embedder, policy: RelevancePolicy
+    full: MemoryResponse,
+    request: MemoryRequest,
+    intent: str,
+    embedder,
+    policy: RelevancePolicy,
+    *,
+    lexical: bool = False,
 ) -> tuple[dict[str, float], QueryPlan, dict]:
+    """Score authored keys against the question, then apply the acceptance gates.
+
+    ``lexical=True`` replaces the embedding similarity with normalized token overlap.
+    Both scores live in [0, 1], so the same minimum/strong/relative gates apply
+    unchanged. This is the model-free rung: it only chooses which authored keys are
+    relevant, and never touches claim status, validity, conflicts or evidence.
+    """
     from api.services.memory_public import _claims
 
     interpreted = plan(request, intent, policy)
@@ -158,50 +171,68 @@ def relevance(
     if not ids:
         return {}, interpreted, {"candidates": 0, "embedding_calls": 0, "embedding_texts": 0}
     representations = [f"{claims[c].claim} {claims[c].key} {claims[c].path}" for c in ids]
-    # One batch across all topics and claims, not one full archive encoding per topic.
-    texts = list(interpreted.topics) + representations
-    vectors = embedder.embed(texts)
-    if len(vectors) != len(texts) or not vectors or not vectors[0]:
-        raise ValueError("Embedding output count/dimension mismatch")
-    dimension = len(vectors[0])
-    if any(len(v) != dimension or not all(math.isfinite(x) for x in v) for v in vectors):
-        raise ValueError("Invalid embedding vectors")
     documents = [terms(text) for text in representations]
     # Terms occurring in every candidate (e.g. project name) cannot support relevance.
     common = set.intersection(*documents) if len(documents) > 1 else set()
+    topic_terms = [terms(topic) - common for topic in interpreted.topics]
+
+    embedding_calls, embedding_texts = 0, 0
+    vectors = None
+    if not lexical:
+        # One batch across all topics and claims, not one full archive encoding per topic.
+        texts = list(interpreted.topics) + representations
+        vectors = embedder.embed(texts)
+        embedding_calls, embedding_texts = 1, len(texts)
+        if len(vectors) != len(texts) or not vectors or not vectors[0]:
+            raise ValueError("Embedding output count/dimension mismatch")
+        dimension = len(vectors[0])
+        if any(len(v) != dimension or not all(math.isfinite(x) for x in v) for v in vectors):
+            raise ValueError("Invalid embedding vectors")
+
+    def score(i: int, position: int) -> float:
+        if lexical:
+            query_terms = topic_terms[i]
+            if not query_terms:
+                return 0.0
+            return len(query_terms & (documents[position] - common)) / len(query_terms)
+        topic_vector = vectors[i]
+        claim_vector = vectors[len(interpreted.topics) + position]
+        return sum(a * b for a, b in zip(topic_vector, claim_vector))
+
     chosen = {}
-    for i, topic in enumerate(interpreted.topics):
-        query_terms = terms(topic) - common
+    for i in range(len(interpreted.topics)):
+        query_terms = topic_terms[i]
         by_key = {}
-        for cid, vector, words in zip(ids, vectors[len(interpreted.topics) :], documents):
+        for position, cid in enumerate(ids):
             claim = claims[cid]
             if request.path and claim.path != request.path:
                 continue
-            score = sum(a * b for a, b in zip(vectors[i], vector))
-            overlap = bool(query_terms & (words - common))
+            value = score(i, position)
+            overlap = bool(query_terms & (documents[position] - common))
             if policy.approach == "A":
-                accepted = score >= 0.30
+                accepted = value >= 0.30
             elif policy.approach == "B":
-                accepted = score >= 0.30 and overlap
+                accepted = value >= 0.30 and overlap
             elif policy.approach == "C":
-                accepted = score >= policy.minimum
+                accepted = value >= policy.minimum
             else:
-                accepted = score >= policy.minimum and (
-                    overlap or score >= policy.strong or math.isclose(score, policy.minimum)
+                accepted = value >= policy.minimum and (
+                    overlap or value >= policy.strong or math.isclose(value, policy.minimum)
                 )
             if accepted:
-                by_key[claim.key] = max(by_key.get(claim.key, -1), score)
+                by_key[claim.key] = max(by_key.get(claim.key, -1), value)
         top = max(by_key.values(), default=0)
-        for key, score in by_key.items():
-            if score >= top * policy.relative:
-                chosen[key] = max(chosen.get(key, -1), score)
+        for key, value in by_key.items():
+            if value >= top * policy.relative:
+                chosen[key] = max(chosen.get(key, -1), value)
     return (
         chosen,
         interpreted,
         {
             "candidates": len(ids),
-            "embedding_calls": 1,
-            "embedding_texts": len(texts),
+            "embedding_calls": embedding_calls,
+            "embedding_texts": embedding_texts,
             "topics": len(interpreted.topics),
+            "scorer": "lexical" if lexical else "embedding",
         },
     )

@@ -397,12 +397,25 @@ async def record_deletion(db: AsyncSession, corpus_id: str, path: str) -> bool:
     return True
 
 
-async def _load(db, corpus_id, path=None, as_of=None):
+async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+    """Load versions with their claims, evidence and chunks.
+
+    ``chunk_text=False`` returns only each chunk's id and heading. The public
+    projection reads nothing else from a chunk, and chunk text is the bulk of the
+    payload, so dropping it is the difference between a query that scales with
+    the archive and one that does not. The raw ``history`` surface keeps the
+    text, because a developer asking for history wants the source.
+    """
     # One statement gives every read a coherent MVCC view, even without a read lock.
+    chunk_expr = (
+        "to_jsonb(c)"
+        if chunk_text
+        else "jsonb_build_object('id', c.id, 'heading_path', c.heading_path)"
+    )
     result = await db.execute(
-        text("""
+        text(f"""
         SELECT v.*, d.path,
-            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.order_index)
+            COALESCE((SELECT jsonb_agg({chunk_expr} ORDER BY c.order_index)
                 FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
                 '[]'::jsonb) AS chunks,
             COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)

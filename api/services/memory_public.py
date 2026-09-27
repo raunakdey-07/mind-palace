@@ -363,7 +363,10 @@ async def execute_in_session(db, operation: str, request: MemoryRequest) -> Memo
         cutoff = saved["as_of"]
     # Fix the validity clock once for the entire response, including conflicts.
     valid_at = cutoff if saved else request.valid_at or cutoff or datetime.now(timezone.utc)
-    versions = await memory._load(db, corpus["id"], as_of=cutoff)
+    # The public projection reads only each chunk's id and heading, never its
+    # text, and chunk text is the bulk of the payload. The raw history surface
+    # still returns it.
+    versions = await memory._load(db, corpus["id"], as_of=cutoff, chunk_text=False)
     if saved:
         ids = set(saved["version_ids"])
         versions = [v for v in versions if v["id"] in ids]

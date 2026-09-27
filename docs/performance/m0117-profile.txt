@@ -1,0 +1,36 @@
+         2799517 function calls (2736564 primitive calls) in 6.441 seconds
+
+   Ordered by: cumulative time
+   List reduced from 745 to 28 due to restriction <28>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+ 1551/518    0.009    0.000    6.079    0.012 /usr/lib64/python3.14/asyncio/base_events.py:1977(_run_once)
+       27    0.010    0.000    5.999    0.222 /mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0117_profile.py:47(run)
+       30    0.030    0.001    5.988    0.200 /mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0117_profile.py:99(_one)
+       45    0.000    0.000    4.895    0.109 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py:167(greenlet_spawn)
+       36    0.000    0.000    4.889    0.136 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/sqlalchemy/ext/asyncio/session.py:423(execute)
+    60/18    0.002    0.000    4.883    0.271 {method 'switch' of 'greenlet.greenlet' objects}
+     1551    0.004    0.000    4.855    0.003 /usr/lib64/python3.14/selectors.py:435(select)
+       12    0.015    0.001    4.845    0.404 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:400(_load)
+       15    0.000    0.000    4.807    0.320 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/sqlalchemy/orm/session.py:2313(execute)
+     1551    4.401    0.003    4.401    0.003 {method 'poll' of 'select.epoll' objects}
+       15    0.024    0.002    3.097    0.206 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:334(execute_in_session)
+       15    0.000    0.000    2.449    0.163 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/sqlalchemy/orm/session.py:2141(_execute_internal)
+        6    0.111    0.019    0.770    0.128 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)
+    27000    0.024    0.000    0.539    0.000 /usr/lib64/python3.14/json/__init__.py:304(loads)
+    27000    0.244    0.000    0.506    0.000 /usr/lib64/python3.14/json/decoder.py:340(decode)
+        3    0.000    0.000    0.447    0.149 /usr/lib64/python3.14/concurrent/futures/thread.py:81(run)
+        3    0.000    0.000    0.447    0.149 /usr/lib64/python3.14/concurrent/futures/thread.py:71(run)
+        3    0.000    0.000    0.447    0.149 /mnt/Warehouse/projects/Mind Palace/api/services/memory_query.py:244(retrieve)
+        3    0.006    0.002    0.447    0.149 /mnt/Warehouse/projects/Mind Palace/api/services/memory_query.py:128(select)
+        3    0.011    0.004    0.439    0.146 /mnt/Warehouse/projects/Mind Palace/api/services/memory_relevance.py:161(relevance)
+     1509    0.001    0.000    0.439    0.000 /usr/lib64/python3.14/asyncio/selector_events.py:967(_read_ready)
+     1509    0.031    0.000    0.438    0.000 /usr/lib64/python3.14/asyncio/selector_events.py:1007(_read_ready__data_received)
+    24000    0.021    0.000    0.389    0.000 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:1227(_jsonb_decoder)
+        6    0.045    0.007    0.310    0.052 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:463(_query_result)
+        9    0.008    0.001    0.305    0.034 /mnt/Warehouse/projects/Mind Palace/api/services/memory_query.py:196(query)
+    29904    0.023    0.000    0.300    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)
+     3000    0.003    0.000    0.278    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_relevance.py:218(score)
+     3000    0.148    0.000    0.275    0.000 {built-in method builtins.sum}
+
+

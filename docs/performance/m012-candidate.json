@@ -1,0 +1,1863 @@
+{
+  "equivalent": 170,
+  "fallbacks": 24,
+  "median_versions_kept": 2,
+  "median_versions_total": 72,
+  "mismatches": [
+    "hist-sup-search",
+    "hist-db-url",
+    "hist-esc-orders",
+    "hist-esc-web",
+    "hist-esc-archive",
+    "hist-esc-risk",
+    "tmp-rel-0.6",
+    "tmp-rel-0.7",
+    "tmp-rel-0.8",
+    "prv-inc-2024-03",
+    "prv-inc-2024-07",
+    "prv-inc-2024-09",
+    "prv-inc-2024-11",
+    "prv-deploy-tier-0",
+    "prv-deploy-tier-1",
+    "prv-deploy-tier-2",
+    "abs-sso",
+    "mul-release",
+    "rel-dep-orders",
+    "rel-dep-notifier",
+    "rel-dep-risk",
+    "rel-why-storage",
+    "rel-esc-gateway",
+    "rel-esc-identity",
+    "rel-esc-billing",
+    "rel-esc-search-indexer",
+    "rel-esc-web",
+    "rel-esc-notifier",
+    "rel-esc-analytics",
+    "rel-esc-media",
+    "rel-esc-archive",
+    "rel-esc-risk"
+  ],
+  "questions": 202,
+  "rows": [
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "cur-01",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-02",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-03",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-04",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-05",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-06",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-gateway",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-identity",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-orders",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "cur-own-billing",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "cur-own-search-indexer",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-web",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-notifier",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "cur-own-analytics",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-media",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-archive",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-ledger",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-own-risk",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-gateway",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-identity",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-orders",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-billing",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-search-indexer",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-web",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-notifier",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-analytics",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-media",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-archive",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-ledger",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "cur-tier-risk",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-postgres",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-redis",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-queue",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-search",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-storage",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-warehouse",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-sup-postgres",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-sup-redis",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-sup-queue",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-sup-search",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-sup-storage",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-sup-warehouse",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-db-url",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-db-url-now",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-esc-gateway",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-esc-identity",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-esc-orders",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-esc-billing",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-esc-search-indexer",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-esc-web",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-esc-notifier",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-esc-analytics",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-esc-media",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "hist-esc-archive",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "hist-esc-ledger",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-esc-risk",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-team-platform",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-team-payments",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "hist-team-discovery",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "hist-team-data",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "tmp-why-postgres",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-why-redis",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-why-queue",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "tmp-why-search",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-why-storage",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-why-warehouse",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-inc-2024-03-orders",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-inc-2024-07-notifier",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-inc-2024-09-search-indexer",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-inc-2024-11-ledger",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-rel-0.6",
+      "same": false,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "tmp-rel-0.7",
+      "same": false,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "tmp-rel-0.8",
+      "same": false,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "cft-01",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "prv-postgres",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-redis",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-queue",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-search",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-storage",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-warehouse",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-inc-2024-03",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-inc-2024-07",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-inc-2024-09",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-inc-2024-11",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-gateway",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-identity",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-orders",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-billing",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-search-indexer",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-web",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-notifier",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-analytics",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-media",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-archive",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-ledger",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-own-risk",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "prv-deploy-tier-0",
+      "same": false,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "prv-deploy-tier-1",
+      "same": false,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "prv-deploy-tier-2",
+      "same": false,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "prv-deploy-tier-3",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-payroll",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-office",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-insurance",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "abs-catering",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-parking",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-legal",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-travel",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-expenses",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-recruiting",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-training",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-security-audit",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-oncall-rotation",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-hiring",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-conference",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-hardware",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-vpn",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "abs-sso",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-email",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-backup",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-dns",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-firewall",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-cdn",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-monitoring",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-logging",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "abs-secrets",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-gateway",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-identity",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "mul-orders",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "mul-billing",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-search-indexer",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "mul-web",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "mul-notifier",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-analytics",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-media",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-archive",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "mul-ledger",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "mul-risk",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "mul-tech-postgres",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "mul-tech-redis",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "mul-tech-queue",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "mul-tech-search",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "mul-tech-storage",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "mul-tech-warehouse",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "mul-release",
+      "same": false,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "mul-deploy-tier-0",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-deploy-tier-1",
+      "same": true,
+      "versions_kept": 5,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "mul-deploy-tier-2",
+      "same": true,
+      "versions_kept": 5,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "mul-deploy-tier-3",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-dep-identity",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "rel-dep-orders",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-dep-billing",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-dep-search-indexer",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-dep-web",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-dep-notifier",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-dep-analytics",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-dep-media",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-dep-archive",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "rel-dep-ledger",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-dep-risk",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "cft-02",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-cycle",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-after-db",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-impact-ledger",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-impact-orders",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-why-storage",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-team-platform",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-team-payments",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-team-discovery",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-team-data",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "rel-esc-gateway",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-esc-identity",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 3,
+      "qid": "rel-esc-orders",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-esc-billing",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-esc-search-indexer",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-esc-web",
+      "same": false,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-esc-notifier",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-esc-analytics",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-esc-media",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-esc-archive",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 5,
+      "qid": "rel-esc-ledger",
+      "same": true,
+      "versions_kept": 5,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 4,
+      "qid": "rel-esc-risk",
+      "same": false,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "rel-db-users",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "rel-why-queue",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-183",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-184",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-185",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-186",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-187",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "adv-188",
+      "same": true,
+      "versions_kept": 3,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-189",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-190",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-191",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-192",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "adv-193",
+      "same": true,
+      "versions_kept": 1,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "adv-194",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "adv-195",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 1,
+      "qid": "adv-196",
+      "same": true,
+      "versions_kept": 2,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-197",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-198",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-18",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": false,
+      "keys": 2,
+      "qid": "adv-19",
+      "same": true,
+      "versions_kept": 4,
+      "versions_total": 72
+    },
+    {
+      "candidates": 88,
+      "fallback": true,
+      "keys": 0,
+      "qid": "adv-20",
+      "same": true,
+      "versions_kept": 0,
+      "versions_total": 72
+    }
+  ],
+  "scale": 0,
+  "total": 202
+}

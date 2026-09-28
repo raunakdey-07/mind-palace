@@ -20,7 +20,7 @@ from api.routers import context, corpora, ingest, memory, query, search
 
 app = FastAPI(
     title="Mind Palace API",
-    description="RAG and agent APIs for the Mind Palace AI-Research OS",
+    description="The Durable AI Memory Substrate",
     version="0.6.0",
 )
 

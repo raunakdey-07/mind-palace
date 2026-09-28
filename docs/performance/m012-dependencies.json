@@ -1,0 +1,1664 @@
+{
+  "claims_per_key": {
+    "max": 3,
+    "mean": 1.1
+  },
+  "closure": {
+    "closure_claims": {
+      "corpus_total": 88,
+      "max": 10,
+      "max_pct_of_corpus": 11.4,
+      "median": 3,
+      "p95": 9
+    },
+    "closure_documents": {
+      "corpus_total": 63,
+      "max": 5,
+      "max_pct_of_corpus": 7.9,
+      "median": 1,
+      "p95": 3
+    },
+    "closure_versions": {
+      "corpus_total": 72,
+      "max": 5,
+      "max_pct_of_corpus": 6.9,
+      "median": 2,
+      "p95": 4
+    }
+  },
+  "corpus": {
+    "claims": 88,
+    "documents": 63,
+    "keys": 80,
+    "versions": 72
+  },
+  "edge_density": {
+    "architecture.datastore": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "architecture.postgres": {
+      "claims": 3,
+      "documents": 2,
+      "versions": 3
+    },
+    "architecture.queue": {
+      "claims": 2,
+      "documents": 1,
+      "versions": 2
+    },
+    "architecture.redis": {
+      "claims": 2,
+      "documents": 1,
+      "versions": 2
+    },
+    "architecture.search": {
+      "claims": 2,
+      "documents": 1,
+      "versions": 2
+    },
+    "architecture.storage": {
+      "claims": 2,
+      "documents": 1,
+      "versions": 2
+    },
+    "architecture.warehouse": {
+      "claims": 2,
+      "documents": 1,
+      "versions": 2
+    },
+    "config.database.url": {
+      "claims": 2,
+      "documents": 1,
+      "versions": 2
+    },
+    "constraint.deploy.tier-0": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.deploy.tier-1": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.deploy.tier-2": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.deploy.tier-3": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.ledger.settlement": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.notifier.idempotency": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.orders.pool": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "constraint.search.batch": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "decision.cache.reason": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "decision.database.reason": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "decision.queue.reason": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "decision.search.reason": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "decision.storage.reason": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "decision.warehouse.reason": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "incident.2024-03.orders.root": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "incident.2024-07.notifier.root": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "incident.2024-09.search-indexer.root": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "incident.2024-11.ledger.root": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "release.0.6": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "release.0.7": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "release.0.8": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.analytics.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.archive.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.billing.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.gateway.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.identity.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.ledger.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.media.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.notifier.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.orders.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.risk.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.search-indexer.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "runbook.web.escalation": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.analytics.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.analytics.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.analytics.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.archive.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.archive.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.archive.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.billing.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.billing.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.billing.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.gateway.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.gateway.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.identity.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.identity.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.identity.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.ledger.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.ledger.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.ledger.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.media.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.media.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.media.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.notifier.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.notifier.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.notifier.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.orders.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.orders.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.orders.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.risk.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.risk.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.risk.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.search-indexer.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.search-indexer.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.search-indexer.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.web.depends_on": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.web.owner": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "service.web.tier": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "team.data.services": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "team.discovery.services": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "team.payments.services": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    },
+    "team.platform.services": {
+      "claims": 1,
+      "documents": 1,
+      "versions": 1
+    }
+  },
+  "observed": [
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "cur-01"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "cur-02"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "cur-03"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "cur-04"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "cur-05"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "cur-06"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-gateway"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-identity"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-orders"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "cur-own-billing"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "cur-own-search-indexer"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-web"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-notifier"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "cur-own-analytics"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-media"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-archive"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-ledger"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-own-risk"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-gateway"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-identity"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-orders"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-billing"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-search-indexer"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-web"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-notifier"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-analytics"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-media"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-archive"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-ledger"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "cur-tier-risk"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "hist-postgres"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-redis"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-queue"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-search"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-storage"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-warehouse"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "hist-sup-postgres"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-sup-redis"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-sup-queue"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-sup-search"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-sup-storage"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-sup-warehouse"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-db-url"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "hist-db-url-now"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 3,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-gateway"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-esc-identity"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-orders"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-esc-billing"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-search-indexer"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-web"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-esc-notifier"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-esc-analytics"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-esc-media"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-archive"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-ledger"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-esc-risk"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-team-platform"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-team-payments"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "hist-team-discovery"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "hist-team-data"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "tmp-why-postgres"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "tmp-why-redis"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "tmp-why-queue"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "tmp-why-search"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "tmp-why-storage"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "tmp-why-warehouse"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "tmp-inc-2024-03-orders"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "tmp-inc-2024-07-notifier"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "tmp-inc-2024-09-search-indexer"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "tmp-inc-2024-11-ledger"
+    },
+    {
+      "answer_claims": 0,
+      "closure_claims": 0,
+      "closure_documents": 0,
+      "closure_versions": 0,
+      "qid": "tmp-rel-0.6"
+    },
+    {
+      "answer_claims": 0,
+      "closure_claims": 0,
+      "closure_documents": 0,
+      "closure_versions": 0,
+      "qid": "tmp-rel-0.7"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 3,
+      "qid": "tmp-rel-0.8"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "cft-01"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "prv-postgres"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "prv-redis"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "prv-queue"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "prv-search"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "prv-storage"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "prv-warehouse"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-inc-2024-03"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-inc-2024-07"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-inc-2024-09"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-inc-2024-11"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-gateway"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-identity"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-orders"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-billing"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-search-indexer"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-web"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-notifier"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-analytics"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-media"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-archive"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-ledger"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-own-risk"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 4,
+      "closure_versions": 4,
+      "qid": "prv-deploy-tier-0"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 4,
+      "closure_versions": 4,
+      "qid": "prv-deploy-tier-1"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 4,
+      "closure_versions": 4,
+      "qid": "prv-deploy-tier-2"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "prv-deploy-tier-3"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 9,
+      "closure_documents": 4,
+      "closure_versions": 4,
+      "qid": "mul-gateway"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 10,
+      "closure_documents": 4,
+      "closure_versions": 4,
+      "qid": "mul-identity"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-orders"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-billing"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 10,
+      "closure_documents": 4,
+      "closure_versions": 4,
+      "qid": "mul-search-indexer"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 6,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "mul-web"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-notifier"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-analytics"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-media"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-archive"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 9,
+      "closure_documents": 3,
+      "closure_versions": 3,
+      "qid": "mul-ledger"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 6,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "mul-risk"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "mul-tech-postgres"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "mul-tech-redis"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "mul-tech-queue"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "mul-tech-search"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "mul-tech-storage"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "mul-tech-warehouse"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 3,
+      "qid": "mul-release"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "mul-deploy-tier-0"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 7,
+      "closure_documents": 5,
+      "closure_versions": 5,
+      "qid": "mul-deploy-tier-1"
+    },
+    {
+      "answer_claims": 5,
+      "closure_claims": 7,
+      "closure_documents": 5,
+      "closure_versions": 5,
+      "qid": "mul-deploy-tier-2"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "mul-deploy-tier-3"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-dep-identity"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-orders"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-billing"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-dep-search-indexer"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-web"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-dep-notifier"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-analytics"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-media"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-archive"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-ledger"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-dep-risk"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "cft-02"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "rel-after-db"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-impact-ledger"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 2,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-impact-orders"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "rel-why-storage"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-team-platform"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-team-payments"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-team-discovery"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 1,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-team-data"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 3,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-gateway"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-identity"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-orders"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-billing"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-search-indexer"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "rel-esc-web"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-notifier"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-analytics"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-media"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-archive"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-ledger"
+    },
+    {
+      "answer_claims": 4,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 2,
+      "qid": "rel-esc-risk"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "rel-db-users"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "rel-why-queue"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-183"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-184"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-185"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-186"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-187"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 4,
+      "closure_documents": 2,
+      "closure_versions": 3,
+      "qid": "adv-188"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-189"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-190"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-191"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-192"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 1,
+      "qid": "adv-193"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "adv-194"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "adv-195"
+    },
+    {
+      "answer_claims": 1,
+      "closure_claims": 3,
+      "closure_documents": 1,
+      "closure_versions": 2,
+      "qid": "adv-196"
+    },
+    {
+      "answer_claims": 2,
+      "closure_claims": 6,
+      "closure_documents": 2,
+      "closure_versions": 4,
+      "qid": "adv-197"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-198"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-18"
+    },
+    {
+      "answer_claims": 3,
+      "closure_claims": 5,
+      "closure_documents": 3,
+      "closure_versions": 4,
+      "qid": "adv-19"
+    }
+  ]
+}

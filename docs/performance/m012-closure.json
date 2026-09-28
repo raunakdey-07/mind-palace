@@ -1,0 +1,123 @@
+{
+  "rows": [
+    {
+      "shape": "wide",
+      "claims": 1,
+      "seed": "c0",
+      "versions": 1,
+      "documents": 1,
+      "pct_of_claims": 1.0,
+      "pct_of_versions": 1.0
+    },
+    {
+      "shape": "wide",
+      "claims": 1,
+      "seed": "c0",
+      "versions": 1,
+      "documents": 1,
+      "pct_of_claims": 0.1,
+      "pct_of_versions": 0.1
+    },
+    {
+      "shape": "wide",
+      "claims": 1,
+      "seed": "c0",
+      "versions": 1,
+      "documents": 1,
+      "pct_of_claims": 0.01,
+      "pct_of_versions": 0.01
+    },
+    {
+      "shape": "deep",
+      "claims": 100,
+      "seed": "c0",
+      "versions": 100,
+      "documents": 1,
+      "pct_of_claims": 100.0,
+      "pct_of_versions": 100.0
+    },
+    {
+      "shape": "deep",
+      "claims": 1000,
+      "seed": "c0",
+      "versions": 1000,
+      "documents": 1,
+      "pct_of_claims": 100.0,
+      "pct_of_versions": 100.0
+    },
+    {
+      "shape": "deep",
+      "claims": 10000,
+      "seed": "c0",
+      "versions": 10000,
+      "documents": 1,
+      "pct_of_claims": 100.0,
+      "pct_of_versions": 100.0
+    },
+    {
+      "shape": "hotkey",
+      "claims": 100,
+      "seed": "c0",
+      "versions": 100,
+      "documents": 100,
+      "pct_of_claims": 100.0,
+      "pct_of_versions": 100.0
+    },
+    {
+      "shape": "hotkey",
+      "claims": 1000,
+      "seed": "c0",
+      "versions": 1000,
+      "documents": 1000,
+      "pct_of_claims": 100.0,
+      "pct_of_versions": 100.0
+    },
+    {
+      "shape": "hotkey",
+      "claims": 10000,
+      "seed": "c0",
+      "versions": 10000,
+      "documents": 10000,
+      "pct_of_claims": 100.0,
+      "pct_of_versions": 100.0
+    },
+    {
+      "shape": "mixed",
+      "claims": 5,
+      "seed": "c0",
+      "versions": 5,
+      "documents": 1,
+      "pct_of_claims": 5.0,
+      "pct_of_versions": 5.0
+    },
+    {
+      "shape": "mixed",
+      "claims": 5,
+      "seed": "c0",
+      "versions": 5,
+      "documents": 1,
+      "pct_of_claims": 0.5,
+      "pct_of_versions": 0.5
+    },
+    {
+      "shape": "mixed",
+      "claims": 5,
+      "seed": "c0",
+      "versions": 5,
+      "documents": 1,
+      "pct_of_claims": 0.05,
+      "pct_of_versions": 0.05
+    }
+  ],
+  "sizes": [
+    100,
+    1000,
+    10000
+  ],
+  "shapes": [
+    "wide",
+    "deep",
+    "hotkey",
+    "mixed"
+  ]
+}

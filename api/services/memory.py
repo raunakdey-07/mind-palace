@@ -400,18 +400,27 @@ async def record_deletion(db: AsyncSession, corpus_id: str, path: str) -> bool:
 async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
     """Load versions with their claims, evidence and chunks.
 
+    The child aggregates are correlated subqueries rather than one set-based pass
+    per table. A set-based rewrite was built and measured: it returns byte-
+    identical rows and cuts shared buffer reads at 1,000 claims from 1,057,320 to
+    2,475, with EXPLAIN ANALYZE execution 639.93 ms to 95.91 ms. It was reverted.
+    End to end it is 3.5x faster at 1,000 claims but 2.2x slower at 100, because
+    three hash aggregates plus three joins cost more than a handful of index
+    lookups on a small corpus, and it needs `plan_cache_mode = force_custom_plan`
+    to avoid a 12x generic-plan cliff that asyncpg walks into after five calls.
+    See `docs/research/m012-fast-memory-substrate.md`.
+
     ``chunk_text=False`` returns only each chunk's id and heading. The public
-    projection reads nothing else from a chunk, and chunk text is the bulk of the
-    payload, so dropping it is the difference between a query that scales with
-    the archive and one that does not. The raw ``history`` surface keeps the
-    text, because a developer asking for history wants the source.
+    projection reads nothing else from a chunk, and chunk text is the bulk of a
+    real document. The raw ``history`` surface keeps the text, because a
+    developer asking for history wants the source.
     """
-    # One statement gives every read a coherent MVCC view, even without a read lock.
     chunk_expr = (
-        "to_jsonb(c)"
-        if chunk_text
-        else "jsonb_build_object('id', c.id, 'heading_path', c.heading_path)"
+        "jsonb_build_object('id', c.id, 'heading_path', c.heading_path)"
+        if not chunk_text
+        else "to_jsonb(c)"
     )
+    # One statement gives every read a coherent MVCC view, even without a read lock.
     result = await db.execute(
         text(f"""
         SELECT v.*, d.path,

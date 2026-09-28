@@ -1,0 +1,321 @@
+{
+  "claims_target": 1000,
+  "current_ms": [
+    556.59,
+    557.85,
+    568.69
+  ],
+  "current_p50": 557.85,
+  "equivalence": {
+    "byte_identical": true,
+    "rows_current": 1004,
+    "rows_set_based": 1004
+  },
+  "plan_current": {
+    "execution_ms": 589.204,
+    "nodes": [
+      {
+        "cost": 115.86,
+        "depth": 0,
+        "hit": 1083643,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Sort"
+      },
+      {
+        "cost": 115.81,
+        "depth": 1,
+        "hit": 1083643,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Nested Loop"
+      },
+      {
+        "cost": 8.29,
+        "depth": 2,
+        "hit": 314,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 339,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.29,
+        "depth": 2,
+        "hit": 1017,
+        "loops": 339,
+        "removed_by_filter": null,
+        "rows": 3,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.31,
+        "depth": 2,
+        "hit": 3012,
+        "loops": 1004,
+        "removed_by_filter": null,
+        "rows": 1,
+        "type": "Aggregate"
+      },
+      {
+        "cost": 8.29,
+        "depth": 3,
+        "hit": 3012,
+        "loops": 1004,
+        "removed_by_filter": null,
+        "rows": 1,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.19,
+        "depth": 2,
+        "hit": 56224,
+        "loops": 1004,
+        "removed_by_filter": null,
+        "rows": 1,
+        "type": "Aggregate"
+      },
+      {
+        "cost": 8.17,
+        "depth": 3,
+        "hit": 56224,
+        "loops": 1004,
+        "removed_by_filter": 1003,
+        "rows": 1,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.31,
+        "depth": 2,
+        "hit": 1023076,
+        "loops": 1004,
+        "removed_by_filter": null,
+        "rows": 1,
+        "type": "Aggregate"
+      },
+      {
+        "cost": 8.29,
+        "depth": 3,
+        "hit": 1023076,
+        "loops": 1004,
+        "removed_by_filter": 1003,
+        "rows": 1,
+        "type": "Index Scan"
+      }
+    ],
+    "planning_ms": 0.515
+  },
+  "plan_set_based": {
+    "execution_ms": 93.725,
+    "nodes": [
+      {
+        "cost": 44.48,
+        "depth": 0,
+        "hit": 2490,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Sort"
+      },
+      {
+        "cost": 44.43,
+        "depth": 1,
+        "hit": 2490,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Hash Join"
+      },
+      {
+        "cost": 33.22,
+        "depth": 2,
+        "hit": 2410,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Nested Loop"
+      },
+      {
+        "cost": 24.83,
+        "depth": 3,
+        "hit": 1387,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Hash Join"
+      },
+      {
+        "cost": 16.59,
+        "depth": 4,
+        "hit": 1331,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Nested Loop"
+      },
+      {
+        "cost": 8.29,
+        "depth": 5,
+        "hit": 314,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 339,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.29,
+        "depth": 5,
+        "hit": 1017,
+        "loops": 339,
+        "removed_by_filter": null,
+        "rows": 3,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.21,
+        "depth": 4,
+        "hit": 56,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Hash"
+      },
+      {
+        "cost": 8.21,
+        "depth": 5,
+        "hit": 56,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Subquery Scan"
+      },
+      {
+        "cost": 8.2,
+        "depth": 6,
+        "hit": 56,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Aggregate"
+      },
+      {
+        "cost": 8.18,
+        "depth": 7,
+        "hit": 56,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Sort"
+      },
+      {
+        "cost": 8.17,
+        "depth": 8,
+        "hit": 56,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 8.33,
+        "depth": 3,
+        "hit": 1023,
+        "loops": 1004,
+        "removed_by_filter": null,
+        "rows": 502,
+        "type": "Materialize"
+      },
+      {
+        "cost": 8.32,
+        "depth": 4,
+        "hit": 1023,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Subquery Scan"
+      },
+      {
+        "cost": 8.31,
+        "depth": 5,
+        "hit": 1023,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Aggregate"
+      },
+      {
+        "cost": 8.29,
+        "depth": 6,
+        "hit": 1023,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Index Scan"
+      },
+      {
+        "cost": 11.18,
+        "depth": 2,
+        "hit": 80,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Hash"
+      },
+      {
+        "cost": 11.18,
+        "depth": 3,
+        "hit": 80,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Subquery Scan"
+      },
+      {
+        "cost": 11.16,
+        "depth": 4,
+        "hit": 80,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Aggregate"
+      },
+      {
+        "cost": 11.12,
+        "depth": 5,
+        "hit": 80,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Sort"
+      },
+      {
+        "cost": 11.1,
+        "depth": 6,
+        "hit": 80,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Bitmap Heap Scan"
+      },
+      {
+        "cost": 4.29,
+        "depth": 7,
+        "hit": 31,
+        "loops": 1,
+        "removed_by_filter": null,
+        "rows": 1004,
+        "type": "Bitmap Index Scan"
+      }
+    ],
+    "planning_ms": 0.404
+  },
+  "repeats": 3,
+  "set_based_ms": [
+    83.29,
+    84.3,
+    6874.74
+  ],
+  "set_based_p50": 84.3
+}

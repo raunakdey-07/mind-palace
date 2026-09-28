@@ -1,0 +1,229 @@
+{
+  "points": [
+    {
+      "backfill_s": 5.5,
+      "breakdown_ms": {
+        "load": 101.22,
+        "project": 5.68,
+        "read": 0.13,
+        "resolve": 640.78,
+        "total": 750.77
+      },
+      "cache_rows": 100,
+      "cache_rows_during_warm": [
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "claims": 100,
+      "cold_p50": 689.23,
+      "cold_samples": [
+        653.1,
+        687.4,
+        691.0,
+        703.7
+      ],
+      "documents": 100,
+      "ingest_s": 1.6,
+      "load_p50": 102.09,
+      "probe_claims": 1,
+      "probe_status": "resolved",
+      "repeats": 3,
+      "target_claims": 100,
+      "versions": 100,
+      "warm_p50": 136.34,
+      "warm_samples": [
+        153.2,
+        157.8,
+        140.0,
+        134.2,
+        136.3,
+        136.4,
+        138.9,
+        137.7,
+        136.2,
+        134.8,
+        135.0,
+        135.7
+      ]
+    },
+    {
+      "backfill_s": 8.3,
+      "breakdown_ms": {
+        "load": 6927.39,
+        "project": 76.39,
+        "read": 0.11,
+        "resolve": 6290.13,
+        "total": 13297.27
+      },
+      "cache_rows": 1000,
+      "cache_rows_during_warm": [
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000
+      ],
+      "claims": 1000,
+      "cold_p50": 14063.84,
+      "cold_samples": [
+        24991.5,
+        14994.5,
+        12966.0,
+        13133.1
+      ],
+      "documents": 1000,
+      "ingest_s": 21.7,
+      "load_p50": 7183.97,
+      "probe_claims": 1,
+      "probe_status": "resolved",
+      "repeats": 3,
+      "target_claims": 1000,
+      "versions": 1000,
+      "warm_p50": 7753.15,
+      "warm_samples": [
+        319.3,
+        297.5,
+        494.4,
+        296.5,
+        295.8,
+        8176.2,
+        7511.2,
+        8614.8,
+        7995.1,
+        8925.2,
+        8669.7,
+        8045.6
+      ]
+    },
+    {
+      "backfill_s": 42.9,
+      "breakdown_ms": {
+        "load": 6346.46,
+        "project": 838.58,
+        "read": 0.17,
+        "resolve": 40089.52,
+        "total": 47278.98
+      },
+      "cache_rows": 5002,
+      "cache_rows_during_warm": [
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002,
+        5002
+      ],
+      "claims": 5002,
+      "cold_p50": 53237.7,
+      "cold_samples": [
+        39752.5,
+        66377.8,
+        40097.6,
+        71729.1
+      ],
+      "documents": 5002,
+      "ingest_s": 202.3,
+      "load_p50": 5773.64,
+      "probe_claims": 1,
+      "probe_status": "resolved",
+      "repeats": 3,
+      "target_claims": 5000,
+      "versions": 5002,
+      "warm_p50": 16382.73,
+      "warm_samples": [
+        1814.5,
+        1956.9,
+        1810.1,
+        1809.4,
+        1913.7,
+        17340.6,
+        18646.2,
+        16875.6,
+        16301.4,
+        18895.4,
+        18180.7,
+        16464.1
+      ]
+    },
+    {
+      "backfill_s": 96.7,
+      "breakdown_ms": {
+        "load": 24330.17,
+        "project": 2225.14,
+        "read": 0.25,
+        "resolve": 51228.51,
+        "total": 77789.44
+      },
+      "cache_rows": 10000,
+      "cache_rows_during_warm": [
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000,
+        10000
+      ],
+      "claims": 10000,
+      "cold_p50": 74791.81,
+      "cold_samples": [
+        75810.1,
+        72849.7,
+        73773.6,
+        76961.7
+      ],
+      "documents": 10000,
+      "ingest_s": 628.3,
+      "load_p50": 22902.56,
+      "probe_claims": 1,
+      "probe_status": "resolved",
+      "repeats": 3,
+      "target_claims": 10000,
+      "versions": 10000,
+      "warm_p50": 60280.63,
+      "warm_samples": [
+        8871.5,
+        7506.0,
+        7165.0,
+        6935.2,
+        8048.4,
+        99467.9,
+        75195.0,
+        64818.7,
+        62527.3,
+        61369.5,
+        59191.8,
+        62603.5
+      ]
+    }
+  ],
+  "repeats": 3
+}

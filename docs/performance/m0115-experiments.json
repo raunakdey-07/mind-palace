@@ -1,6 +1,6 @@
 {
   "meta": {
-    "commit": "f9e7e707bad484509acc98a2ed2ae0bf47e5af27",
+    "commit": "2deebaee2599a8b2a4dd7148460a5644576f524b",
     "dataset_hash": "9cdecda73cbdc8ae055926320b85402d47dd7eed0cb28c96b9b191e5bed154a7",
     "model": "all-MiniLM-L6-v2",
     "python": "3.14.7",
@@ -2524,16 +2524,16 @@
   },
   "timing": {
     "lexical_ms": {
-      "mean": 63.43,
+      "mean": 26.98,
       "n": 202,
-      "p50": 61.98,
-      "p95": 86.0
+      "p50": 27.18,
+      "p95": 36.69
     },
     "semantic_ms": {
-      "mean": 1446.01,
+      "mean": 617.93,
       "n": 202,
-      "p50": 1414.27,
-      "p95": 1665.13
+      "p50": 590.3,
+      "p95": 760.43
     }
   }
 }

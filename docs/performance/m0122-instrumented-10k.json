@@ -1,0 +1,321 @@
+{
+  "environment": {
+    "boundary": "archive load, projection, vector cache, select and pack, as the public query path runs them",
+    "cache": "claim vector cache asserted fully populated; zero misses allowed",
+    "commit": "2deebaee2599a8b2a4dd7148460a5644576f524b",
+    "model": "all-MiniLM-L6-v2",
+    "numpy": "2.5.2",
+    "pgvector": "0.8.6",
+    "postgres": "15.19",
+    "python": "3.14.7",
+    "questions": 4,
+    "repeats": 3
+  },
+  "points": [
+    {
+      "cached_rows": 10000,
+      "claims": 10000,
+      "raw": [
+        {
+          "archive_load_ms": 650.2971080008138,
+          "db_corpus_lookup_ms": 2.700089000427397,
+          "pack_ms": 0.20901199968648143,
+          "project_ms": 2507.688734000112,
+          "select_ms": 367.9530010012968,
+          "total_ms": 4460.053172002517,
+          "vector_cache_ms": 753.4526029994595
+        },
+        {
+          "archive_load_ms": 631.2024519975239,
+          "db_corpus_lookup_ms": 2.8641470016737003,
+          "pack_ms": 0.22538300254382193,
+          "project_ms": 2502.3410739995597,
+          "select_ms": 405.4124239992234,
+          "total_ms": 4435.588153999561,
+          "vector_cache_ms": 726.4574140026525
+        },
+        {
+          "archive_load_ms": 826.5923779981676,
+          "db_corpus_lookup_ms": 2.3699390003457665,
+          "pack_ms": 0.2356329969188664,
+          "project_ms": 2512.8602719996707,
+          "select_ms": 374.8640449994127,
+          "total_ms": 4632.4186050005665,
+          "vector_cache_ms": 746.9722469977569
+        },
+        {
+          "archive_load_ms": 623.0619689995365,
+          "db_corpus_lookup_ms": 2.890477000619285,
+          "pack_ms": 0.2423349978926126,
+          "project_ms": 2487.647850997746,
+          "select_ms": 398.594274000061,
+          "total_ms": 4401.3388070015935,
+          "vector_cache_ms": 720.2313960005995
+        },
+        {
+          "archive_load_ms": 843.7343789992156,
+          "db_corpus_lookup_ms": 2.246727999590803,
+          "pack_ms": 0.21601600019494072,
+          "project_ms": 2196.437918999436,
+          "select_ms": 366.43259700213093,
+          "total_ms": 4582.335423001496,
+          "vector_cache_ms": 1003.2237790001091
+        },
+        {
+          "archive_load_ms": 621.578545000375,
+          "db_corpus_lookup_ms": 2.207724999607308,
+          "pack_ms": 0.23833700106479228,
+          "project_ms": 2462.0273020009336,
+          "select_ms": 390.08979799837107,
+          "total_ms": 4369.563824999204,
+          "vector_cache_ms": 722.3809310016804
+        },
+        {
+          "archive_load_ms": 615.7335809984943,
+          "db_corpus_lookup_ms": 2.2410270030377433,
+          "pack_ms": 0.21178799943299964,
+          "project_ms": 2444.1308560017205,
+          "select_ms": 372.0240239999839,
+          "total_ms": 4316.787789000955,
+          "vector_cache_ms": 712.1100290023605
+        },
+        {
+          "archive_load_ms": 852.040311001474,
+          "db_corpus_lookup_ms": 2.7072119992226362,
+          "pack_ms": 0.23106400112737902,
+          "project_ms": 2462.7972890011733,
+          "select_ms": 368.8913119985955,
+          "total_ms": 4607.25376299888,
+          "vector_cache_ms": 736.2144519975118
+        },
+        {
+          "archive_load_ms": 626.0090209980262,
+          "db_corpus_lookup_ms": 2.8494290017988533,
+          "pack_ms": 0.2381369995418936,
+          "project_ms": 2442.9347600016627,
+          "select_ms": 397.4899409986392,
+          "total_ms": 4351.526233000186,
+          "vector_cache_ms": 710.907070999383
+        },
+        {
+          "archive_load_ms": 639.4349160000274,
+          "db_corpus_lookup_ms": 2.342857998883119,
+          "pack_ms": 0.21601499975076877,
+          "project_ms": 2453.8888839997526,
+          "select_ms": 384.0116780011158,
+          "total_ms": 4399.192387998482,
+          "vector_cache_ms": 749.32801900286
+        },
+        {
+          "archive_load_ms": 856.372072998056,
+          "db_corpus_lookup_ms": 2.918879999924684,
+          "pack_ms": 0.2209449994552415,
+          "project_ms": 2651.620337001077,
+          "select_ms": 434.94033699971624,
+          "total_ms": 4852.475899999263,
+          "vector_cache_ms": 739.2037429999618
+        },
+        {
+          "archive_load_ms": 620.3639839986863,
+          "db_corpus_lookup_ms": 2.782563999062404,
+          "pack_ms": 0.22552299924427643,
+          "project_ms": 2436.0027559996524,
+          "select_ms": 384.82264000049327,
+          "total_ms": 4341.773183998157,
+          "vector_cache_ms": 709.2313950015523
+        }
+      ],
+      "repeats": 3,
+      "rows": [
+        {
+          "archive_load_ms": 650.2971080008138,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.700089000427397,
+          "pack_bytes": 1851,
+          "pack_ms": 0.20901199968648143,
+          "project_ms": 2507.688734000112,
+          "select_ms": 367.9530010012968,
+          "total_ms": 4460.053172002517,
+          "vector_cache_ms": 753.4526029994595
+        },
+        {
+          "archive_load_ms": 631.2024519975239,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.8641470016737003,
+          "pack_bytes": 1902,
+          "pack_ms": 0.22538300254382193,
+          "project_ms": 2502.3410739995597,
+          "select_ms": 405.4124239992234,
+          "total_ms": 4435.588153999561,
+          "vector_cache_ms": 726.4574140026525
+        },
+        {
+          "archive_load_ms": 826.5923779981676,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.3699390003457665,
+          "pack_bytes": 1810,
+          "pack_ms": 0.2356329969188664,
+          "project_ms": 2512.8602719996707,
+          "select_ms": 374.8640449994127,
+          "total_ms": 4632.4186050005665,
+          "vector_cache_ms": 746.9722469977569
+        },
+        {
+          "archive_load_ms": 623.0619689995365,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.890477000619285,
+          "pack_bytes": 1837,
+          "pack_ms": 0.2423349978926126,
+          "project_ms": 2487.647850997746,
+          "select_ms": 398.594274000061,
+          "total_ms": 4401.3388070015935,
+          "vector_cache_ms": 720.2313960005995
+        },
+        {
+          "archive_load_ms": 843.7343789992156,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.246727999590803,
+          "pack_bytes": 1851,
+          "pack_ms": 0.21601600019494072,
+          "project_ms": 2196.437918999436,
+          "select_ms": 366.43259700213093,
+          "total_ms": 4582.335423001496,
+          "vector_cache_ms": 1003.2237790001091
+        },
+        {
+          "archive_load_ms": 621.578545000375,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.207724999607308,
+          "pack_bytes": 1902,
+          "pack_ms": 0.23833700106479228,
+          "project_ms": 2462.0273020009336,
+          "select_ms": 390.08979799837107,
+          "total_ms": 4369.563824999204,
+          "vector_cache_ms": 722.3809310016804
+        },
+        {
+          "archive_load_ms": 615.7335809984943,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.2410270030377433,
+          "pack_bytes": 1810,
+          "pack_ms": 0.21178799943299964,
+          "project_ms": 2444.1308560017205,
+          "select_ms": 372.0240239999839,
+          "total_ms": 4316.787789000955,
+          "vector_cache_ms": 712.1100290023605
+        },
+        {
+          "archive_load_ms": 852.040311001474,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.7072119992226362,
+          "pack_bytes": 1837,
+          "pack_ms": 0.23106400112737902,
+          "project_ms": 2462.7972890011733,
+          "select_ms": 368.8913119985955,
+          "total_ms": 4607.25376299888,
+          "vector_cache_ms": 736.2144519975118
+        },
+        {
+          "archive_load_ms": 626.0090209980262,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.8494290017988533,
+          "pack_bytes": 1851,
+          "pack_ms": 0.2381369995418936,
+          "project_ms": 2442.9347600016627,
+          "select_ms": 397.4899409986392,
+          "total_ms": 4351.526233000186,
+          "vector_cache_ms": 710.907070999383
+        },
+        {
+          "archive_load_ms": 639.4349160000274,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.342857998883119,
+          "pack_bytes": 1902,
+          "pack_ms": 0.21601499975076877,
+          "project_ms": 2453.8888839997526,
+          "select_ms": 384.0116780011158,
+          "total_ms": 4399.192387998482,
+          "vector_cache_ms": 749.32801900286
+        },
+        {
+          "archive_load_ms": 856.372072998056,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.918879999924684,
+          "pack_bytes": 1810,
+          "pack_ms": 0.2209449994552415,
+          "project_ms": 2651.620337001077,
+          "select_ms": 434.94033699971624,
+          "total_ms": 4852.475899999263,
+          "vector_cache_ms": 739.2037429999618
+        },
+        {
+          "archive_load_ms": 620.3639839986863,
+          "cache_hits": 10000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.782563999062404,
+          "pack_bytes": 1837,
+          "pack_ms": 0.22552299924427643,
+          "project_ms": 2436.0027559996524,
+          "select_ms": 384.82264000049327,
+          "total_ms": 4341.773183998157,
+          "vector_cache_ms": 709.2313950015523
+        }
+      ],
+      "summary": {
+        "archive_load_ms": {
+          "max": 856.37,
+          "min": 615.73,
+          "p50": 639.43,
+          "p95": 856.37
+        },
+        "db_corpus_lookup_ms": {
+          "max": 2.92,
+          "min": 2.21,
+          "p50": 2.71,
+          "p95": 2.92
+        },
+        "pack_ms": {
+          "max": 0.24,
+          "min": 0.21,
+          "p50": 0.23,
+          "p95": 0.24
+        },
+        "project_ms": {
+          "max": 2651.62,
+          "min": 2196.44,
+          "p50": 2462.8,
+          "p95": 2651.62
+        },
+        "select_ms": {
+          "max": 434.94,
+          "min": 366.43,
+          "p50": 384.82,
+          "p95": 434.94
+        },
+        "total_ms": {
+          "max": 4852.48,
+          "min": 4316.79,
+          "p50": 4435.59,
+          "p95": 4852.48
+        },
+        "vector_cache_ms": {
+          "max": 1003.22,
+          "min": 709.23,
+          "p50": 736.21,
+          "p95": 1003.22
+        }
+      }
+    }
+  ]
+}

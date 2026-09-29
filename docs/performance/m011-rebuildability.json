@@ -20,7 +20,8 @@
     },
     "rebuild_stats": {
       "archived_paths": 7,
-      "corpus_id": "954c7b496d9f25ec6fa4ce8d098c2ed470f7c2752adc3b3250d94c5941981662",
+      "cached_claims": 10,
+      "corpus_id": "656fac2439725698637a39539d5eea02a7dd92057fe30ddb32e804ee65f10df1",
       "deleted_archive_paths": 0,
       "rebuilt_chunks": 7,
       "rebuilt_documents": 7,
@@ -37,12 +38,12 @@
     }
   },
   "digests": {
-    "l2_destroyed": "85a05154115352fc1a169df23d48b39f63904329e0db0cec2b7c07430bda3f28",
-    "l2_rebuilt": "85a05154115352fc1a169df23d48b39f63904329e0db0cec2b7c07430bda3f28",
-    "with_l2": "85a05154115352fc1a169df23d48b39f63904329e0db0cec2b7c07430bda3f28"
+    "l2_destroyed": "f4aef657aecd45b23674d3fe67911057acce5e1ba7b7d653de8b8b51847ccfda",
+    "l2_rebuilt": "f4aef657aecd45b23674d3fe67911057acce5e1ba7b7d653de8b8b51847ccfda",
+    "with_l2": "f4aef657aecd45b23674d3fe67911057acce5e1ba7b7d653de8b8b51847ccfda"
   },
   "meta": {
-    "commit": "b00f5a716a4e3b9f96152304a2020a2c66aef778",
+    "commit": "2deebaee2599a8b2a4dd7148460a5644576f524b",
     "python": "3.14.7"
   },
   "questions": [

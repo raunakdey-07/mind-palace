@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
-[Current release: v0.6.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.7.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
 **Mind Palace is a persistent, portable memory layer for AI applications that
 need persistent, versioned, evidence-backed knowledge over an evolving corpus.**
@@ -22,10 +22,12 @@ means model-independent interfaces, not a promised archive export/import tool.
 
 ### Current product
 
-`v0.6.0` is the current public release. It packages the released M009 operational
-memory feed and the existing persistent corpus-memory model. The current product
-also includes the live REST/Python/CLI retrieval surfaces, MCP for ordinary
-memory operations, and dependency-aware liveness and readiness checks.
+`v0.7.0` is the current public release. It packages the unified authoritative
+`context()` surface, the portable Memory Pack reader, the claim-representation
+cache, and a cached-query fix, alongside the released M009 operational memory
+feed and the existing persistent corpus-memory model. The current product also
+includes the live REST/Python/CLI retrieval surfaces, MCP for ordinary memory
+operations, and dependency-aware liveness and readiness checks.
 
 The durable feed is a corpus-scoped read interface over immutable
 `memory_versions` rows. It uses an opaque, integrity-protected cursor for bounded
@@ -566,6 +568,23 @@ by a claim that generation or production validation is complete.
 
 ## Known limitations
 
+- **Measured latency envelope, and its edges.** Warm, real public query path,
+  claim-representation cache warm, 20 samples per size (12 at 10,000):
+
+  | claims | warm p50 |
+  | ---: | ---: |
+  | 100 | 47 ms |
+  | 1,000 | 1.0 s |
+  | 5,000 | 1.7 s |
+  | 10,000 | 4.4 s |
+
+  **25,000 and above were not measured.** These are medians on one host with
+  roughly 2x run-to-run variance, not guarantees, and not a comparison against
+  any other system. Above about 5,000 claims, projection dominates: the
+  projection builds a model per archived claim and keeps roughly one. Reducing
+  that needs the dependency closure solved first, because narrowing the archive
+  before projection was measured to change 32 of 202 benchmark answers.
+  [Measurement and rejected candidates](docs/research/m0123-projection-release-gate.md).
 - Existing lexical operations remain lexical AND. M006.5 adds heuristic semantic
   question retrieval, not universally reliable question answering or automatic
   claim extraction. Related concepts, multi-part questions, and abstention remain
@@ -574,8 +593,10 @@ by a claim that generation or production validation is complete.
   without pagination. Output budgets do not bound memory/SQL cost. The M009
   operational feed is separately keyset-paginated; its concurrency and archive
   late-arrival limitations are documented in `docs/operations.md`.
-- Conflicts require same-key differing values across active documents; no general
-  contradiction detection, independent truth verification, or semantic entailment.
+- Conflicts require same-key differing values across active documents. A
+  contradicting claim authored under a *different* key is not detected, and the
+  pack does not label it as drift. This is a known gap, measured on the authored
+  benchmark, and it is why no general contradiction detection is claimed.
 - `/ask` grounding and citation instructions are prompt-based, not formally verified;
   memory semantics results do not establish generated-answer quality.
 - Markdown-only source support today; plain text/code are planned.

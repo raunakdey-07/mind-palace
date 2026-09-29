@@ -22,12 +22,12 @@ def main() -> None:
     m0065 = (ROOT / "docs/evaluation/m0065.md").read_text(encoding="utf-8")
     m00675 = (ROOT / "docs/evaluation/m00675-reproducibility.md").read_text(encoding="utf-8")
 
-    require(pyproject, r'^version = "0\.6\.0"$', "package version is v0.6.0")
-    require(changelog, r"^## \[v0\.6\.0\]", "v0.6.0 changelog entry")
+    require(pyproject, r'^version = "0\.7\.0"$', "package version is v0.7.0")
+    require(changelog, r"^## \[v0\.7\.0\]", "v0.7.0 changelog entry")
     require(release_map, r"\| M006\.75 \|.*\| `v0\.5\.0` \|", "M006.75 release mapping")
     require(
         readme,
-        r"\[Current release: v0\.6\.0\]\(docs/release-map\.md\)",
+        r"\[Current release: v0\.7\.0\]\(docs/release-map\.md\)",
         "README release-map link",
     )
     require(m006, r"^Public release: `v0\.5\.0`$", "M006 release metadata")
@@ -42,6 +42,26 @@ def main() -> None:
         release_map,
         r"\| M009 \|.*\| `v0\.6\.0` \|",
         "M009 release mapping",
+    )
+    require(
+        release_map,
+        r"\| M010 \|.*\| `v0\.7\.0` \|",
+        "M010 release mapping",
+    )
+    require(
+        release_map,
+        r"\| M011 \|.*\| `v0\.7\.0` \|",
+        "M011 release mapping",
+    )
+    require(
+        release_map,
+        r"\| M011\.5 \|.*\| `v0\.7\.0` \|",
+        "M011.5 release mapping",
+    )
+    require(
+        release_map,
+        r"\| M012 / M012\.3 \|.*\| `v0\.7\.0` \|",
+        "M012 release mapping",
     )
     print("release metadata: PASS")
 

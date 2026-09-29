@@ -4,6 +4,77 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.7.0] - 2026-09-28
+
+### Added
+
+- Unified authoritative `context()` surface across REST, the Python SDK and MCP.
+  The archive is resolved first and ranked live chunks are attached as raw
+  material, so a conflicted key is reported as a conflict rather than as the
+  latest writer's text. The response keeps its existing fields and adds
+  `status`, `memories`, `conflicts` and `changes`; existing fields are unchanged.
+- `memory_pack.py`, a standard-library-only reader for the Memory Pack. It is
+  shipped in the distribution so a consumer can read a pack with no database,
+  ORM, embedding model or server present.
+- Claim-representation cache (migration `007_claim_embedding_cache`) and a
+  `mindpalace reindex` command that rebuilds the derived layer from the archive.
+- `as_of` and explicit `intent` selectors on `GET /api/context`, and a lexical
+  relevance fallback so authoritative query answers when the embedding model
+  cannot load.
+- Dependency-free Memory Pack reading, verified from a clean install.
+
+### Fixed
+
+- **Cached-vector queries got 22x slower on a long-lived connection.** After
+  asyncpg prepared the statement, two large SQL array parameters dominated the
+  load: roughly 380 ms for the first five executions and about 8,400 ms after.
+  The load now selects by the indexed corpus, model and dimension prefix and
+  filters in Python, which is also a stricter freshness check. Measured on the
+  public query path with a warm cache: 10,168 ms to 1,745 ms at 5,000 claims,
+  1,359 ms to 1,010 ms at 1,000, and no regression at 100.
+- `bounded_pack` now preserves the `NO_RELEVANT_MEMORY` marker, so a bounded
+  answer to an unanswerable question is distinguishable from an empty envelope.
+- The archive load no longer ships chunk text to the public projection, which
+  reads only a chunk's id and heading.
+- The API description reads "The Durable AI Memory Substrate" and is pinned by a
+  test, so it cannot drift back to the previous RAG framing.
+- `memory_pack` is declared in the package, so `pip install` makes it importable.
+- Runtime dependencies are declared in `pyproject.toml` rather than left empty.
+
+### Changed
+
+- Claim representations are tokenised once and memoised on the immutable claim
+  text, and the common-term difference is computed once instead of per candidate
+  and per topic. Neither showed a measurable end-to-end change on the measuring
+  host and neither is presented as a performance result.
+- The public projection no longer receives full chunk text.
+
+### Upgrade
+
+- Two additive migrations apply: `006_snapshot_membership_seal` and
+  `007_claim_embedding_cache`. Neither rewrites existing rows. The Memory Pack
+  schema stays at version 1 and no public response contract changed, so this is a
+  minor release.
+
+### Known limitations
+
+- Measured warm p50 for the public query path: 47 ms at 100 claims, 1.0 s at
+  1,000, 1.7 s at 5,000 and 4.4 s at 10,000, on one host with roughly 2x
+  run-to-run variance. 25,000 claims and above were not measured.
+- Above about 5,000 claims, projection dominates: it builds a model per archived
+  claim and keeps roughly one. Reducing that requires the dependency closure to
+  be solved first, because narrowing the archive before projection was measured to
+  change 32 of 202 benchmark answers.
+- The archive load is not a clean linear function of archive size between 1,000
+  and 5,000 versions, and its sort spills to disk on a corpus of that size. The
+  cause is not identified. JIT compilation and run-to-run variance are ruled out.
+- Conflict detection is keyed, so a contradicting claim authored under a different
+  key is not detected and is not labelled as drift.
+- Relationship questions score 31 of 34. The failures are two ranking
+  weaknesses, one of which is a vocabulary gap, and one missing authored
+  representation. No multi-hop relationship reasoning is claimed.
+- M006.75 frozen evidence is unchanged. No prior benchmark number was rewritten.
+
 ## [v0.6.0] - 2026-09-24
 
 ### Added

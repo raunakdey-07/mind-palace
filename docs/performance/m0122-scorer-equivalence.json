@@ -1,0 +1,1020 @@
+{
+  "differing": [],
+  "margins": {
+    "note": "A flip needs a gap of 0. Observed max numeric error was 1.6e-16.",
+    "smallest_distance_to_any_gate": 2.2964078845111313e-05,
+    "smallest_top_two_score_gap": 0.0
+  },
+  "questions": [
+    {
+      "digest": "55391720cbab34c8",
+      "identical": true,
+      "qid": "cur-01"
+    },
+    {
+      "digest": "bf46bd18c0ec243a",
+      "identical": true,
+      "qid": "cur-02"
+    },
+    {
+      "digest": "3bbac6b30886b176",
+      "identical": true,
+      "qid": "cur-03"
+    },
+    {
+      "digest": "6b09d3a98f1b3c71",
+      "identical": true,
+      "qid": "cur-04"
+    },
+    {
+      "digest": "aeeade1e8ef6ca6a",
+      "identical": true,
+      "qid": "cur-05"
+    },
+    {
+      "digest": "b9f82d89d2de5279",
+      "identical": true,
+      "qid": "cur-06"
+    },
+    {
+      "digest": "ea864deff8669f45",
+      "identical": true,
+      "qid": "cur-own-gateway"
+    },
+    {
+      "digest": "2e272b5a6bac074b",
+      "identical": true,
+      "qid": "cur-own-identity"
+    },
+    {
+      "digest": "294eecaf23ca68db",
+      "identical": true,
+      "qid": "cur-own-orders"
+    },
+    {
+      "digest": "72a2e190456e830e",
+      "identical": true,
+      "qid": "cur-own-billing"
+    },
+    {
+      "digest": "f96348d1c4be4c52",
+      "identical": true,
+      "qid": "cur-own-search-indexer"
+    },
+    {
+      "digest": "a5342112aea0cdd7",
+      "identical": true,
+      "qid": "cur-own-web"
+    },
+    {
+      "digest": "a8ab41ca57d28723",
+      "identical": true,
+      "qid": "cur-own-notifier"
+    },
+    {
+      "digest": "dfda8e8ee9d624f7",
+      "identical": true,
+      "qid": "cur-own-analytics"
+    },
+    {
+      "digest": "47a2734f290abc35",
+      "identical": true,
+      "qid": "cur-own-media"
+    },
+    {
+      "digest": "447a096818d443a1",
+      "identical": true,
+      "qid": "cur-own-archive"
+    },
+    {
+      "digest": "bd10eef1ed622102",
+      "identical": true,
+      "qid": "cur-own-ledger"
+    },
+    {
+      "digest": "63e18fa3ff01c2ba",
+      "identical": true,
+      "qid": "cur-own-risk"
+    },
+    {
+      "digest": "8c45040554e364aa",
+      "identical": true,
+      "qid": "cur-tier-gateway"
+    },
+    {
+      "digest": "7a21a082deab5a3b",
+      "identical": true,
+      "qid": "cur-tier-identity"
+    },
+    {
+      "digest": "f77c64e8c9fee0ab",
+      "identical": true,
+      "qid": "cur-tier-orders"
+    },
+    {
+      "digest": "d11607854300a39f",
+      "identical": true,
+      "qid": "cur-tier-billing"
+    },
+    {
+      "digest": "c1420a7a5cc0d46f",
+      "identical": true,
+      "qid": "cur-tier-search-indexer"
+    },
+    {
+      "digest": "3c9a5226e6fdf150",
+      "identical": true,
+      "qid": "cur-tier-web"
+    },
+    {
+      "digest": "221712b2fbf316ad",
+      "identical": true,
+      "qid": "cur-tier-notifier"
+    },
+    {
+      "digest": "fa06cad38056f016",
+      "identical": true,
+      "qid": "cur-tier-analytics"
+    },
+    {
+      "digest": "b37117f8fb421ac3",
+      "identical": true,
+      "qid": "cur-tier-media"
+    },
+    {
+      "digest": "f759676715293027",
+      "identical": true,
+      "qid": "cur-tier-archive"
+    },
+    {
+      "digest": "5e35c641377c9193",
+      "identical": true,
+      "qid": "cur-tier-ledger"
+    },
+    {
+      "digest": "fbe802100a4f061a",
+      "identical": true,
+      "qid": "cur-tier-risk"
+    },
+    {
+      "digest": "a22e1238acd5f517",
+      "identical": true,
+      "qid": "hist-postgres"
+    },
+    {
+      "digest": "df309a57ffcbc39f",
+      "identical": true,
+      "qid": "hist-redis"
+    },
+    {
+      "digest": "b6eaf56dbd2d1b84",
+      "identical": true,
+      "qid": "hist-queue"
+    },
+    {
+      "digest": "7639e27d0c310765",
+      "identical": true,
+      "qid": "hist-search"
+    },
+    {
+      "digest": "dbcdc5015a478305",
+      "identical": true,
+      "qid": "hist-storage"
+    },
+    {
+      "digest": "4c0a508ecd295a6b",
+      "identical": true,
+      "qid": "hist-warehouse"
+    },
+    {
+      "digest": "cff7d1afd5193833",
+      "identical": true,
+      "qid": "hist-sup-postgres"
+    },
+    {
+      "digest": "86bec778da1b12d5",
+      "identical": true,
+      "qid": "hist-sup-redis"
+    },
+    {
+      "digest": "1e5b97087b3b0629",
+      "identical": true,
+      "qid": "hist-sup-queue"
+    },
+    {
+      "digest": "27645f070f1da440",
+      "identical": true,
+      "qid": "hist-sup-search"
+    },
+    {
+      "digest": "3e06d612637d931f",
+      "identical": true,
+      "qid": "hist-sup-storage"
+    },
+    {
+      "digest": "0f457178d6caebed",
+      "identical": true,
+      "qid": "hist-sup-warehouse"
+    },
+    {
+      "digest": "3cdde82ee5fcb8aa",
+      "identical": true,
+      "qid": "hist-db-url"
+    },
+    {
+      "digest": "571ced30912d13fb",
+      "identical": true,
+      "qid": "hist-db-url-now"
+    },
+    {
+      "digest": "c86af81b8e25a609",
+      "identical": true,
+      "qid": "hist-esc-gateway"
+    },
+    {
+      "digest": "67d5bf7b2632d91a",
+      "identical": true,
+      "qid": "hist-esc-identity"
+    },
+    {
+      "digest": "37e32a66e586b298",
+      "identical": true,
+      "qid": "hist-esc-orders"
+    },
+    {
+      "digest": "161fcfe101fff5c3",
+      "identical": true,
+      "qid": "hist-esc-billing"
+    },
+    {
+      "digest": "d103aef4b13a6384",
+      "identical": true,
+      "qid": "hist-esc-search-indexer"
+    },
+    {
+      "digest": "65f7d719db68d940",
+      "identical": true,
+      "qid": "hist-esc-web"
+    },
+    {
+      "digest": "99815fe605b9dd6a",
+      "identical": true,
+      "qid": "hist-esc-notifier"
+    },
+    {
+      "digest": "414d9e623b37ef1b",
+      "identical": true,
+      "qid": "hist-esc-analytics"
+    },
+    {
+      "digest": "f139ac236d14fff0",
+      "identical": true,
+      "qid": "hist-esc-media"
+    },
+    {
+      "digest": "52762dcf1aba4c1e",
+      "identical": true,
+      "qid": "hist-esc-archive"
+    },
+    {
+      "digest": "f1f63a3d0996fb46",
+      "identical": true,
+      "qid": "hist-esc-ledger"
+    },
+    {
+      "digest": "687fe2ac69fe9e8b",
+      "identical": true,
+      "qid": "hist-esc-risk"
+    },
+    {
+      "digest": "27cd5859d77b7e2c",
+      "identical": true,
+      "qid": "hist-team-platform"
+    },
+    {
+      "digest": "5de9b6e7ac17fd84",
+      "identical": true,
+      "qid": "hist-team-payments"
+    },
+    {
+      "digest": "8dbdd78f6a94a346",
+      "identical": true,
+      "qid": "hist-team-discovery"
+    },
+    {
+      "digest": "8c3c27addbc61f25",
+      "identical": true,
+      "qid": "hist-team-data"
+    },
+    {
+      "digest": "c47db7521f8246d9",
+      "identical": true,
+      "qid": "tmp-why-postgres"
+    },
+    {
+      "digest": "8b00ea8dd103002d",
+      "identical": true,
+      "qid": "tmp-why-redis"
+    },
+    {
+      "digest": "a51b68175f233bb3",
+      "identical": true,
+      "qid": "tmp-why-queue"
+    },
+    {
+      "digest": "05aa3a315aeebe15",
+      "identical": true,
+      "qid": "tmp-why-search"
+    },
+    {
+      "digest": "0dc9cdd333cfcd9d",
+      "identical": true,
+      "qid": "tmp-why-storage"
+    },
+    {
+      "digest": "5267b18faddf164a",
+      "identical": true,
+      "qid": "tmp-why-warehouse"
+    },
+    {
+      "digest": "d74777b5aebda2a3",
+      "identical": true,
+      "qid": "tmp-inc-2024-03-orders"
+    },
+    {
+      "digest": "9ecd384f7fdb4858",
+      "identical": true,
+      "qid": "tmp-inc-2024-07-notifier"
+    },
+    {
+      "digest": "85e711ee7c02290b",
+      "identical": true,
+      "qid": "tmp-inc-2024-09-search-indexer"
+    },
+    {
+      "digest": "bac60d2937b0f241",
+      "identical": true,
+      "qid": "tmp-inc-2024-11-ledger"
+    },
+    {
+      "digest": "c5b203807bcbafdf",
+      "identical": true,
+      "qid": "tmp-rel-0.6"
+    },
+    {
+      "digest": "8ffa283e64d54175",
+      "identical": true,
+      "qid": "tmp-rel-0.7"
+    },
+    {
+      "digest": "9aa2376fcf7582af",
+      "identical": true,
+      "qid": "tmp-rel-0.8"
+    },
+    {
+      "digest": "5da992e635506288",
+      "identical": true,
+      "qid": "cft-01"
+    },
+    {
+      "digest": "fa7aabae16183b83",
+      "identical": true,
+      "qid": "prv-postgres"
+    },
+    {
+      "digest": "3e5d029b0f5d9b2f",
+      "identical": true,
+      "qid": "prv-redis"
+    },
+    {
+      "digest": "a66ad2f5bd3f96c3",
+      "identical": true,
+      "qid": "prv-queue"
+    },
+    {
+      "digest": "7b14667d92ea1970",
+      "identical": true,
+      "qid": "prv-search"
+    },
+    {
+      "digest": "0118ce0eb585095e",
+      "identical": true,
+      "qid": "prv-storage"
+    },
+    {
+      "digest": "652cdfd99a60a765",
+      "identical": true,
+      "qid": "prv-warehouse"
+    },
+    {
+      "digest": "7f28a38502b0c8e7",
+      "identical": true,
+      "qid": "prv-inc-2024-03"
+    },
+    {
+      "digest": "cba7eedf5c2d1a90",
+      "identical": true,
+      "qid": "prv-inc-2024-07"
+    },
+    {
+      "digest": "8b6bad412b6fb313",
+      "identical": true,
+      "qid": "prv-inc-2024-09"
+    },
+    {
+      "digest": "bb4bbccd887c0cd7",
+      "identical": true,
+      "qid": "prv-inc-2024-11"
+    },
+    {
+      "digest": "29e7224946200c6e",
+      "identical": true,
+      "qid": "prv-own-gateway"
+    },
+    {
+      "digest": "f1389e011dac98c9",
+      "identical": true,
+      "qid": "prv-own-identity"
+    },
+    {
+      "digest": "480d98de11317041",
+      "identical": true,
+      "qid": "prv-own-orders"
+    },
+    {
+      "digest": "fd3ea4d556315d8d",
+      "identical": true,
+      "qid": "prv-own-billing"
+    },
+    {
+      "digest": "924bd3ed17f4def2",
+      "identical": true,
+      "qid": "prv-own-search-indexer"
+    },
+    {
+      "digest": "d9d419d2e8ceb4d5",
+      "identical": true,
+      "qid": "prv-own-web"
+    },
+    {
+      "digest": "287c5772c7c091db",
+      "identical": true,
+      "qid": "prv-own-notifier"
+    },
+    {
+      "digest": "c68d9ba7ea82d568",
+      "identical": true,
+      "qid": "prv-own-analytics"
+    },
+    {
+      "digest": "cd122ab9dc120552",
+      "identical": true,
+      "qid": "prv-own-media"
+    },
+    {
+      "digest": "f1530ac497bae846",
+      "identical": true,
+      "qid": "prv-own-archive"
+    },
+    {
+      "digest": "a6d73c70bb72c735",
+      "identical": true,
+      "qid": "prv-own-ledger"
+    },
+    {
+      "digest": "1a4a99c3cfbc23c4",
+      "identical": true,
+      "qid": "prv-own-risk"
+    },
+    {
+      "digest": "dfe94c2838263ac6",
+      "identical": true,
+      "qid": "prv-deploy-tier-0"
+    },
+    {
+      "digest": "814df884c3edc3ec",
+      "identical": true,
+      "qid": "prv-deploy-tier-1"
+    },
+    {
+      "digest": "a3030730c478f416",
+      "identical": true,
+      "qid": "prv-deploy-tier-2"
+    },
+    {
+      "digest": "95f72977a7c07339",
+      "identical": true,
+      "qid": "prv-deploy-tier-3"
+    },
+    {
+      "digest": "32fe75c20c037914",
+      "identical": true,
+      "qid": "abs-payroll"
+    },
+    {
+      "digest": "20659a1009c6c1f3",
+      "identical": true,
+      "qid": "abs-office"
+    },
+    {
+      "digest": "4de58fb445b3404f",
+      "identical": true,
+      "qid": "abs-insurance"
+    },
+    {
+      "digest": "da1780905e8aa71d",
+      "identical": true,
+      "qid": "abs-catering"
+    },
+    {
+      "digest": "0943c34770ac63a6",
+      "identical": true,
+      "qid": "abs-parking"
+    },
+    {
+      "digest": "7328eb14d5a337a1",
+      "identical": true,
+      "qid": "abs-legal"
+    },
+    {
+      "digest": "ebbebd66e0a5be42",
+      "identical": true,
+      "qid": "abs-travel"
+    },
+    {
+      "digest": "1f553b9834187083",
+      "identical": true,
+      "qid": "abs-expenses"
+    },
+    {
+      "digest": "bbe703031c4c2c10",
+      "identical": true,
+      "qid": "abs-recruiting"
+    },
+    {
+      "digest": "70cf719e89526f47",
+      "identical": true,
+      "qid": "abs-training"
+    },
+    {
+      "digest": "965ee3e7083d1d1f",
+      "identical": true,
+      "qid": "abs-security-audit"
+    },
+    {
+      "digest": "320798b72b5eb1a3",
+      "identical": true,
+      "qid": "abs-oncall-rotation"
+    },
+    {
+      "digest": "a1ec2757389ea4dc",
+      "identical": true,
+      "qid": "abs-hiring"
+    },
+    {
+      "digest": "7fb8bc3f2c9b28b6",
+      "identical": true,
+      "qid": "abs-conference"
+    },
+    {
+      "digest": "2cc9734a4038f399",
+      "identical": true,
+      "qid": "abs-hardware"
+    },
+    {
+      "digest": "c6bc6fdd31308948",
+      "identical": true,
+      "qid": "abs-vpn"
+    },
+    {
+      "digest": "6d3f758eaa056b23",
+      "identical": true,
+      "qid": "abs-sso"
+    },
+    {
+      "digest": "21d048b10f98053b",
+      "identical": true,
+      "qid": "abs-email"
+    },
+    {
+      "digest": "5ae40d82cb1d197a",
+      "identical": true,
+      "qid": "abs-backup"
+    },
+    {
+      "digest": "92fb1db012139bd6",
+      "identical": true,
+      "qid": "abs-dns"
+    },
+    {
+      "digest": "5e78058e61b7ad90",
+      "identical": true,
+      "qid": "abs-firewall"
+    },
+    {
+      "digest": "ba34ca144729ec53",
+      "identical": true,
+      "qid": "abs-cdn"
+    },
+    {
+      "digest": "a9c22e0f18bc1249",
+      "identical": true,
+      "qid": "abs-monitoring"
+    },
+    {
+      "digest": "297cf2327516887a",
+      "identical": true,
+      "qid": "abs-logging"
+    },
+    {
+      "digest": "c6998b6664a61df3",
+      "identical": true,
+      "qid": "abs-secrets"
+    },
+    {
+      "digest": "89a12c4ad3fde5bd",
+      "identical": true,
+      "qid": "mul-gateway"
+    },
+    {
+      "digest": "453d40b1cb9137e5",
+      "identical": true,
+      "qid": "mul-identity"
+    },
+    {
+      "digest": "a5585b3d4e63b8bd",
+      "identical": true,
+      "qid": "mul-orders"
+    },
+    {
+      "digest": "e64b24564e86b488",
+      "identical": true,
+      "qid": "mul-billing"
+    },
+    {
+      "digest": "ee7c9d429c8afc6c",
+      "identical": true,
+      "qid": "mul-search-indexer"
+    },
+    {
+      "digest": "39a07b462774249b",
+      "identical": true,
+      "qid": "mul-web"
+    },
+    {
+      "digest": "02c0bf3d7e5f192a",
+      "identical": true,
+      "qid": "mul-notifier"
+    },
+    {
+      "digest": "7624ed5ce075351c",
+      "identical": true,
+      "qid": "mul-analytics"
+    },
+    {
+      "digest": "ed3d11169496e642",
+      "identical": true,
+      "qid": "mul-media"
+    },
+    {
+      "digest": "07933d2fc1a22acf",
+      "identical": true,
+      "qid": "mul-archive"
+    },
+    {
+      "digest": "76639fb4955e1fce",
+      "identical": true,
+      "qid": "mul-ledger"
+    },
+    {
+      "digest": "8f7f49c8bfe42ea9",
+      "identical": true,
+      "qid": "mul-risk"
+    },
+    {
+      "digest": "2ab307410de40370",
+      "identical": true,
+      "qid": "mul-tech-postgres"
+    },
+    {
+      "digest": "65ea2d391850eee9",
+      "identical": true,
+      "qid": "mul-tech-redis"
+    },
+    {
+      "digest": "9e211fe3452f15e8",
+      "identical": true,
+      "qid": "mul-tech-queue"
+    },
+    {
+      "digest": "13b9b749b64b7931",
+      "identical": true,
+      "qid": "mul-tech-search"
+    },
+    {
+      "digest": "992395d469e012c5",
+      "identical": true,
+      "qid": "mul-tech-storage"
+    },
+    {
+      "digest": "f98ec3502e36ce17",
+      "identical": true,
+      "qid": "mul-tech-warehouse"
+    },
+    {
+      "digest": "0bf911498ef7cf91",
+      "identical": true,
+      "qid": "mul-release"
+    },
+    {
+      "digest": "59804165bdbb8acd",
+      "identical": true,
+      "qid": "mul-deploy-tier-0"
+    },
+    {
+      "digest": "0bf66b30e62a35b4",
+      "identical": true,
+      "qid": "mul-deploy-tier-1"
+    },
+    {
+      "digest": "d4201064463c1069",
+      "identical": true,
+      "qid": "mul-deploy-tier-2"
+    },
+    {
+      "digest": "c6b7c5327e32e07b",
+      "identical": true,
+      "qid": "mul-deploy-tier-3"
+    },
+    {
+      "digest": "17c60f35a43cfb55",
+      "identical": true,
+      "qid": "rel-dep-identity"
+    },
+    {
+      "digest": "e6acb3da7a7141c4",
+      "identical": true,
+      "qid": "rel-dep-orders"
+    },
+    {
+      "digest": "607ec04e51f61b76",
+      "identical": true,
+      "qid": "rel-dep-billing"
+    },
+    {
+      "digest": "a755d5088f1badb1",
+      "identical": true,
+      "qid": "rel-dep-search-indexer"
+    },
+    {
+      "digest": "8e86f07fa3d27fd7",
+      "identical": true,
+      "qid": "rel-dep-web"
+    },
+    {
+      "digest": "1370d957117cfd9e",
+      "identical": true,
+      "qid": "rel-dep-notifier"
+    },
+    {
+      "digest": "c250462a0f6df1be",
+      "identical": true,
+      "qid": "rel-dep-analytics"
+    },
+    {
+      "digest": "b2e96ac6ae2d45cd",
+      "identical": true,
+      "qid": "rel-dep-media"
+    },
+    {
+      "digest": "d237e1ea3a68b570",
+      "identical": true,
+      "qid": "rel-dep-archive"
+    },
+    {
+      "digest": "f5e624fb3f39b601",
+      "identical": true,
+      "qid": "rel-dep-ledger"
+    },
+    {
+      "digest": "b2e96166f7c037ab",
+      "identical": true,
+      "qid": "rel-dep-risk"
+    },
+    {
+      "digest": "9f5ef850c86090de",
+      "identical": true,
+      "qid": "cft-02"
+    },
+    {
+      "digest": "d10e949e87db736c",
+      "identical": true,
+      "qid": "rel-cycle"
+    },
+    {
+      "digest": "748f420df7dc4520",
+      "identical": true,
+      "qid": "rel-after-db"
+    },
+    {
+      "digest": "9c5758ca7cb1609f",
+      "identical": true,
+      "qid": "rel-impact-ledger"
+    },
+    {
+      "digest": "7b13c7c5b4f1b77b",
+      "identical": true,
+      "qid": "rel-impact-orders"
+    },
+    {
+      "digest": "1276d2f8d33b30e1",
+      "identical": true,
+      "qid": "rel-why-storage"
+    },
+    {
+      "digest": "f36b13cc86d555e8",
+      "identical": true,
+      "qid": "rel-team-platform"
+    },
+    {
+      "digest": "8d8905dd7fa15446",
+      "identical": true,
+      "qid": "rel-team-payments"
+    },
+    {
+      "digest": "273efa8097a32877",
+      "identical": true,
+      "qid": "rel-team-discovery"
+    },
+    {
+      "digest": "de9529d41b7efa0f",
+      "identical": true,
+      "qid": "rel-team-data"
+    },
+    {
+      "digest": "2c09877a7a62ea9e",
+      "identical": true,
+      "qid": "rel-esc-gateway"
+    },
+    {
+      "digest": "da020352811ee345",
+      "identical": true,
+      "qid": "rel-esc-identity"
+    },
+    {
+      "digest": "ce67f865487287ae",
+      "identical": true,
+      "qid": "rel-esc-orders"
+    },
+    {
+      "digest": "8945ce277a8208a0",
+      "identical": true,
+      "qid": "rel-esc-billing"
+    },
+    {
+      "digest": "8948a0d5e3f0c0d1",
+      "identical": true,
+      "qid": "rel-esc-search-indexer"
+    },
+    {
+      "digest": "e0979d431456378f",
+      "identical": true,
+      "qid": "rel-esc-web"
+    },
+    {
+      "digest": "8c0d01204ab20669",
+      "identical": true,
+      "qid": "rel-esc-notifier"
+    },
+    {
+      "digest": "ed69bf14cf1de1b8",
+      "identical": true,
+      "qid": "rel-esc-analytics"
+    },
+    {
+      "digest": "519cb01ec90fed74",
+      "identical": true,
+      "qid": "rel-esc-media"
+    },
+    {
+      "digest": "e4e8c75451e852b2",
+      "identical": true,
+      "qid": "rel-esc-archive"
+    },
+    {
+      "digest": "e5c7c3978922e564",
+      "identical": true,
+      "qid": "rel-esc-ledger"
+    },
+    {
+      "digest": "e01369844fcd9c4c",
+      "identical": true,
+      "qid": "rel-esc-risk"
+    },
+    {
+      "digest": "cebd13b5055cd447",
+      "identical": true,
+      "qid": "rel-db-users"
+    },
+    {
+      "digest": "bac6b59178cdea4f",
+      "identical": true,
+      "qid": "rel-why-queue"
+    },
+    {
+      "digest": "10e0f710a4b2c4c6",
+      "identical": true,
+      "qid": "adv-183"
+    },
+    {
+      "digest": "97a9889e35a90178",
+      "identical": true,
+      "qid": "adv-184"
+    },
+    {
+      "digest": "f5e7923307fe9306",
+      "identical": true,
+      "qid": "adv-185"
+    },
+    {
+      "digest": "8e8ada7edebcd7ac",
+      "identical": true,
+      "qid": "adv-186"
+    },
+    {
+      "digest": "7fc4c298f9db8e22",
+      "identical": true,
+      "qid": "adv-187"
+    },
+    {
+      "digest": "fe24af1813f9b349",
+      "identical": true,
+      "qid": "adv-188"
+    },
+    {
+      "digest": "518ad90a412f45b2",
+      "identical": true,
+      "qid": "adv-189"
+    },
+    {
+      "digest": "879e3a831e1ea320",
+      "identical": true,
+      "qid": "adv-190"
+    },
+    {
+      "digest": "72b80504498463d9",
+      "identical": true,
+      "qid": "adv-191"
+    },
+    {
+      "digest": "04842d48286d3b40",
+      "identical": true,
+      "qid": "adv-192"
+    },
+    {
+      "digest": "e30ed1b68506d91e",
+      "identical": true,
+      "qid": "adv-193"
+    },
+    {
+      "digest": "7829607db031abc5",
+      "identical": true,
+      "qid": "adv-194"
+    },
+    {
+      "digest": "0111f960ffdd19f0",
+      "identical": true,
+      "qid": "adv-195"
+    },
+    {
+      "digest": "890297f378730bd4",
+      "identical": true,
+      "qid": "adv-196"
+    },
+    {
+      "digest": "f52631d23172189f",
+      "identical": true,
+      "qid": "adv-197"
+    },
+    {
+      "digest": "544205347ca68f94",
+      "identical": true,
+      "qid": "adv-198"
+    },
+    {
+      "digest": "c2a857e3032ea78f",
+      "identical": true,
+      "qid": "adv-18"
+    },
+    {
+      "digest": "7b92d0ce10cf3d31",
+      "identical": true,
+      "qid": "adv-19"
+    },
+    {
+      "digest": "2483430a13a247d4",
+      "identical": true,
+      "qid": "adv-20"
+    }
+  ]
+}

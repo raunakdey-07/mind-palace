@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.memory import MemoryRequest
 from api.services import claim_embeddings, memory_public
@@ -240,6 +241,77 @@ async def test_reindex_rebuilds_the_cache_from_the_archive(memory_ingestion_db):
 
     assert written == 1
     assert await cache_count(memory_ingestion_db) == 1
+
+
+async def test_cached_vector_load_binds_no_array_parameters(memory_ingestion_db):
+    """Regression: the cached-vector load must not bind large array parameters.
+
+    It once passed the wanted ids and hashes as two SQL array parameters. On a
+    long-lived connection asyncpg prepares the statement after five executions
+    and large arrays through the prepared path cost about 22x more, so every
+    warm request after the sixth paid it. At 5,000 claims the load went from
+    about 380 ms to about 8,400 ms with an unchanged plan.
+
+    A timing assertion cannot guard this: the cliff only appears with thousands
+    of claims, and a unit test that small passes against the broken query too.
+    So this asserts the property directly, on the compiled statement, and a
+    second check confirms repeated calls stay in the same order of magnitude at
+    whatever size the test corpus happens to be.
+    """
+    from api.services.claim_embeddings import load_cached, pending
+    from api.services.embedder import Embedder
+    from api.services.ingestion import IngestionService
+    from api.services.rehydrate import backfill_claim_embeddings
+
+    sessions, corpus = memory_ingestion_db
+    service = IngestionService(memory_enabled=True)
+    await service.ingest_file(source(DATABASE), "docs/storage.md", corpus)
+
+    embedder = Embedder()
+    async with sessions() as db:
+        wanted, _texts = await pending(db, corpus)
+    assert wanted, "the corpus authored no claims to load"
+    async with sessions() as db:
+        async with db.begin():
+            await backfill_claim_embeddings(db, corpus)
+
+    # 1. The structural guard. A large array bound into this statement is the
+    #    defect, whatever the corpus size, so assert on the statement itself
+    #    rather than on timings a small test corpus cannot reproduce.
+    captured: list[str] = []
+    original = AsyncSession.execute
+
+    async def capture(self, statement, *args, **kwargs):
+        captured.append(str(statement))
+        return await original(self, statement, *args, **kwargs)
+
+    AsyncSession.execute = capture
+    try:
+        async with sessions() as db:
+            got = await load_cached(db, corpus, wanted, embedder.model_name, embedder.dimension)
+    finally:
+        AsyncSession.execute = original
+
+    assert set(got) == set(wanted), "the cache must serve exactly the asked claims"
+    load_sql = next(s for s in captured if "memory_claim_embeddings" in s)
+    assert "ANY(" not in load_sql, (
+        "load_cached must not bind array parameters; at scale they are sent through "
+        "the prepared-statement path and cost about 22x more:\n" + load_sql
+    )
+
+    # 2. A sanity check that repetition is not degrading. This is deliberately
+    #    weak at test corpus size; the structural assertion above is the guard.
+    import time
+
+    samples = []
+    for _ in range(10):
+        t0 = time.perf_counter()
+        async with sessions() as db:
+            await load_cached(db, corpus, wanted, embedder.model_name, embedder.dimension)
+        samples.append(time.perf_counter() - t0)
+    assert (
+        max(samples[5:]) < max(samples[:5]) * 5
+    ), f"cached-vector load degraded on repetition: {samples}"
 
 
 def test_the_cache_key_describes_the_embedded_text():

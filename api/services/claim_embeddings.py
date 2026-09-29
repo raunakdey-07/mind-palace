@@ -103,41 +103,42 @@ async def load_cached(
 ) -> dict[str, list[float]]:
     """Return vectors for claims whose cached text and model both still match.
 
-    A claim with no row, a changed representation, a different model, or a
-    different dimension is simply absent from the result, and the caller
-    embeds it. Nothing here can return a vector that a fresh embed would not.
+    The rows are selected by the indexed ``(corpus_id, embedding_model,
+    embedding_dimension)`` prefix, which is exactly the set this corpus caches
+    under the running model, and then filtered in Python against ``wanted``.
 
-    Decoding is the measured cost of this call: it is the single largest term in
-    a warm query, because every row arrives as a pgvector text literal. Keeping
-    the rows as one array instead of one list per claim is the next experiment,
-    and this function is where it would land.
+    The obvious alternative, passing the wanted ids and hashes as two SQL array
+    parameters, was measured and is a production defect: with 5,000 claims that
+    statement runs in about 380 ms for the first five executions of a connection
+    and about 8,400 ms for every execution after that, with an unchanged plan.
+    The cliff follows asyncpg's prepare threshold, not a plan switch, so it
+    arrives in any long-lived server and never recovers. The arrays bought
+    nothing, because the Python filter below already rejected any row that was
+    not asked for, and it is also the stricter check now: the stored hash must
+    equal the wanted hash, not merely be a member of the wanted set.
     """
     if not wanted:
         return {}
     rows = await db.execute(
         text("""
-            SELECT claim_id, embedding::text AS vector
+            SELECT claim_id, representation_hash, embedding::text AS vector
             FROM memory_claim_embeddings
             WHERE corpus_id = :corpus
-              AND claim_id = ANY(CAST(:ids AS CHAR(64)[]))
               AND embedding_model = :model
               AND embedding_dimension = :dimension
-              AND representation_hash = ANY(CAST(:hashes AS CHAR(64)[]))
-            """),
+        """),
         {
             "corpus": corpus_id,
-            "ids": list(wanted),
-            "hashes": list(wanted.values()),
             "model": model,
             "dimension": dimension,
         },
     )
     out: dict[str, list[float]] = {}
-    for claim_id, vector in rows.all():
-        # A row whose hash is in the request but whose claim has since changed
-        # is filtered again here, so a stale row can never be paired with a
-        # new claim even if the table were edited directly.
-        if wanted.get(claim_id) is None:
+    for claim_id, stored_hash, vector in rows.all():
+        # The same guarantees the SQL array membership test used to give, made
+        # explicit: an unasked claim is skipped, and so is a row whose recorded
+        # hash no longer matches the text about to be scored.
+        if wanted.get(claim_id) != stored_hash:
             continue
         out[claim_id] = json.loads(vector)
     return out

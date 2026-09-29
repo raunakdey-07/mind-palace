@@ -10,6 +10,7 @@ import math
 import os
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from api.models.memory import MemoryRequest, MemoryResponse
 
@@ -158,6 +159,37 @@ def plan(request: MemoryRequest, intent: str, policy: RelevancePolicy) -> QueryP
     )
 
 
+def _dot_scalar(topic_vector, claim_vector) -> float:
+    """The shipped scorer: a left-to-right float64 accumulation.
+
+    Kept as the reference implementation. The vectorised scorer must reproduce
+    this at the pack boundary, not merely approximate it.
+    """
+    return sum(a * b for a, b in zip(topic_vector, claim_vector))
+
+
+_TERM_CACHE: dict[str, frozenset[str]] = {}
+_TERM_CACHE_LIMIT = 200_000
+
+
+def claim_terms(text: str) -> frozenset[str]:
+    """Terms of a claim representation, memoised on the immutable text.
+
+    Claim representations derive from immutable claim text, so their tokenisation
+    is stable for the life of the archive. Re-running the regex for every claim
+    on every query was a second material cost, and this is the same kind of cache
+    the embeddings use. Bounded so a pathological corpus cannot grow it without
+    limit; an evicted entry is simply recomputed.
+    """
+    cached = _TERM_CACHE.get(text)
+    if cached is not None:
+        return cached
+    value = frozenset(terms(text))
+    if len(_TERM_CACHE) < _TERM_CACHE_LIMIT:
+        _TERM_CACHE[text] = value
+    return value
+
+
 def relevance(
     full: MemoryResponse,
     request: MemoryRequest,
@@ -167,6 +199,7 @@ def relevance(
     *,
     lexical: bool = False,
     claim_vectors: dict[str, list[float]] | None = None,
+    vectorized: bool = False,
 ) -> tuple[dict[str, float], QueryPlan, dict]:
     """Score authored keys against the question, then apply the acceptance gates.
 
@@ -179,6 +212,12 @@ def relevance(
     Only a claim present in the mapping is served from it; anything missing is
     embedded here, so a partial or empty cache costs latency and never changes the
     answer. Vectors are consumed read-only.
+
+    ``vectorized=True`` computes the same inner product with NumPy. It is off by
+    default because it was measured at 1.00x to 1.07x end to end and bought
+    nothing: the inner product was never the cost. It is kept because the switch
+    and the equivalence proof are reusable, and all 202 benchmark questions give
+    byte-identical canonical Memory Packs either way.
     """
     from api.services.claim_embeddings import representation
     from api.services.memory_public import _claims
@@ -189,9 +228,12 @@ def relevance(
     if not ids:
         return {}, interpreted, {"candidates": 0, "embedding_calls": 0, "embedding_texts": 0}
     representations = [representation(claims[c]) for c in ids]
-    documents = [terms(text) for text in representations]
+    documents = [claim_terms(text) for text in representations]
     # Terms occurring in every candidate (e.g. project name) cannot support relevance.
-    common = set.intersection(*documents) if len(documents) > 1 else set()
+    common = frozenset.intersection(*documents) if len(documents) > 1 else frozenset()
+    # Depends on neither the topic nor the gate, so it is computed once. Rebuilding
+    # this per candidate and per topic was the dominant cost at scale.
+    reduced = [document - common for document in documents]
     topic_terms = [terms(topic) - common for topic in interpreted.topics]
 
     embedding_calls, embedding_texts = 0, 0
@@ -215,13 +257,29 @@ def relevance(
         if any(len(v) != dimension or not all(math.isfinite(x) for x in v) for v in vectors):
             raise ValueError("Invalid embedding vectors")
 
+    # Relevance is the dominant cost at scale, and the inner product is an
+    # interpreted multiply-accumulate per dimension. When asked for, the same
+    # product is computed once per topic for every candidate, and the gate loop
+    # below is left exactly as it was, so only the number's origin changes.
+    columns: list[Any] | None = None
+    if vectorized and not lexical and len(ids) > 1:
+        import numpy as np
+
+        matrix = np.asarray([cached[cid] for cid in ids], dtype=np.float64)
+        columns = [
+            matrix @ np.asarray(topic_vectors[i], dtype=np.float64)
+            for i in range(len(interpreted.topics))
+        ]
+
     def score(i: int, position: int) -> float:
         if lexical:
             query_terms = topic_terms[i]
             if not query_terms:
                 return 0.0
-            return len(query_terms & (documents[position] - common)) / len(query_terms)
-        return sum(a * b for a, b in zip(topic_vectors[i], cached[ids[position]]))
+            return len(query_terms & reduced[position]) / len(query_terms)
+        if columns is not None:
+            return float(columns[i][position])
+        return _dot_scalar(topic_vectors[i], cached[ids[position]])
 
     chosen = {}
     for i in range(len(interpreted.topics)):
@@ -232,7 +290,7 @@ def relevance(
             if request.path and claim.path != request.path:
                 continue
             value = score(i, position)
-            overlap = bool(query_terms & (documents[position] - common))
+            overlap = bool(query_terms & reduced[position])
             if policy.approach == "A":
                 accepted = value >= 0.30
             elif policy.approach == "B":

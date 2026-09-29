@@ -133,6 +133,7 @@ def select(
     policy=None,
     lexical: bool = False,
     claim_vectors: dict[str, list[float]] | None = None,
+    vectorized: bool = False,
 ) -> MemoryResponse:
     """Resolve first, then select relevant authored keys and complete conflict groups.
 
@@ -153,6 +154,7 @@ def select(
         policy or RelevancePolicy.configured(),
         lexical=lexical,
         claim_vectors=claim_vectors,
+        vectorized=vectorized,
     )
     keys = set(key_scores)
     selected = {
@@ -199,6 +201,7 @@ async def query(
     *,
     db=None,
     corpus_id: str | None = None,
+    vectorized: bool = False,
 ) -> MemoryResponse:
     """Keep model inference off the async database/event-loop thread.
 
@@ -245,8 +248,12 @@ async def query(
         if embedder is None:
             from api.services.embedder import Embedder as Lazy
 
-            return select(full, request, intent, Lazy(), claim_vectors=cached or None)
-        return select(full, request, intent, embedder, claim_vectors=cached or None)
+            return select(
+                full, request, intent, Lazy(), claim_vectors=cached or None, vectorized=vectorized
+            )
+        return select(
+            full, request, intent, embedder, claim_vectors=cached or None, vectorized=vectorized
+        )
 
     def retrieve_lexically():
         return select(full, request, intent, None, lexical=True)

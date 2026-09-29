@@ -331,7 +331,7 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
     return result
 
 
-async def execute_in_session(db, operation: str, request: MemoryRequest) -> MemoryResponse:
+async def execute_in_session(db, operation: str, request: MemoryRequest, vectorized: bool = False):
     """Execute in caller's transaction (also used by integration tests).
 
     Public callers use execute(); ingestion retains its existing transaction.
@@ -380,7 +380,7 @@ async def execute_in_session(db, operation: str, request: MemoryRequest) -> Memo
         full = project(
             versions, request.model_copy(update={"query": "", "path": None}), "pack", state, saved
         )
-        return await query(full, request, db=db, corpus_id=corpus["id"])
+        return await query(full, request, db=db, corpus_id=corpus["id"], vectorized=vectorized)
     result = project(versions, request, operation, state, saved)
     return bounded_pack(result, request.budget) if operation == "pack" else result
 

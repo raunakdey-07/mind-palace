@@ -106,6 +106,11 @@ async def load_cached(
     A claim with no row, a changed representation, a different model, or a
     different dimension is simply absent from the result, and the caller
     embeds it. Nothing here can return a vector that a fresh embed would not.
+
+    Decoding is the measured cost of this call: it is the single largest term in
+    a warm query, because every row arrives as a pgvector text literal. Keeping
+    the rows as one array instead of one list per claim is the next experiment,
+    and this function is where it would land.
     """
     if not wanted:
         return {}

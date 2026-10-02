@@ -569,14 +569,14 @@ by a claim that generation or production validation is complete.
 ## Known limitations
 
 - **Measured latency envelope, and its edges.** Warm, real public query path,
-  claim-representation cache warm, 20 samples per size (12 at 10,000):
+  claim-representation cache warm, 12 samples per size, measured at `v0.7.0`:
 
-  | claims | warm p50 |
-  | ---: | ---: |
-  | 100 | 47 ms |
-  | 1,000 | 1.0 s |
-  | 5,000 | 1.7 s |
-  | 10,000 | 4.4 s |
+  | claims | warm p50 | warm p95 |
+  | ---: | ---: | ---: |
+  | 100 | 49 ms | 54 ms |
+  | 1,000 | 880 ms | 1,135 ms |
+  | 5,000 | 1.63 s | 1.65 s |
+  | 10,000 | 4.29 s | 5.09 s |
 
   **25,000 and above were not measured.** These are medians on one host with
   roughly 2x run-to-run variance, not guarantees, and not a comparison against
@@ -584,7 +584,10 @@ by a claim that generation or production validation is complete.
   projection builds a model per archived claim and keeps roughly one. Reducing
   that needs the dependency closure solved first, because narrowing the archive
   before projection was measured to change 32 of 202 benchmark answers.
-  [Measurement and rejected candidates](docs/research/m0123-projection-release-gate.md).
+  [`docs/STATUS.md`](docs/STATUS.md) is the authoritative current-state summary,
+  with the full stage breakdown, the verified invariants, and every remaining
+  limitation; [this experiment](docs/research/m0123-projection-release-gate.md)
+  has the detail behind it.
 - Existing lexical operations remain lexical AND. M006.5 adds heuristic semantic
   question retrieval, not universally reliable question answering or automatic
   claim extraction. Related concepts, multi-part questions, and abstention remain

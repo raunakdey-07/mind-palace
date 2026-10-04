@@ -635,7 +635,73 @@ reachable. Production retrieval is untouched.
 
 The offline study's 10/29 was measured on **lexical token overlap**, where extra
 terms genuinely add signal. It does not transfer to a bi-encoder, where extra text
-dilutes. Those two channels must not be conflated again.
+dilutes. The two channels must not be conflated again.
+
+---
+
+## EXECUTED: the acceptance boundary characterised — decision B
+
+`evidence/270-acceptance-boundary.txt`, `m013_acceptance_boundary.py`. Research
+only; the gate was transcribed from source and evaluated, not changed.
+
+### The constants have no documented rationale
+
+`docs/research/retrieval-evaluation.md:138` lists 0.30 / 0.90 / 0.65 as chosen
+configuration with no justification, and is itself stale (it says vectors are
+recomputed per query with no cache, untrue since `8c5891f`). No commit, test or
+research note states why these numbers. **They are unjustified constants.**
+
+### Confusion matrix
+
+| dataset | TP | FP | TN | FN | absent false accepts | correct abstentions |
+|---|---:|---:|---:|---:|---:|---:|
+| dev | 170 | 6 | 0 | 0 | 2 | 24 |
+| v1 | 129 | 9 | 3 | 0 | 1 | 15 |
+| v2 | 21 | 4 | 3 | 0 | 2 | 2 |
+
+**FN is zero everywhere.** The gate never rejects the gold claim. Every failure is
+a false positive or a false abstention — it is permissive, not selective.
+
+### Absolute cosine does not separate gold from non-gold
+
+| dataset | gold median | negative median | gold below best negative |
+|---|---:|---:|---:|
+| dev | 0.6373 | 0.1642 | **95.4%** |
+| v1 | 0.5846 | 0.1540 | **97.8%** |
+| v2 | 0.5135 | 0.1445 | **100%** |
+
+Gold ranks well (median ~4x the negative median) but sits deep inside the negative
+range: 42% (dev), 63% (v1), 28% (v2) of negatives score above the worst gold.
+
+### 0.65 is vestigial
+
+| dataset | recall @0.30 | recall @0.65 |
+|---|---:|---:|
+| dev | 1.000 | 0.568 |
+| v1 | 0.992 | 0.315 |
+| v2 | 1.000 | 0.185 |
+
+It only survives in production because `overlap` is an OR-escape, so **the gate's
+real work is done by lexical token overlap.** Cosine contributes ranking and a floor
+that never fires negatively.
+
+### Margin is not a separator
+
+Margin medians 0.049 dev / 0.029 v1 / 0.029 v2, and compresses on unseen data
+(v2 max 0.0852 vs dev max 0.3346). Separation degrades as the corpus hardens —
+the opposite of a reliable acceptance signal.
+
+### Decision B — ranking and acceptance must be separated
+
+Cosine is a usable **ranking** signal and a poorly calibrated **acceptance**
+signal. Using it as both is why every representation experiment moved 63 packs.
+
+No threshold is proposed. A single-threshold replacement was swept and only trades
+FP against FN along one dataset-sensitive curve; with FN=0 today and an explicit
+preference for abstention over unsupported output, any replacement needs an
+objective the project has not yet written down.
+
+**The vocabulary gap remains an authoring problem, not a threshold problem.**
 
 ---
 
@@ -687,6 +753,8 @@ dilutes. Those two channels must not be conflated again.
 | An LLM-derived L2 representation is needed for the representation gap **[M013]** | **Not justified yet.** Deterministic evidence + document context closes 8/19 v1 and 2/10 v2 blind failures with no model | The remaining 8 failures are vocabulary absent from L0/L1 entirely. An LLM would invent it, which is an authoring decision, not a retrieval one |
 | Deterministic contextual L2 representation (claim + key + path + evidence) **[M013]** | **Implemented and REJECTED.** 63 of 202 authoritative packs changed; an abstention question started answering | The dev score *rose* 194→197, so an aggregate criterion would have shipped a semantic regression as a win. Evidence in the representation widens what clears the relevance floor, which was calibrated against the narrower text |
 | Evidence-aware embedding with an evidence-free lexical gate **[M013]** | **REJECTED on a score-only diagnostic; never implemented.** Gold scores fell more often than they rose on all three sets; margin change −0.0031 dev, −0.0036 v1, −0.0020 v2 | Also structurally impossible as specified: in production `value` IS the semantic cosine AND the acceptance threshold, so the acceptance boundary cannot be held fixed while the embedding changes. Appending evidence dilutes a sentence embedding rather than sharpening it |
+| The 0.30 / 0.65 relevance constants have a documented rationale **[M013]** | **No.** The only mention lists them as configuration without justification, and is stale. FN is 0 across all three sets, so the 0.30 floor never rejects gold | 0.65 alone gives recall 0.19–0.57; it survives only via the `overlap` OR-escape. The gate's real work is done by lexical token overlap |
+| A single cosine threshold can replace the current gate **[M013]** | **REJECTED.** 95–100% of gold scores fall below the best negative for their own question, so no threshold separates returnable from not-returnable | The sweep only trades FP against FN along one dataset-sensitive curve, and the product's cost asymmetry (abstain > unsupported memory) has never been written down as a decision |
 | PostgreSQL full-text search as the lexical arm **[M013]** | **Non-functional on natural-language questions.** R@5 0.371 dev / 0.000 held-out against the shipped Python lexical arm's 0.897 / 0.793 | `plainto_tsquery` ANDs every token, so one word present in the question and absent from the claim takes 6 matches to 0. OR semantics (`websearch_to_tsquery`) also returned 0 |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x

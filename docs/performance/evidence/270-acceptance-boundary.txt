@@ -1,0 +1,119 @@
+=== M013 acceptance boundary — CHARACTERISED (research only) ===
+Commit: f1e7eac3e8c98055e9d489b5398c7f66dd98bf41
+COMMAND:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_acceptance_boundary.py \
+      --datasets dev,v1,v2 --out /tmp/m013-acceptance.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+
+No production code changed. The gate E decision was transcribed from
+memory_relevance.py:301-303 and evaluated against the real projection.
+
+--- WHAT THE NUMBERS ARE ---
+
+  value   = cosine(query_topic_embedding, claim_embedding), NOT normalised across
+            the corpus and NOT calibrated. It is corpus-relative by nature.
+  overlap = boolean: does the query share any non-stopword token with the
+            claim's representation? Computed from the SAME representation list.
+  0.30    = "minimum". operationally, the floor below which nothing is returned.
+  0.65    = "strong". reachable ONLY via the overlap bypass; as a standalone
+            threshold it is far too strict (see sweep).
+  isclose = a float-tolerance escape hatch around the 0.30 boundary, so a
+            candidate sitting exactly on the floor is not lost to float error.
+
+HISTORICAL RATIONALE: none found. The only prose that mentions them
+(docs/research/retrieval-evaluation.md:138) lists them as chosen configuration
+without justification, and is itself stale (it says vectors are recomputed per
+query with no cache, which has not been true since 8c5891f). No commit, test or
+research note states WHY 0.30 and 0.65. They are unjustified constants.
+
+--- CONFUSION MATRIX (authored gold as truth) ---
+
+  dataset   TP    FP   TN   FN   absent_false_accept  correct_abstention
+  dev      170     6    0    0          2                    24
+  v1       129     9    3    0          1                    15
+  v2        21     4    3    0          2                     2
+
+FN is ZERO everywhere. The gate never rejects the gold claim. Every failure is a
+false POSITIVE or a false abstention — the gate is permissive, not selective.
+
+--- SCORE DISTRIBUTIONS: THE RANGES OVERLAP BADLY ---
+
+  dev  gold  n=240    median 0.6373  p05 0.4282  p95 0.8210
+       neg   n=15248  median 0.1642  p95 0.4286
+       95.4% of gold scores fall BELOW the best negative for their question.
+  v1   gold  n=178    median 0.5846  p05 0.2670  p95 0.7536
+       neg   n=12230  median 0.1540  p95 0.4077
+       97.8% of gold scores fall below the best negative.
+  v2   gold  n=41     median 0.5135  p05 0.2507  p95 0.7026
+       neg   n=2423   median 0.1445  p95 0.3700
+       100% of gold scores fall below the best negative.
+
+Absolute cosine does NOT separate gold from non-gold. The median gold (0.51-0.64)
+sits far above the negative median (0.14-0.16) but deeply inside the negative
+range: 42% (dev), 63% (v1), 28% (v2) of all negatives score ABOVE the worst gold
+for their own question.
+
+--- 0.65 IS NOT A DEFENSIBLE BOUNDARY ---
+
+As a standalone threshold, 0.65 destroys the system:
+
+  dataset   recall@0.30   recall@0.65
+  dev          1.000         0.568
+  v1           0.992         0.315
+  v2           1.000         0.185
+
+It works in production only because `overlap` is an OR-escape: a candidate with
+lexical overlap is accepted at 0.30 regardless. So 0.65 is nearly dead code in
+practice, and the gate's real behaviour is governed by the lexical overlap term.
+
+--- THRESHOLD STABILITY ACROSS DATASETS ---
+
+The best single threshold is not stable. At 0.25 dev recall is 1.000 while v2 is
+1.000; at 0.40 dev 0.970 and v1 0.903; at 0.55 dev 0.873 but v2 0.385. The curve
+is dataset-sensitive, and no threshold separates "returnable" from "not
+returnable" — it only trades FP for FN along one curve. Because FN is the costly
+error for this product (returning unsupported memory is worse than returning
+nothing), any fixed threshold is a guess about corpus composition.
+
+--- MARGIN IS NOT A SEPARATOR ---
+
+  dev  margin median 0.0487  p95 0.1883  max 0.3346
+  v1   margin median 0.0292  p95 0.1173  max 0.2159
+  v2   margin median 0.0292  p95 0.0786  max 0.0852
+
+Margins are tiny and compress further on the unseen set (v2 max 0.0852 vs dev max
+0.3346). Separation degrades as the corpus gets harder, which is the opposite of
+what a reliable acceptance signal should do.
+
+--- WHAT THE GATE ACTUALLY OPTIMISES ---
+
+Objective A (retrieval relevance): poor. Cosine ranks adequately (gold median is
+~4x the negative median) but does not separate.
+Objective B (answer correctness): the floor never rejects gold (FN=0), so it is
+not selecting for correctness.
+Objective C (safe abstention): weak. 5 of 26 ABSENT questions on dev accept.
+Objective D (evidence-backed support): not implemented at all; no signal in the
+gate consults evidence or provenance.
+Objective E (hybrid): this is what it is — cosine ranking with a lexical bypass.
+
+The measured shape is: a permissive gate whose only real work is done by LEXICAL
+TOKEN OVERLAP, with cosine contributing ranking and a floor that never fires
+negatively. The dual use of `value` is not defensible, and 0.65 is a vestigial
+number.
+
+--- DECISION ---
+
+B — ranking and acceptance must be separated.
+
+Cosine is a usable RANKING signal (gold median 0.51-0.64 vs negative median
+0.14-0.16) and a POORLY CALIBRATED ACCEPTANCE signal (95-100% of gold scores
+fall below the best negative for their own question). The current gate uses it as
+both, which is why every representation experiment moved 63 authoritative packs.
+
+No threshold is proposed here. A single-threshold replacement was swept and
+trades FP against FN along one dataset-sensitive curve; with FN=0 today and an
+explicit product preference for abstention over unsupported output, any new
+threshold needs an objective the project has not yet written down.
+
+The vocabulary gap from the representation study is NOT a threshold problem. It is
+an authoring problem, and remains open.

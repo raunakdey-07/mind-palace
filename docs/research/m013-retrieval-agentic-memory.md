@@ -381,6 +381,87 @@ a semantic arm cannot improve on that.
 
 ---
 
+## EXECUTED: held-out v2, and the tokenizer verdict
+
+`evidence/230-tokenizer-v2-generalization.txt`. Frozen at `b6ff4f7`, corpus hash
+`9cdecda7`, question hash `5cf098908d1a0ead…`, 32 questions across all ten
+categories. Frozen and committed **before** any benchmark ran.
+
+### Baseline on genuinely unseen questions
+
+| metric | point | 95% CI (seeded bootstrap) |
+|---|---:|---|
+| R@1 | 0.4286 | [0.250, 0.607] |
+| R@5 | 0.6429 | [0.464, 0.821] |
+| R@10 | 0.6429 | [0.464, 0.821] |
+| MRR | 0.5298 | [0.357, 0.691] |
+| nDCG@5 | 0.1896 | [0.132, 0.243] |
+| candidate recall ceiling | 0.6429 | — |
+| abstention accuracy (4) | 0.500 | — |
+
+28 answerable, 4 abstention, 10 unreachable. The 10 unreachable are dominated by
+indirect why/identifier questions: 4 of 5 `why_decision`, 2 of 3 `identifier`, and
+one each from temporal_state, supersession and cross_document. **The weakness v2
+was built to probe is real and reproduces on unseen data.**
+
+### The tokenizer verdict: REJECTED
+
+| dataset | shipped lexical recall | candidate | rescued | regressed |
+|---|---:|---:|---:|---:|
+| dev (175) | 0.9314 | 0.9314 | 0 | 0 |
+| **v2 blind (32)** | **0.5714** | **0.5714** | **0** | **0** |
+
+**The +10 improvement measured on v1 does not generalize.** Lexical candidate recall
+is identical in both arms on both datasets.
+
+The fix is not broken. Tokenisation verified token by token — `"2024-11"` yields no
+digits under the shipped pattern and `[11, 2024, …]` under the candidate. The
+defect is real and the candidate repairs it.
+
+**The benefit was an artefact of how v1 was worded.** In v2 the identifier questions
+carry content words that already reach the claim ("constraint", "deployment",
+"release"), so the numeric token adds nothing. The v1 rescues were the opposite
+shape:
+
+```
+'Shipping 0.6 introduced what?'    tokens = [introduc, shipp]
+'What went wrong in 2024-03 ...'    tokens = [affect, order, went, wrong]
+```
+
+No content word from the gold claim. The identifier was the *sole* bridge — exactly
+the case the fix addresses, and exactly the case a naturally-worded question rarely
+is.
+
+**So the v1 result measured a property of the question set used to discover it, not
+a property of the retrieval system.** This is the clearest justification yet for the
+project's own rule: a benchmark that has informed a fix can no longer measure it.
+
+### Decision: DO NOT SHIP
+
+Null on unseen data, and it would add a parameter plus a gating rule to production
+for no measured benefit. Per the shipping criterion — *"if v2 shows no improvement,
+revert/reject"* — it is rejected.
+
+Recorded rather than erased: the tokenizer defect is genuine, and a future set
+containing identifier-only questions would benefit. No such set exists outside the
+one that produced the finding.
+
+### What v2 says the remaining problem actually is
+
+The blind ceiling of 0.6429 is the number that matters, and it is a **representation
+and query-understanding** problem, not a tokenisation one. Ten questions are
+unreachable because the question and the gold claim share no retrievable signal:
+
+- `hv2-why_decision-02` "Why was the old caching layer replaced rather than kept?" →
+  `"Redis was chosen for its native TTL and pub/sub support."` — no shared content term
+- `hv2-temporal_state-04` "Which component handles background messaging in production?" →
+  `"The job queue is RabbitMQ."` — the gold claim does not contain "messaging" or "component"
+
+These need the authored representation or the query to carry the relationship, which
+is a larger change than a tokeniser edit and is the next thing to characterise.
+
+---
+
 ## Known limitations
 
 - **Held-out v1 is no longer blind.** Its 26 failures drove diagnosis. Any number
@@ -425,6 +506,7 @@ a semantic arm cannot improve on that.
 | Numeric tokeniser variant `[a-z0-9]+` **[M013]** | held-out +10, **dev −4** | Admits the bare pronoun "I" into the query denominator |
 | Numeric tokeniser variant `[a-z0-9][a-z0-9]+` **[M013]** | held-out +3, dev 0 | Splits "0.6" into "0" and "6", losing the version identity |
 | "The 17 zero-bridge failures are a vocabulary gap" **[M013]** | **Mostly wrong.** They are a tokeniser defect: `[a-z][a-z0-9]+` discards every version and incident identifier | The adopted variant recovers 10 of 10 with zero regressions |
+| The tokenizer fix generalises **[M013]** | **No. Rejected.** +10 rescued on held-out v1, **0 rescued / 0 regressed on frozen held-out v2**. Lexical recall identical in both arms on both datasets | The v1 benefit measured how v1 was *worded*, not the retrieval system. In v2 identifier questions carry content words that already reach the claim, so the numeric token adds nothing |
 | PostgreSQL full-text search as the lexical arm **[M013]** | **Non-functional on natural-language questions.** R@5 0.371 dev / 0.000 held-out against the shipped Python lexical arm's 0.897 / 0.793 | `plainto_tsquery` ANDs every token, so one word present in the question and absent from the claim takes 6 matches to 0. OR semantics (`websearch_to_tsquery`) also returned 0 |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x

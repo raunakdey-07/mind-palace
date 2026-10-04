@@ -1,0 +1,743 @@
+{
+  "candidate_lexical_recall": {
+    "ci95": [
+      0.3929,
+      0.75
+    ],
+    "point": 0.5714
+  },
+  "commit": "b6ff4f7fcaa6bbfecd76d938372a9fafc4badf18",
+  "dataset": "heldout",
+  "lexical_floor": 0.3,
+  "per_question": [
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "gold_key": "decision.database.reason",
+      "qid": "hv2-why_decision-01",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "The team moved off the earlier database engine. What capability drove that?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "gold_key": "decision.cache.reason",
+      "qid": "hv2-why_decision-02",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Why was the old caching layer replaced rather than kept?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "gold_key": "decision.queue.reason",
+      "qid": "hv2-why_decision-03",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "What was the operational argument for changing the messaging broker?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "gold_key": "decision.search.reason",
+      "qid": "hv2-why_decision-04",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Licensing concerns influenced one technology change. Which one, and what else mattered?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "gold_key": "decision.warehouse.reason",
+      "qid": "hv2-why_decision-05",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "The reporting store was migrated for performance reasons. What workload drove it?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch",
+        "incident.2024-11.ledger.root",
+        "incident.2024-03.orders.root",
+        "incident.2024-07.notifier.root",
+        "incident.2024-09.search-indexer.root",
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "identifier",
+      "expect_state": "CURRENT",
+      "gold_key": "constraint.ledger.settlement",
+      "qid": "hv2-identifier-01",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch",
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "incident.2024-03.orders.root",
+        "incident.2024-07.notifier.root",
+        "incident.2024-09.search-indexer.root",
+        "incident.2024-11.ledger.root"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Which constraint was established after the 2024-11 incident?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.web.tier"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "identifier",
+      "expect_state": "CURRENT",
+      "gold_key": "constraint.deploy.tier-0",
+      "qid": "hv2-identifier-02",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "What limit does tier-0 deployment impose?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "release.0.7",
+        "release.0.6",
+        "release.0.8"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "identifier",
+      "expect_state": "CURRENT",
+      "gold_key": "release.0.7",
+      "qid": "hv2-identifier-03",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [
+        "release.0.6",
+        "release.0.7",
+        "release.0.8"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Following release 0.7, what changed?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.postgres",
+      "qid": "hv2-temporal_state-01",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Which datastore is in production today?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.search",
+      "qid": "hv2-temporal_state-02",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Name the search component currently serving queries."
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.storage",
+      "qid": "hv2-temporal_state-03",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "What binary store backs the media pipeline at present?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.queue",
+      "qid": "hv2-temporal_state-04",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Which component handles background messaging in production?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.warehouse",
+        "decision.warehouse.reason",
+        "service.analytics.depends_on"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.warehouse",
+      "qid": "hv2-version_update-01",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.warehouse",
+        "decision.warehouse.reason",
+        "service.analytics.depends_on"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "What replaced the previous warehouse technology?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.storage"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.storage",
+      "qid": "hv2-version_update-02",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.storage"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "The object storage choice changed at some point. What is it now?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.queue",
+        "decision.queue.reason",
+        "incident.2024-09.search-indexer.root",
+        "service.billing.depends_on",
+        "service.notifier.depends_on",
+        "service.search-indexer.depends_on"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.queue",
+      "qid": "hv2-version_update-03",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.queue",
+        "decision.queue.reason",
+        "incident.2024-09.search-indexer.root",
+        "service.billing.depends_on",
+        "service.notifier.depends_on",
+        "service.search-indexer.depends_on"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Which queue technology superseded the previous one?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.redis"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.redis",
+      "qid": "hv2-version_update-04",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.redis"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "The shared cache was migrated once. Which product is used now?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.datastore"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "supersession",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.datastore",
+      "qid": "hv2-supersession-01",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.datastore"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "An ADR claims to supersede an earlier one about the edge store. What does it assert about the datastore?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "supersession",
+      "expect_state": "CURRENT",
+      "gold_key": "service.risk.owner",
+      "qid": "hv2-supersession-02",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Which team is responsible for the component that escalated risk using the ledger?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "runbook.archive.escalation",
+        "service.archive.owner",
+        "team.data.services"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "supersession",
+      "expect_state": "CURRENT",
+      "gold_key": "runbook.archive.escalation",
+      "qid": "hv2-supersession-03",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "runbook.archive.escalation",
+        "service.archive.owner",
+        "team.data.services"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "When someone must be paged about the Archive Job, which team answers?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "conflict",
+      "expect_state": "CONFLICTING",
+      "gold_key": "architecture.postgres",
+      "qid": "hv2-conflict-01",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Two records disagree about the primary datastore. What are the competing values?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "conflict",
+      "expect_state": "CURRENT",
+      "gold_key": "architecture.datastore",
+      "qid": "hv2-conflict-02",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Is there an unreconciled architectural record naming a different primary store?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "conflict",
+      "expect_state": "CONFLICTING",
+      "gold_key": "architecture.postgres",
+      "qid": "hv2-conflict-03",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "Which documented position contradicts the datastore actually in production?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "team.platform.services",
+        "service.gateway.owner",
+        "runbook.gateway.escalation",
+        "service.gateway.tier",
+        "team.data.services",
+        "team.discovery.services",
+        "team.payments.services"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "cross_document",
+      "expect_state": "CURRENT",
+      "gold_key": "team.platform.services",
+      "qid": "hv2-cross_document-01",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "team.platform.services",
+        "service.gateway.owner",
+        "runbook.gateway.escalation",
+        "service.gateway.tier",
+        "team.data.services",
+        "team.discovery.services",
+        "team.payments.services"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Which team owns every service that sits directly behind the API Gateway?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "service.analytics.owner",
+        "service.archive.owner",
+        "service.risk.owner",
+        "team.data.services",
+        "runbook.analytics.escalation",
+        "runbook.archive.escalation",
+        "runbook.identity.escalation",
+        "runbook.ledger.escalation",
+        "runbook.media.escalation",
+        "runbook.orders.escalation",
+        "runbook.risk.escalation",
+        "service.billing.owner",
+        "service.gateway.owner",
+        "service.identity.owner",
+        "service.ledger.owner",
+        "service.media.owner",
+        "service.notifier.owner",
+        "service.orders.owner",
+        "service.search-indexer.owner",
+        "service.web.owner",
+        "team.discovery.services",
+        "team.payments.services",
+        "team.platform.services"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "cross_document",
+      "expect_state": "CURRENT",
+      "gold_key": "team.data.services",
+      "qid": "hv2-cross_document-02",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "service.analytics.owner",
+        "service.archive.owner",
+        "service.risk.owner",
+        "team.data.services",
+        "runbook.analytics.escalation",
+        "runbook.archive.escalation",
+        "runbook.identity.escalation",
+        "runbook.ledger.escalation",
+        "runbook.media.escalation",
+        "runbook.orders.escalation",
+        "runbook.risk.escalation",
+        "service.billing.owner",
+        "service.gateway.owner",
+        "service.identity.owner",
+        "service.ledger.owner",
+        "service.media.owner",
+        "service.notifier.owner",
+        "service.orders.owner",
+        "service.search-indexer.owner",
+        "service.web.owner",
+        "team.discovery.services",
+        "team.payments.services",
+        "team.platform.services"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Name the services the data team is accountable for."
+    },
+    {
+      "candidate_lex_ranked": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "service.ledger.tier",
+        "service.orders.tier",
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "architecture.datastore",
+        "constraint.orders.pool",
+        "release.0.7",
+        "runbook.identity.escalation",
+        "runbook.ledger.escalation",
+        "runbook.media.escalation",
+        "runbook.orders.escalation",
+        "service.analytics.depends_on",
+        "service.analytics.owner",
+        "service.archive.depends_on",
+        "service.archive.owner",
+        "service.billing.depends_on",
+        "service.billing.owner",
+        "service.gateway.owner",
+        "service.identity.depends_on",
+        "service.identity.owner",
+        "service.ledger.depends_on",
+        "service.ledger.owner",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.notifier.depends_on",
+        "service.notifier.owner",
+        "service.orders.depends_on",
+        "service.orders.owner",
+        "service.risk.depends_on",
+        "service.risk.owner",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.web.depends_on",
+        "service.web.owner",
+        "team.data.services",
+        "team.discovery.services",
+        "team.payments.services",
+        "team.platform.services"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "cross_document",
+      "expect_state": "CURRENT",
+      "gold_key": "team.payments.services",
+      "qid": "hv2-cross_document-03",
+      "semantic_reachable": false,
+      "shipped_lex_ranked": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "architecture.datastore",
+        "constraint.orders.pool",
+        "release.0.7",
+        "runbook.identity.escalation",
+        "runbook.ledger.escalation",
+        "runbook.media.escalation",
+        "runbook.orders.escalation",
+        "service.analytics.depends_on",
+        "service.analytics.owner",
+        "service.archive.depends_on",
+        "service.archive.owner",
+        "service.billing.depends_on",
+        "service.billing.owner",
+        "service.gateway.owner",
+        "service.identity.depends_on",
+        "service.identity.owner",
+        "service.ledger.depends_on",
+        "service.ledger.owner",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.notifier.depends_on",
+        "service.notifier.owner",
+        "service.orders.depends_on",
+        "service.orders.owner",
+        "service.risk.depends_on",
+        "service.risk.owner",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.web.depends_on",
+        "service.web.owner",
+        "team.data.services",
+        "team.discovery.services",
+        "team.payments.services",
+        "team.platform.services"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Which services run at tier-1?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": false,
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "gold_key": "service.risk.depends_on",
+      "qid": "hv2-relationship-01",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": false,
+      "text": "The Risk Engine relies on other components to function. Name them."
+    },
+    {
+      "candidate_lex_ranked": [
+        "runbook.media.escalation",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.media.tier",
+        "team.discovery.services"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "gold_key": "service.media.depends_on",
+      "qid": "hv2-relationship-02",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "runbook.media.escalation",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.media.tier",
+        "team.discovery.services"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "What must be present for the Media Service to operate?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "constraint.search.batch",
+        "incident.2024-09.search-indexer.root",
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.search-indexer.tier",
+        "team.discovery.services"
+      ],
+      "candidate_lex_reachable": true,
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "gold_key": "service.search-indexer.depends_on",
+      "qid": "hv2-relationship-03",
+      "semantic_reachable": true,
+      "shipped_lex_ranked": [
+        "constraint.search.batch",
+        "incident.2024-09.search-indexer.root",
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.search-indexer.tier",
+        "team.discovery.services"
+      ],
+      "shipped_lex_reachable": true,
+      "text": "Which components does the Search Indexer need before it can run?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "service.gateway.tier",
+        "service.identity.depends_on",
+        "service.media.depends_on",
+        "service.orders.depends_on",
+        "service.risk.depends_on",
+        "service.web.depends_on",
+        "team.platform.services"
+      ],
+      "candidate_lex_reachable": null,
+      "category": "negative_evidence",
+      "expect_state": "ABSENT",
+      "gold_key": null,
+      "qid": "hv2-negative_evidence-01",
+      "semantic_reachable": null,
+      "shipped_lex_ranked": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "service.gateway.tier",
+        "service.identity.depends_on",
+        "service.media.depends_on",
+        "service.orders.depends_on",
+        "service.risk.depends_on",
+        "service.web.depends_on",
+        "team.platform.services"
+      ],
+      "shipped_lex_reachable": null,
+      "text": "Was the gateway left unowned?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": null,
+      "category": "negative_evidence",
+      "expect_state": "ABSENT",
+      "gold_key": null,
+      "qid": "hv2-negative_evidence-02",
+      "semantic_reachable": null,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": null,
+      "text": "What is the sanctioned way to remove records that are no longer on disk?"
+    },
+    {
+      "candidate_lex_ranked": [],
+      "candidate_lex_reachable": null,
+      "category": "abstention",
+      "expect_state": "ABSENT",
+      "gold_key": null,
+      "qid": "hv2-abstention-01",
+      "semantic_reachable": null,
+      "shipped_lex_ranked": [],
+      "shipped_lex_reachable": null,
+      "text": "Which vendor supplies the production message broker?"
+    },
+    {
+      "candidate_lex_ranked": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "service.gateway.tier",
+        "team.platform.services"
+      ],
+      "candidate_lex_reachable": null,
+      "category": "abstention",
+      "expect_state": "ABSENT",
+      "gold_key": null,
+      "qid": "hv2-abstention-02",
+      "semantic_reachable": null,
+      "shipped_lex_ranked": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "service.gateway.tier",
+        "team.platform.services"
+      ],
+      "shipped_lex_reachable": null,
+      "text": "How many replicas does the API Gateway run?"
+    }
+  ],
+  "python": "3.14.7",
+  "questions": 32,
+  "regressed": [],
+  "regressed_count": 0,
+  "rescued": [],
+  "rescued_count": 0,
+  "semantic_recall": {
+    "ci95": [
+      0.4643,
+      0.8214
+    ],
+    "point": 0.6429
+  },
+  "shipped_lexical_recall": {
+    "ci95": [
+      0.3929,
+      0.75
+    ],
+    "point": 0.5714
+  }
+}

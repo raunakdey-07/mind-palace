@@ -1,0 +1,37 @@
+=== held-out v2 gate: negative tests ===
+Commit: 7983caf8d872dee7785cc69584c19fca4536ad9b
+
+The tokenizer fix measured +10 rescued / 0 regressed on held-out v1, but was
+DISCOVERED by reading v1. v1 can no longer validate it. This establishes the
+gate that must pass before the fix ships.
+
+--- freeze on an EMPTY set must refuse ---
+
+The set is EMPTY. freeze REFUSED.
+Owner must author the questions first (protocol section 8).
+Machine-generated questions are not acceptable for a held-out set.
+EXIT=1 (expected)
+
+--- verify with no freeze file must refuse ---
+FAIL: no freeze file. Run `freeze` first.
+EXIT=1 (expected)
+
+--- run on an empty set must refuse ---
+FAIL: no questions. The held-out v2 gate cannot be run on an empty set.
+EXIT=1 (expected)
+
+--- validation: nonexistent gold key must refuse ---
+  !! hv2-why_decision-01: gold key ... does not exist in the corpus
+
+--- validation: ABSENT question carrying a key must refuse ---
+  !! hv2-abstention-01: ABSENT question must have key=None
+
+--- validation: UNSCORABLE question carrying a gold key must refuse ---
+  !! hv2-why_decision-01: marked UNSCORABLE but carries key; unscorable must not assert a gold key
+
+--- positive: a valid question freezes ---
+  frozen. hash=67f79e6d1c9ae19618ccd5fa3a2c22fb175116d1d236e9bf90419113fb170ce0
+
+--- tamper detection: a mutated freeze hash must fail verify ---
+  FAIL: dataset hash changed after freeze
+  The held-out set must be immutable after freezing. Start a new version.

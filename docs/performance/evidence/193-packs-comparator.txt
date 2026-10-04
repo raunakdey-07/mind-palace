@@ -1,0 +1,12 @@
+$ sha256sum scripts/benchmark/baseline_packs.py (expect 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4)
+12638b246b183382fd93623f774f09f46d6b5511360f4c9305027243df568daf  scripts/benchmark/baseline_packs.py
+
+$ venvmp/bin/python scripts/benchmark/baseline_packs.py --help
+usage: baseline_packs.py [-h] {capture,compare} ...
+
+positional arguments:
+  {capture,compare}
+
+options:
+  -h, --help         show this help message and exit
+HELP=0

@@ -1,0 +1,185 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace)
+
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m part_c   -> 182-cliff-reverified-n1000.json (raw)
+                                   183a-cliff-reverified-raw.txt (console)
+
+  VERDICT: the 117x shared-buffer result REPRODUCES. Re-established from
+  scratch in this session; the previous session's numbers were not trusted or
+  reused.
+
+
+==============================================================================
+SETUP, AND WHY IT IS A CLEAN MEASUREMENT
+==============================================================================
+  Server            PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2)
+  Corpus            1000 documents, one authored `claims:` entry each, built by
+                    the real IngestionService with the deterministic Offline
+                    embedder (scripts/benchmark/m0117_scale.py::_doc).
+  Rows actually in the tables (read back, not assumed):
+                    claims 1000, evidence 1000, chunks 1000,
+                    versions 1000, documents 1000
+  Isolation         throwaway schema anxC_* created inside ONE transaction that
+                    is ROLLED BACK at the end. Nothing in `public` touched; no
+                    index, migration or DDL created anywhere else.
+  Fresh-install     ASSERTED before any EXPLAIN and before any ANALYZE:
+                    memory_claims reltuples = -1, last_analyze = NULL,
+                    pg_statistic_rows = 0. The script aborts if not.
+  plan_cache_mode   force_custom_plan, set identically on both sides, so the
+                    only variable between the two measurements is statistics.
+  Reps              3 per side. All three reps agreed EXACTLY on both sides.
+  Plan-shape        asserted identical across all 3 reps on each side, so a
+                    buffer count cannot be quoted for a plan that was drifting.
+
+  MEASUREMENT RULE
+  EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) is used because PostgreSQL refuses
+  BUFFERS without ANALYZE. Only shared buffers, plan shape, row counts and row
+  hashes are treated as evidence. Execution Time is present in the raw JSON and
+  is NOT used as a measurement anywhere in this file. No wall-clock benchmark
+  was run.
+
+
+==============================================================================
+THE STATEMENT MEASURED
+==============================================================================
+  Captured by intercepting api.services.memory._load itself with
+  chunk_text=False, version_text=False -- the narrow public projection that
+  api/services/memory_public.py:370 calls. Not retyped by hand.
+
+      SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id,
+             v.version_number, v.document_id, v.event, v.observed_at,
+             v.fingerprint, d.path,
+          COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id,
+                              'heading_path', c.heading_path)
+                              ORDER BY c.order_index)
+                    FROM memory_chunks c
+                    WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                  '[]'::jsonb) AS chunks,
+          COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+                    FROM memory_claims c
+                    WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                  '[]'::jsonb) AS claims,
+          COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+                    FROM memory_evidence e
+                    WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+                  '[]'::jsonb) AS evidence
+      FROM memory_versions v JOIN memory_documents d
+        ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+      WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+        AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+      ORDER BY v.observed_at, d.path, v.version_number
+
+  Parameters: corpus_id = the fresh corpus, path = NULL, as_of = NULL -- i.e.
+  the whole-corpus load, which is what a public query does.
+
+
+==============================================================================
+RESULT: 117.41x
+==============================================================================
+
+                                BEFORE ANALYZE          AFTER ANALYZE
+  Shared Hit Blocks (root)       1,079,038              9,190
+  Shared Hit Blocks per rep      1079038, 1079038,     9190, 9190, 9190
+                                 1079038                (exactly equal)
+  ratio                                          117.41x
+
+  The three child aggregates, plan shape before ANALYZE:
+
+    memory_chunks     Index Scan using memory_chunks_corpus_id_version_id_order_index_key
+        Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+        Filter                 = None
+        Rows Removed by Filter = None
+        Actual Loops           = 1000
+
+    memory_claims     Index Scan using idx_memory_claims_validity
+        Index Cond             = (corpus_id = v.corpus_id)
+        Filter                 = (version_id = v.id)          <-- CONFIRMED
+        Rows Removed by Filter = 999                          <-- CONFIRMED
+        Actual Loops           = 1000
+
+    memory_evidence   Index Scan using idx_memory_evidence_claim
+        Index Cond             = (corpus_id = v.corpus_id)
+        Filter                 = (version_id = v.id)          <-- CONFIRMED
+        Rows Removed by Filter = 999                          <-- CONFIRMED
+        Actual Loops           = 1000
+
+  Both requested pre-ANALYZE markers are present EXACTLY as specified:
+  `Filter: (version_id = v.id)` with `Rows Removed by Filter: 999`, on a 1000-row
+  table returned once per correlated subquery, driven 1000 times by the outer
+  join. memory_chunks already had the composite index available and used it;
+  memory_claims and memory_evidence did not, which is the asymmetry that makes
+  this a statistics problem and not an index problem.
+
+  Plan shape after ANALYZE -- all three now use a true two-column Index Cond:
+
+    memory_chunks     Index Scan using memory_chunks_corpus_id_version_id_order_index_key
+        Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+        Filter                 = None
+        Rows Removed by Filter = None
+
+    memory_claims     Index Scan using memory_claims_corpus_id_version_id_id_key
+        Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+        Filter                 = None
+        Rows Removed by Filter = None
+                                ^-- was 999 before. The filter is GONE, not
+                                    merely cheaper. (corpus_id, version_id) is
+                                    the index condition now.
+
+    memory_evidence   Index Scan using idx_memory_evidence_chunk
+        Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+        Filter                 = None
+        Rows Removed by Filter = None
+
+  Every index used after ANALYZE already existed before it. ANALYZE created no
+  object; it only moved version_id from the Filter clause into the Index Cond by
+  giving the planner a row estimate. Both (corpus_id, version_id) indexes are
+  UNIQUE constraints that the migrations have always created
+  (migrations/versions/004_memory.py:114 and :147).
+
+
+==============================================================================
+ROW IDENTITY ACROSS THE ANALYZE
+==============================================================================
+
+    before  sha256 = d6fa4583c6ea1f25994f82b64a112777476a67fb45b5b2411818326485c236ec
+    after   sha256 = d6fa4583c6ea1f25994f82b64a112777476a67fb45b5b2411818326485c236ec
+    n_rows  1000 = 1000        n_cols 13 = 13
+
+  SHA-256 over every column of every returned row, hashed in column order with
+  a field separator and a row separator, with datetime/decimal/bytes/None
+  normalised to unambiguous text. The two are byte-identical: ANALYZE changed
+  the plan and the cost, and nothing about the answer.
+
+
+==============================================================================
+CORROBORATION FROM THE OTHER RUNS IN THIS SESSION
+==============================================================================
+
+  180 A5 (committed fixture, separate run, same N, same generator):
+      1,078,038 -> 9,190 = 116.5x, Rows Removed by Filter = 999, rows
+      byte-identical. Independent of the rollback-based Part C run and within
+      0.1% of its buffer counts, so the figure is stable across a committed and
+      a rolled-back fixture rather than being an artefact of either.
+
+  180 A4a (fresh-install control at N=100):
+      12,194 shared blocks, same bad shape, Rows Removed by Filter = 99 on a
+      100-row table. Confirms the mechanism scales as N x N -- the outer join
+      drives the child scan once per version, and each scan reads every row of
+      the child table.
+
+  180 A2/A4a (why this run is trustworthy):
+      Rolled-back schemas get NEW relation OIDs, so nothing a previous run
+      wrote can be visible here. Each run therefore genuinely starts from
+      reltuples = -1, and the fresh-install assertion above is a real check
+      rather than a formality.
+
+==============================================================================
+CLEANUP
+==============================================================================
+  Schema created for this run: anxC_*, rolled back. After all runs:
+  schemas remaining = ['public'], pg_statistic rows = 470 (the pre-existing
+  baseline, unchanged).

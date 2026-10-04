@@ -1,0 +1,10 @@
+157:not be reproduced, and do not appear in any artifact. `docs/performance/status-latency.json`
+308:| Latency envelope | `docs/performance/status-latency.json` |
+309:| Latency above 10k | `docs/performance/status-latency-extended.json` |
+310:| Correctness, 202 questions | `docs/performance/m0115-experiments.json` |
+311:| Held-out correctness, 157 questions | `docs/performance/m0130-heldout.json` |
+312:| Authoritative pack baseline and comparison | `docs/performance/baseline-packs.json` |
+313:| Degradation and poisoning | `docs/performance/m0115-degradation.json` |
+314:| Rebuildability | `docs/performance/m011-rebuildability.json` |
+315:| Load serialisation split | `docs/performance/m0124-load-split.json` |
+331:    --sizes 100,1000,5000,10000 --repeats 3 --out docs/performance/status-latency.json

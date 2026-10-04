@@ -1,0 +1,15 @@
+# RUN 2 on UNCHANGED code - proves the L2 digest is not run-stable
+$ PYTHONPATH=scripts/benchmark venvmp/bin/python -m scripts.benchmark.m011_rebuildability --out /tmp/analyze-m011-rebuildability-run2.json
+pack digest with L2       6dd9d813079676fc846f91ef20b6d5b98e8b0687a88594d9b7e5916cc901c807
+pack digest L2 destroyed  6dd9d813079676fc846f91ef20b6d5b98e8b0687a88594d9b7e5916cc901c807
+pack digest L2 rebuilt    6dd9d813079676fc846f91ef20b6d5b98e8b0687a88594d9b7e5916cc901c807
+identical with L2 destroyed: 12/12
+identical after rebuild    : 12/12
+RUN2=0
+
+run1 digests: {"l2_destroyed": "ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c", "l2_rebuilt": "ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c", "with_l2": "ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c"}
+run2 digests: {"l2_destroyed": "6dd9d813079676fc846f91ef20b6d5b98e8b0687a88594d9b7e5916cc901c807", "l2_rebuilt": "6dd9d813079676fc846f91ef20b6d5b98e8b0687a88594d9b7e5916cc901c807", "with_l2": "6dd9d813079676fc846f91ef20b6d5b98e8b0687a88594d9b7e5916cc901c807"}
+
+WITHIN run1 all three equal: True
+WITHIN run2 all three equal: True
+ACROSS runs identical      : False <- digest moves on UNCHANGED code

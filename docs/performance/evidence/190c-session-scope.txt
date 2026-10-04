@@ -1,0 +1,6 @@
+$ grep -n "session_scope" -A 20 api/services/db.py
+
+68:async def session_scope() -> AsyncGenerator[AsyncSession, None]:
+69-    """Standalone async session context manager for non-FastAPI callers."""
+70-    async with AsyncSessionLocal() as session:
+71-        yield session

@@ -1,0 +1,4 @@
+$ echo PROBE-OK
+# Phase 0 terminal recovery probe (cd="Mind Palace" workaround)
+
+PROBE-OK

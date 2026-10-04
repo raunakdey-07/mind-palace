@@ -1,0 +1,677 @@
+{
+  "V0": {
+    "why": "BASELINE: production _load narrow SQL, verbatim",
+    "pre": [],
+    "planning_ms": [
+      0.324
+    ],
+    "exec_ms": [
+      46.2
+    ],
+    "shared_hit": [
+      71627
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 60750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": "SELF"
+  },
+  "V1": {
+    "why": "LEFT JOIN LATERAL for the three aggregates",
+    "pre": [],
+    "planning_ms": [
+      0.287
+    ],
+    "exec_ms": [
+      44.696
+    ],
+    "shared_hit": [
+      71627
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 60750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V2": {
+    "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+    "pre": [],
+    "planning_ms": [
+      0.649
+    ],
+    "exec_ms": [
+      58.783
+    ],
+    "shared_hit": [
+      6862
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = 'ef0d10c9ed82eb71dddb77fb51be04f021ad08f7bc17b69c96ea7869a989f45b'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 15,
+      "rows": 250,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_chunk",
+      "index_cond": "(corpus_id = 'ef0d10c9ed82eb71dddb77fb51be04f021ad08f7bc17b69c96ea7869a989f45b'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 238,
+      "rows": 250,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "(corpus_id = 'ef0d10c9ed82eb71dddb77fb51be04f021ad08f7bc17b69c96ea7869a989f45b'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 232,
+      "rows": 250,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V3": {
+    "why": "correlated subqueries, version_id predicate written first",
+    "pre": [],
+    "planning_ms": [
+      0.261
+    ],
+    "exec_ms": [
+      47.157
+    ],
+    "shared_hit": [
+      71627
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 60750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V4": {
+    "why": "inline pre-grouped derived tables instead of CTEs",
+    "pre": [],
+    "planning_ms": [
+      0.465
+    ],
+    "exec_ms": [
+      591.522
+    ],
+    "shared_hit": [
+      65942
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = 'ef0d10c9ed82eb71dddb77fb51be04f021ad08f7bc17b69c96ea7869a989f45b'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 15,
+      "rows": 250,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_chunk",
+      "index_cond": "(corpus_id = 'ef0d10c9ed82eb71dddb77fb51be04f021ad08f7bc17b69c96ea7869a989f45b'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 30123,
+      "rows": 126,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "(corpus_id = 'ef0d10c9ed82eb71dddb77fb51be04f021ad08f7bc17b69c96ea7869a989f45b'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 29427,
+      "rows": 126,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V5": {
+    "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+    "pre": [
+      "SET LOCAL default_statistics_target = 1000"
+    ],
+    "planning_ms": [
+      0.286
+    ],
+    "exec_ms": [
+      44.054
+    ],
+    "shared_hit": [
+      71627
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 60750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V6a": {
+    "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+    "pre": [
+      "SET LOCAL enable_indexscan = off"
+    ],
+    "planning_ms": [
+      0.461
+    ],
+    "exec_ms": [
+      52.633
+    ],
+    "shared_hit": [
+      15672
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": null,
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": null,
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 5750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "memory_chunks_pkey",
+      "index_cond": null,
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 5000,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V6b": {
+    "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+    "pre": [
+      "SET LOCAL enable_seqscan = off",
+      "SET LOCAL enable_bitmapscan = off"
+    ],
+    "planning_ms": [
+      0.316
+    ],
+    "exec_ms": [
+      43.969
+    ],
+    "shared_hit": [
+      71627
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 60750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  },
+  "V6c": {
+    "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+    "pre": [
+      "SET LOCAL random_page_cost = 1.1"
+    ],
+    "planning_ms": [
+      0.269
+    ],
+    "exec_ms": [
+      44.399
+    ],
+    "shared_hit": [
+      71627
+    ],
+    "shared_read": [
+      0
+    ],
+    "temp_read": [
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 3750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 249,
+      "loops": 250,
+      "shared_hit": 60750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 250,
+      "shared_hit": 750,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "jit": {},
+    "jit_timing": {},
+    "nondefault_settings": {},
+    "n_rows": 250,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "6fc37024627d1570cd42636262bbdfa24d74c85d7a2fe9ba5ec4454763e6fbf8",
+    "identical_to_V0": true
+  }
+}

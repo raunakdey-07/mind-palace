@@ -1,0 +1,32 @@
+nspname | size | bytes
+public | 0 bytes | 0
+schema count (non-system): 1
+total bytes: 0
+
+--- prefix counts ---
+mp_: 0
+scale_: 0
+prof_: 0
+base_: 0
+m115_: 0
+m130_: 0
+prod_: 0
+gate_: 0
+
+harness-prefixed schemas: 0
+
+--- largest user tables ---
+public.chunks | 264 kB | live_tup=2
+public.documents | 160 kB | live_tup=2
+public.memory_claims | 64 kB | live_tup=0
+public.memory_versions | 56 kB | live_tup=0
+public.corpora | 48 kB | live_tup=2
+public.ingestion_manifest | 48 kB | live_tup=2
+public.memory_evidence | 40 kB | live_tup=0
+public.memory_chunks | 32 kB | live_tup=0
+public.memory_documents | 24 kB | live_tup=0
+public.memory_claim_embeddings | 24 kB | live_tup=0
+public.alembic_version | 24 kB | live_tup=1
+public.memory_snapshot_versions | 16 kB | live_tup=0
+public.memory_snapshots | 16 kB | live_tup=0
+public.memory_snapshot_seals | 8192 bytes | live_tup=0

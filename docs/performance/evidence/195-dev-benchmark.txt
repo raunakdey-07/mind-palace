@@ -1,0 +1,27 @@
+$ venvmp/bin/python -m scripts.benchmark.m0115_experiments --out /tmp/analyze-m0115-experiments.json
+M011.5 experiments: lexical vs semantic vs fallback
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 7229.86it/s]
+
+dataset 9cdecda73cbdc8ae  questions 202
+A semantic always : 178/202
+B lexical always  : 164/202
+C lexical->sem    : 194/202
+
+by category (n / A / B / C):
+  abstention      25   23   22   23
+  adversarial     19   18   14   18
+  conflict         2    2    1    2
+  current         30   30   18   30
+  historical      30   30   30   30
+  multi-topic     23   17   10   22
+  provenance      26   22   26   26
+  relationship    34   28   31   31
+  temporal        13    8   12   12
+
+routing: {"cheap_sufficient": 148, "unnecessarily_expensive": 16, "dangerously_cheap": 26}
+failures: {"F7": 3, "F2": 2, "F9": 3}
+
+timing: {"semantic_ms": {"n": 202, "p50": 681.27, "p95": 780.71, "mean": 691.6}, "lexical_ms": {"n": 202, "p50": 25.84, "p95": 34.55, "mean": 26.21}}
+
+written: /tmp/analyze-m0115-experiments.json
+EXPERIMENTS=0

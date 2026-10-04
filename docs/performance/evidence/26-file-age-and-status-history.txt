@@ -1,0 +1,14 @@
+--- f52272d vs HEAD ---
+f52272d release: v0.7.0 unified context, portable pack, cached query fix
+f52272d release: v0.7.0 unified context, portable pack, cached query fix
+--- commits from f52272d..HEAD ---
+(end)
+--- is f52272d ancestor of HEAD? ---
+YES_ANCESTOR
+--- status-latency.json mtime ---
+docs/performance/status-latency.json  mtime=2026-10-02 10:58:14.368955425 +0530  size=41471
+docs/performance/m0122-instrumented.json  mtime=2026-09-29 14:02:56.109333093 +0530  size=49513
+docs/STATUS.md  mtime=2026-10-02 20:59:47.000072789 +0530  size=15341
+--- git status for STATUS.md ---
+?? docs/STATUS.md
+--- history of STATUS.md ---

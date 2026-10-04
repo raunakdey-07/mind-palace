@@ -1,0 +1,19 @@
+PERMITTED STATE CHANGE: ANALYZE on the four public memory tables.
+These tables hold 0 rows. ANALYZE rewrites no rows and changes no data;
+it only refreshes planner statistics (pg_class.reltuples/relpages, pg_statistic).
+
+  --- BEFORE ---
+    memory_claims      reltuples=-1.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    memory_evidence    reltuples=-1.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    memory_versions    reltuples=-1.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    memory_documents   reltuples=-1.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    ANALYZE memory_claims done
+    ANALYZE memory_evidence done
+    ANALYZE memory_versions done
+    ANALYZE memory_documents done
+
+  --- AFTER ---
+    memory_claims      reltuples=0.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    memory_evidence    reltuples=0.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    memory_versions    reltuples=0.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0
+    memory_documents   reltuples=0.0 relpages=0 n_live_tup=0 last_analyze=None last_autoanalyze=None analyze_count=0

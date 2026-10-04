@@ -1,0 +1,5 @@
+  tests/test_security.py:70: PytestWarning: The test <Function test_oversized_document_is_chunked_not_crashed> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_oversized_document_is_chunked_not_crashed():
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1200 passed, 12 warnings in 108.68s (0:01:48)

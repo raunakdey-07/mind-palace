@@ -1,0 +1,12 @@
+memory_versions {'relname': 'memory_versions', 'reltuples': -1.0, 'relpages': 0} {'last_analyze': None, 'last_autoanalyze': None, 'n_live_tup': 0, 'autoanalyze_count': 0}
+memory_documents {'relname': 'memory_documents', 'reltuples': -1.0, 'relpages': 0} {'last_analyze': None, 'last_autoanalyze': None, 'n_live_tup': 0, 'autoanalyze_count': 0}
+memory_chunks {'relname': 'memory_chunks', 'reltuples': -1.0, 'relpages': 0} {'last_analyze': None, 'last_autoanalyze': None, 'n_live_tup': 0, 'autoanalyze_count': 0}
+memory_claims {'relname': 'memory_claims', 'reltuples': -1.0, 'relpages': 0} {'last_analyze': None, 'last_autoanalyze': None, 'n_live_tup': 0, 'autoanalyze_count': 0}
+memory_evidence {'relname': 'memory_evidence', 'reltuples': -1.0, 'relpages': 0} {'last_analyze': None, 'last_autoanalyze': None, 'n_live_tup': 0, 'autoanalyze_count': 0}
+--- actual row counts in public schema ---
+memory_versions      count=0
+memory_documents     count=0
+memory_chunks        count=0
+memory_claims        count=0
+memory_evidence      count=0
+server: PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit

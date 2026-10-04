@@ -1,0 +1,9 @@
+$ venvmp/bin/python -m flake8 api cli tests --max-line-length=100
+FLAKE8=0
+
+$ venvmp/bin/python -m black --check api cli tests --line-length 100
+would reformat /mnt/Warehouse/projects/Mind Palace/tests/test_ingestion_statistics.py
+
+Oh no! 💥 💔 💥
+1 file would be reformatted, 109 files would be left unchanged.
+BLACK=1

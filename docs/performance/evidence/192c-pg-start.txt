@@ -1,0 +1,8 @@
+$ podman start mindpalace_postgresql_1
+mindpalace_postgresql_1
+START=0
+
+$ sleep 12
+
+$ podman ps
+mindpalace_postgresql_1 Up 12 seconds (healthy) 0.0.0.0:5432->5432/tcp

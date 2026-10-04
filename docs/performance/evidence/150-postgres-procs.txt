@@ -1,0 +1,13 @@
+=== all postgres OS processes ===
+  26691   26689   15792  0.0  0.1 21028 Ss   Sat Oct  3 10:34:34 2026 postgres
+  26824   26691   15787  0.0  0.5 95300 Ss   Sat Oct  3 10:34:38 2026 postgres: checkpointer 
+  26825   26691   15787  0.0  0.0  9216 Ss   Sat Oct  3 10:34:38 2026 postgres: background writer 
+  26827   26691   15787  0.1  0.0  8736 Ss   Sat Oct  3 10:34:38 2026 postgres: walwriter 
+  26828   26691   15787  0.0  0.0  7472 Ss   Sat Oct  3 10:34:38 2026 postgres: autovacuum launcher 
+  26829   26691   15787  0.0  0.0  6872 Ss   Sat Oct  3 10:34:38 2026 postgres: logical replication launcher 
+ 306161  306097       0  0.0  0.0  2140 S+   Sat Oct  3 14:57:46 2026 tee docs/performance/evidence/150-postgres-procs.txt
+
+=== postgres total rss (kB) ===
+150764
+
+=== psql/pgadmin client procs ===

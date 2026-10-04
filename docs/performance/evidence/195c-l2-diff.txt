@@ -1,0 +1,9 @@
+$ field-level diff: tracked m011-rebuildability.json vs /tmp capture
+DIFFERS  counts
+    tracked: {"after_destroy": {"chunks": 0, "claims": 10, "documents": 0, "embedded": 0, "evidence": 10, "manifest": 0, "versions": 8}, "after_rebuild": {"chunks": 7, "claims": 10, "documents": 7, "embedded": 7, 
+    current: {"after_destroy": {"chunks": 0, "claims": 10, "documents": 0, "embedded": 0, "evidence": 10, "manifest": 0, "versions": 8}, "after_rebuild": {"chunks": 7, "claims": 10, "documents": 7, "embedded": 7, 
+DIFFERS  digests
+    tracked: {"l2_destroyed": "92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89", "l2_rebuilt": "92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89", "with_l2": "92e51b529dd391a5fd630
+    current: {"l2_destroyed": "ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c", "l2_rebuilt": "ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c", "with_l2": "ce74fe11a0dd3504b4118
+SAME     meta
+SAME     questions

@@ -1,0 +1,54 @@
+# EXPLAIN (ANALYZE, BUFFERS, VERBOSE) -- narrow production projection, default work_mem
+# work_mem=4MB; corpus=xpl_fcf1505518 target=3000 counts={'versions': 3001, 'documents': 1003, 'claims': 3001, 'chunks': 3001, 'evidence_rows': 3001}
+# per-run execution ms: [104.281, 102.57, 101.441]
+# EXPLAIN ANALYZE does not serialize or transfer rows to the client.
+# Output: tuple payload elided: 0 lines, 42 bytes; the complete un-elided text and its sha256 are recorded in 51-explain-summary.txt.
+#------------------------------------------------------------------------------
+Sort  (cost=407.43..407.47 rows=15 width=1504) (actual time=102.302..103.219 rows=3001 loops=1)
+  Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path, (COALESCE((SubPlan 1), '[]'::jsonb)), (COALESCE((SubPlan 2), '[]'::jsonb)), (COALESCE((SubP
+  Sort Key: v.observed_at, d.path, v.version_number
+  Sort Method: external merge  Disk: 4928kB
+  Buffers: shared hit=40062, temp read=616 written=617
+  ->  Nested Loop  (cost=4.69..407.14 rows=15 width=1504) (actual time=0.154..93.718 rows=3001 loops=1)
+        Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path, COALESCE((SubPlan 1), '[]'::jsonb), COALESCE((SubPlan 2), '[]'::jsonb), COALESCE((Sub
+        Buffers: shared hit=40062
+        ->  Bitmap Heap Scan on xpl_fcf1505518.memory_documents d  (cost=4.29..10.54 rows=2 width=552) (actual time=0.068..0.284 rows=1003 loops=1)
+              Output: d.corpus_id, d.id, d.path
+              Recheck Cond: (d.corpus_id = '19651b1d2302132f89fe12cbb71c5003db6100de595a1551d99daa027c140fa6'::bpchar)
+              Heap Blocks: exact=23
+              Buffers: shared hit=38
+              ->  Bitmap Index Scan on memory_documents_corpus_id_path_key  (cost=0.00..4.29 rows=2 width=0) (actual time=0.059..0.060 rows=1003 loops=1)
+                    Index Cond: (d.corpus_id = '19651b1d2302132f89fe12cbb71c5003db6100de595a1551d99daa027c140fa6'::bpchar)
+                    Buffers: shared hit=15
+        ->  Index Scan using memory_versions_corpus_id_memory_document_id_version_number_key on xpl_fcf1505518.memory_versions v  (cost=0.41..8.42 rows=1 width=1376) (actual time=0.004..0.005 rows=3 loops=1003)
+              Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.content, v.metadata, v.fingerprint
+              Index Cond: ((v.corpus_id = '19651b1d2302132f89fe12cbb71c5003db6100de595a1551d99daa027c140fa6'::bpchar) AND (v.memory_document_id = d.id))
+              Buffers: shared hit=4012
+        SubPlan 1
+          ->  Aggregate  (cost=8.43..8.44 rows=1 width=32) (actual time=0.007..0.007 rows=1 loops=3001)
+                Output: jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+                Buffers: shared hit=12004
+                ->  Index Scan using memory_chunks_corpus_id_version_id_order_index_key on xpl_fcf1505518.memory_chunks c  (cost=0.40..8.42 rows=1 width=296) (actual time=0.003..0.004 rows=1 loops=3001)
+                      Output: c.corpus_id, c.version_id, c.id, c.text, c.heading_path, c.order_index
+                      Index Cond: ((c.corpus_id = v.corpus_id) AND (c.version_id = v.id))
+                      Buffers: shared hit=12004
+        SubPlan 2
+          ->  Aggregate  (cost=8.43..8.44 rows=1 width=32) (actual time=0.011..0.011 rows=1 loops=3001)
+                Output: jsonb_agg(to_jsonb(c_1.*) ORDER BY c_1.key, c_1.id)
+                Buffers: shared hit=12004
+                ->  Index Scan using memory_claims_corpus_id_version_id_id_key on xpl_fcf1505518.memory_claims c_1  (cost=0.40..8.42 rows=1 width=1760) (actual time=0.004..0.004 rows=1 loops=3001)
+                      Output: c_1.*, c_1.key, c_1.id
+                      Index Cond: ((c_1.corpus_id = v.corpus_id) AND (c_1.version_id = v.id))
+                      Buffers: shared hit=12004
+        SubPlan 3
+          ->  Aggregate  (cost=8.43..8.44 rows=1 width=32) (actual time=0.010..0.010 rows=1 loops=3001)
+                Output: jsonb_agg(to_jsonb(e.*) ORDER BY e.id)
+                Buffers: shared hit=12004
+                ->  Index Scan using idx_memory_evidence_chunk on xpl_fcf1505518.memory_evidence e  (cost=0.40..8.42 rows=1 width=1624) (actual time=0.004..0.004 rows=1 loops=3001)
+                      Output: e.*, e.id
+                      Index Cond: ((e.corpus_id = v.corpus_id) AND (e.version_id = v.id))
+                      Buffers: shared hit=12004
+Planning:
+  Buffers: shared hit=16
+Planning Time: 0.336 ms
+Execution Time: 104.281 ms

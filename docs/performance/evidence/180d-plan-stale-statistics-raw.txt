@@ -1,0 +1,601 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace):
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m a4c_plan
+
+RAW OUTPUT
+==============================================================================
+### A4 (re-run) -- autovacuum pinned off on throwaway tables
+
+==============================================================================
+A4b  OVER-estimating stale stats: analysed 1000, rolled back, loaded 100
+==============================================================================
+  actual claims rows = 100; statistics claim reltuples=1000, pg_statistic_rows=0
+  A4b STALE stats (no ANALYZE)
+    shared_hit_blocks (root, 3 reps identical) = 923
+    root Plan Rows = 5  Actual Rows = 100
+    memory_claims    Index Scan         index=memory_claims_corpus_id_version_id_id_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=100
+    memory_evidence  Index Scan         index=idx_memory_evidence_chunk
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=100
+    memory_chunks    Index Scan         index=memory_chunks_corpus_id_version_id_order_index_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=100
+
+  A4b after ANALYZE
+    shared_hit_blocks (root, 3 reps identical) = 941
+    root Plan Rows = 100  Actual Rows = 100
+    memory_claims    Index Scan         index=memory_claims_corpus_id_version_id_id_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=100
+    memory_evidence  Index Scan         index=idx_memory_evidence_chunk
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=100
+    memory_chunks    Index Scan         index=memory_chunks_corpus_id_version_id_order_index_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=100
+  stale/analyzed shared buffers = 923/941
+  rows identical across ANALYZE: True
+
+==============================================================================
+A4d  UNDER-estimating stale stats: analysed 50, rolled back, loaded 1000
+==============================================================================
+  actual claims rows = 1000; statistics claim reltuples=50, pg_statistic_rows=0
+  A4d STALE stats (no ANALYZE)
+    shared_hit_blocks (root, 3 reps identical) = 9184
+    root Plan Rows = 4  Actual Rows = 1000
+    memory_claims    Index Scan         index=memory_claims_corpus_id_version_id_id_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=1000
+    memory_evidence  Index Scan         index=idx_memory_evidence_chunk
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=1000
+    memory_chunks    Index Scan         index=memory_chunks_corpus_id_version_id_order_index_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=1000
+
+  A4d after ANALYZE
+    shared_hit_blocks (root, 3 reps identical) = 9176
+    root Plan Rows = 1000  Actual Rows = 1000
+    memory_claims    Index Scan         index=memory_claims_corpus_id_version_id_id_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=1000
+    memory_evidence  Index Scan         index=idx_memory_evidence_chunk
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=1000
+    memory_chunks    Index Scan         index=memory_chunks_corpus_id_version_id_order_index_key
+                     Index Cond = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+                     Filter     = None
+                     Rows Removed by Filter = None loops=1000
+  stale/analyzed shared buffers = 9184/9176 = 1.0x
+  rows identical across ANALYZE: True
+
+==============================================================================
+RAW JSON
+==============================================================================
+{
+  "A4b": {
+    "actual_rows_now": {
+      "chunks": 100,
+      "claims": 100,
+      "documents": 100,
+      "evidence": 100,
+      "versions": 100
+    },
+    "analyzed": {
+      "label": "A4b after ANALYZE",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 100,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 300,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 100,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_claims_corpus_id_version_id_id_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 300,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 100,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "idx_memory_evidence_chunk",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 300,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 100,
+      "root_plan_rows": 100,
+      "shared_hit_blocks": 941,
+      "shared_hit_blocks_all_reps": [
+        941,
+        941,
+        941
+      ]
+    },
+    "autovacuum_pinned_off": [
+      "anx4c_ef166c6ae5.memory_chunks",
+      "anx4c_ef166c6ae5.memory_claims",
+      "anx4c_ef166c6ae5.memory_documents",
+      "anx4c_ef166c6ae5.memory_evidence",
+      "anx4c_ef166c6ae5.memory_versions"
+    ],
+    "catalog_in_use": {
+      "memory_chunks": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.912747+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 1000,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 50,
+        "reltuples": 1000
+      },
+      "memory_claims": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.928038+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 1000,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 56,
+        "reltuples": 1000
+      },
+      "memory_documents": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.930794+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 1000,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 23,
+        "reltuples": 1000
+      },
+      "memory_evidence": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.940814+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 1000,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 53,
+        "reltuples": 1000
+      },
+      "memory_versions": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.957082+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 1000,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 167,
+        "reltuples": 1000
+      }
+    },
+    "catalog_of_rolled_back_corpus": {
+      "memory_chunks": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.912747+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 6,
+        "relpages": 50,
+        "reltuples": 1000
+      },
+      "memory_claims": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.928038+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 11,
+        "relpages": 56,
+        "reltuples": 1000
+      },
+      "memory_documents": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.930794+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 3,
+        "relpages": 23,
+        "reltuples": 1000
+      },
+      "memory_evidence": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.940814+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 8,
+        "relpages": 53,
+        "reltuples": 1000
+      },
+      "memory_versions": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:27.957082+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 11,
+        "relpages": 167,
+        "reltuples": 1000
+      }
+    },
+    "n_analysed_then_rolled_back": 1000,
+    "n_really_loaded": 100,
+    "n_rows": 100,
+    "rows_identical": true,
+    "schema": "anx4c_ef166c6ae5",
+    "schema_dropped": true,
+    "sha256": "71e1ca4173affd643bdc2961273259041ab84fb42261c54ed341fe24395d0931",
+    "stale": {
+      "label": "A4b STALE stats (no ANALYZE)",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 100,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 300,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 100,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_claims_corpus_id_version_id_id_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 300,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 100,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "idx_memory_evidence_chunk",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 300,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 100,
+      "root_plan_rows": 5,
+      "shared_hit_blocks": 923,
+      "shared_hit_blocks_all_reps": [
+        923,
+        923,
+        923
+      ]
+    },
+    "tag": "A4b"
+  },
+  "A4d": {
+    "actual_rows_now": {
+      "chunks": 1000,
+      "claims": 1000,
+      "documents": 1000,
+      "evidence": 1000,
+      "versions": 1000
+    },
+    "analyzed": {
+      "label": "A4d after ANALYZE",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_claims_corpus_id_version_id_id_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "idx_memory_evidence_chunk",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 1000,
+      "root_plan_rows": 1000,
+      "shared_hit_blocks": 9176,
+      "shared_hit_blocks_all_reps": [
+        9176,
+        9176,
+        9176
+      ]
+    },
+    "autovacuum_pinned_off": [
+      "anx4c_006c6e48e1.memory_chunks",
+      "anx4c_006c6e48e1.memory_claims",
+      "anx4c_006c6e48e1.memory_documents",
+      "anx4c_006c6e48e1.memory_evidence",
+      "anx4c_006c6e48e1.memory_versions"
+    ],
+    "catalog_in_use": {
+      "memory_chunks": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.892242+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 50,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 3,
+        "reltuples": 50
+      },
+      "memory_claims": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.894147+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 50,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 3,
+        "reltuples": 50
+      },
+      "memory_documents": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.895273+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 50,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 2,
+        "reltuples": 50
+      },
+      "memory_evidence": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.896750+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 50,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 3,
+        "reltuples": 50
+      },
+      "memory_versions": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.899114+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 50,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 0,
+        "relpages": 9,
+        "reltuples": 50
+      }
+    },
+    "catalog_of_rolled_back_corpus": {
+      "memory_chunks": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.892242+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 6,
+        "relpages": 3,
+        "reltuples": 50
+      },
+      "memory_claims": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.894147+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 11,
+        "relpages": 3,
+        "reltuples": 50
+      },
+      "memory_documents": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.895273+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 3,
+        "relpages": 2,
+        "reltuples": 50
+      },
+      "memory_evidence": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.896750+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 8,
+        "relpages": 3,
+        "reltuples": 50
+      },
+      "memory_versions": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:18:31.899114+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 0,
+        "pg_statistic_rows": 11,
+        "relpages": 9,
+        "reltuples": 50
+      }
+    },
+    "n_analysed_then_rolled_back": 50,
+    "n_really_loaded": 1000,
+    "n_rows": 1000,
+    "rows_identical": true,
+    "schema": "anx4c_006c6e48e1",
+    "schema_dropped": true,
+    "sha256": "c9300675a4de192ac3f57164c9d85cd8d63a774a373612f5d9218f4c5f9e60a8",
+    "stale": {
+      "label": "A4d STALE stats (no ANALYZE)",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_claims_corpus_id_version_id_id_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "idx_memory_evidence_chunk",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 1000,
+      "root_plan_rows": 4,
+      "shared_hit_blocks": 9184,
+      "shared_hit_blocks_all_reps": [
+        9184,
+        9184,
+        9184
+      ]
+    },
+    "tag": "A4d"
+  }
+}

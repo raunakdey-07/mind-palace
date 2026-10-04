@@ -1,0 +1,117 @@
+==============================================================================
+STEP 4 -- PREPARED STATEMENT / plan_cache_mode SENSITIVITY
+==============================================================================
+  question                  : A previous rewrite was rejected for a generic-plan cliff that asyncpg walks into after five calls. Does the CURRENT correlated-subquery form have one too?
+  method                    : (A) six consecutive executions per mode through the async path; (B) EXPLAIN of the identical parameterised statement under each plan_cache_mode.
+  pg_stat_statements        : NOT INSTALLED (verified: absent from pg_extension, shared_preload_libraries empty)
+
+
+==============================================================================
+N=1000
+==============================================================================
+
+STATEMENT captured from memory._load (1171 chars):
+  SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,
+  COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+  FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+  '[]'::jsonb) AS chunks,
+  COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+  FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+  '[]'::jsonb) AS claims,
+  COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+  FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+  '[]'::jsonb) AS evidence
+  FROM memory_versions v JOIN memory_documents d
+  ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+  WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+  AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+  ORDER BY v.observed_at, d.path, v.version_number
+
+------------------------------------------------------------------------------
+A) SIX CONSECUTIVE EXECUTIONS PER MODE
+------------------------------------------------------------------------------
+    mode                 call  claims index                           evidence index                    wall_ms
+    auto                 1     idx_memory_claims_validity             idx_memory_evidence_claim         1680.00
+    auto                 2     idx_memory_claims_validity             idx_memory_evidence_claim         1675.97
+    auto                 3     idx_memory_claims_validity             idx_memory_evidence_claim         1647.85
+    auto                 4     idx_memory_claims_validity             idx_memory_evidence_claim         1678.95
+    auto                 5     idx_memory_claims_validity             idx_memory_evidence_claim         1724.26
+    auto                 6     idx_memory_claims_validity             idx_memory_evidence_claim         1661.04
+    force_custom_plan    1     idx_memory_claims_validity             idx_memory_evidence_claim         1673.55
+    force_custom_plan    2     idx_memory_claims_validity             idx_memory_evidence_claim         1676.78
+    force_custom_plan    3     idx_memory_claims_validity             idx_memory_evidence_claim         1656.21
+    force_custom_plan    4     idx_memory_claims_validity             idx_memory_evidence_claim         1637.32
+    force_custom_plan    5     idx_memory_claims_validity             idx_memory_evidence_claim         1673.99
+    force_custom_plan    6     idx_memory_claims_validity             idx_memory_evidence_claim         1660.54
+    force_generic_plan   1     idx_memory_claims_validity             idx_memory_evidence_claim         1674.17
+    force_generic_plan   2     idx_memory_claims_validity             idx_memory_evidence_claim         1670.78
+    force_generic_plan   3     idx_memory_claims_validity             idx_memory_evidence_claim         1729.64
+    force_generic_plan   4     idx_memory_claims_validity             idx_memory_evidence_claim         1722.26
+    force_generic_plan   5     idx_memory_claims_validity             idx_memory_evidence_claim         1670.47
+    force_generic_plan   6     idx_memory_claims_validity             idx_memory_evidence_claim         1807.14
+
+------------------------------------------------------------------------------
+B) EXPLAIN (ANALYZE, BUFFERS) OF THE IDENTICAL STATEMENT UNDER EACH MODE
+------------------------------------------------------------------------------
+    mode                 claims index                           evidence index                   shared hit  shared read    exec_ms
+    force_custom_plan    idx_memory_claims_validity             idx_memory_evidence_claim           1068313            0   1688.743
+        planning_ms=0.694
+    force_generic_plan   idx_memory_claims_validity             idx_memory_evidence_claim           1068313            0   1691.553
+        planning_ms=0.582
+    auto                 idx_memory_claims_validity             idx_memory_evidence_claim           1068313            0    1735.73
+        planning_ms=0.574
+
+==============================================================================
+N=2000
+==============================================================================
+
+STATEMENT captured from memory._load (1171 chars):
+  SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,
+  COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+  FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+  '[]'::jsonb) AS chunks,
+  COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+  FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+  '[]'::jsonb) AS claims,
+  COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+  FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+  '[]'::jsonb) AS evidence
+  FROM memory_versions v JOIN memory_documents d
+  ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+  WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+  AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+  ORDER BY v.observed_at, d.path, v.version_number
+
+------------------------------------------------------------------------------
+A) SIX CONSECUTIVE EXECUTIONS PER MODE
+------------------------------------------------------------------------------
+    mode                 call  claims index                           evidence index                    wall_ms
+    auto                 1     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          265.20
+    auto                 2     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          256.09
+    auto                 3     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          262.85
+    auto                 4     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          260.54
+    auto                 5     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          259.99
+    auto                 6     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          262.07
+    force_custom_plan    1     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          248.78
+    force_custom_plan    2     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          245.74
+    force_custom_plan    3     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          261.12
+    force_custom_plan    4     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          246.57
+    force_custom_plan    5     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          241.80
+    force_custom_plan    6     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          243.78
+    force_generic_plan   1     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          248.62
+    force_generic_plan   2     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          243.80
+    force_generic_plan   3     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          249.22
+    force_generic_plan   4     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          248.34
+    force_generic_plan   5     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          253.73
+    force_generic_plan   6     memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk          248.21
+
+------------------------------------------------------------------------------
+B) EXPLAIN (ANALYZE, BUFFERS) OF THE IDENTICAL STATEMENT UNDER EACH MODE
+------------------------------------------------------------------------------
+    mode                 claims index                           evidence index                   shared hit  shared read    exec_ms
+    force_custom_plan    memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk             24676            0    178.925
+        planning_ms=0.64
+    force_generic_plan   memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk             24676            0    176.243
+        planning_ms=0.617
+    auto                 memory_claims_corpus_id_version_id_id_key idx_memory_evidence_chunk             24676            0    178.875
+        planning_ms=0.746

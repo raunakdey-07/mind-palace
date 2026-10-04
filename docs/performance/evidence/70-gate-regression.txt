@@ -1,0 +1,256 @@
+================================================================================
+70 — REGRESSION CHECK: --max-load gate in m0122_instrumented.py
+Claim under test: the ISOLATED path (the default) failed to forward --max-load to
+the child; the child re-derived the default (MP_MAX_LOADAVG, 0.5) from the env,
+hit the gate, exited 2, and subprocess.run(check=True) killed the parent with a
+traceback. Claimed fix: pass "--max-load 0" to the child; the parent owns the
+artifact and does the gating.
+
+Verdict recorded at the end of this file. Nothing here is taken on trust.
+================================================================================
+
+--------------------------------------------------------------------------------
+HOST PRE-FLIGHT
+--------------------------------------------------------------------------------
+$ venvmp/bin/python -c "import os,platform;print('loadavg1m',os.getloadavg()[0]);print('cpus',os.cpu_count());print('py',platform.python_version())"
+loadavg1m 0.84912109375
+cpus 8
+py 3.14.7
+
+$ git --no-pager log -1 --format='%H %s'
+f52272db635cbd17171d3d3b02eaeb855efefe69 release: v0.7.0 unified context, portable pack, cached query fix
+
+NOTE: loadavg1m (0.849) is ABOVE the script's default threshold
+MP_MAX_LOADAVG default of 0.5. So on THIS host the described original bug is
+reproducible: an unforwarded --max-load in the child re-derives 0.5, trips the
+gate, child exits 2.
+
+BASELINE `git status --short` (BEFORE any test run), for TEST 6 comparison:
+ M .gitignore
+ M CHANGELOG.md
+ M api/main.py
+ M api/services/memory.py
+ M api/services/memory_public.py
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+ M scripts/benchmark/m0122_instrumented.py
+ M tests/test_api.py
+?? docs/STATUS.md
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/
+?? docs/performance/m0130-heldout.json
+?? docs/performance/m0131-projection-extra.json
+?? docs/performance/m0131-projection.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json
+?? scripts/benchmark/baseline_packs.py
+?? scripts/benchmark/m0130_heldout.py
+?? scripts/benchmark/m0130_run_heldout.py
+?? scripts/benchmark/m0131_profile_projection.py
+
+The tree was ALREADY dirty before this regression check. No source file was
+edited by this check.
+
+================================================================================
+
+--------------------------------------------------------------------------------
+TEST 1 — LINT
+--------------------------------------------------------------------------------
+$ venvmp/bin/python -m flake8 scripts/benchmark/m0122_instrumented.py --max-line-length=100
+FLAKE8=0
+$ venvmp/bin/python -m black --check scripts/benchmark/m0122_instrumented.py --line-length 100
+All done! ✨ 🍰 ✨
+1 file would be left unchanged.
+BLACK=0
+
+--------------------------------------------------------------------------------
+TEST 2 — ISOLATED (default), --max-load 999 (gate forced HIGH), expect exit 0
+--------------------------------------------------------------------------------
+$ PYTHONPATH=scripts/benchmark DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1 venvmp/bin/python scripts/benchmark/m0122_instrumented.py --sizes 100 --repeats 3 --max-load 999 --out /tmp/mp-preserve/g2-high.json
+ claims    n  db_corpus  archive_l  project_m  vector_ca  select_ms    pack_ms   total_ms
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8853.28it/s]
+    100   12       1.94      13.69       5.12       9.05      12.22       0.16      42.40
+             ingest=1.3s backfill=5.0s
+
+stage share of p50 total:
+     100: db_corpus_lookup=4.6% archive_load=32.3% project=12.1% vector_cache=21.3% select=28.8% pack=0.4%
+
+written: /tmp/mp-preserve/g2-high.json
+EXIT_HIGH=0
+ claims    n  db_corpus  archive_l  project_m  vector_ca  select_ms    pack_ms   total_ms
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8846.02it/s]
+    100   12       2.00      13.56       5.07       9.10      12.27       0.16      42.62
+             ingest=1.6s backfill=5.0s
+
+stage share of p50 total:
+     100: db_corpus_lookup=4.7% archive_load=31.8% project=11.9% vector_cache=21.4% select=28.8% pack=0.4%
+
+REFUSING TO PUBLISH: load average 0.98 over 8 cores exceeds --max-load 0.001.
+Timings are reported above for diagnosis but this file is not a baseline.
+EXIT_LOW=2
+
+--------------------------------------------------------------------------------
+TEST 4 — ARTIFACT INSPECTION
+--------------------------------------------------------------------------------
+$ venvmp/bin/python -c "... g2-low.json ..."
+host_load: {
+  "cores": 8,
+  "loadavg_1m": 0.98,
+  "per_core": 0.122,
+  "threshold": 0.001,
+  "verdict": "CONTENDED: timings above are not a clean measurement"
+}
+points: [100]
+T4_LOW_EXIT=0
+
+$ venvmp/bin/python -c "... g2-high.json ..."
+host_load: None
+points: [100]
+isolation: one process per size
+load_at_start: {'cores': 8, 'loadavg_1m': 0.97}
+T4_HIGH_EXIT=0
+
+--------------------------------------------------------------------------------
+TEST 6 — NO STRAY FILES / SCRATCH DIR LEAKED
+--------------------------------------------------------------------------------
+$ find . -name '.m0122-work' -o -name 'm0122-*' -not -path './venvmp/*' | head
+./docs/research/m0122-resource-efficiency.md
+./docs/performance/m0122-scorer-perf.json
+./docs/performance/m0122-plan-cliff.json
+./docs/performance/m0122-instrumented.json
+./docs/performance/m0122-scorer-equivalence.json
+./docs/performance/m0122-instrumented-10k.json
+FIND_EXIT=0
+
+--- any leftover m0122 scratch DIRS anywhere (incl. /tmp) ---
+ claims    n  db_corpus  archive_l  project_m  vector_ca  select_ms    pack_ms   total_ms
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8032.08it/s]
+    100   12       1.97      13.87       5.34       8.79      12.18       0.16      42.93
+             ingest=1.3s backfill=5.0s
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 9882.50it/s]
+    500   12       2.45     179.41      27.95      33.18      23.02       0.17     267.00
+             ingest=7.6s backfill=7.6s
+
+stage share of p50 total:
+     100: db_corpus_lookup=4.6% archive_load=32.3% project=12.4% vector_cache=20.5% select=28.4% pack=0.4%
+     500: db_corpus_lookup=0.9% archive_load=67.2% project=10.5% vector_cache=12.4% select=8.6% pack=0.1%
+
+written: /tmp/mp-preserve/g2-multi.json
+EXIT_MULTI=0
+
+artifact point check:
+points: [100, 500]
+host_load: None
+isolation: one process per size
+/tmp/m0122-ctn82ax_
+/tmp/m0122-vz1il3_j
+/tmp/m0122-q1f_nhfy
+/tmp/m0122-uly3fq6k
+DIRFIND_EXIT=0
+
+$ git --no-optional-locks status --short
+ M .gitignore
+ M CHANGELOG.md
+ M api/main.py
+ M api/services/memory.py
+ M api/services/memory_public.py
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+ M scripts/benchmark/m0122_instrumented.py
+ M tests/test_api.py
+?? docs/STATUS.md
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/
+?? docs/performance/m0130-heldout.json
+?? docs/performance/m0131-projection-extra.json
+?? docs/performance/m0131-projection.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json
+?? scripts/benchmark/baseline_packs.py
+?? scripts/benchmark/m0130_heldout.py
+?? scripts/benchmark/m0130_run_heldout.py
+?? scripts/benchmark/m0131_profile_projection.py
+STATUS_EXIT=0
+
+--------------------------------------------------------------------------------
+TEST 6b — FALSIFICATION: is the fix load-bearing?
+--------------------------------------------------------------------------------
+Re-ran the CHILD command line as it existed BEFORE the fix (i.e. WITHOUT
+--max-load forwarded, so the child re-derives MP_MAX_LOADAVG default 0.5).
+Host loadavg_1m ~0.98 > 0.5, so the pre-fix child should refuse and exit 2.
+
+$ MP_ISOLATED_CHILD=1 venvmp/bin/python scripts/benchmark/m0122_instrumented.py --sizes 100 --repeats 3 --out /tmp/mp-preserve/prefix-child.json --quiet
+Loading weights: 100%|██████████| 103/103 [00:00<00:00, 7505.05it/s]
+PREFIX_CHILD_EXIT=2
+
+CONFIRMED: without the forward, the child exits 2. Under the old code that 2
+fed subprocess.run(check=True) and killed the parent. The --max-load 0 that
+the fix adds is therefore load-bearing, not cosmetic.
+
+--------------------------------------------------------------------------------
+TEST 6c — SCRATCH DIR LEAK, investigated
+--------------------------------------------------------------------------------
+4 scratch dirs exist under /tmp, so their provenance was checked:
+/tmp/m0122-ctn82ax_  mtime=2026-10-02 15:19
+/tmp/m0122-q1f_nhfy  mtime=2026-10-02 12:07
+/tmp/m0122-uly3fq6k  mtime=2026-10-02 12:07
+/tmp/m0122-vz1il3_j  mtime=2026-10-02 15:19
+
+All 4 are dated 2026-10-02 (12:07 and 15:19). This regression check ran
+2026-10-03 01:52-02:00. None is from these runs: 0 scratch dirs leaked here.
+They are pre-existing detritus from an earlier session, and they live OUTSIDE
+the repo (/tmp, not the working tree), so they are not a regression of the fix.
+The harness already intends this: it mkdtemp()s outside the repo precisely so
+a killed run cannot litter the tree next to the evidence files.
+
+Repo-internal check for completeness:
+  find . -name '.m0122-work'  ->  no matches
+  find . -name 'm0122-*'     ->  6 pre-existing tracked files under docs/ only,
+                                no directories, all present in the baseline.
+
+================================================================================
+VERDICT
+================================================================================
+
+  FIX WORKS: YES
+
+  Every test passed. Exit codes, verbatim:
+    FLAKE8=0        (required 0)   PASS
+    BLACK=0         (required 0)   PASS
+    EXIT_HIGH=0     (required 0)   PASS   TEST 2, isolated, --max-load 999
+    EXIT_LOW=2      (required 2)   PASS   TEST 3, isolated, --max-load 0.001
+    T4_LOW_EXIT=0 / T4_HIGH_EXIT=0          PASS
+    EXIT_MULTI=0    (required 0)   PASS   TEST 5, --sizes 100,500
+    STATUS_EXIT=0   git status clean vs baseline   PASS
+
+  No traceback appeared in any run. The parent was never killed.
+
+  Artifact files, all present and freshly created (none existed beforehand):
+    -rw-r--r--. 1 rdx rdx 11043 Oct  3 01:59 /tmp/mp-preserve/g2-high.json
+    -rw-r--r--. 1 rdx rdx 11204 Oct  3 01:59 /tmp/mp-preserve/g2-low.json
+    -rw-r--r--. 1 rdx rdx 21522 Oct  3 02:00 /tmp/mp-preserve/g2-multi.json
+
+    g2-high.json   host_load ABSENT (None)        -> published as a baseline
+    g2-low.json    host_load PRESENT, threshold 0.001, verdict CONTENDED
+    g2-multi.json  points [100, 500], host_load absent
+
+  Not-verified / caveats, stated plainly:
+   * Isolation confirmed via 'Loading weights' appearing once per size in
+     TEST 5 (two model loads = two child processes) and via the recorded
+     environment.isolation == 'one process per size'. It was NOT confirmed by
+     PID capture, which the script does not record.
+   * The gate threshold is compared against a loadavg sampled at process start
+     only (os.getloadavg()[0] before the sweep), not per point. A host that goes
+     busy mid-sweep is not caught. That is the design as written, not a bug
+     introduced by this fix.
+   * _measure_isolated still takes a max_load parameter that it now never uses; echo      the literal '0' is hardcoded in the argv. flake8 does not flag unused
+     arguments, so TEST 1 cannot catch this. Harmless, but it is dead weight
+     and will mislead the next reader into thinking the parent threshold reaches
+     the child.
+   * Leftover /tmp/m0122-* scratch dirs (4, dated 2026-10-02) predate this
+     check; see TEST 6c. Outside the repo, not caused by these runs.
+
+  No source file was edited. No state-changing git was run.
+================================================================================

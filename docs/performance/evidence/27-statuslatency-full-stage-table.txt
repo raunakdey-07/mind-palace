@@ -1,0 +1,19 @@
+WORKING COPY status-latency.json  commit field: f52272db635cbd17171d3d3b02eaeb855efefe69
+
+claims  total_p50  total_p95  load_p50  project_p50  vector_p50  select_p50  pack_p50  n
+   100      99.57     123.90     34.39       13.45       21.23       25.05      0.39  12
+  1000    2308.49    2592.09   1848.21      168.33      172.88       91.30      0.40  12
+  5000    1638.24    1654.34    284.94      776.94      348.54      155.11      0.19  12
+ 10000    4096.06    4336.02    577.16     2301.17      703.08      350.51      0.20  12
+
+environment keys: ['boundary', 'cache', 'commit', 'model', 'numpy', 'pgvector', 'postgres', 'python', 'questions', 'repeats']
+   boundary = archive load, projection, vector cache, select and pack, as the public query path runs them
+   cache = claim vector cache asserted fully populated; zero misses allowed
+   commit = f52272db635cbd17171d3d3b02eaeb855efefe69
+   model = all-MiniLM-L6-v2
+   numpy = 2.5.2
+   pgvector = 0.8.6
+   postgres = 15.19
+   python = 3.14.7
+   questions = 4
+   repeats = 3

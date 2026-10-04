@@ -1,0 +1,50 @@
+# EXPLAIN (ANALYZE, BUFFERS, VERBOSE) -- narrow production projection, default work_mem
+# work_mem=4MB; corpus=xpl_4bd29e5c15 target=2000 counts={'versions': 2002, 'documents': 670, 'claims': 2002, 'chunks': 2002, 'evidence_rows': 2002}
+# per-run execution ms: [64.686, 64.567, 63.275]
+# EXPLAIN ANALYZE does not serialize or transfer rows to the client.
+# Output: tuple payload elided: 0 lines, 42 bytes; the complete un-elided text and its sha256 are recorded in 51-explain-summary.txt.
+#------------------------------------------------------------------------------
+Sort  (cost=219.22..219.24 rows=8 width=1504) (actual time=64.342..64.582 rows=2002 loops=1)
+  Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path, (COALESCE((SubPlan 1), '[]'::jsonb)), (COALESCE((SubPlan 2), '[]'::jsonb)), (COALESCE((SubP
+  Sort Key: v.observed_at, d.path, v.version_number
+  Sort Method: quicksort  Memory: 3392kB
+  Buffers: shared hit=26678
+  ->  Nested Loop  (cost=0.55..219.09 rows=8 width=1504) (actual time=0.098..61.754 rows=2002 loops=1)
+        Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path, COALESCE((SubPlan 1), '[]'::jsonb), COALESCE((SubPlan 2), '[]'::jsonb), COALESCE((Sub
+        Buffers: shared hit=26678
+        ->  Index Scan using memory_documents_pkey on xpl_4bd29e5c15.memory_documents d  (cost=0.27..8.29 rows=1 width=552) (actual time=0.012..0.500 rows=670 loops=1)
+              Output: d.corpus_id, d.id, d.path
+              Index Cond: (d.corpus_id = '153fd3993b8c581a9916fdf8ea2e43805f70950ef4bae99574e2c8338361b282'::bpchar)
+              Buffers: shared hit=644
+        ->  Index Scan using memory_versions_corpus_id_memory_document_id_version_number_key on xpl_4bd29e5c15.memory_versions v  (cost=0.28..8.30 rows=1 width=1376) (actual time=0.003..0.004 rows=3 loops=670)
+              Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.content, v.metadata, v.fingerprint
+              Index Cond: ((v.corpus_id = '153fd3993b8c581a9916fdf8ea2e43805f70950ef4bae99574e2c8338361b282'::bpchar) AND (v.memory_document_id = d.id))
+              Buffers: shared hit=2010
+        SubPlan 1
+          ->  Aggregate  (cost=8.43..8.44 rows=1 width=32) (actual time=0.007..0.007 rows=1 loops=2002)
+                Output: jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+                Buffers: shared hit=8008
+                ->  Index Scan using memory_chunks_corpus_id_version_id_order_index_key on xpl_4bd29e5c15.memory_chunks c  (cost=0.40..8.42 rows=1 width=296) (actual time=0.003..0.003 rows=1 loops=2002)
+                      Output: c.corpus_id, c.version_id, c.id, c.text, c.heading_path, c.order_index
+                      Index Cond: ((c.corpus_id = v.corpus_id) AND (c.version_id = v.id))
+                      Buffers: shared hit=8008
+        SubPlan 2
+          ->  Aggregate  (cost=8.43..8.44 rows=1 width=32) (actual time=0.011..0.011 rows=1 loops=2002)
+                Output: jsonb_agg(to_jsonb(c_1.*) ORDER BY c_1.key, c_1.id)
+                Buffers: shared hit=8008
+                ->  Index Scan using memory_claims_corpus_id_version_id_id_key on xpl_4bd29e5c15.memory_claims c_1  (cost=0.40..8.42 rows=1 width=1760) (actual time=0.004..0.004 rows=1 loops=2002)
+                      Output: c_1.*, c_1.key, c_1.id
+                      Index Cond: ((c_1.corpus_id = v.corpus_id) AND (c_1.version_id = v.id))
+                      Buffers: shared hit=8008
+        SubPlan 3
+          ->  Aggregate  (cost=8.43..8.44 rows=1 width=32) (actual time=0.010..0.010 rows=1 loops=2002)
+                Output: jsonb_agg(to_jsonb(e.*) ORDER BY e.id)
+                Buffers: shared hit=8008
+                ->  Index Scan using idx_memory_evidence_chunk on xpl_4bd29e5c15.memory_evidence e  (cost=0.40..8.42 rows=1 width=1624) (actual time=0.004..0.004 rows=1 loops=2002)
+                      Output: e.*, e.id
+                      Index Cond: ((e.corpus_id = v.corpus_id) AND (e.version_id = v.id))
+                      Buffers: shared hit=8008
+Planning:
+  Buffers: shared hit=16
+Planning Time: 0.333 ms
+Execution Time: 64.686 ms

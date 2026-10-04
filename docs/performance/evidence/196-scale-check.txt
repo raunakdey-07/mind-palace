@@ -1,0 +1,27 @@
+$ venvmp/bin/python /tmp/analyze_scale_check.py
+AFTER the hook (the shipped behaviour)
+versions | reltuples |                 index used | est rows | act rows | shared bufs |           node
+------------------------------------------------------------------------------------------
+     500 |     500.0 | memory_claims_corpus_id_version_id_id_key |        1 |        1 |        4584 |     Index Scan
+    1000 |    1000.0 | memory_claims_corpus_id_version_id_id_key |        1 |        1 |        9166 |     Index Scan
+    1500 |    1500.0 | memory_claims_corpus_id_version_id_key_key |        1 |        1 |       15249 |     Index Scan
+    2000 |    2000.0 | memory_claims_corpus_id_version_id_id_key |        1 |        1 |       22331 |     Index Scan
+
+BEFORE the hook (hook stubbed to return None)
+versions | reltuples |                 index used | est rows | rows removed | shared bufs
+--------------------------------------------------------------------------------
+     500 |      -1.0 | idx_memory_claims_validity |        1 |          499 |      266470
+    1000 |      -1.0 | idx_memory_claims_validity |        1 |          999 |     1069038
+    1500 |      -1.0 | memory_claims_corpus_id_version_id_key_key |        1 |         None |       19556
+    2000 |      -1.0 | memory_claims_corpus_id_version_id_id_key |        1 |         None |       28074
+
+versions | shared before | shared after |  ratio | under ceiling |  rows identical
+------------------------------------------------------------------------
+     500 |        266470 |         4584 |   58.1 |          True |            True
+    1000 |       1069038 |         9166 |  116.6 |          True |            True
+    1500 |         19556 |        15249 |    1.3 |          True |            True
+    2000 |         28074 |        22331 |    1.3 |          True |            True
+
+SHARED_BUFFER_CEILING in the regression test: 50000
+written: /tmp/analyze-scale-check.json
+SCALE=0

@@ -1,0 +1,12 @@
+[N=250] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=250]   V0  plan=[0.293, 0.25, 0.273] exec=[45.9, 46.9, 43.8] hit=[71093, 71093, 71093] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=SELF
+[N=250]   V2  plan=[0.415, 0.419, 0.45] exec=[50.3, 53.4, 65.0] hit=[6842, 6842, 6842] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=250 same=True
+[N=250]   V4  plan=[0.946, 0.465, 0.438] exec=[586.7, 584.8, 579.7] hit=[67460, 67460, 67460] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=250 same=True
+[N=500] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=500]   V0  plan=[0.327, 0.302, 0.333] exec=[176.2, 177.1, 179.7] hit=[263194, 263194, 263194] claims_idx=idx_memory_claims_validity rf=501 | ev_idx=idx_memory_evidence_claim rf=501 | rows=502 same=SELF
+[N=500]   V2  plan=[0.499, 0.432, 0.437] exec=[257.3, 231.2, 234.9] hit=[1677, 1677, 1677] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=502 same=True
+[N=500]   V4  plan=[0.451, 0.594, 1.231] exec=[71.5, 68.2, 54.1] hit=[1677, 1677, 1677] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=502 same=True
+[N=1000] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=1000]   V0  plan=[0.437, 0.262, 0.288] exec=[844.6, 839.0, 806.0] hit=[1077312, 1077312, 1077312] claims_idx=idx_memory_claims_validity rf=999 | ev_idx=idx_memory_evidence_claim rf=999 | rows=1000 same=SELF
+[N=1000]   V2  plan=[1.105, 0.883, 0.482] exec=[1014.2, 1041.0, 1013.1] hit=[2463, 2463, 2463] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1000 same=True
+[N=1000]   V4  plan=[0.47, 0.586, 0.476] exec=[122.9, 116.0, 116.3] hit=[2463, 2463, 2463] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1000 same=True

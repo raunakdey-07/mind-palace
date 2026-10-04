@@ -1,0 +1,13 @@
+$ git show HEAD:docs/performance/m011-rebuildability.json | digests
+HEAD digests: {
+  "l2_destroyed": "d193b34a8369ca2995c31921c63c76ee98fdbd0a1c446ba43dec691349c661db",
+  "l2_rebuilt": "d193b34a8369ca2995c31921c63c76ee98fdbd0a1c446ba43dec691349c661db",
+  "with_l2": "d193b34a8369ca2995c31921c63c76ee98fdbd0a1c446ba43dec691349c661db"
+}
+
+$ working-tree digests (before my session touched nothing here)
+WT   digests: {
+  "l2_destroyed": "92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89",
+  "l2_rebuilt": "92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89",
+  "with_l2": "92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89"
+}

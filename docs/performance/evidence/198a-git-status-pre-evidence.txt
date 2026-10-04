@@ -1,0 +1,28 @@
+$ git --no-optional-locks status --short (pre check_evidence: confirm no NEW untracked artifacts)
+ M .gitignore
+ M CHANGELOG.md
+ M README.md
+ M api/main.py
+ M api/services/ingestion.py
+ M api/services/memory.py
+ M api/services/memory_public.py
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+ M scripts/benchmark/m0122_instrumented.py
+ M tests/test_api.py
+?? docs/STATUS.md
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/
+?? docs/performance/m0130-heldout.json
+?? docs/performance/m0131-projection-extra.json
+?? docs/performance/m0131-projection.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json
+?? scripts/benchmark/baseline_packs.py
+?? scripts/benchmark/host_calibration.py
+?? scripts/benchmark/m0130_heldout.py
+?? scripts/benchmark/m0130_run_heldout.py
+?? scripts/benchmark/m0131_profile_projection.py
+?? scripts/check_evidence.py
+?? tests/test_ingestion_statistics.py

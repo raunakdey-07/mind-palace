@@ -1,0 +1,1382 @@
+$ sha256sum api/services/ingestion.py (pre-mutation)
+d97d3cb51d691304e3b43964223e879ccd39c02f01f19a1a256c5e46ce43d732  api/services/ingestion.py
+# MUTATION INJECTED: _refresh_planner_statistics returns None immediately
+$ venvmp/bin/python -m pytest tests/test_ingestion_statistics.py -q
+FFF.FF                                                                   [100%]
+=================================== FAILURES ===================================
+____________ test_bulk_sync_leaves_the_five_memory_tables_analysed _____________
+
+bulk_sync = {'schema': 'ingestion_stats_137a7580f185', 'corpus': 'c428537c9a1b7e450165148d0742ae67adb0d4785adf54101b11a6e4248f5e8c', 'sync': {'success': True, 'added': 1000, 'changed': 0, 'deleted': 0, ...}, 'events': [], ...}
+
+    @requires_db
+    def test_bulk_sync_leaves_the_five_memory_tables_analysed(bulk_sync):
+        """reltuples must be the row count, not -1, and the ANALYZE must be recorded."""
+        before, after = bulk_sync["catalog_before"], bulk_sync["catalog_after"]
+        for table in TABLES:
+            assert before[table]["reltuples"] == -1, f"{table} was analysed before the sync"
+            assert before[table]["last_analyze"] is None, f"{table} had last_analyze before the sync"
+        assert bulk_sync["sync"]["success"] is True
+        assert bulk_sync["sync"]["added"] == BULK_CLAIMS
+        assert bulk_sync["touched"] == BULK_CLAIMS
+>       assert bulk_sync["events"] == ["PLANNER_STATISTICS_REFRESHED"], bulk_sync["events"]
+E       AssertionError: []
+E       assert [] == ['PLANNER_STA...CS_REFRESHED']
+E         
+E         Right contains one more item: 'PLANNER_STATISTICS_REFRESHED'
+E         Use -v to get more diff
+
+tests/test_ingestion_statistics.py:423: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+_______ test_load_query_makes_version_id_an_index_condition_not_a_filter _______
+
+bulk_sync = {'schema': 'ingestion_stats_137a7580f185', 'corpus': 'c428537c9a1b7e450165148d0742ae67adb0d4785adf54101b11a6e4248f5e8c', 'sync': {'success': True, 'added': 1000, 'changed': 0, 'deleted': 0, ...}, 'events': [], ...}
+
+    @requires_db
+    def test_load_query_makes_version_id_an_index_condition_not_a_filter(bulk_sync):
+        """The whole point: (corpus_id, version_id) has to reach the Index Cond."""
+        plan = bulk_sync["after"]["plan"]
+        for relation in ("claims", "evidence"):
+            info = plan[relation]
+            assert info.get("index_cond"), f"memory_{relation} was not reached by an index scan: {info}"
+>           assert "version_id" in info["index_cond"], (
+                f"memory_{relation} scans {info['index']} on {info['index_cond']},"
+                f" so version_id is still being filtered away"
+            )
+E           AssertionError: memory_claims scans idx_memory_claims_validity on (corpus_id = v.corpus_id), so version_id is still being filtered away
+E           assert 'version_id' in '(corpus_id = v.corpus_id)'
+
+tests/test_ingestion_statistics.py:442: AssertionError
+______________ test_load_reads_a_bounded_number_of_shared_buffers ______________
+
+bulk_sync = {'schema': 'ingestion_stats_137a7580f185', 'corpus': 'c428537c9a1b7e450165148d0742ae67adb0d4785adf54101b11a6e4248f5e8c', 'sync': {'success': True, 'added': 1000, 'changed': 0, 'deleted': 0, ...}, 'events': [], ...}
+
+    @requires_db
+    def test_load_reads_a_bounded_number_of_shared_buffers(bulk_sync):
+        """A buffer ceiling, not a stopwatch. See SHARED_BUFFER_CEILING for the rationale."""
+        before, after = bulk_sync["before"]["plan"], bulk_sync["after"]["plan"]
+>       assert after["shared_hit"] < SHARED_BUFFER_CEILING, (
+            f"narrow _load read {after['shared_hit']} shared buffers at"
+            f" BULK_CLAIMS={BULK_CLAIMS}; the ceiling is {SHARED_BUFFER_CEILING}"
+        )
+E       AssertionError: narrow _load read 1074038 shared buffers at BULK_CLAIMS=1000; the ceiling is 50000
+E       assert 1074038 < 50000
+
+tests/test_ingestion_statistics.py:462: AssertionError
+_______________ test_a_failing_analyze_does_not_fail_the_ingest ________________
+
+threshold_corpus = (<function _sessions.<locals>.sessions at 0x7f577c7aec40>, '18aa3d8d2f231f6184a2c56a1829f77531a1675c1c413669879bbbce50...ice object at 0x7f577c73ac10>, PosixPath('/tmp/pytest-of-rdx/pytest-1/test_a_failing_analyze_does_no0/threshold/repo'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f577ed01940>
+
+    @requires_db
+    async def test_a_failing_analyze_does_not_fail_the_ingest(threshold_corpus, monkeypatch):
+        """Statistics are an optimisation; losing them must cost speed, not truth.
+    
+        The fault is injected at the statement the hook builds, so the production
+        try/except is what is under test rather than a replacement for it.
+        """
+        sessions, corpus, service, repo = threshold_corpus
+        real_text = ingestion.text
+    
+        def exploding_text(statement, *args, **kwargs):
+            if str(statement).lstrip().upper().startswith("ANALYZE"):
+                raise RuntimeError("injected ANALYZE failure")
+            return real_text(statement, *args, **kwargs)
+    
+        monkeypatch.setattr(ingestion, "text", exploding_text)
+        logger = logging.getLogger("api.services.ingestion")
+        monkeypatch.setattr(logger, "level", logging.INFO)
+        log_capture = _LogCapture()
+        logger.addHandler(log_capture)
+        try:
+            result = await service.sync_repo(str(repo), corpus)
+            async with sessions() as db:
+                catalog = await _catalog(db)
+        finally:
+            logger.removeHandler(log_capture)
+    
+        assert result["success"] is True, result
+        assert result["failed"] == 0, result
+        assert result["added"] == STATISTICS_REFRESH_MINIMUM + 1, result
+>       assert [e for e, _ in log_capture.events] == ["PLANNER_STATISTICS_REFRESH_FAILED"]
+E       AssertionError: assert [] == ['PLANNER_STA...FRESH_FAILED']
+E         
+E         Right contains one more item: 'PLANNER_STATISTICS_REFRESH_FAILED'
+E         Use -v to get more diff
+
+tests/test_ingestion_statistics.py:555: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+______________ test_a_sync_below_the_threshold_never_runs_analyze ______________
+
+tiny_corpus = (<function _sessions.<locals>.sessions at 0x7f577cb71fe0>, 'a9936a7282b29fbb4a281c85401e6578a198cc6096ae6d1c6ce4976714...nService object at 0x7f577cb4a0d0>, PosixPath('/tmp/pytest-of-rdx/pytest-1/test_a_sync_below_the_threshol0/tiny/repo'))
+
+    @requires_db
+    async def test_a_sync_below_the_threshold_never_runs_analyze(tiny_corpus):
+        """One ANALYZE per sync, and not one at all until a sync has written enough."""
+        sessions, corpus, service, repo = tiny_corpus
+        result = await service.sync_repo(str(repo), corpus)
+    
+        assert result["success"] is True
+        assert result["added"] + result["changed"] + result["deleted"] <= STATISTICS_REFRESH_MINIMUM
+        async with sessions() as db:
+            catalog = await _catalog(db)
+            for table in TABLES:
+                assert catalog[table]["reltuples"] == -1, f"{table} was analysed for a tiny sync"
+                assert catalog[table]["last_analyze"] is None
+    
+            # The bound is inclusive at the threshold and moves one row above it.
+            await service._refresh_planner_statistics(corpus, STATISTICS_REFRESH_MINIMUM)
+            catalog = await _catalog(db)
+            assert all(catalog[t]["last_analyze"] is None for t in TABLES), catalog
+    
+            await service._refresh_planner_statistics(corpus, STATISTICS_REFRESH_MINIMUM + 1)
+            catalog = await _catalog(db)
+            for table in TABLES:
+>               assert catalog[table]["last_analyze"] is not None, f"{table} skipped at +1 row"
+E               AssertionError: memory_versions skipped at +1 row
+E               assert None is not None
+
+tests/test_ingestion_statistics.py:586: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+INFO     api.services.ingestion:ingestion.py:74 document_ingested
+=========================== short test summary info ============================
+FAILED tests/test_ingestion_statistics.py::test_bulk_sync_leaves_the_five_memory_tables_analysed
+FAILED tests/test_ingestion_statistics.py::test_load_query_makes_version_id_an_index_condition_not_a_filter
+FAILED tests/test_ingestion_statistics.py::test_load_reads_a_bounded_number_of_shared_buffers
+FAILED tests/test_ingestion_statistics.py::test_a_failing_analyze_does_not_fail_the_ingest
+FAILED tests/test_ingestion_statistics.py::test_a_sync_below_the_threshold_never_runs_analyze
+5 failed, 1 passed in 59.18s
+PYTEST_MUTATED=1
+
+# ---- intended-reason extraction (Test B) ----
+22:E       AssertionError: []
+23:E       assert [] == ['PLANNER_STA...CS_REFRESHED']
+24:E         
+25:E         Right contains one more item: 'PLANNER_STATISTICS_REFRESHED'
+26:E         Use -v to get more diff
+1045:E           AssertionError: memory_claims scans idx_memory_claims_validity on (corpus_id = v.corpus_id), so version_id is still being filtered away
+1046:E           assert 'version_id' in '(corpus_id = v.corpus_id)'
+1061:E       AssertionError: narrow _load read 1074038 shared buffers at BULK_CLAIMS=1000; the ceiling is 50000
+1062:E       assert 1074038 < 50000
+1101:E       AssertionError: assert [] == ['PLANNER_STA...FRESH_FAILED']
+1102:E         
+1103:E         Right contains one more item: 'PLANNER_STATISTICS_REFRESH_FAILED'
+1104:E         Use -v to get more diff
+1336:E               AssertionError: memory_versions skipped at +1 row
+1337:E               assert None is not None
+
+# ---- RESTORED ----
+$ sha256sum api/services/ingestion.py (post-restore, must equal pre-mutation)
+d97d3cb51d691304e3b43964223e879ccd39c02f01f19a1a256c5e46ce43d732  api/services/ingestion.py
+
+$ grep -n MUTATION-STUB api/services/ingestion.py  (expect no match)
+GREP=1
+
+$ venvmp/bin/python -m pytest tests/test_ingestion_statistics.py -q
+......                                                                   [100%]
+6 passed in 51.24s
+PYTEST_RESTORED=0

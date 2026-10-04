@@ -1,0 +1,831 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace):
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m a2_a3_confirm
+
+RAW OUTPUT
+==============================================================================
+==============================================================================
+INSIDE the transaction, immediately after ANALYZE
+==============================================================================
+{
+  "memory_chunks": {
+    "analyze_count": 1,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.459454+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 0,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 6,
+    "relpages": 50,
+    "reltuples": 1000
+  },
+  "memory_claims": {
+    "analyze_count": 1,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.477056+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 0,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 11,
+    "relpages": 56,
+    "reltuples": 1000
+  },
+  "memory_documents": {
+    "analyze_count": 1,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.480173+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 0,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 3,
+    "relpages": 23,
+    "reltuples": 1000
+  },
+  "memory_evidence": {
+    "analyze_count": 1,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.489502+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 0,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 8,
+    "relpages": 53,
+    "reltuples": 1000
+  },
+  "memory_versions": {
+    "analyze_count": 1,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.509554+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 0,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 11,
+    "relpages": 167,
+    "reltuples": 1000
+  }
+}
+
+==============================================================================
+AFTER rollback, read from a BRAND-NEW backend
+==============================================================================
+{
+  "catalog": {
+    "memory_chunks": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.459454+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 50,
+      "reltuples": 1000
+    },
+    "memory_claims": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.477056+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 56,
+      "reltuples": 1000
+    },
+    "memory_documents": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.480173+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 23,
+      "reltuples": 1000
+    },
+    "memory_evidence": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.489502+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 53,
+      "reltuples": 1000
+    },
+    "memory_versions": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.509554+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 167,
+      "reltuples": 1000
+    }
+  },
+  "dead_pg_statistic_tuples_dbwide": 0,
+  "pg_statistic_rows_for_schema": 0,
+  "pg_stats_claims": [],
+  "reltuples_raw": [
+    [
+      "memory_chunks",
+      1000,
+      50,
+      0
+    ],
+    [
+      "memory_chunks_corpus_id_version_id_id_key",
+      1000,
+      38,
+      0
+    ],
+    [
+      "memory_chunks_corpus_id_version_id_order_index_key",
+      1000,
+      28,
+      0
+    ],
+    [
+      "memory_chunks_pkey",
+      1000,
+      28,
+      0
+    ],
+    [
+      "memory_claim_embeddings",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_claim_embeddings_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_claims",
+      1000,
+      56,
+      0
+    ],
+    [
+      "memory_claims_corpus_id_memory_document_id_key_id_key",
+      1000,
+      46,
+      0
+    ],
+    [
+      "memory_claims_corpus_id_version_id_id_key",
+      1000,
+      38,
+      0
+    ],
+    [
+      "memory_claims_corpus_id_version_id_key_key",
+      1000,
+      32,
+      0
+    ],
+    [
+      "memory_claims_pkey",
+      1000,
+      28,
+      0
+    ],
+    [
+      "memory_documents",
+      1000,
+      23,
+      0
+    ],
+    [
+      "memory_documents_corpus_id_path_key",
+      1000,
+      16,
+      0
+    ],
+    [
+      "memory_documents_pkey",
+      1000,
+      29,
+      0
+    ],
+    [
+      "memory_evidence",
+      1000,
+      53,
+      0
+    ],
+    [
+      "memory_evidence_pkey",
+      1000,
+      30,
+      0
+    ],
+    [
+      "memory_snapshot_seals",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_snapshot_seals_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_snapshot_versions",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_snapshot_versions_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_snapshots",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_snapshots_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_versions",
+      1000,
+      167,
+      0
+    ],
+    [
+      "memory_versions_corpus_id_memory_document_id_id_key",
+      1000,
+      44,
+      0
+    ],
+    [
+      "memory_versions_corpus_id_memory_document_id_version_number_key",
+      1000,
+      29,
+      0
+    ],
+    [
+      "memory_versions_corpus_id_predecessor_id_key",
+      1000,
+      2,
+      0
+    ],
+    [
+      "memory_versions_pkey",
+      1000,
+      28,
+      0
+    ]
+  ],
+  "txid_status_last_analyze_xid": [
+    [
+      "chunks",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "corpora",
+      null,
+      null,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      "documents",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "ingestion_manifest",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_chunks",
+      "2026-10-03 10:14:13.459454+00:00",
+      null,
+      1,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_claim_embeddings",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_claims",
+      "2026-10-03 10:14:13.477056+00:00",
+      null,
+      1,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_documents",
+      "2026-10-03 10:14:13.480173+00:00",
+      null,
+      1,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_evidence",
+      "2026-10-03 10:14:13.489502+00:00",
+      null,
+      1,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_snapshot_seals",
+      null,
+      null,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "memory_snapshot_versions",
+      null,
+      null,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "memory_snapshots",
+      null,
+      null,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "memory_versions",
+      "2026-10-03 10:14:13.509554+00:00",
+      null,
+      1,
+      0,
+      0,
+      1000
+    ]
+  ]
+}
+
+==============================================================================
+A3: ANALYZE of the now-EMPTY tables, read INSIDE that transaction
+==============================================================================
+{
+  "memory_chunks": {
+    "analyze_count": 2,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.646222+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 1000,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 0,
+    "relpages": 50,
+    "reltuples": 0
+  },
+  "memory_claims": {
+    "analyze_count": 2,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.648988+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 1000,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 0,
+    "relpages": 56,
+    "reltuples": 0
+  },
+  "memory_documents": {
+    "analyze_count": 2,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.650940+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 1000,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 0,
+    "relpages": 23,
+    "reltuples": 0
+  },
+  "memory_evidence": {
+    "analyze_count": 2,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.652329+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 1000,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 0,
+    "relpages": 53,
+    "reltuples": 0
+  },
+  "memory_versions": {
+    "analyze_count": 2,
+    "autoanalyze_count": 0,
+    "last_analyze": "2026-10-03 10:14:13.654169+00:00",
+    "last_autoanalyze": null,
+    "n_dead_tup": 1000,
+    "n_live_tup": 0,
+    "pg_statistic_rows": 0,
+    "relpages": 167,
+    "reltuples": 0
+  }
+}
+
+==============================================================================
+A3: same tables, read from a BRAND-NEW backend AFTER commit
+==============================================================================
+{
+  "catalog": {
+    "memory_chunks": {
+      "analyze_count": 2,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.646222+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 50,
+      "reltuples": 0
+    },
+    "memory_claims": {
+      "analyze_count": 2,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.648988+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 56,
+      "reltuples": 0
+    },
+    "memory_documents": {
+      "analyze_count": 2,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.650940+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 23,
+      "reltuples": 0
+    },
+    "memory_evidence": {
+      "analyze_count": 2,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.652329+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 53,
+      "reltuples": 0
+    },
+    "memory_versions": {
+      "analyze_count": 2,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:14:13.654169+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 167,
+      "reltuples": 0
+    }
+  },
+  "dead_pg_statistic_tuples_dbwide": 0,
+  "pg_statistic_rows_for_schema": 0,
+  "pg_stats_claims": [],
+  "reltuples_raw": [
+    [
+      "memory_chunks",
+      0,
+      50,
+      0
+    ],
+    [
+      "memory_chunks_corpus_id_version_id_id_key",
+      0,
+      38,
+      0
+    ],
+    [
+      "memory_chunks_corpus_id_version_id_order_index_key",
+      0,
+      28,
+      0
+    ],
+    [
+      "memory_chunks_pkey",
+      0,
+      28,
+      0
+    ],
+    [
+      "memory_claim_embeddings",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_claim_embeddings_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_claims",
+      0,
+      56,
+      0
+    ],
+    [
+      "memory_claims_corpus_id_memory_document_id_key_id_key",
+      0,
+      46,
+      0
+    ],
+    [
+      "memory_claims_corpus_id_version_id_id_key",
+      0,
+      38,
+      0
+    ],
+    [
+      "memory_claims_corpus_id_version_id_key_key",
+      0,
+      32,
+      0
+    ],
+    [
+      "memory_claims_pkey",
+      0,
+      28,
+      0
+    ],
+    [
+      "memory_documents",
+      0,
+      23,
+      0
+    ],
+    [
+      "memory_documents_corpus_id_path_key",
+      0,
+      16,
+      0
+    ],
+    [
+      "memory_documents_pkey",
+      0,
+      29,
+      0
+    ],
+    [
+      "memory_evidence",
+      0,
+      53,
+      0
+    ],
+    [
+      "memory_evidence_pkey",
+      0,
+      30,
+      0
+    ],
+    [
+      "memory_snapshot_seals",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_snapshot_seals_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_snapshot_versions",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_snapshot_versions_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_snapshots",
+      -1,
+      0,
+      0
+    ],
+    [
+      "memory_snapshots_pkey",
+      0,
+      1,
+      0
+    ],
+    [
+      "memory_versions",
+      0,
+      167,
+      0
+    ],
+    [
+      "memory_versions_corpus_id_memory_document_id_id_key",
+      0,
+      44,
+      0
+    ],
+    [
+      "memory_versions_corpus_id_memory_document_id_version_number_key",
+      0,
+      29,
+      0
+    ],
+    [
+      "memory_versions_corpus_id_predecessor_id_key",
+      0,
+      2,
+      0
+    ],
+    [
+      "memory_versions_pkey",
+      0,
+      28,
+      0
+    ]
+  ],
+  "txid_status_last_analyze_xid": [
+    [
+      "chunks",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "corpora",
+      null,
+      null,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      "documents",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "ingestion_manifest",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_chunks",
+      "2026-10-03 10:14:13.646222+00:00",
+      null,
+      2,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_claim_embeddings",
+      null,
+      null,
+      0,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_claims",
+      "2026-10-03 10:14:13.648988+00:00",
+      null,
+      2,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_documents",
+      "2026-10-03 10:14:13.650940+00:00",
+      null,
+      2,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_evidence",
+      "2026-10-03 10:14:13.652329+00:00",
+      null,
+      2,
+      0,
+      0,
+      1000
+    ],
+    [
+      "memory_snapshot_seals",
+      null,
+      null,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "memory_snapshot_versions",
+      null,
+      null,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "memory_snapshots",
+      null,
+      null,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "memory_versions",
+      "2026-10-03 10:14:13.654169+00:00",
+      null,
+      2,
+      0,
+      0,
+      1000
+    ]
+  ]
+}
+
+### dropped committed throwaway schema anxX_237d4cb04e

@@ -1,0 +1,18 @@
+[target] abs-sso current_memories observed_at ranks: [('6b651bad63ab48bd2d4eab2486cbdee4b15fa862a98c0b18d52fc1496dd3c028', 1), ('f12bf24375273954d430b6280794aceeabea18682f0f2a14894767118c86a8fe', 0), ('f6c7a7cff46445bcc4711cf11a94867bfb79fbae7d4568d672685e9137c2198b', 0), ('da4e1ee02b0b5d80784c16a2ae3888604b0002e7df18c914c948fc25af384612', 0)]
+[wrote] C1-swap-ranks.json, C2-jitter-rank.json
+=== C1: swap observed_at ranks (real reordering) ===
+baseline commit : f52272db635c
+current  commit : f52272db635c
+questions       : 202
+set digest      : 1b6b841c722eee28
+authoritative output: 1 QUESTION(S) DIFFER
+  abs-sso: changed
+EXIT_CODE=1
+=== C2: move one rank, order preserved (clock jitter) ===
+baseline commit : f52272db635c
+current  commit : f52272db635c
+questions       : 202
+set digest      : 3c551c53642d8986
+authoritative output: 1 QUESTION(S) DIFFER
+  abs-sso: changed
+EXIT_CODE=1

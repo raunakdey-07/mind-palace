@@ -1,0 +1,23 @@
+observed_at type counts across all packs: {'int': 366}
+non-str observed_at rows: 366
+   ('abs-catering', 'current_memories', 'team.payments.services', '0')
+   ('abs-sso', 'current_memories', 'runbook.identity.escalation', '1')
+   ('abs-sso', 'current_memories', 'service.identity.depends_on', '0')
+   ('abs-sso', 'current_memories', 'service.identity.owner', '0')
+   ('abs-sso', 'current_memories', 'service.identity.tier', '0')
+   ('adv-18', 'current_memories', 'architecture.datastore', '2')
+   ('adv-183', 'current_memories', 'architecture.datastore', '2')
+   ('adv-184', 'current_memories', 'architecture.datastore', '2')
+   ('adv-185', 'current_memories', 'architecture.datastore', '2')
+   ('adv-186', 'current_memories', 'architecture.datastore', '2')
+   ('adv-187', 'current_memories', 'architecture.datastore', '2')
+   ('adv-189', 'current_memories', 'architecture.datastore', '2')
+   ('adv-19', 'current_memories', 'architecture.datastore', '2')
+   ('adv-190', 'current_memories', 'architecture.datastore', '2')
+   ('adv-191', 'current_memories', 'architecture.datastore', '2')
+   ('adv-192', 'current_memories', 'architecture.datastore', '2')
+   ('adv-193', 'current_memories', 'service.orders.owner', '0')
+   ('adv-194', 'current_memories', 'architecture.queue', '0')
+   ('adv-195', 'current_memories', 'architecture.search', '0')
+   ('adv-196', 'current_memories', 'architecture.warehouse', '1')
+distinct affected qids: ['abs-catering', 'abs-sso', 'adv-18', 'adv-183', 'adv-184', 'adv-185', 'adv-186', 'adv-187', 'adv-189', 'adv-19', 'adv-190', 'adv-191', 'adv-192', 'adv-193', 'adv-194', 'adv-195', 'adv-196', 'adv-197', 'adv-198', 'cft-01', 'cft-02', 'cur-01', 'cur-02', 'cur-03', 'cur-04', 'cur-05', 'cur-06', 'cur-own-analytics', 'cur-own-archive', 'cur-own-billing', 'cur-own-gateway', 'cur-own-identity', 'cur-own-ledger', 'cur-own-media', 'cur-own-notifier', 'cur-own-orders', 'cur-own-risk', 'cur-own-search-indexer', 'cur-own-web', 'cur-tier-analytics', 'cur-tier-archive', 'cur-tier-billing', 'cur-tier-gateway', 'cur-tier-identity', 'cur-tier-ledger', 'cur-tier-media', 'cur-tier-notifier', 'cur-tier-orders', 'cur-tier-risk', 'cur-tier-search-indexer', 'cur-tier-web', 'hist-db-url', 'hist-db-url-now', 'hist-esc-analytics', 'hist-esc-archive', 'hist-esc-billing', 'hist-esc-gateway', 'hist-esc-identity', 'hist-esc-ledger', 'hist-esc-media', 'hist-esc-notifier', 'hist-esc-orders', 'hist-esc-risk', 'hist-esc-search-indexer', 'hist-esc-web', 'hist-postgres', 'hist-queue', 'hist-redis', 'hist-search', 'hist-storage', 'hist-sup-postgres', 'hist-sup-queue', 'hist-sup-redis', 'hist-sup-search', 'hist-sup-storage', 'hist-sup-warehouse', 'hist-team-data', 'hist-team-discovery', 'hist-team-payments', 'hist-team-platform', 'hist-warehouse', 'mul-analytics', 'mul-archive', 'mul-billing', 'mul-deploy-tier-0', 'mul-deploy-tier-1', 'mul-deploy-tier-2', 'mul-deploy-tier-3', 'mul-gateway', 'mul-identity', 'mul-ledger', 'mul-media', 'mul-notifier', 'mul-orders', 'mul-release', 'mul-risk', 'mul-search-indexer', 'mul-tech-postgres', 'mul-tech-queue', 'mul-tech-redis', 'mul-tech-search', 'mul-tech-storage', 'mul-tech-warehouse', 'mul-web', 'prv-deploy-tier-0', 'prv-deploy-tier-1', 'prv-deploy-tier-2', 'prv-deploy-tier-3', 'prv-inc-2024-03', 'prv-inc-2024-07', 'prv-inc-2024-09', 'prv-inc-2024-11', 'prv-own-analytics', 'prv-own-archive', 'prv-own-billing', 'prv-own-gateway', 'prv-own-identity', 'prv-own-ledger', 'prv-own-media', 'prv-own-notifier', 'prv-own-orders', 'prv-own-risk', 'prv-own-search-indexer', 'prv-own-web', 'prv-postgres', 'prv-queue', 'prv-redis', 'prv-search', 'prv-storage', 'prv-warehouse', 'rel-after-db', 'rel-cycle', 'rel-db-users', 'rel-dep-analytics', 'rel-dep-archive', 'rel-dep-billing', 'rel-dep-identity', 'rel-dep-ledger', 'rel-dep-media', 'rel-dep-notifier', 'rel-dep-orders', 'rel-dep-risk', 'rel-dep-search-indexer', 'rel-dep-web', 'rel-esc-analytics', 'rel-esc-archive', 'rel-esc-billing', 'rel-esc-gateway', 'rel-esc-identity', 'rel-esc-ledger', 'rel-esc-media', 'rel-esc-notifier', 'rel-esc-orders', 'rel-esc-risk', 'rel-esc-search-indexer', 'rel-esc-web', 'rel-impact-ledger', 'rel-impact-orders', 'rel-team-data', 'rel-team-discovery', 'rel-team-payments', 'rel-team-platform', 'rel-why-queue', 'rel-why-storage', 'tmp-inc-2024-03-orders', 'tmp-inc-2024-07-notifier', 'tmp-inc-2024-09-search-indexer', 'tmp-inc-2024-11-ledger', 'tmp-rel-0.6', 'tmp-rel-0.7', 'tmp-rel-0.8', 'tmp-why-postgres', 'tmp-why-queue', 'tmp-why-redis', 'tmp-why-search', 'tmp-why-storage', 'tmp-why-warehouse']

@@ -1,0 +1,103 @@
+Package Version
+------- -------
+pip     26.0.1
+python            : 3.14.7
+executable        : /tmp/cleanpack-venv/bin/python
+memory_pack from  : /tmp/cleanpack-venv/memory_pack.py
+reader imports    : hashlib, json, dataclasses, typing (stdlib only)
+BANNED modules    : torch, numpy, sqlalchemy, fastapi, sentence_transformers, psycopg, psycopg2, asyncpg, pydantic, alembic, transformers, httpx, requests
+found in sys.modules: NONE
+installed dists   : ['pip', 'pip']
+
+schema versions   : (1,)
+__all__ exports   : 14 names
+
+packs in baseline : 202 corpus: mp-baseline
+
+--- reading one pack (public API, no DB, no model) ---
+qid               : abs-backup
+  status          : no_relevant_memory
+  current claims  : 0
+  historical      : 0
+  conflicts       : 0
+  evidence rows   : 0
+  size (bytes)    : 395
+  digest computed : 05d9e645d1029a35455db1c8015288d5d9dc22144ed7baff792a9edb517d0f66
+  digest baseline : 05d9e645d1029a35455db1c8015288d5d9dc22144ed7baff792a9edb517d0f66
+  digest MATCHES baseline: True
+Traceback (most recent call last):
+  File "/tmp/cleanpack-venv/check_clean.py", line 51, in <module>
+    claim = pack.all_claims()[0]
+            ~~~~~~~~~~~~~~~~~^^^
+IndexError: tuple index out of range
+python            : 3.14.7
+executable        : /tmp/cleanpack-venv/bin/python
+memory_pack from  : /tmp/cleanpack-venv/memory_pack.py
+reader imports    : hashlib, json, dataclasses, typing (stdlib only)
+BANNED modules    : torch, numpy, sqlalchemy, fastapi, sentence_transformers, psycopg, psycopg2, asyncpg, pydantic, alembic, transformers, httpx, requests
+found in sys.modules: NONE
+installed dists   : ['pip', 'pip']
+
+schema versions   : (1,)
+__all__ exports   : 14 names
+
+packs in baseline : 202 corpus: mp-baseline
+Traceback (most recent call last):
+  File "/tmp/cleanpack-venv/check_clean.py", line 38, in <module>
+    p = memory_pack.MemoryPack.from_json(e["canonical_json"])
+  File "/tmp/cleanpack-venv/memory_pack.py", line 330, in from_json
+    return cls.from_dict(data)
+           ~~~~~~~~~~~~~^^^^^^
+  File "/tmp/cleanpack-venv/memory_pack.py", line 281, in from_dict
+    current=tuple(_claim(c) for c in data.get("current_memories") or ()),
+            ^^^^^
+  File "/tmp/cleanpack-venv/memory_pack.py", line 281, in <genexpr>
+    current=tuple(_claim(c) for c in data.get("current_memories") or ()),
+                  ~~~~~~^^^
+  File "/tmp/cleanpack-venv/memory_pack.py", line 207, in _claim
+    observed_at=_require(data, "observed_at", str, "claim"),
+                ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cleanpack-venv/memory_pack.py", line 191, in _require
+    raise PackError(
+    ...<2 lines>...
+    )
+memory_pack.PackError: field 'observed_at' must be str, got int
+python              : 3.14.7
+executable          : /tmp/cleanpack-venv/bin/python
+memory_pack from    : /tmp/cleanpack-venv/memory_pack.py
+reader imports      : hashlib, json, dataclasses, typing  (stdlib only)
+BANNED modules      : torch, numpy, sqlalchemy, fastapi, sentence_transformers, psycopg, psycopg2, asyncpg, pydantic, alembic, transformers, httpx, requests
+found in sys.modules: NONE
+installed dists     : ['pip', 'pip']
+=> no torch, numpy, sqlalchemy, fastapi, sentence_transformers, psycopg, asyncpg
+
+schema versions     : (1,)
+__all__ exports     : 14 names
+
+=== A. real pack produced by the server, read here with no DB and no model ===
+canonical bytes     : 12296
+  query             : Why was the database changed?
+  status            : conflicting
+  current claims    : 1
+  historical        : 1
+  conflicts         : 1
+  evidence rows     : 6
+  sources           : 4
+  size()            : 12296
+  digest()          : f3cc991d4fc8b2c4a5c23c63bb66933140de5ae3b1e1c0ed5bf9e2a18192637c
+  digest == sha256(canonical_json): True
+  claim decision.database.reason           -> 1 evidence row(s)
+     offsets consistent: True | quote: PostgreSQL was chosen for JSONB and advisory locks.
+  every current claim resolves to evidence: True
+
+=== B. baseline-packs.json: the rank-normalised capture ===
+normalized_fields   : ['observed_at']
+packs in file       : 202
+parsed by reader    : 24 of which digest matches recorded: 24
+refused             : {'observed_at': 178}
+NOTE: baseline_packs.py replaces observed_at with its rank (int) so the
+      digest measures authority rather than the clock; the reader is strict
+      and refuses a non-str observed_at. Fixture property, not a wire defect.
+empty-pack probe    : abs-backup -> status=no_relevant_memory size=395B digest_ok=True
+
+ALL CLEAN-VENV ASSERTIONS PASSED

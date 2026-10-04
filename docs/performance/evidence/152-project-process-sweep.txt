@@ -1,0 +1,19 @@
+=== any process whose cmdline mentions the project or venvmp ===
+
+=== processes whose CWD is the project dir ===
+/proc/15860 -> /mnt/Warehouse/projects/Mind Palace  args: /usr/bin/zsh 
+/proc/16120 -> /mnt/Warehouse/projects/Mind Palace  args: /usr/bin/ruff server 
+/proc/16575 -> /mnt/Warehouse/projects/Mind Palace  args: /home/rdx/.local/share/zed/languages/package-version-server/package-version-server-v0.0.10 
+/proc/16646 -> /mnt/Warehouse/projects/Mind Palace  args: /usr/bin/node /home/rdx/.local/share/zed/languages/json-language-server/node_modules/vscode-langservers-extracted/bin/vscode-json-language-server --stdio 
+/proc/189621 -> /mnt/Warehouse/projects/Mind Palace  args: /usr/bin/node /home/rdx/.local/share/zed/languages/bash-language-server/node_modules/bash-language-server/out/cli.js start 
+/proc/26689 -> /mnt/Warehouse/projects/Mind Palace  args: /usr/bin/conmon --api-version 1 -c 6217182e66a727eacb0191f49823ed4cb09c2bbad6fd93dfad955040d0ae4b30 -u 6217182e66a727eacb0191f49823ed4cb09c2bbad6fd93dfad955040d
+/proc/306510 -> /mnt/Warehouse/projects/Mind Palace  args: /bin/sh -i -c exec </dev/null
+cd '/mnt/Warehouse/projects/Mind Palace' && { echo "=== any process whose cmdline mentions the project or venvmp ==="; ps -eo pid,ppid,etimes,pcpu,rss,lstart,ar
+/proc/306560 -> /mnt/Warehouse/projects/Mind Palace  args: /bin/sh -i -c exec </dev/null
+cd '/mnt/Warehouse/projects/Mind Palace' && { echo "=== any process whose cmdline mentions the project or venvmp ==="; ps -eo pid,ppid,etimes,pcpu,rss,lstart,ar
+/proc/306561 -> /mnt/Warehouse/projects/Mind Palace  args: tee docs/performance/evidence/152-project-process-sweep.txt 
+
+=== processes with cwd under /tmp/mp* ===
+
+=== total process count ===
+442

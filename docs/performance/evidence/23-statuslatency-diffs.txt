@@ -1,0 +1,17 @@
+--- diff f52272d..HEAD ---
+--- diff HEAD..worktree ---
+--- md5 of each ---
+fatal: path 'docs/performance/status-latency.json' exists on disk, but not in 'f52272d'
+d41d8cd98f00b204e9800998ecf8427e  -
+fatal: path 'docs/performance/status-latency.json' exists on disk, but not in 'HEAD'
+d41d8cd98f00b204e9800998ecf8427e  -
+5264c4814874010103ee0c58bad66cbe  docs/performance/status-latency.json
+--- untracked files in docs/performance ---
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/
+?? docs/performance/m0130-heldout.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json

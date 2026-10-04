@@ -1,0 +1,13 @@
+=== all python procs ===
+    778       1   16835  0.0 47700 Sat Oct  3 10:15:54 2026 /usr/bin/python3 -sP /usr/bin/firewalld --nofork --nopid
+  55806   55801   13975  0.0 32548 Sat Oct  3 11:03:35 2026 /usr/bin/python3 /usr/bin/wsdd --no-host --discovery --listen /run/user/1000/gvfsd/wsdd
+  98836    5230   11420  0.0 22756 Sat Oct  3 11:46:09 2026 python3 -m http.server 8899
+  99249    5230   11397  0.0 22628 Sat Oct  3 11:46:33 2026 python3 -m http.server 8898
+ 172245       1    7095  0.4 46076 Sat Oct  3 12:58:14 2026 /opt/auto-cpufreq/venv/bin/python /opt/auto-cpufreq/venv/bin/auto-cpufreq --daemon
+=== harness-name matches ===
+=== defunct/zombie ===
+ 151207  151202 Z       8371 [cat] <defunct>
+ 231632  231627 Z       3963 [cat] <defunct>
+ 243581  243576 Z       3453 [cat] <defunct>
+ 265230  265225 Z       2336 [cat] <defunct>
+ 265768  265763 Z       2321 [cat] <defunct>

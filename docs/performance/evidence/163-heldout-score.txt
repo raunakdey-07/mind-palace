@@ -1,0 +1,18 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+venvmp/bin/python -c "import json;d=json.load(open(docs/performance/m0130-heldout.json));s=d[summary];print(TOP-LEVELTOP-LEVEL KEYS: ['failure_taxonomy', 'meta', 'results', 'summary', 'timing']
+SUMMARY KEYS: ['by_category', 'failure_labels', 'failures', 'routing', 'strategies', 'total']
+STRATEGIES: {
+  "A_semantic": 124,
+  "B_lexical": 115,
+  "C_fallback": 131
+}
+FAILURES: {
+  "F2": 5,
+  "F7": 19,
+  "F9": 2
+}
+DATASET_HASH: None
+QUESTIONS: None
+EXIT_CODE=0
+TOTAL: 157
+EXIT_CODE=0

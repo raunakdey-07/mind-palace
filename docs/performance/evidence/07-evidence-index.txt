@@ -1,0 +1,28 @@
+total 56
+drwxr-xr-x. 2 rdx rdx 4096 Oct  2 21:22 .
+drwxr-xr-x. 7 rdx rdx 4096 Oct  2 21:19 ..
+-rw-r--r--. 1 rdx rdx   19 Oct  2 21:19 00-probe.txt
+-rw-r--r--. 1 rdx rdx 1762 Oct  2 21:19 01-working-tree.txt
+-rw-r--r--. 1 rdx rdx 3889 Oct  2 21:19 02-production-diff.txt
+-rw-r--r--. 1 rdx rdx  429 Oct  2 21:19 03-scratch-scan.txt
+-rw-r--r--. 1 rdx rdx  488 Oct  2 21:21 04a-mutator-run.txt
+-rw-r--r--. 1 rdx rdx  175 Oct  2 21:21 04-mutation-control.txt
+-rw-r--r--. 1 rdx rdx  192 Oct  2 21:21 04-mutation-M1.txt
+-rw-r--r--. 1 rdx rdx  192 Oct  2 21:21 04-mutation-M2.txt
+-rw-r--r--. 1 rdx rdx  192 Oct  2 21:21 04-mutation-M3.txt
+-rw-r--r--. 1 rdx rdx  192 Oct  2 21:21 04-mutation-M4.txt
+-rw-r--r--. 1 rdx rdx  679 Oct  2 21:22 05-l0l1-diff-stat.txt
+-rw-r--r--. 1 rdx rdx  891 Oct  2 21:22 06-observed_at-probe.txt
+   1 docs/performance/evidence/00-probe.txt
+  42 docs/performance/evidence/01-working-tree.txt
+  85 docs/performance/evidence/02-production-diff.txt
+  11 docs/performance/evidence/03-scratch-scan.txt
+  10 docs/performance/evidence/04a-mutator-run.txt
+   6 docs/performance/evidence/04-mutation-control.txt
+   7 docs/performance/evidence/04-mutation-M1.txt
+   7 docs/performance/evidence/04-mutation-M2.txt
+   7 docs/performance/evidence/04-mutation-M3.txt
+   7 docs/performance/evidence/04-mutation-M4.txt
+  22 docs/performance/evidence/05-l0l1-diff-stat.txt
+  18 docs/performance/evidence/06-observed_at-probe.txt
+ 223 total

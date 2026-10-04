@@ -1,0 +1,395 @@
+==============================================================================
+STEP 3 -- DOES ANALYZE REMOVE THE ARCHIVE-LOAD CLIFF AT EVERY SIZE?
+==============================================================================
+  query                  : api.services.memory._load, narrow projection
+                           (chunk_text=False, version_text=False) -- the statement
+                           the production public projection issues, captured by
+                           intercepting _load itself, not retyped by hand
+  corpus                 : fresh throwaway schema per N, Offline embedder, rolled back
+  statistics             : asserted reltuples=-1 and last_analyze IS NULL immediately
+                           after ingest, BEFORE any EXPLAIN and before any ANALYZE
+  reps per point         : 3 x EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+  plan_cache_mode        : force_custom_plan (set identically on both sides)
+  identical-rows check   : SHA-256 over every column of every returned row, computed
+                           by a non-EXPLAIN run of the SAME statement on both sides
+
+------------------------------------------------------------------------------
+MAIN TABLE  (N = requested claim target; actual claim count in brackets)
+------------------------------------------------------------------------------
+     N  claims |    PRE hit  POST hit   ratio |                     PRE claims idx                    POST claims idx
+---------------------------------------------------------------------------------------------------------------------
+   250     250 |     70,169     2,294   30.59x |         idx_memory_claims_validity memory_claims_corpus_id_version_id_id_key
+   500     502 |    267,708     4,606   58.12x |         idx_memory_claims_validity memory_claims_corpus_id_version_id_id_key
+   750     751 |    605,524     6,890   87.88x |         idx_memory_claims_validity memory_claims_corpus_id_version_id_id_key
+  1000    1000 |  1,072,316     9,175  116.87x |         idx_memory_claims_validity memory_claims_corpus_id_version_id_id_key
+  1100    1102 |  1,238,993    10,111  122.54x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+  1200    1201 |     12,377    11,018    1.12x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+  1300    1300 |     13,420    11,927    1.13x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+  1400    1402 |     14,472    12,863    1.13x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+  1500    1501 |     16,988    15,272    1.11x | memory_claims_corpus_id_version_id_key_key memory_claims_corpus_id_version_id_key_key
+  2000    2002 |     24,677    22,371     1.1x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+  3000    3001 |     40,062    36,535     1.1x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+  5000    5002 |     66,767    60,896     1.1x | memory_claims_corpus_id_version_id_id_key memory_claims_corpus_id_version_id_id_key
+
+------------------------------------------------------------------------------
+EVIDENCE SUBPLAN  (the table that carries the cliff at smaller N)
+------------------------------------------------------------------------------
+     N |                   PRE ev idx     rf |                  POST ev idx     rf
+----------------------------------------------------------------------------------
+   250 |    idx_memory_evidence_claim    249 |    idx_memory_evidence_chunk      -
+   500 |    idx_memory_evidence_claim    501 |    idx_memory_evidence_chunk      -
+   750 |    idx_memory_evidence_claim    750 |    idx_memory_evidence_chunk      -
+  1000 |    idx_memory_evidence_claim    999 |    idx_memory_evidence_chunk      -
+  1100 |    idx_memory_evidence_claim   1101 |    idx_memory_evidence_chunk      -
+  1200 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+  1300 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+  1400 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+  1500 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+  2000 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+  3000 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+  5000 |    idx_memory_evidence_chunk      - |    idx_memory_evidence_chunk      -
+
+------------------------------------------------------------------------------
+ROWS REMOVED BY FILTER, TIME, ROOT ESTIMATE, ROW-IDENTITY
+------------------------------------------------------------------------------
+     N |       rf claims |   PRE ms  POST ms |  est PRE  est POST | rows identical
+----------------------------------------------------------------------------------
+   250 |     249 -> -       |    42.73     7.22 |        1       250 | YES  (2ada9b44498ed4ee)
+   500 |     501 -> -       |   173.58     17.2 |        2       502 | YES  (f32f6544fd64e031)
+   750 |     750 -> -       |    441.6     25.4 |        3       751 | YES  (4a36107b7d5e52ab)
+  1000 |     999 -> -       |   835.27    34.08 |        4      1000 | YES  (c58c99af47384fae)
+  1100 |       - -> -       |   499.76    35.07 |        5      1102 | YES  (9113c71223d34950)
+  1200 |       - -> -       |     40.6    37.67 |        5      1201 | YES  (d3ef554adec4d37d)
+  1300 |       - -> -       |    43.59    40.97 |        5      1300 | YES  (8ad032a7c15aba42)
+  1400 |       - -> -       |    48.53    44.32 |        6      1402 | YES  (b6aab7ecd4a6d8e1)
+  1500 |       - -> -       |    54.63    51.65 |        6      1501 | YES  (180e23a7cfcf9f3c)
+  2000 |       - -> -       |    71.77    72.49 |        8      2002 | YES  (946652b2641f3819)
+  3000 |       - -> -       |   125.33   114.61 |       15      3001 | YES  (cd82e5b54bc9fd45)
+  5000 |       - -> -       |   201.93   262.29 |       24      5002 | YES  (bbef4d2b49c358e9)
+
+------------------------------------------------------------------------------
+PER-SIZE DETAIL, INCLUDING THE ASSERTED FRESH-INSTALL CONDITION
+------------------------------------------------------------------------------
+
+N=250   rows={'claims': 250, 'evidence': 250, 'chunks': 250, 'versions': 250, 'documents': 86}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=250.0 relpages=14 last_analyze=None
+  POST stats memory_evidence   : reltuples=250.0 relpages=14 last_analyze=None
+  PRE  claims Index Cond       : (corpus_id = v.corpus_id)
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : (version_id = v.id)
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : (corpus_id = v.corpus_id)
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : (version_id = v.id)
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [70169, 70169, 70169]
+  POST shared hit (3 reps)     : [2294, 2294, 2294]
+  PRE  exec ms  (3 reps)       : [43.4, 42.4, 42.7]
+  POST exec ms  (3 reps)       : [7.2, 7.2, 7.4]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : 2ada9b44498ed4ee91c773b35a0a8511de384279d6751fb35bf585c67863be74 (n=250)
+  rows sha256 POST             : 2ada9b44498ed4ee91c773b35a0a8511de384279d6751fb35bf585c67863be74 (n=250)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=500   rows={'claims': 502, 'evidence': 502, 'chunks': 502, 'versions': 502, 'documents': 170}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=502.0 relpages=27 last_analyze=None
+  POST stats memory_evidence   : reltuples=502.0 relpages=27 last_analyze=None
+  PRE  claims Index Cond       : (corpus_id = v.corpus_id)
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : (version_id = v.id)
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : (corpus_id = v.corpus_id)
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : (version_id = v.id)
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [267708, 267708, 267708]
+  POST shared hit (3 reps)     : [4606, 4606, 4606]
+  PRE  exec ms  (3 reps)       : [178.4, 172.6, 173.6]
+  POST exec ms  (3 reps)       : [17.2, 16.1, 17.7]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : f32f6544fd64e031cc070982d623acfd1c26e9beb939695dfda610a3f530d835 (n=502)
+  rows sha256 POST             : f32f6544fd64e031cc070982d623acfd1c26e9beb939695dfda610a3f530d835 (n=502)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=750   rows={'claims': 751, 'evidence': 751, 'chunks': 751, 'versions': 751, 'documents': 253}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=751.0 relpages=41 last_analyze=None
+  POST stats memory_evidence   : reltuples=751.0 relpages=40 last_analyze=None
+  PRE  claims Index Cond       : (corpus_id = v.corpus_id)
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : (version_id = v.id)
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : (corpus_id = v.corpus_id)
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : (version_id = v.id)
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [605524, 605524, 605524]
+  POST shared hit (3 reps)     : [6890, 6890, 6890]
+  PRE  exec ms  (3 reps)       : [441.6, 437.8, 450.6]
+  POST exec ms  (3 reps)       : [23.9, 26.6, 25.4]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : 4a36107b7d5e52abe5244bff04aa4210fd445d071a21877bab78c58ad37e5fd8 (n=751)
+  rows sha256 POST             : 4a36107b7d5e52abe5244bff04aa4210fd445d071a21877bab78c58ad37e5fd8 (n=751)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=1000   rows={'claims': 1000, 'evidence': 1000, 'chunks': 1000, 'versions': 1000, 'documents': 336}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=1000.0 relpages=55 last_analyze=None
+  POST stats memory_evidence   : reltuples=1000.0 relpages=53 last_analyze=None
+  PRE  claims Index Cond       : (corpus_id = v.corpus_id)
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : (version_id = v.id)
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : (corpus_id = v.corpus_id)
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : (version_id = v.id)
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [1072316, 1072316, 1072316]
+  POST shared hit (3 reps)     : [9175, 9175, 9175]
+  PRE  exec ms  (3 reps)       : [830.1, 835.3, 839.6]
+  POST exec ms  (3 reps)       : [33.5, 34.1, 34.5]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : c58c99af47384fae0d94c4285173d5a30824bdfef814b3a27fedbb5c3d4514c1 (n=1000)
+  rows sha256 POST             : c58c99af47384fae0d94c4285173d5a30824bdfef814b3a27fedbb5c3d4514c1 (n=1000)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=1100   rows={'claims': 1102, 'evidence': 1102, 'chunks': 1102, 'versions': 1102, 'documents': 370}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=1102.0 relpages=60 last_analyze=None
+  POST stats memory_evidence   : reltuples=1102.0 relpages=58 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : (corpus_id = v.corpus_id)
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : (version_id = v.id)
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [1238993, 1238993, 1238993]
+  POST shared hit (3 reps)     : [10111, 10111, 10111]
+  PRE  exec ms  (3 reps)       : [486.5, 499.8, 545.5]
+  POST exec ms  (3 reps)       : [35.1, 35.1, 33.9]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : 9113c71223d34950937ad703b31e29c809b0f259ad3ed65f2a0627de48fd6d69 (n=1102)
+  rows sha256 POST             : 9113c71223d34950937ad703b31e29c809b0f259ad3ed65f2a0627de48fd6d69 (n=1102)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=1200   rows={'claims': 1201, 'evidence': 1201, 'chunks': 1201, 'versions': 1201, 'documents': 403}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=1201.0 relpages=66 last_analyze=None
+  POST stats memory_evidence   : reltuples=1201.0 relpages=64 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [12377, 12377, 12377]
+  POST shared hit (3 reps)     : [11018, 11018, 11018]
+  PRE  exec ms  (3 reps)       : [41.1, 40.6, 39.6]
+  POST exec ms  (3 reps)       : [38.0, 37.3, 37.7]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : d3ef554adec4d37d856ef2e46268f5c9cf6f400822ed7c45fa204756ace681fd (n=1201)
+  rows sha256 POST             : d3ef554adec4d37d856ef2e46268f5c9cf6f400822ed7c45fa204756ace681fd (n=1201)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=1300   rows={'claims': 1300, 'evidence': 1300, 'chunks': 1300, 'versions': 1300, 'documents': 436}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=1300.0 relpages=71 last_analyze=None
+  POST stats memory_evidence   : reltuples=1300.0 relpages=69 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [13420, 13420, 13420]
+  POST shared hit (3 reps)     : [11927, 11927, 11927]
+  PRE  exec ms  (3 reps)       : [44.9, 43.6, 43.3]
+  POST exec ms  (3 reps)       : [40.4, 41.0, 42.0]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : 8ad032a7c15aba4279db609c58319d65563f433daad63e85b74b79a4dd79f609 (n=1300)
+  rows sha256 POST             : 8ad032a7c15aba4279db609c58319d65563f433daad63e85b74b79a4dd79f609 (n=1300)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=1400   rows={'claims': 1402, 'evidence': 1402, 'chunks': 1402, 'versions': 1402, 'documents': 470}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=1402.0 relpages=77 last_analyze=None
+  POST stats memory_evidence   : reltuples=1402.0 relpages=74 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [14472, 14472, 14472]
+  POST shared hit (3 reps)     : [12863, 12863, 12863]
+  PRE  exec ms  (3 reps)       : [47.6, 50.4, 48.5]
+  POST exec ms  (3 reps)       : [44.4, 44.3, 43.9]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : b6aab7ecd4a6d8e121500fbf8df12a9d1d4f7a19aa97610cd94c29982cfbd8da (n=1402)
+  rows sha256 POST             : b6aab7ecd4a6d8e121500fbf8df12a9d1d4f7a19aa97610cd94c29982cfbd8da (n=1402)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=1500   rows={'claims': 1501, 'evidence': 1501, 'chunks': 1501, 'versions': 1501, 'documents': 503}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=1501.0 relpages=82 last_analyze=None
+  POST stats memory_evidence   : reltuples=1501.0 relpages=79 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [16988, 16988, 16988]
+  POST shared hit (3 reps)     : [15272, 15272, 15272]
+  PRE  exec ms  (3 reps)       : [59.0, 54.6, 53.2]
+  POST exec ms  (3 reps)       : [51.7, 55.4, 50.3]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : 180e23a7cfcf9f3c4fb06029470e8aa8a3b8a6ab3b33e83362653e08a751994d (n=1501)
+  rows sha256 POST             : 180e23a7cfcf9f3c4fb06029470e8aa8a3b8a6ab3b33e83362653e08a751994d (n=1501)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=2000   rows={'claims': 2002, 'evidence': 2002, 'chunks': 2002, 'versions': 2002, 'documents': 670}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=2002.0 relpages=110 last_analyze=None
+  POST stats memory_evidence   : reltuples=2002.0 relpages=106 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [24677, 24677, 24677]
+  POST shared hit (3 reps)     : [22371, 22371, 22371]
+  PRE  exec ms  (3 reps)       : [77.4, 71.0, 71.8]
+  POST exec ms  (3 reps)       : [69.9, 72.5, 73.8]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : 946652b2641f38195a92d3c68b889ee8579b8819f410fb3b384678b24de920d6 (n=2002)
+  rows sha256 POST             : 946652b2641f38195a92d3c68b889ee8579b8819f410fb3b384678b24de920d6 (n=2002)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=3000   rows={'claims': 3001, 'evidence': 3001, 'chunks': 3001, 'versions': 3001, 'documents': 1003}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=3001.0 relpages=165 last_analyze=None
+  POST stats memory_evidence   : reltuples=3001.0 relpages=158 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [40062, 40062, 40062]
+  POST shared hit (3 reps)     : [36535, 36535, 36535]
+  PRE  exec ms  (3 reps)       : [133.6, 118.0, 125.3]
+  POST exec ms  (3 reps)       : [113.3, 115.3, 114.6]
+  PRE  JIT                     : none
+  POST JIT                     : none
+  rows sha256 PRE              : cd82e5b54bc9fd45dbbf5cb50536c677ce246b5a19ed0193ef9778a4e9e7d7cc (n=3001)
+  rows sha256 POST             : cd82e5b54bc9fd45dbbf5cb50536c677ce246b5a19ed0193ef9778a4e9e7d7cc (n=3001)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+N=5000   rows={'claims': 5002, 'evidence': 5002, 'chunks': 5002, 'versions': 5002, 'documents': 1670}
+  fresh-install assertion      : True
+  PRE  stats memory_claims     : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  PRE  stats memory_evidence   : reltuples=-1.0 relpages=0 last_analyze=None analyze_count=0
+  POST stats memory_claims     : reltuples=5002.0 relpages=276 last_analyze=None
+  POST stats memory_evidence   : reltuples=5002.0 relpages=264 last_analyze=None
+  PRE  claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST claims Index Cond       : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  claims Filter           : None
+  POST claims Filter           : None
+  PRE  evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  POST evidence Index Cond     : ((corpus_id = v.corpus_id) AND (version_id = v.id))
+  PRE  evidence Filter         : None
+  POST evidence Filter         : None
+  PRE  shared hit (3 reps)     : [66767, 66767, 66767]
+  POST shared hit (3 reps)     : [60896, 60896, 60896]
+  PRE  exec ms  (3 reps)       : [206.0, 201.9, 201.1]
+  POST exec ms  (3 reps)       : [463.3, 262.3, 241.8]
+  PRE  JIT                     : none
+  POST JIT                     : {'Functions': 50, 'Options': {'Inlining': False, 'Optimization': False, 'Expressions': True, 'Deforming': True}, 'Timing': {'Generation': 1.983, 'Inlining': 0.0, 'Optimization': 1.168, 'Emission': 40.06, 'Total': 43.21}}
+  rows sha256 PRE              : bbef4d2b49c358e98400e928f2fce67974a0bff387f7c9360bd77ddaeba22321 (n=5002)
+  rows sha256 POST             : bbef4d2b49c358e98400e928f2fce67974a0bff387f7c9360bd77ddaeba22321 (n=5002)
+  BYTE-IDENTICAL ACROSS ANALYZE: True
+
+==============================================================================
+VERDICT
+==============================================================================
+  sizes where a corpus-only index was chosen PRE-ANALYZE : [250, 500, 750, 1000, 1100]
+  sizes already clean PRE-ANALYZE                       : [1200, 1300, 1400, 1500, 2000, 3000, 5000]
+  at every size where the cliff existed, ANALYZE removed it: False
+  rows byte-identical across ANALYZE at all 12 sizes       : True
+
+  NOTE ON THE UPPER EDGE. The cliff is not monotonic: at N=1100 the claims
+  subplan is already narrow but the evidence subplan is still the corpus-only
+  idx_memory_evidence_claim. The last size measured with ANY corpus-only
+  choice is 1100; the first size measured clean on both subplans is 1200.
+  The exact crossover is therefore somewhere in (1100, 1200] and was not
+  bisected further.
+
+  NOTE ON AUTOVACUUM. Every schema here is created inside one transaction that
+  is rolled back, so the ingested rows are never committed. autovacuum cannot
+  see uncommitted rows, so it can never rescue these tables mid-run. That makes
+  this a STRICTLY HARSH test of the pre-ANALYZE condition compared with a real
+  committed install, where autovacuum can in principle fire. Step 4 quantifies
+  how long that window is.
+
+  NOTE ON THE QUOTED FIGURE. Background cites 1,078,311 -> 10,311 shared hits
+  at N=1000. This run measured 1,072,316 -> 9,175 at N=1000. Same structure,
+  same order, ~117x not ~102x; the absolute numbers depend on page-cache and
+  index build state. Prior evidence 111 independently recorded 1,073,302 at
+  N=1000, i.e. this run reproduces the previously observed magnitude.
+
+  INDEX LEGEND
+    idx_memory_claims_validity                      (corpus_id, valid_from, valid_until)
+    memory_claims_corpus_id_version_id_id_key      UNIQUE(corpus_id, version_id, id)
+    memory_claims_corpus_id_version_id_key_key     UNIQUE(corpus_id, version_id, key)
+    idx_memory_evidence_claim                      (corpus_id, claim_id)      <- corpus-only
+    idx_memory_evidence_chunk                      (corpus_id, version_id, chunk_id)

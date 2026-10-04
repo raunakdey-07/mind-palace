@@ -1,0 +1,11 @@
+$ venvmp/bin/python -m flake8 api cli tests --max-line-length=100
+FLAKE8=0
+
+$ venvmp/bin/python -m black --check api cli tests --line-length 100
+All done! ✨ 🍰 ✨
+110 files would be left unchanged.
+BLACK=0
+
+$ venvmp/bin/python scripts/release/check_versioning.py
+release metadata: PASS
+VERSIONING=0

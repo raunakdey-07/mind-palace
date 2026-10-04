@@ -1,0 +1,49 @@
+### Latency
+
+Warm, real public query path, claim-representation cache warm and asserted fully
+populated, 12 samples per size, each size measured in its own process, at `f52272d`
+(`docs/performance/status-latency.json`):
+
+| claims | p50 | p95 | archive load | project | vector cache | select | pack |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 43 ms | 48 ms | 14 ms | 5 ms | 9 ms | 12 ms | 0.2 ms |
+| 1,000 | 842 ms | 1,292 ms | 667 ms | 68 ms | 65 ms | 39 ms | 0.2 ms |
+| 5,000 | 1,636 ms | 1,649 ms | 284 ms | 782 ms | 354 ms | 158 ms | 0.2 ms |
+| 10,000 | 4,096 ms | 4,336 ms | 577 ms | 2,301 ms | 703 ms | 351 ms | 0.2 ms |
+
+**[v0.8.0] Correction.** The 100 and 1,000 rows of `status-latency.json` as first
+written were 49 ms and 2,308 ms. Those two rows were measured in the same process
+as the larger sizes, during a window when the host was transiently loaded: every
+stage was inflated together by about 2.5x, including pure-Python projection, which
+never touches the database. Measuring each size in its own process reproduced the
+larger sizes to within 1% and gave the 100 and 1,000 rows above. The combined-run
+file is retained as evidence; the isolated numbers are the ones to use. The harness
+now isolates by default (`--in-process` restores the old behaviour).
+
+25,000 claims **[v0.8.0]**, same harness, same question set, one process
+(`docs/performance/status-latency-extended.json`):
+
+| claims | p50 | p95 | archive load | project | vector cache | select | pack |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 25,000 | 17,055 ms | 18,143 ms | 1,566 ms | 11,359 ms | 1,730 ms | 1,045 ms | 0.2 ms |
+
+Projection is 66.6% of a warm query at 25,000 claims, up from 47.8% at 5,000 and
+55.9% at 10,000. Archive load is 9.2%, down from 17.4% and 14.1%: the archive is
+no longer the term that grows.
+
+Read this table with its limits:
+
+- **50,000 and 100,000 claims were not measured.** Building those corpora is the
+  binding constraint, not the query: ingesting 25,000 claims took 2,238 s and 50,000
+  and 100,000 exceeded 3 and 4 hours respectively and were killed. Nothing here
+  supports a claim about those sizes, in either direction.
+- This is one host. Run-to-run variance across the project has been roughly 2x, so
+  treat the order of magnitude as the result and not the digits.
+- With 12 samples, the reported p95 is the index nearest the 95th percentile and is
+  in practice the maximum. It is a worst observed value, not a tail estimate.
+- Pack construction is 0.2 ms at every size. It is not a cost and has not been
+  optimised.
+- These are medians over 12 samples of one question set on one corpus shape. They
+  are not a latency guarantee and not comparable to any other system.
+
+## Remaining limitations

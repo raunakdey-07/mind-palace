@@ -1,0 +1,21 @@
+sources: docs/performance/m0131-projection.json + docs/performance/m0131-projection-extra.json
+points merged: 5
+
+per-size timings (claims = actual ingested claim count)
+  claims    project_ms   query_result_ms   model_layer_ms   conflicts   versions
+    2002         180.2              72.7            107.5        1959       2002
+    5002        1747.3             915.3            832.0       13481       5002
+   10000        5150.6            3209.1           1941.4       55573      10000
+   20002        7185.7            4614.5           2571.2      225726      20002
+   25000       10714.2            6958.6           3755.6      353685      25000
+
+combined log-log exponents over all 5 sizes
+(1.0 = linear, 2.0 = quadratic)
+                       field   exponent        R^2
+                  project_ms     1.5328     0.9345
+             query_result_ms     1.7201     0.9336
+              model_layer_ms     1.3174     0.9266
+
+project_ms         exponent 1.5328 -> SUPERLINEAR  (+53.3% vs linear)
+query_result_ms    exponent 1.7201 -> SUPERLINEAR  (+72.0% vs linear)
+model_layer_ms     exponent 1.3174 -> SUPERLINEAR  (+31.7% vs linear)

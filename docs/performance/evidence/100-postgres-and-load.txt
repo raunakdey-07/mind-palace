@@ -1,0 +1,62 @@
+================================================================================
+STEP 0 — POSTGRES AVAILABILITY AND HOST STATE
+Date (UTC): 2026-10-03
+Repo: /mnt/Warehouse/projects/Mind Palace
+================================================================================
+
+COMMAND: sh scripts/benchmark/ensure_postgres.sh
+--------------------------------------------------------------------------------
+postgres: starting mp-pg-scale
+Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.
+postgres: up after 5s
+extensions: ready
+INFO  [alembic.runtime.migration] Running upgrade 006_snapshot_membership_seal -> 007_claim_embedding_cache, Cache claim representations so relevance scoring stops re-encoding the archive.
+migrations: at head
+--------------------------------------------------------------------------------
+EXIT: 0
+
+COMMAND: cat /proc/loadavg ; nproc ; free -g
+--------------------------------------------------------------------------------
+1.47 1.69 1.13 4/1325 26594
+8
+               total        used        free      shared  buff/cache   available
+Mem:              15           6           1           0           7           8
+Swap:              7           0           7
+--------------------------------------------------------------------------------
+nproc        = 8
+loadavg      = 1.47 (1m) / 1.69 (5m) / 1.13 (15m)
+procs        = 4 running / 1325 total
+Mem total    = 15 GiB
+Mem available= 8 GiB
+buff/cache   = 7 GiB
+Swap used    = 0 / 7 GiB
+
+HOST STATE ASSESSMENT
+--------------------------------------------------------------------------------
+The box is NOT idle. 1-minute loadavg is 1.47 against 8 cores, i.e. ~18% of
+capacity, and the 1-minute figure is rising relative to the 5-minute (1.47 vs
+1.69) which suggests load is decaying from an earlier burst rather than
+growing. 4 runnable processes out of 1325 threads.
+
+WHY THIS DOES NOT INVALIDATE THE MEASUREMENTS
+--------------------------------------------------------------------------------
+This investigation deliberately avoids wall-clock as the primary metric. The
+three primary signals collected at every N are:
+
+  * shared hit / shared read counts   -- a deterministic count of buffer
+                                         accesses, independent of CPU speed
+  * actual vs estimated row counts    -- a planner decision, a boolean-ish
+                                         outcome rather than a timing
+  * the NAME OF THE INDEX selected for the claims/evidence subplans
+                                         -- the actual thing under
+                                         investigation
+
+None of these scale with host contention. Execution time is recorded for
+context only and is explicitly NOT used to locate the cliff; see STEP 5, where
+the switch is located by index name and buffer count.
+
+Caveat recorded honestly: execution times in 10N-plan-NNNN.txt and 103/107
+files carry whatever contention existed at the time and should not be compared
+across runs of the whole sweep. Buffer counts and index names are the
+load-independent signal.
+================================================================================

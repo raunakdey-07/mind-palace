@@ -1,0 +1,52 @@
+=== df -h ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p5   84G   40G   42G  50% /
+devtmpfs        7.7G     0  7.7G   0% /dev
+tmpfs           7.7G   92K  7.7G   1% /dev/shm
+efivarfs        128K   47K   77K  38% /sys/firmware/efi/efivars
+tmpfs           3.1G  3.8M  3.1G   1% /run
+none            1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+none            1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+tmpfs           7.7G  1.5G  6.3G  19% /tmp
+/dev/nvme0n1p5   84G   40G   42G  50% /home
+/dev/nvme0n1p2  147G   45G   96G  32% /mnt/Warehouse
+/dev/nvme0n1p4  2.0G  624M  1.2G  35% /boot
+/dev/nvme0n1p1  256M  108M  149M  42% /boot/efi
+tmpfs           1.6G  240K  1.6G   1% /run/user/1000
+=== df -i ===
+Filesystem      Inodes  IUsed   IFree IUse% Mounted on
+/dev/nvme0n1p5       0      0       0     - /
+devtmpfs       1993637    581 1993056    1% /dev
+tmpfs          2014287      5 2014282    1% /dev/shm
+efivarfs             0      0       0     - /sys/firmware/efi/efivars
+tmpfs           819200   1137  818063    1% /run
+none              1024      2    1022    1% /run/credentials/systemd-journald.service
+none              1024      2    1022    1% /run/credentials/systemd-resolved.service
+tmpfs          1048576  12347 1036229    2% /tmp
+/dev/nvme0n1p5       0      0       0     - /home
+/dev/nvme0n1p2 9854976 190653 9664323    2% /mnt/Warehouse
+/dev/nvme0n1p4  131072     45  131027    1% /boot
+/dev/nvme0n1p1       0      0       0     - /boot/efi
+tmpfs           402857    241  402616    1% /run/user/1000
+=== largest dirs under /tmp ===
+583M	/tmp/v1
+365M	/tmp/rt2
+155M	/tmp/rt
+154M	/tmp/v3
+67M	/tmp/v4
+5.0M	/tmp/node-compile-cache
+4.5M	/tmp/tmp-vlv.xpi
+2.1M	/tmp/mp-preserve
+1.6M	/tmp/pytest-of-rdx
+912K	/tmp/probe
+556K	/tmp/mpscratch
+192K	/tmp/mp-analyze
+188K	/tmp/sweep-e.json
+140K	/tmp/sweep-b.json
+140K	/tmp/sweep-a.json
+108K	/tmp/sweep-c.json
+76K	/tmp/host
+68K	/tmp/sweep-d.json
+36K	/tmp/smoke2.json
+36K	/tmp/smoke-250.json
+=== /var/lib/pgsql or pg data size ===

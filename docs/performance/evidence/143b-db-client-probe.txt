@@ -1,0 +1,48 @@
+=== which/where psql ===
+which: no psql in (/home/rdx/projects/Mind Palace/venvmp/bin:/home/rdx/.opencode/bin:/home/rdx/.warm/bin:/home/rdx/llama.cpp/build/bin:/home/rdx/.opencode/bin:/home/rdx/.warm/bin:/home/rdx/llama.cpp/build/bin:/home/rdx/.opencode/bin:/home/rdx/.local/share/pnpm:/home/rdx/.warm/bin:/home/rdx/llama.cpp/build/bin:/home/rdx/.local/bin:/usr/local/bin:/usr/bin)
+which: no pg_isready in (/home/rdx/projects/Mind Palace/venvmp/bin:/home/rdx/.opencode/bin:/home/rdx/.warm/bin:/home/rdx/llama.cpp/build/bin:/home/rdx/.opencode/bin:/home/rdx/.warm/bin:/home/rdx/llama.cpp/build/bin:/home/rdx/.opencode/bin:/home/rdx/.local/share/pnpm:/home/rdx/.warm/bin:/home/rdx/llama.cpp/build/bin:/home/rdx/.local/bin:/usr/local/bin:/usr/bin)
+=== find psql binaries ===
+=== venvmp bin ===
+activate
+activate.csh
+activate.fish
+Activate.ps1
+alembic
+black
+blackd
+cffi-gen-src
+distro
+dotenv
+f2py
+fastapi
+flake8
+hf
+httpx
+httpx2
+huggingface-cli
+idna
+isympy
+jsondiff
+jsonpatch
+jsonpointer
+jsonschema
+mako-render
+markdown-it
+mcp
+mindpalace
+normalizer
+numpy-config
+pip
+pip3
+pip3.14
+proton
+proton-viewer
+pycodestyle
+pyflakes
+pygmentize
+py.test
+pytest
+python
+=== driver check ===
+psycopg2 2.9.12 (dt dec pq3 ext lo64)
+sqlalchemy 2.0.51

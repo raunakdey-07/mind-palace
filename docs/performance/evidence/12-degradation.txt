@@ -1,0 +1,24 @@
+ingesting corpus once...
+schema: m115d_b7dc621a58
+
+phase: full
+  answered=202 correct=177 abstained=24 conflicts=23 failures=0
+phase: nomodel
+  answered=202 correct=163 abstained=27 conflicts=20 failures=0
+phase: nlexical
+  answered=202 correct=163 abstained=27 conflicts=20 failures=0
+
+destroying L2...
+  L2 destroyed: {'docs': 0, 'cache': 0, 'versions': 72, 'claims': 88}
+  answered=202 correct=177 abstained=24
+
+poisoning:
+  untrusted claims authored : 0
+  untrusted evidence cited : 0
+  injection text in claims : []
+  injection text in evidence: []
+
+distinct authoritative packs: full=202 without L2=202
+identical: True
+
+written: /mnt/Warehouse/projects/Mind Palace/docs/performance/m0115-degradation.json

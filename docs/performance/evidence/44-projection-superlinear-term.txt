@@ -1,0 +1,77 @@
+STEP 4 - superlinear term identification
+==============================================================================
+
+25,000 claims - by CUMULATIVE time, top 10
+           1 calls  cum    2.006s  tot   18.513s  memory_public.py:130(project)
+           1 calls  cum    0.998s  tot   14.252s  memory.py:486(_query_result)
+           1 calls  cum    0.168s  tot    0.291s  memory_public.py:99(_attach)
+           2 calls  cum    0.080s  tot    0.346s  {method 'update' of 'set' objects}
+   1,498,068 calls  cum    0.000s  tot    9.115s  memory.py:66(_canonical)
+   1,498,068 calls  cum    0.000s  tot    5.339s  __init__.py:185(dumps)
+     353,685 calls  cum    0.000s  tot    5.182s  memory.py:70(_hash)
+     395,349 calls  cum    0.000s  tot    5.017s  memory.py:513(matches)
+   1,498,068 calls  cum    0.000s  tot    3.136s  encoder.py:185(encode)
+   2,767,443 calls  cum    0.000s  tot    2.773s  memory.py:52(_json_value)
+
+25,000 claims - by CALL COUNT, top 10
+   8,781,009 calls  cum    0.000s  tot    1.250s  {built-in method builtins.isinstance}
+   2,767,443 calls  cum    0.000s  tot    2.773s  memory.py:52(_json_value)
+   1,498,068 calls  cum    0.000s  tot    9.115s  memory.py:66(_canonical)
+   1,498,068 calls  cum    0.000s  tot    5.339s  __init__.py:185(dumps)
+   1,498,068 calls  cum    0.000s  tot    3.136s  encoder.py:185(encode)
+   1,498,068 calls  cum    0.000s  tot    0.310s  encoder.py:105(__init__)
+   1,102,719 calls  cum    0.000s  tot    0.332s  {built-in method _json.encode_basestring}
+     453,686 calls  cum    0.000s  tot    0.863s  main.py:253(__init__)
+     453,686 calls  cum    0.000s  tot    0.725s  {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}
+     395,350 calls  cum    0.000s  tot    2.602s  __init__.py:270(findall)
+
+named functions, 5002 -> 25000 claims (claims grew 4.998x)
+function                               calls@5k    calls@25k     ratio  exponent
+_query_result                                 1            1     1.00x    0.000
+matches closure                          21,815      395,349    18.12x    1.801
+itertools.combinations                      n/a          n/a         -         -
+re.findall (module)                      21,816      395,350    18.12x    1.801
+re.findall (C impl)                      21,816      395,350    18.12x    1.801
+_canonical                               70,592    1,498,068    21.22x    1.899
+_json_value                             152,705    2,767,443    18.12x    1.801
+_hash                                    13,481      353,685    26.24x    2.030
+pydantic Claim __init__                  33,490      453,686    13.55x    1.620
+pydantic validate_python                 33,490      453,686    13.55x    1.620
+json.dumps                               70,592    1,498,068    21.22x    1.899
+iterencode                               21,815      395,349    18.12x    1.801
+itertools.combinations() pairs actually iterated by _query_result
+(the generator is C-level, so cProfile cannot see it; counted from the key groups)
+  claims   groups   comb_calls  pairs/claim       vs5k  exponent
+Traceback (most recent call last):
+  File "/tmp/m0131_pairs_direct.py", line 26, in <module>
+    math.log(n/base)/math.log(t/2002) if base else 0))
+    ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+ZeroDivisionError: division by zero
+itertools.combinations() pairs actually iterated by _query_result
+(the generator is C-level, so cProfile cannot see it; counted from the key groups)
+  claims   groups   comb_calls  pairs/claim       vs5k  exponent
+Traceback (most recent call last):
+  File "/tmp/m0131_pairs_direct.py", line 28, in <module>
+    math.log(n/base)/math.log(t/base_t)))
+    ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+ZeroDivisionError: division by zero
+itertools.combinations() pairs actually iterated by _query_result
+(the generator is C-level, so cProfile cannot see it; counted from the key groups)
+  claims   groups   comb_calls  pairs/claim     vs2002  exponent
+Traceback (most recent call last):
+  File "/tmp/m0131_pairs_direct.py", line 28, in <module>
+    t, g, n, n / t, n / base_n, math.log(n / base_n) / math.log(t / base_t)))
+                                ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+ZeroDivisionError: division by zero
+itertools.combinations() pairs actually iterated by _query_result
+(C-level generator, invisible to cProfile; counted from the real key groups)
+  claims   groups   comb_calls  pairs/claim     vs2002  exponent
+    2002      295         5877         2.94      1.00x      base
+    5002      295        40443         8.09      6.88x     2.106
+   10000      295       166719        16.67     28.37x     2.080
+   20002      295       677178        33.86    115.23x     2.062
+   25000      295      1061055        42.44    180.54x     2.058
+
+5002 -> 25000: combinations x26.24  (claims x5.00)
+largest single key group at 25k = 86 claims -> 3655 pairs
+distinct keys stay constant at 295 regardless of corpus size

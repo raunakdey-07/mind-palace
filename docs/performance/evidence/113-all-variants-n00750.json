@@ -1,0 +1,749 @@
+{
+  "V0": {
+    "why": "BASELINE: production _load narrow SQL, verbatim",
+    "pre": [],
+    "planning_ms": [
+      0.387,
+      0.336,
+      0.494
+    ],
+    "exec_ms": [
+      378.524,
+      376.374,
+      377.515
+    ],
+    "shared_hit": [
+      598782,
+      598782,
+      598782
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 564001,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": "SELF"
+  },
+  "V1": {
+    "why": "LEFT JOIN LATERAL for the three aggregates",
+    "pre": [],
+    "planning_ms": [
+      0.388,
+      0.352,
+      0.313
+    ],
+    "exec_ms": [
+      380.387,
+      391.992,
+      373.569
+    ],
+    "shared_hit": [
+      598782,
+      598782,
+      598782
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 564001,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V2": {
+    "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+    "pre": [],
+    "planning_ms": [
+      0.602,
+      0.435,
+      0.437
+    ],
+    "exec_ms": [
+      491.201,
+      479.076,
+      491.235
+    ],
+    "shared_hit": [
+      1851,
+      1851,
+      1851
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = '187397cdecdee54c0619309db61172231974c7362b990c4a3ca36268ed2570d6'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 42,
+      "rows": 751,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_chunk",
+      "index_cond": "(corpus_id = '187397cdecdee54c0619309db61172231974c7362b990c4a3ca36268ed2570d6'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 766,
+      "rows": 751,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": null,
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 57,
+      "rows": 751,
+      "plan_rows": 2
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V3": {
+    "why": "correlated subqueries, version_id predicate written first",
+    "pre": [],
+    "planning_ms": [
+      0.258,
+      0.335,
+      0.404
+    ],
+    "exec_ms": [
+      375.15,
+      386.194,
+      384.957
+    ],
+    "shared_hit": [
+      598782,
+      598782,
+      598782
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 564001,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V4": {
+    "why": "inline pre-grouped derived tables instead of CTEs",
+    "pre": [],
+    "planning_ms": [
+      0.465,
+      0.472,
+      1.01
+    ],
+    "exec_ms": [
+      65.268,
+      64.24,
+      67.289
+    ],
+    "shared_hit": [
+      1851,
+      1851,
+      1851
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = '187397cdecdee54c0619309db61172231974c7362b990c4a3ca36268ed2570d6'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 42,
+      "rows": 751,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_chunk",
+      "index_cond": "(corpus_id = '187397cdecdee54c0619309db61172231974c7362b990c4a3ca36268ed2570d6'::bpchar)",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 766,
+      "rows": 751,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": null,
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 1,
+      "shared_hit": 57,
+      "rows": 751,
+      "plan_rows": 2
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V5": {
+    "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+    "pre": [
+      "SET LOCAL default_statistics_target = 1000"
+    ],
+    "planning_ms": [
+      0.275,
+      0.259,
+      0.256
+    ],
+    "exec_ms": [
+      387.726,
+      371.958,
+      378.21
+    ],
+    "shared_hit": [
+      598782,
+      598782,
+      598782
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 564001,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V6a": {
+    "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+    "pre": [
+      "SET LOCAL enable_indexscan = off"
+    ],
+    "planning_ms": [
+      0.265,
+      0.264,
+      0.371
+    ],
+    "exec_ms": [
+      276.409,
+      273.218,
+      271.614
+    ],
+    "shared_hit": [
+      80376,
+      80376,
+      80376
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": null,
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": null,
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 45811,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Bitmap Heap Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": null,
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V6b": {
+    "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+    "pre": [
+      "SET LOCAL enable_seqscan = off",
+      "SET LOCAL enable_bitmapscan = off"
+    ],
+    "planning_ms": [
+      0.524,
+      0.264,
+      0.403
+    ],
+    "exec_ms": [
+      391.32,
+      370.994,
+      377.394
+    ],
+    "shared_hit": [
+      598782,
+      598782,
+      598782
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 564001,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  },
+  "V6c": {
+    "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+    "pre": [
+      "SET LOCAL random_page_cost = 1.1"
+    ],
+    "planning_ms": [
+      0.344,
+      0.681,
+      0.358
+    ],
+    "exec_ms": [
+      382.384,
+      374.913,
+      378.46
+    ],
+    "shared_hit": [
+      598782,
+      598782,
+      598782
+    ],
+    "shared_read": [
+      0,
+      0,
+      0
+    ],
+    "temp_read": [
+      0,
+      0,
+      0
+    ],
+    "claims_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_claims_validity",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 31542,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "evidence_index": {
+      "node": "Index Scan",
+      "index": "idx_memory_evidence_claim",
+      "index_cond": "(corpus_id = v.corpus_id)",
+      "filter": "(version_id = v.id)",
+      "rows_removed_by_filter": 750,
+      "loops": 751,
+      "shared_hit": 564001,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "chunks_index": {
+      "node": "Index Scan",
+      "index": "memory_chunks_corpus_id_version_id_order_index_key",
+      "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+      "filter": null,
+      "rows_removed_by_filter": null,
+      "loops": 751,
+      "shared_hit": 2253,
+      "rows": 1,
+      "plan_rows": 1
+    },
+    "root_node": "Sort",
+    "nondefault_settings": {},
+    "n_rows": 751,
+    "cols": [
+      "corpus_id",
+      "memory_document_id",
+      "id",
+      "predecessor_id",
+      "version_number",
+      "document_id",
+      "event",
+      "observed_at",
+      "fingerprint",
+      "path",
+      "chunks",
+      "claims",
+      "evidence"
+    ],
+    "sha256": "705b4b082b89796b0c4db30c7393d7771a4093257e693466c3862af0921aaf53",
+    "identical_to_V0": true
+  }
+}

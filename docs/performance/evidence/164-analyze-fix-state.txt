@@ -1,0 +1,133 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+git --no-pager diff -- api/ | head -60
+git --no-pager log --oneline -3
+diff --git a/api/main.py b/api/main.py
+index 3f09469..9a8e4d5 100644
+--- a/api/main.py
++++ b/api/main.py
+@@ -6,6 +6,7 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import importlib.metadata
+ import os
+ 
+ from fastapi import FastAPI, Request
+@@ -21,7 +22,7 @@ from api.routers import context, corpora, ingest, memory, query, search
+ app = FastAPI(
+     title="Mind Palace API",
+     description="The Durable AI Memory Substrate",
+-    version="0.6.0",
++    version=importlib.metadata.version("mindpalace-os"),
+ )
+ 
+ 
+diff --git a/api/services/memory.py b/api/services/memory.py
+index 25c3f54..fe35e43 100644
+--- a/api/services/memory.py
++++ b/api/services/memory.py
+@@ -397,7 +397,7 @@ async def record_deletion(db: AsyncSession, corpus_id: str, path: str) -> bool:
+     return True
+ 
+ 
+-async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
++async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True, version_text=True):
+     """Load versions with their claims, evidence and chunks.
+ 
+     The child aggregates are correlated subqueries rather than one set-based pass
+@@ -414,7 +414,21 @@ async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+     projection reads nothing else from a chunk, and chunk text is the bulk of a
+     real document. The raw ``history`` surface keeps the text, because a
+     developer asking for history wants the source.
++
++    ``version_text=False`` drops each version's ``content`` and ``metadata``.
++    Those two columns hold the whole document body and are the widest part of a
++    version row, but the projection never reads either: authority comes from the
++    claims, evidence and the version graph. Same reasoning as ``chunk_text``, and
++    the raw ``history`` surface keeps both for the same reason.
+     """
++    columns = (
++        "v.*"
++        if version_text
++        else (
++            "v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, "
++            "v.document_id, v.event, v.observed_at, v.fingerprint"
++        )
++    )
+     chunk_expr = (
+         "jsonb_build_object('id', c.id, 'heading_path', c.heading_path)"
+         if not chunk_text
+@@ -423,7 +437,7 @@ async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+     # One statement gives every read a coherent MVCC view, even without a read lock.
+     result = await db.execute(
+         text(f"""
+EXIT_CODE=0
+git --no-pager log --oneline -3
+f52272d release: v0.7.0 unified context, portable pack, cached query fix
+76065f9 research: record the release-readiness evidence and the remaining bottleneck
+91ac567 fix: remove large array parameters from the cached-vector load
+EXIT_CODE=0
+--- supplementary: case-insensitive ANALYZE search in unstaged and staged diff; diffstat of api/ migrations/
+122:+  `last_analyze` null), so the planner underestimates the row count by ~250x and
+123:+  picks the wrong index. Running `ANALYZE` removes the cliff entirely. This is a
+GREP_UNSTAGED_EXIT=0
+GREP_STAGED_EXIT=1
+ api/main.py                   |  3 ++-
+ api/services/memory.py        | 18 ++++++++++++++++--
+ api/services/memory_public.py |  9 ++++++---
+ 3 files changed, 24 insertions(+), 6 deletions(-)
+DIFFSTAT_EXIT=0
+EXIT_CODE=1
+1:diff --git a/.gitignore b/.gitignore
+4:+++ b/.gitignore
+13:diff --git a/CHANGELOG.md b/CHANGELOG.md
+16:+++ b/CHANGELOG.md
+70:diff --git a/README.md b/README.md
+73:+++ b/README.md
+135:diff --git a/api/main.py b/api/main.py
+138:+++ b/api/main.py
+156:diff --git a/api/services/memory.py b/api/services/memory.py
+159:+++ b/api/services/memory.py
+200:diff --git a/api/services/memory_public.py b/api/services/memory_public.py
+203:+++ b/api/services/memory_public.py
+220:diff --git a/docs/performance/m011-rebuildability.json b/docs/performance/m011-rebuildability.json
+223:+++ b/docs/performance/m011-rebuildability.json
+250:diff --git a/docs/performance/m0115-degradation.json b/docs/performance/m0115-degradation.json
+253:+++ b/docs/performance/m0115-degradation.json
+1898:diff --git a/docs/performance/m0115-experiments.json b/docs/performance/m0115-experiments.json
+1901:+++ b/docs/performance/m0115-experiments.json
+1933:diff --git a/scripts/benchmark/m0122_instrumented.py b/scripts/benchmark/m0122_instrumented.py
+1936:+++ b/scripts/benchmark/m0122_instrumented.py
+2196:diff --git a/tests/test_api.py b/tests/test_api.py
+2199:+++ b/tests/test_api.py
+EXIT_CODE=0
+45-+  loaded, so a busy window cannot silently become a baseline. No current latency
+46-+  envelope is claimed until one is re-measured on a host that passes that gate.
+47-+
+48-+  Separately and more consequentially, a **query plan cliff** was found and its cause
+49-+  identified. Between roughly 250 and 1,000 versions the archive-load query picks
+50-+  corpus-only indexes and filters on `version_id` afterwards, discarding 999 of every
+51-+  1,000 rows: 1,075,310 shared buffer hits at 1,000 versions against 26,674 at 2,000.
+52-+  The cause is that these tables have never been analysed (`reltuples = -1`,
+53:+  `last_analyze` null), so the planner underestimates the row count by ~250x and
+54-+  picks the wrong index. Running `ANALYZE` removes the cliff entirely. This is a
+55-+  real defect and is being addressed; see `docs/STATUS.md`.
+56-   [Measurement and rejected candidates](docs/research/m0123-projection-release-gate.md).
+57-+- **Accuracy is lower on unseen questions than the headline benchmark suggests.** The
+58-+  202-question benchmark reports 194/202, but it is a development set whose failures
+59-+  are known. On a separately authored 157-question held-out set, frozen before any
+60-+  retrieval code was touched, the same system answers 131/157. Questions phrased
+61-+  indirectly, especially asking *why* a decision was made, are answered noticeably
+62-+  less often. See [docs/STATUS.md](docs/STATUS.md).
+63- - Existing lexical operations remain lexical AND. M006.5 adds heuristic semantic
+EXIT_CODE=0
+api/services/memory.py:406:    2,475, with EXPLAIN ANALYZE execution 639.93 ms to 95.91 ms. It was reverted.
+grep: api/services/__pycache__/memory.cpython-314.pyc: binary file matches
+GREP_API_MIGRATIONS_EXIT=0
+CACHED_STAT_EXIT=0
+11
+MODIFIED_EXIT=0
+13
+UNTRACKED_EXIT=0
+0
+COMMITS_AHEAD_EXIT=0

@@ -1,0 +1,10 @@
+[sanity] re-hashing untouched pack 'abs-backup' reproduces its stored digest
+[sanity] normalize() is idempotent on an already-normalised pack
+[targets] conflict group with 2 claims: adv-18 (conflicts=1)
+[targets] question with >=2 current_memories: abs-sso
+[M2] cur-01 current_memories[0].valid_until: None -> '2024-01-01T00:00:00Z'
+[M4] adv-18: reversed conflicts[0]['claims'] (2 items)
+[wrote] /tmp/mut/M1.json
+[wrote] /tmp/mut/M2.json
+[wrote] /tmp/mut/M3.json
+[wrote] /tmp/mut/M4.json

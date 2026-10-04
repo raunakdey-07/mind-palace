@@ -1,0 +1,18 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m0130_heldout.py
+{
+  "categories": {
+    "abstention": 16,
+    "adversarial": 8,
+    "conflict": 2,
+    "current": 30,
+    "historical": 23,
+    "multi-topic": 19,
+    "provenance": 26,
+    "relationship": 16,
+    "temporal": 17
+  },
+  "dataset_hash": "13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0",
+  "questions": 157
+}
+EXIT_CODE=0

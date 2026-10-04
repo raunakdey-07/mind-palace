@@ -1,0 +1,562 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace):
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m a1_a2p
+
+RAW OUTPUT
+==============================================================================
+### A1 / A2 / A3 -- ANALYZE transaction semantics
+### corpus size N=1000 versions, one claim per version
+
+==============================================================================
+CASE P result
+==============================================================================
+{
+  "A1_reltuples_matches_uncommitted_count": true,
+  "A2_orphan_pg_statistic_rows": 0,
+  "A2_stale_statalltables_entries": [],
+  "case": "P (schema+DDL+corpus+ANALYZE all rolled back)",
+  "catalog_post_analyze_inside_txn": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 6,
+      "relpages": 50,
+      "reltuples": 1000
+    },
+    "memory_claims": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 11,
+      "relpages": 56,
+      "reltuples": 1000
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 3,
+      "relpages": 23,
+      "reltuples": 1000
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 8,
+      "relpages": 53,
+      "reltuples": 1000
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 11,
+      "relpages": 167,
+      "reltuples": 1000
+    }
+  },
+  "catalog_pre_analyze_inside_txn": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_claims": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    }
+  },
+  "global_pg_statistic_rows_after_rollback": 470,
+  "global_pg_statistic_rows_before": 470,
+  "global_pg_statistic_rows_inside_txn_after_analyze": 509,
+  "n": 1000,
+  "pg_stats_claims_inside_txn": [
+    {
+      "attname": "claim",
+      "avg_width": 55,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "corpus_id",
+      "avg_width": 65,
+      "most_common_freqs": "{1}",
+      "n_distinct": 1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "id",
+      "avg_width": 65,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "key",
+      "avg_width": 21,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "memory_document_id",
+      "avg_width": 65,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "supersedes_id",
+      "avg_width": 0,
+      "most_common_freqs": null,
+      "n_distinct": 0.0,
+      "null_frac": 1.0
+    }
+  ],
+  "row_counts_inside_txn": {
+    "chunks": 1000,
+    "claims": 1000,
+    "documents": 1000,
+    "evidence": 1000,
+    "versions": 1000
+  },
+  "schema": "anxP_a2cf7d4250",
+  "schema_exists_after_rollback": false,
+  "table_oids": {
+    "chunks": 153244,
+    "chunks_pkey": 153256,
+    "corpora": 153291,
+    "corpora_name_key": 153300,
+    "corpora_pkey": 153298,
+    "documents": 153229,
+    "documents_pkey": 153240,
+    "idx_chunks_doc_id": 153278,
+    "idx_chunks_document_type": 153279,
+    "idx_chunks_embedding": 153277,
+    "idx_chunks_heading_path": 153280,
+    "idx_claim_embeddings_lookup": 153513,
+    "idx_documents_corpus": 153310,
+    "idx_documents_indexed_at": 153284,
+    "idx_documents_ingested_at": 153283,
+    "idx_documents_type": 153281,
+    "idx_documents_updated_at": 153282,
+    "idx_memory_claims_key": 153406,
+    "idx_memory_claims_supersedes": 153408,
+    "idx_memory_claims_validity": 153407,
+    "idx_memory_evidence_chunk": 153431,
+    "idx_memory_evidence_claim": 153480,
+    "idx_memory_snapshot_version": 153460,
+    "idx_memory_snapshots_observed": 153444,
+    "idx_memory_versions_observed": 153359,
+    "ingestion_manifest": 153263,
+    "ingestion_manifest_pkey": 153312,
+    "memory_chunks": 153360,
+    "memory_chunks_corpus_id_version_id_id_key": 153368,
+    "memory_chunks_corpus_id_version_id_order_index_key": 153370,
+    "memory_chunks_pkey": 153366,
+    "memory_claim_embeddings": 153499,
+    "memory_claim_embeddings_pkey": 153506,
+    "memory_claims": 153377,
+    "memory_claims_corpus_id_memory_document_id_key_id_key": 153394,
+    "memory_claims_corpus_id_version_id_id_key": 153392,
+    "memory_claims_corpus_id_version_id_key_key": 153390,
+    "memory_claims_pkey": 153388,
+    "memory_documents": 153314,
+    "memory_documents_corpus_id_path_key": 153322,
+    "memory_documents_pkey": 153320,
+    "memory_evidence": 153409,
+    "memory_evidence_pkey": 153417,
+    "memory_snapshot_seals": 153483,
+    "memory_snapshot_seals_pkey": 153486,
+    "memory_snapshot_versions": 153445,
+    "memory_snapshot_versions_pkey": 153448,
+    "memory_snapshots": 153432,
+    "memory_snapshots_pkey": 153437,
+    "memory_versions": 153329,
+    "memory_versions_corpus_id_memory_document_id_id_key": 153342,
+    "memory_versions_corpus_id_memory_document_id_version_number_key": 153344,
+    "memory_versions_corpus_id_predecessor_id_key": 153346,
+    "memory_versions_pkey": 153340,
+    "uq_chunks_doc_chunk": 153289,
+    "uq_documents_corpus_path": 153308,
+    "uq_documents_doc_id": 153285,
+    "uq_memory_evidence_reference": 153478,
+    "uq_memory_root": 153358
+  }
+}
+
+==============================================================================
+CASE C result
+==============================================================================
+{
+  "A1_reltuples_matches_uncommitted_count": true,
+  "A2_catalog_after_rollback": {
+    "memory_chunks": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.136252+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 50,
+      "reltuples": 1000
+    },
+    "memory_claims": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.153726+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 56,
+      "reltuples": 1000
+    },
+    "memory_documents": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.157562+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 23,
+      "reltuples": 1000
+    },
+    "memory_evidence": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.167884+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 53,
+      "reltuples": 1000
+    },
+    "memory_versions": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.185738+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 167,
+      "reltuples": 1000
+    }
+  },
+  "A2_pg_stats_claims_after_rollback": [],
+  "A2_row_counts_after_rollback": {
+    "chunks": 0,
+    "claims": 0,
+    "documents": 0,
+    "evidence": 0,
+    "versions": 0
+  },
+  "A2_statistic_survived": true,
+  "A3_catalog_after_analyze_of_empty_tables": {
+    "memory_chunks": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.136252+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 50,
+      "reltuples": 0
+    },
+    "memory_claims": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.153726+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 56,
+      "reltuples": 0
+    },
+    "memory_documents": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.157562+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 23,
+      "reltuples": 0
+    },
+    "memory_evidence": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.167884+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 53,
+      "reltuples": 0
+    },
+    "memory_versions": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:11:01.185738+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 1000,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 167,
+      "reltuples": 0
+    }
+  },
+  "A3_row_counts_confirm_empty": {
+    "chunks": 0,
+    "claims": 0,
+    "documents": 0,
+    "evidence": 0,
+    "versions": 0
+  },
+  "case": "C (DDL committed; INSERT+ANALYZE rolled back)",
+  "catalog_post_analyze_inside_txn": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 6,
+      "relpages": 50,
+      "reltuples": 1000
+    },
+    "memory_claims": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 11,
+      "relpages": 56,
+      "reltuples": 1000
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 3,
+      "relpages": 23,
+      "reltuples": 1000
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 8,
+      "relpages": 53,
+      "reltuples": 1000
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 11,
+      "relpages": 167,
+      "reltuples": 1000
+    }
+  },
+  "catalog_pre_analyze_inside_txn": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_claims": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    }
+  },
+  "corpus": "e7b0345690dad80327710d254c299ffeb2136b48a51a1e96ce102ac900f1d5cf",
+  "n": 1000,
+  "pg_stats_claims_inside_txn": [
+    {
+      "attname": "claim",
+      "avg_width": 55,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "corpus_id",
+      "avg_width": 65,
+      "most_common_freqs": "{1}",
+      "n_distinct": 1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "id",
+      "avg_width": 65,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "key",
+      "avg_width": 21,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "memory_document_id",
+      "avg_width": 65,
+      "most_common_freqs": null,
+      "n_distinct": -1.0,
+      "null_frac": 0.0
+    },
+    {
+      "attname": "supersedes_id",
+      "avg_width": 0,
+      "most_common_freqs": null,
+      "n_distinct": 0.0,
+      "null_frac": 1.0
+    }
+  ],
+  "row_counts_inside_txn": {
+    "chunks": 1000,
+    "claims": 1000,
+    "documents": 1000,
+    "evidence": 1000,
+    "versions": 1000
+  },
+  "schema": "anxC_472bd14552",
+  "schema_committed": true,
+  "schema_dropped_at_end": true
+}

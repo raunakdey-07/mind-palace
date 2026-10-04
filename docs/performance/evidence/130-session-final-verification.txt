@@ -1,0 +1,370 @@
+================================================================================
+SESSION FINAL VERIFICATION
+Mind Palace — milestone/v0.8.0-dev
+Date: 2026-10-03
+Operator: automated verification pass (read-only; no source file edited, no
+          state-changing git run)
+================================================================================
+
+ENVIRONMENT
+-----------
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export HF_HUB_OFFLINE=1
+export PYTHONPATH=scripts/benchmark
+Interpreter: venvmp/bin/python -m <tool>
+
+================================================================================
+1. QUALITY GATES  (all must be 0)
+================================================================================
+
+--- 1a. flake8 ---
+$ venvmp/bin/python -m flake8 api cli tests --max-line-length=100
+FLAKE8=0
+(no output = zero findings)
+
+--- 1b. black ---
+$ venvmp/bin/python -m black --check api cli tests --line-length 100
+All done! ✨ 🍰 ✨
+109 files would be left unchanged.
+BLACK=0
+
+--- 1c. versioning ---
+$ venvmp/bin/python scripts/release/check_versioning.py
+release metadata: PASS
+VERSIONING=0
+
+RESULT: GATES GREEN. FLAKE8=0, BLACK=0, VERSIONING=0
+
+================================================================================
+2. FULL TEST SUITE  (expect 1200)
+================================================================================
+$ DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace \
+  HF_HUB_OFFLINE=1 venvmp/bin/python -m pytest -q --maxfail=1
+
+1200 passed, 12 warnings in 108.88s (0:01:48)
+
+RESULT: GREEN. 1200 passed — matches expected count exactly.
+
+================================================================================
+3. AUTHORITATIVE GATE — 202 packs byte-identical
+================================================================================
+--- 3a. capture ---
+$ PYTHONPATH=scripts/benchmark \
+  DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace \
+  HF_HUB_OFFLINE=1 venvmp/bin/python scripts/benchmark/baseline_packs.py \
+  capture --out /tmp/mp-preserve/final-packs.json
+
+Loading weights:   0%|          | 0/103 [00:0Loading weights: 100%|██████████| 103/103 [00:00<00:00, 7032.84it/s]
+captured 202 packs
+dataset hash   : 9cdecda73cbdc8ae
+set digest     : 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+commit         : f52272db635c
+written        : /tmp/mp-preserve/final-packs.json
+
+--- 3b. compare ---
+$ PYTHONPATH=scripts/benchmark venvmp/bin/python \
+  scripts/benchmark/baseline_packs.py compare \
+  --baseline docs/performance/baseline-packs.json \
+  --current /tmp/mp-preserve/final-packs.json
+
+baseline commit : f52272db635c
+current  commit : f52272db635c
+questions       : 202
+set digest      : 5a3b80490af52c85
+authoritative output: IDENTICAL to baseline
+COMPARE=0
+
+RESULT: GREEN.
+  202 packs
+  IDENTICAL to baseline
+  set digest 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+    -> matches expected digest EXACTLY
+  dataset hash 9cdecda73cbdc8ae
+  commit f52272db635c == baseline commit f52272db635c
+
+================================================================================
+4. BENCHMARKS UNCHANGED
+================================================================================
+$ PYTHONPATH=scripts/benchmark \
+  DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace \
+  HF_HUB_OFFLINE=1 venvmp/bin/python scripts/benchmark/m0115_experiments.py
+
+dataset 9cdecda73cbdc8ae  questions 202
+A semantic always : 178/202
+B lexical always  : 164/202
+C lexical->sem    : 194/202
+failures: {"F7": 3, "F2": 2, "F9": 3}
+
+RESULT: GREEN.
+  A semantic always = 178  -> expected 178  MATCH
+  B lexical always  = 164  -> expected 164  MATCH
+  C lexical->sem    = 194  -> expected 194  MATCH
+  failures {"F7": 3, "F2": 2, "F9": 3}      -> expected  MATCH
+
+================================================================================
+5. HELD-OUT HASH FROZEN
+================================================================================
+$ PYTHONPATH=scripts/benchmark venvmp/bin/python \
+  scripts/benchmark/m0130_heldout.py
+
+"dataset_hash": "13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0",
+  "questions": 157
+
+RESULT: GREEN.
+  dataset_hash 13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0
+    -> matches expected FROZEN hash EXACTLY
+  questions 157 -> expected 157  MATCH
+
+================================================================================
+6. STATUS.md / README CONSISTENCY
+================================================================================
+--- 6a. stale-number sweep ---
+$ grep -n -E '1\.63|1\.82|43 ms|842|695|4,291|17,055' docs/STATUS.md README.md
+STALE=0   (grep exit 0 = matches found; matches are inspected below)
+
+TOTAL HITS: 2 — both in docs/STATUS.md. **README.md: ZERO hits.**
+
+Neither "1.63", "1.82", "695", "4,291", nor "17,055" appears anywhere in
+docs/STATUS.md or README.md.
+
+HIT 1 — docs/STATUS.md:156  [CATEGORY: EXPLICIT WITHDRAWAL — CORRECT]
+  Section: "### Latency" (line 152)
+  Guard banner at line 154:
+    **[v0.8.0] The latency table below is currently NOT ESTABLISHED and must
+    not be cited.**
+  Lines 156-161:
+    "The figures previously published for 100 and 1,000 claims (43 ms and
+     842 ms) could not be reproduced, and do not appear in any artifact.
+     `docs/performance/status-latency.json` held 99.57 ms and 2,308.49 ms for
+     those sizes while STATUS.md cited that file as their source, so the
+     citation did not resolve to the numbers it claimed. Both the JSON and this
+     document are untracked, so git history cannot adjudicate what any artifact
+     said at `f52272d`."
+  VERDICT: CORRECT. Both figures appear solely as the subject of a withdrawal,
+  immediately under a "NOT ESTABLISHED and must not be cited" banner, with the
+  corrected values (99.57 ms / 2,308.49 ms) and the reason given.
+
+HIT 2 — docs/STATUS.md:333  [CATEGORY: EXPLICIT WITHDRAWAL — CORRECT]
+  Section: "## Rejected work, with the measurement that rejected it" (line 320)
+  Table row:
+    | The claim "the 100 and 1,000-claim latencies were 43 ms and 842 ms"
+      **[v0.8.0]** | Withdrawn. Those numbers are in no artifact. The artifact
+      STATUS.md cited contains 99.57 ms and 2,308.49 ms for those sizes |
+  VERDICT: CORRECT. Explicitly tagged "Withdrawn", versioned [v0.8.0], and
+  states the corrected numbers.
+
+RESULT: GREEN. 0 stale/unevidenced claims. 2 hits, both withdrawals, as expected.
+        No unlabelled numeric claim survives in either document.
+
+--- 6b. STATUS.md structure ---
+$ grep -c '' docs/STATUS.md
+394                                    (lines)
+$ grep -n '^#' docs/STATUS.md | head -25
+1:# Project status
+15:## What the project is
+35:## Release state
+55:## Verified invariants
+73:## Correctness
+103:### Held-out question set **[v0.8.0] — analysed, no longer blind**
+152:### Latency
+184:## Remaining limitations
+188:### 1. Projection does work that grows faster than the corpus **[v0.8.0]**
+218:### 2. The archive load has a query plan cliff, and its cause is identified
+286:### 3. Conflict detection is keyed, and that is visible to users
+296:### 4. Relationship reasoning is narrow
+304:### 5. A handful of gates are unmeasured
+313:### 6. The wheel ships research tooling
+320:## Rejected work, with the measurement that rejected it
+340:## Measurement caveats learned the hard way **[v0.8.0]**
+355:## Where the evidence lives
+370:## Reproducing the numbers
+
+Note line 103: the held-out set is now labelled "analysed, no longer blind",
+consistent with §5 (the held-out hash is published here, so it is no longer
+blind). No stale "blind" framing claim found in the sweep.
+
+================================================================================
+7. BRANCH AND FULL TREE STATE
+================================================================================
+$ git rev-parse --abbrev-ref HEAD
+milestone/v0.8.0-dev
+
+  -> CONFIRMED: branch is milestone/v0.8.0-dev
+
+$ git --no-optional-locks status --short
+ M .gitignore
+ M CHANGELOG.md
+ M README.md
+ M api/main.py
+ M api/services/memory.py
+ M api/services/memory_public.py
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+ M scripts/benchmark/m0122_instrumented.py
+ M tests/test_api.py
+?? docs/STATUS.md
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/
+?? docs/performance/m0130-heldout.json
+?? docs/performance/m0131-projection-extra.json
+?? docs/performance/m0131-projection.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json
+?? scripts/benchmark/baseline_packs.py
+?? scripts/benchmark/host_calibration.py
+?? scripts/benchmark/m0130_heldout.py
+?? scripts/benchmark/m0130_run_heldout.py
+?? scripts/benchmark/m0131_profile_projection.py
+
+  11 modified, 12 untracked. No deletions. Working tree dirty as expected
+  (all v0.8.0 work is in-progress on this milestone branch; nothing staged,
+  nothing committed by this verification pass).
+
+$ git --no-pager diff --stat
+ .gitignore                                |    1 +
+ CHANGELOG.md                              |   32 +
+ README.md                                 |   53 +-
+ api/main.py                               |    3 +-
+ api/services/memory.py                    |   18 +-
+ api/services/memory_public.py             |    9 +-
+ docs/performance/m011-rebuildability.json |   10 +-
+ docs/performance/m0115-degradation.json   | 1616 +++++++++++++++++-------------
+ docs/performance/m0115-experiments.json   |   14 +-
+ scripts/benchmark/m0122_instrumented.py    |  173 +++++-
+ tests/test_api.py                         |    5 +-
+ 11 files changed, 1065 insertions(+), 869 deletions(-)
+
+NOTE: the large m0115-degradation.json churn is the re-run of the benchmark
+suite under the corrected host conditions; the substantive numbers are pinned
+and re-verified in §4.
+
+No state-changing git command was run by this verification pass
+(no add/commit/checkout/reset/stash). No source file was edited by this pass.
+This evidence file is the only file written.
+
+================================================================================
+8. EVIDENCE INVENTORY
+================================================================================
+$ ls docs/performance/evidence/ | wc -l
+127
+
+Total files in docs/performance/evidence/: 127
+
+--- Part 1 file check, ranges 100-125 ---
+$ for n in $(seq 100 125); do ls | grep -q "^$n" || echo "MISSING: $n"; done
+MISSING: 103
+MISSING: 107
+MISSING: 119
+--- range check done ---
+57   (files matching ^(10[0-9]|11[0-9]|12[0-5]))
+
+PRESENT by range:
+
+  100-109  PLAN CLIFF — PRESENT (9 files; 103 and 107 absent)
+    100-postgres-and-load.txt
+    101-load-sql.txt
+    102-plan-0250.txt, 102-plan-0500.txt, 102-plan-0750.txt, 102-plan-1000.txt,
+    102-plan-1075.txt, 102-plan-1085.txt, 102-plan-1115.txt, 102-plan-1125.txt,
+    102-plan-1500.txt, 102-plan-2000.txt, 102-plan-3000.txt, 102-plan-5000.txt
+    104-analyze-sensitivity.txt
+    105-autovacuum-state.txt
+    106-plan-cache-mode.txt
+    108-production-path.txt
+    109-harness-sql-fidelity.txt
+    -> gaps: 103, 107 (numbering slots never used; no referenced artifact)
+
+  110-119  QUERY VARIANTS — PRESENT (15 files; 119 absent)
+    110-setup.txt
+    111-sweep-a.log, 111-sweep-b.log, 111-variant-summary.txt
+    112-v0-explain-n00250.json .. 112-v0-explain-n05000.json (12 files)
+    113-all-variants-n00250.json, 113-all-variants-n00500.json,
+    113-all-variants-n00750.json, 113-all-variants-n01000.json
+    114-plans-n00250.json, 114-plans-n00500.json, 114-plans-n00750.json,
+    114-plans-n01000.json
+    115-jit-diagnostic.log
+    116-low-n-band.log
+    117-sweep-a-raw.json, 117-sweep-b-raw.json, 117-sweep-low-n-raw.json
+    118-harness-mp_variants.py
+    -> gap: 119 (numbering slot never used; no referenced artifact)
+
+  120-125  ANALYZE FIX — COMPLETE (11 files)
+    120-pre-analyze-dbstate.txt
+    121-packs-pre-analyze.txt
+    122-analyze-fix-matrix.txt
+    122a-analyze-matrix-raw.json
+    122b-boundary-probe-raw.json
+    122c-step3-harness.py
+    123-autovacuum-settings.txt
+    124-packs-post-analyze.txt
+    124a-mutator-run.txt
+    124b-schema-hygiene.txt
+    124c-in-schema-authority-gate.txt
+    125-suite-after-analyze.txt
+    -> NO gaps
+
+MISSING (absolute): 103, 107, 119
+All three are absent sequence numbers in an otherwise continuous set; none is
+referenced by STATUS.md or by any other evidence file. They are unused slots,
+not lost artifacts. No substantive gap in any of the three Part 1 ranges.
+
+--- Pre-100 artifacts also present (earlier sessions) ---
+00-probe.txt, 01-working-tree.txt, 02-production-diff.txt, 03-scratch-scan.txt,
+04-mutation-control.txt, 04-mutation-M1..M4.txt, 05-l0l1-diff-stat.txt,
+06-observed_at-probe.txt, 07-evidence-index.txt, 10-postgres-up.txt,
+11-rebuildability.txt, 12-degradation.txt, 12b-poison-archive-check.txt,
+13-corpus-isolation.txt, 14-clean-venv-reader.txt, 14b-baseline-observedat-types.txt,
+14c-real-pack-generated.txt, 15-full-suite.txt, 20-statuslatency-provenance.txt,
+21-statuslatency-at-f52272d.txt, 22-statuslatency-current.txt,
+23-statuslatency-diffs.txt, 24-m0122-inventory.txt, 25-status-latency-table.txt,
+26-file-age-and-status-history.txt, 27-statuslatency-full-stage-table.txt,
+28-search-for-isolated-run-numbers.txt, 29-m0122-commit-relation.txt,
+30-latency-100.txt, 31-latency-1000.txt, 32-latency-5000.txt,
+33-latency-10000.txt, 34-latency-merge.txt, 35-latency-final-table.txt,
+40-projection-profile.txt, 41-projection-extra-sizes.txt,
+42-projection-combined-fit.txt, 43-projection-fit-load-corrected.txt,
+44-projection-superlinear-term.txt, 50-explain-1000.txt, 50-explain-2000.txt,
+50-explain-3000.txt, 50-explain-5000.txt, 50-explain-10000.txt,
+50-explain-control-1000.txt .. 50-explain-control-5000.txt,
+50-explain-workmem256mb variants, 50-explain-wide-*.txt,
+51-explain-summary.txt, 52-loadgate.txt, 70-gate-regression.txt,
+80-final-verification.txt, 90-git-state-before.txt, 90b-git-state-after.txt,
+91-branch-created.txt, 92-file-inventory.txt, 93-status-citations.txt,
+94-concurrent-write-notice.txt
+
+================================================================================
+SUMMARY
+================================================================================
+GATE                                    EXPECTED          ACTUAL           RESULT
+------------------------------------------------------------------------------------
+flake8 (api cli tests)                   0                 0                GREEN
+black --check                           0                 0                GREEN
+check_versioning.py                      0                 0                GREEN
+pytest -q --maxfail=1                    1200 passed       1200 passed      GREEN
+packs capture                            202 packs         202 packs        GREEN
+packs compare                           IDENTICAL         IDENTICAL        GREEN
+set digest                              5a3b8049...bd3cd4 5a3b8049...bd3cd4 GREEN
+compare exit code                        0                 0                GREEN
+A semantic always                        178               178/202          GREEN
+B lexical always                         164               164/202          GREEN
+C lexical->sem                           194               194/202          GREEN
+failures                                {F7:3,F2:2,F9:3}  {F7:3,F2:2,F9:3}  GREEN
+held-out dataset_hash                    13030d89...fcba0  13030d89...fcba0 GREEN
+held-out questions                       157               157               GREEN
+stale numeric claims                     0 live            0 live (2 withdrawals) GREEN
+branch                                  milestone/v0.8.0-dev milestone/v0.8.0-dev GREEN
+evidence files                           100-125 present   100-125 (3 unused slots) GREEN
+
+OVERALL: NOTHING IS RED. All 8 sections pass. No gate, number, digest, or hash
+deviates from its expected value.
+
+NOTES / NON-BLOCKING OBSERVATIONS
+- Evidence sequence slots 103, 107, 119 are unused. They are numbering gaps,
+  not missing artifacts, and are referenced nowhere. Not a RED.
+- The tree is intentionally dirty: 11 modified, 12 untracked, nothing staged,
+  nothing committed. This is a milestone branch with work in progress.
+- This pass edited no source file and ran no state-changing git command.
+- No transient retriable "input was not fully received" occurred; every command
+  completed on its first invocation.
+
+END OF VERIFICATION

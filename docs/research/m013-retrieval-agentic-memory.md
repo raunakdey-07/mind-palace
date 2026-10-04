@@ -462,6 +462,79 @@ is a larger change than a tokeniser edit and is the next thing to characterise.
 
 ---
 
+## EXECUTED: the representation-gap study
+
+`evidence/240-representation-gap.txt`, `m013_representation_gap.py`.
+
+For every blind failure, the question asked is narrow: **is the information the
+question needs already in the authoritative corpus, just not on the claim that
+answers it?** Four deterministic representations, all built from data already in
+L0/L1, no model:
+
+| representation | v1 reachable | v2 reachable |
+|---|---:|---:|
+| claim only (shipped) | 0/19 | 2/10 |
+| + evidence | 8/19 | 3/10 |
+| + document context | 8/19 | 4/10 |
+| + evidence + context | **8/19** | **4/10** |
+
+**Deterministic re-projection of data already in the archive closes 10 of 29 blind
+failures, with no LLM.** The information was authoritative all along; it was exposed
+on the evidence row and the document rather than on the claim sentence.
+
+Note for accuracy: **evidence is L1, not L2.** `memory_evidence` rows are written
+inside `record_version` alongside the claim, and the rebuildability invariant covers
+them. So a representation that reads evidence is reading authoritative state, which
+is a stronger position than reading derived state.
+
+### The residual splits into two mechanisms needing different answers
+
+**Mechanism 1 — the identifier is authored, but never tokenised.** The author *did*
+encode it, in the key and the path:
+
+```
+ho-chg-inc-2024-07  'What went wrong in 2024-07 that affected notifier?'
+   key  incident.2024-07.notifier.root   key overlap ['notifier']
+   path ops/incidents/2024-07-notifier-duplicate-sms.md
+ho-ev-inc-2024-03  'What rule did the 2024-03 incident put in place?'
+   path ops/incidents/2024-03-orders-connection-pool-exhaustion.md
+```
+
+This is the tokenizer defect, confined to questions where the identifier is the
+*only* bridge. 9 of 19 v1, 2 of 10 v2.
+
+**Mechanism 2 — the vocabulary exists nowhere in the authoritative record.**
+
+```
+hv2-temporal_state-04 'Which component handles background messaging in production?'
+   claim 'The job queue is RabbitMQ.'
+   query terms [background, component, handle, messag, production] — none appear
+hv2-why_decision-02 'Why was the old caching layer replaced rather than kept?'
+   claim 'Redis was chosen for its native TTL and pub/sub support.'
+```
+
+No deterministic re-projection can close these, because the words are not in L0/L1.
+4 of 5 v2 `why_decision` failures are here. 2 of 19 v1, 6 of 10 v2.
+
+### Counts
+
+| set | closed deterministically | identifier-only | vocabulary absent |
+|---|---:|---:|---:|
+| v1 (19) | 8 | 9 | 2 |
+| v2 (10) | 2 | 2 | 6 |
+
+### What this rules out
+
+- **Not an LLM-extraction problem for most of the gap.** Deterministic re-projection
+  closes 10 of 29 blind failures by itself.
+- **Not purely a retrieval problem.** Mechanism 2 is unreachable by *any* ranking,
+  because no arm can propose a candidate whose text shares no term with the query.
+- An LLM would only address mechanism 2, and would do it by generating vocabulary
+  that is **not in the corpus**. That is a representation-authoring decision, not a
+  retrieval one, and it must be chosen explicitly rather than drifted into.
+
+---
+
 ## Known limitations
 
 - **Held-out v1 is no longer blind.** Its 26 failures drove diagnosis. Any number
@@ -507,6 +580,7 @@ is a larger change than a tokeniser edit and is the next thing to characterise.
 | Numeric tokeniser variant `[a-z0-9][a-z0-9]+` **[M013]** | held-out +3, dev 0 | Splits "0.6" into "0" and "6", losing the version identity |
 | "The 17 zero-bridge failures are a vocabulary gap" **[M013]** | **Mostly wrong.** They are a tokeniser defect: `[a-z][a-z0-9]+` discards every version and incident identifier | The adopted variant recovers 10 of 10 with zero regressions |
 | The tokenizer fix generalises **[M013]** | **No. Rejected.** +10 rescued on held-out v1, **0 rescued / 0 regressed on frozen held-out v2**. Lexical recall identical in both arms on both datasets | The v1 benefit measured how v1 was *worded*, not the retrieval system. In v2 identifier questions carry content words that already reach the claim, so the numeric token adds nothing |
+| An LLM-derived L2 representation is needed for the representation gap **[M013]** | **Not justified yet.** Deterministic evidence + document context closes 8/19 v1 and 2/10 v2 blind failures with no model | The remaining 8 failures are vocabulary absent from L0/L1 entirely. An LLM would invent it, which is an authoring decision, not a retrieval one |
 | PostgreSQL full-text search as the lexical arm **[M013]** | **Non-functional on natural-language questions.** R@5 0.371 dev / 0.000 held-out against the shipped Python lexical arm's 0.897 / 0.793 | `plainto_tsquery` ANDs every token, so one word present in the question and absent from the claim takes 6 matches to 0. OR semantics (`websearch_to_tsquery`) also returned 0 |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x

@@ -1,0 +1,82 @@
+=== M013 representation-gap study ===
+Commit: 5aa27527ca99c337b807c3b5b566583e89a82ba2
+COMMAND:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_representation_gap.py
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+
+No LLM. Every input is already present in L0/L1. No production code changed.
+Lexical gate at the shipped 0.30 floor, scored on the authored key.
+
+=== V1 (19 blind failures) ===
+  claim_only                         reachable  0/19  newly  0  still 19
+  claim_plus_doc_context             reachable  8/19  newly  8  still 11
+      newly: ['ho-chg-why-postgres', 'ho-mul-tech-postgres', 'ho-mul-tech-queue', 'ho-mul-tech-redis', 'ho-mul-tech-search', 'ho-mul-tech-storage', 'ho-mul-tech-warehouse', 'ho-rel-impact-orders']
+  claim_plus_evidence                reachable  8/19  newly  8  still 11
+      newly: ['ho-chg-why-postgres', 'ho-mul-tech-postgres', 'ho-mul-tech-queue', 'ho-mul-tech-redis', 'ho-mul-tech-search', 'ho-mul-tech-storage', 'ho-mul-tech-warehouse', 'ho-rel-impact-orders']
+  claim_plus_evidence_and_context    reachable  8/19  newly  8  still 11
+      newly: ['ho-chg-why-postgres', 'ho-mul-tech-postgres', 'ho-mul-tech-queue', 'ho-mul-tech-redis', 'ho-mul-tech-search', 'ho-mul-tech-storage', 'ho-mul-tech-warehouse', 'ho-rel-impact-orders']
+
+=== V2 (10 blind failures) ===
+  claim_only                         reachable  2/10  newly  0  still  8
+  claim_plus_doc_context             reachable  4/10  newly  2  still  6
+      newly: ['hv2-identifier-01', 'hv2-supersession-02']
+  claim_plus_evidence                reachable  3/10  newly  1  still  7
+      newly: ['hv2-supersession-02']
+  claim_plus_evidence_and_context    reachable  4/10  newly  2  still  6
+      newly: ['hv2-identifier-01', 'hv2-supersession-02']
+
+=== WHERE THE MISSING INFORMATION ALREADY LIVES ===
+
+Deterministic evidence + document context recovers a large share of the gap:
+8 of 19 v1 failures and 2 of 10 v2 failures, with NO model. The information was
+already authoritative; it was exposed on the evidence row and the document rather
+than on the claim sentence.
+
+The residual splits cleanly into TWO mechanisms, and they need different answers.
+
+--- Mechanism 1: the identifier is in the KEY and PATH but never tokenised ---
+
+  ho-chg-inc-2024-07  'What went wrong in 2024-07 that affected notifier?'
+     gold key  incident.2024-07.notifier.root   key overlap: ['notifier']
+     path      ops/incidents/2024-07-notifier-duplicate-sms.md
+  ho-ev-inc-2024-03  'What rule did the 2024-03 incident put in place?'
+     gold key  constraint.orders.pool            key overlap: []
+     path      ops/incidents/2024-03-orders-connection-pool-exhaustion.md
+
+The author DID encode the identifier -- in the key and the path. The shipped
+tokeniser discards it. This is the defect already found, and it is confined to
+questions whose identifier is the only bridge.
+
+--- Mechanism 2: the vocabulary exists NOWHERE in the authoritative record ---
+
+  hv2-temporal_state-04 'Which component handles background messaging in production?'
+     gold claim 'The job queue is RabbitMQ.'  Q terms [background, component,
+     handle, messag, production]; claim and key contain none of them.
+  hv2-why_decision-02  'Why was the old caching layer replaced rather than kept?'
+     gold claim 'Redis was chosen for its native TTL and pub/sub support.'
+     Q terms [cach, kept, layer, replac] overlap the claim on 'cach' only.
+
+For these the authored text simply does not use the words a user would. No
+deterministic re-projection of existing data can close them, because the words
+are not anywhere in L0/L1. This is a genuine authoring-vocabulary gap.
+
+=== COUNTS ===
+
+  v1 (19 blind failures)
+    closed by deterministic evidence+context :  8
+    residual, identifier-only (key/path)    :  9
+    residual, vocabulary absent entirely    :  2
+  v2 (10 blind failures)
+    closed by deterministic evidence+context :  2
+    residual, identifier-only (key/path)    :  2
+    residual, vocabulary absent entirely    :  6
+
+=== WHAT THIS RULES OUT ===
+
+- NOT an LLM-extraction problem for most of the gap. Deterministic re-projection
+  of data already in the archive closes 10 of 29 blind failures on its own.
+- NOT purely a retrieval problem. Mechanism 2 is unreachable by ANY ranking
+  because no arm can propose a candidate whose text shares no term with the query.
+- An LLM would only address mechanism 2, and would do so by inventing vocabulary
+  that is not in the corpus. That is a representation-authoring decision, not a
+  retrieval one, and it is out of scope until it is chosen explicitly.

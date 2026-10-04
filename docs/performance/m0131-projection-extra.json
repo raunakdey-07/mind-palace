@@ -1,0 +1,72 @@
+{
+  "environment": {
+    "commit": "f52272db635cbd17171d3d3b02eaeb855efefe69",
+    "cores": 8,
+    "loadavg_1m": 1.73,
+    "note": "project() is timed on the real projection path with an empty query",
+    "repeats": 3
+  },
+  "fits": {
+    "model_layer_ms": {
+      "exponent": 1.379,
+      "points": [
+        [
+          2002,
+          107.5
+        ],
+        [
+          20002,
+          2571.2
+        ]
+      ]
+    },
+    "project_ms": {
+      "exponent": 1.601,
+      "points": [
+        [
+          2002,
+          180.2
+        ],
+        [
+          20002,
+          7185.7
+        ]
+      ]
+    },
+    "query_result_ms": {
+      "exponent": 1.803,
+      "points": [
+        [
+          2002,
+          72.7
+        ],
+        [
+          20002,
+          4614.5
+        ]
+      ]
+    }
+  },
+  "points": [
+    {
+      "active_claims": 4,
+      "claims": 2002,
+      "conflicts": 1959,
+      "model_layer_ms": 107.47898666886613,
+      "pack_claims": 2668,
+      "project_ms": 180.16811800043797,
+      "query_result_ms": 72.68913133157184,
+      "versions": 2002
+    },
+    {
+      "active_claims": 4,
+      "claims": 20002,
+      "conflicts": 225726,
+      "model_layer_ms": 2571.1907943332335,
+      "pack_claims": 26668,
+      "project_ms": 7185.682292998536,
+      "query_result_ms": 4614.491498665302,
+      "versions": 20002
+    }
+  ]
+}

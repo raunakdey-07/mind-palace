@@ -1,0 +1,19 @@
+=== DIRECT RUN (parent session) — authoritative pack identity across the ANALYZE commit ===
+Commit under test: cda4d5874091615a658880b482e0287971b1958a  (cda4d58 = ANALYZE fix)
+Baseline captured at: f52272d (v0.7.0)
+
+$ PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/baseline_packs.py capture --out /tmp/verify-packs.json
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2413.32it/s]
+captured 202 packs
+dataset hash   : 9cdecda73cbdc8ae
+set digest     : 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+commit         : cda4d5874091
+written        : /tmp/verify-packs.json
+
+$ venvmp/bin/python scripts/benchmark/baseline_packs.py compare --baseline docs/performance/baseline-packs.json --current /tmp/verify-packs.json
+baseline commit : f52272db635c
+current  commit : cda4d5874091
+questions       : 202
+set digest      : 5a3b80490af52c85
+authoritative output: IDENTICAL to baseline
+COMPARE_EXIT=0

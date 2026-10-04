@@ -1,0 +1,100 @@
+{
+  "environment": {
+    "commit": "f52272db635cbd17171d3d3b02eaeb855efefe69",
+    "cores": 8,
+    "loadavg_1m": 1.7,
+    "note": "project() is timed on the real projection path with an empty query",
+    "repeats": 3
+  },
+  "fits": {
+    "model_layer_ms": {
+      "exponent": 0.925,
+      "points": [
+        [
+          5002,
+          832.0
+        ],
+        [
+          10000,
+          1941.4
+        ],
+        [
+          25000,
+          3755.6
+        ]
+      ]
+    },
+    "project_ms": {
+      "exponent": 1.11,
+      "points": [
+        [
+          5002,
+          1747.3
+        ],
+        [
+          10000,
+          5150.6
+        ],
+        [
+          25000,
+          10714.2
+        ]
+      ]
+    },
+    "query_result_ms": {
+      "exponent": 1.239,
+      "points": [
+        [
+          5002,
+          915.3
+        ],
+        [
+          10000,
+          3209.1
+        ],
+        [
+          25000,
+          6958.6
+        ]
+      ]
+    }
+  },
+  "points": [
+    {
+      "active_claims": 4,
+      "claims": 5002,
+      "conflicts": 13481,
+      "model_layer_ms": 831.9938569984515,
+      "pack_claims": 6668,
+      "profile_top25": "         1535207 function calls (1453094 primitive calls) in 3.064 seconds\n\n   Ordered by: cumulative time\n   List reduced from 51 to 25 due to restriction <25>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.445    0.445    3.064    3.064 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)\n        1    0.152    0.152    1.779    1.779 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:486(_query_result)\n    70592    0.136    0.000    1.350    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)\n    21815    0.142    0.000    0.753    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:513(matches)\n    70592    0.256    0.000    0.708    0.000 /usr/lib64/python3.14/json/__init__.py:185(dumps)\n    13481    0.048    0.000    0.515    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:70(_hash)\n152705/70592    0.323    0.000    0.507    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:52(_json_value)\n    15009    0.031    0.000    0.479    0.000 {built-in method builtins.sorted}\n    10004    0.013    0.000    0.479    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:115(_semantic)\n    18338    0.024    0.000    0.447    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:116(<genexpr>)\n    70592    0.133    0.000    0.409    0.000 /usr/lib64/python3.14/json/encoder.py:185(encode)\n    21816    0.031    0.000    0.371    0.000 /usr/lib64/python3.14/re/__init__.py:270(findall)\n    21816    0.293    0.000    0.293    0.000 {method 'findall' of 're.Pattern' objects}\n    33490    0.032    0.000    0.238    0.000 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/pydantic/main.py:253(__init__)\n    33490    0.206    0.000    0.206    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}\n   496601    0.198    0.000    0.198    0.000 {built-in method builtins.isinstance}\n    21815    0.186    0.000    0.186    0.000 /usr/lib64/python3.14/json/encoder.py:207(iterencode)\n        1    0.047    0.047    0.089    0.089 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:99(_attach)\n    21816    0.034    0.000    0.047    0.000 /usr/lib64/python3.14/re/__init__.py:330(_compile)\n    50004    0.031    0.000    0.043    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:61(<genexpr>)\n    70592    0.043    0.000    0.043    0.000 /usr/lib64/python3.14/json/encoder.py:105(__init__)\n    48777    0.042    0.000    0.042    0.000 {built-in method _json.encode_basestring}\n        2    0.019    0.009    0.040    0.020 {method 'update' of 'set' objects}\n    10004    0.019    0.000    0.039    0.000 {method 'extend' of 'list' objects}\n    13481    0.021    0.000    0.021    0.000 {method 'hexdigest' of '_hashlib.HASH' objects}\n\n\n",
+      "profile_tottime15": "         1535207 function calls (1453094 primitive calls) in 3.064 seconds\n\n   Ordered by: internal time\n   List reduced from 51 to 15 due to restriction <15>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.445    0.445    3.064    3.064 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)\n152705/70592    0.323    0.000    0.507    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:52(_json_value)\n    21816    0.293    0.000    0.293    0.000 {method 'findall' of 're.Pattern' objects}\n    70592    0.256    0.000    0.708    0.000 /usr/lib64/python3.14/json/__init__.py:185(dumps)\n    33490    0.206    0.000    0.206    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}\n   496601    0.198    0.000    0.198    0.000 {built-in method builtins.isinstance}\n    21815    0.186    0.000    0.186    0.000 /usr/lib64/python3.14/json/encoder.py:207(iterencode)\n        1    0.152    0.152    1.779    1.779 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:486(_query_result)\n    21815    0.142    0.000    0.753    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:513(matches)\n    70592    0.136    0.000    1.350    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)\n    70592    0.133    0.000    0.409    0.000 /usr/lib64/python3.14/json/encoder.py:185(encode)\n    13481    0.048    0.000    0.515    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:70(_hash)\n        1    0.047    0.047    0.089    0.089 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:99(_attach)\n    70592    0.043    0.000    0.043    0.000 /usr/lib64/python3.14/json/encoder.py:105(__init__)\n    48777    0.042    0.000    0.042    0.000 {built-in method _json.encode_basestring}\n\n\n",
+      "project_ms": 1747.32688133372,
+      "query_result_ms": 915.3330243352684,
+      "versions": 5002
+    },
+    {
+      "active_claims": 4,
+      "claims": 10000,
+      "conflicts": 55573,
+      "model_layer_ms": 1941.443913997015,
+      "pack_claims": 13332,
+      "profile_top25": "         5015549 function calls (4765510 primitive calls) in 9.275 seconds\n\n   Ordered by: cumulative time\n   List reduced from 51 to 25 due to restriction <25>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    1.052    1.052    9.275    9.275 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)\n        1    0.456    0.456    6.428    6.428 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:486(_query_result)\n   255620    0.462    0.000    4.430    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)\n   255620    0.868    0.000    2.502    0.000 /usr/lib64/python3.14/json/__init__.py:185(dumps)\n    72237    0.441    0.000    2.457    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:513(matches)\n    55573    0.185    0.000    2.194    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:70(_hash)\n   255620    0.443    0.000    1.492    0.000 /usr/lib64/python3.14/json/encoder.py:185(encode)\n505659/255620    0.944    0.000    1.467    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:52(_json_value)\n    72238    0.101    0.000    1.263    0.000 /usr/lib64/python3.14/re/__init__.py:270(findall)\n    72238    1.015    0.000    1.015    0.000 {method 'findall' of 're.Pattern' objects}\n    30003    0.062    0.000    0.899    0.000 {built-in method builtins.sorted}\n    20000    0.025    0.000    0.894    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:115(_semantic)\n    36664    0.044    0.000    0.834    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:116(<genexpr>)\n    72237    0.737    0.000    0.737    0.000 /usr/lib64/python3.14/json/encoder.py:207(iterencode)\n  1622545    0.619    0.000    0.619    0.000 {built-in method builtins.isinstance}\n    95574    0.085    0.000    0.585    0.000 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/pydantic/main.py:253(__init__)\n    95574    0.500    0.000    0.500    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}\n        1    0.100    0.100    0.196    0.196 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:99(_attach)\n   183383    0.150    0.000    0.150    0.000 {built-in method _json.encode_basestring}\n        2    0.069    0.034    0.149    0.074 {method 'update' of 'set' objects}\n    72238    0.106    0.000    0.147    0.000 /usr/lib64/python3.14/re/__init__.py:330(_compile)\n   255620    0.141    0.000    0.141    0.000 /usr/lib64/python3.14/json/encoder.py:105(__init__)\n    20000    0.050    0.000    0.087    0.000 {method 'extend' of 'list' objects}\n    55573    0.082    0.000    0.082    0.000 {method 'hexdigest' of '_hashlib.HASH' objects}\n    99984    0.058    0.000    0.081    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:61(<genexpr>)\n\n\n",
+      "profile_tottime15": "         5015549 function calls (4765510 primitive calls) in 9.275 seconds\n\n   Ordered by: internal time\n   List reduced from 51 to 15 due to restriction <15>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    1.052    1.052    9.275    9.275 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)\n    72238    1.015    0.000    1.015    0.000 {method 'findall' of 're.Pattern' objects}\n505659/255620    0.944    0.000    1.467    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:52(_json_value)\n   255620    0.868    0.000    2.502    0.000 /usr/lib64/python3.14/json/__init__.py:185(dumps)\n    72237    0.737    0.000    0.737    0.000 /usr/lib64/python3.14/json/encoder.py:207(iterencode)\n  1622545    0.619    0.000    0.619    0.000 {built-in method builtins.isinstance}\n    95574    0.500    0.000    0.500    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}\n   255620    0.462    0.000    4.430    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)\n        1    0.456    0.456    6.428    6.428 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:486(_query_result)\n   255620    0.443    0.000    1.492    0.000 /usr/lib64/python3.14/json/encoder.py:185(encode)\n    72237    0.441    0.000    2.457    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:513(matches)\n    55573    0.185    0.000    2.194    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:70(_hash)\n   183383    0.150    0.000    0.150    0.000 {built-in method _json.encode_basestring}\n   255620    0.141    0.000    0.141    0.000 /usr/lib64/python3.14/json/encoder.py:105(__init__)\n    72238    0.106    0.000    0.147    0.000 /usr/lib64/python3.14/re/__init__.py:330(_compile)\n\n\n",
+      "project_ms": 5150.556010664634,
+      "query_result_ms": 3209.1120966676194,
+      "versions": 10000
+    },
+    {
+      "active_claims": 4,
+      "claims": 25000,
+      "conflicts": 353685,
+      "model_layer_ms": 3755.596705998566,
+      "pack_claims": 33332,
+      "profile_top25": "         27142165 function calls (25872790 primitive calls) in 18.513 seconds\n\n   Ordered by: cumulative time\n   List reduced from 51 to 25 due to restriction <25>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    2.006    2.006   18.513   18.513 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)\n        1    0.998    0.998   14.252   14.252 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:486(_query_result)\n  1498068    1.003    0.000    9.115    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)\n  1498068    1.893    0.000    5.339    0.000 /usr/lib64/python3.14/json/__init__.py:185(dumps)\n   353685    0.440    0.000    5.182    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:70(_hash)\n   395349    0.878    0.000    5.017    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:513(matches)\n  1498068    0.957    0.000    3.136    0.000 /usr/lib64/python3.14/json/encoder.py:185(encode)\n2767443/1498068    1.805    0.000    2.773    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:52(_json_value)\n   395350    0.207    0.000    2.602    0.000 /usr/lib64/python3.14/re/__init__.py:270(findall)\n   395350    2.094    0.000    2.094    0.000 {method 'findall' of 're.Pattern' objects}\n   395349    1.506    0.000    1.506    0.000 /usr/lib64/python3.14/json/encoder.py:207(iterencode)\n  8781009    1.250    0.000    1.250    0.000 {built-in method builtins.isinstance}\n   453686    0.139    0.000    0.863    0.000 /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/pydantic/main.py:253(__init__)\n    75003    0.077    0.000    0.852    0.000 {built-in method builtins.sorted}\n    50000    0.023    0.000    0.824    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:115(_semantic)\n    91664    0.045    0.000    0.770    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:116(<genexpr>)\n   453686    0.725    0.000    0.725    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}\n        2    0.160    0.080    0.346    0.173 {method 'update' of 'set' objects}\n  1102719    0.332    0.000    0.332    0.000 {built-in method _json.encode_basestring}\n  1498068    0.310    0.000    0.310    0.000 /usr/lib64/python3.14/json/encoder.py:105(__init__)\n   395350    0.218    0.000    0.301    0.000 /usr/lib64/python3.14/re/__init__.py:330(_compile)\n        1    0.168    0.168    0.291    0.291 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:99(_attach)\n   353685    0.194    0.000    0.194    0.000 {method 'hexdigest' of '_hashlib.HASH' objects}\n   353685    0.177    0.000    0.177    0.000 {built-in method _hashlib.openssl_sha256}\n    50000    0.069    0.000    0.123    0.000 {method 'extend' of 'list' objects}\n\n\n",
+      "profile_tottime15": "         27142165 function calls (25872790 primitive calls) in 18.513 seconds\n\n   Ordered by: internal time\n   List reduced from 51 to 15 due to restriction <15>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n   395350    2.094    0.000    2.094    0.000 {method 'findall' of 're.Pattern' objects}\n        1    2.006    2.006   18.513   18.513 /mnt/Warehouse/projects/Mind Palace/api/services/memory_public.py:130(project)\n  1498068    1.893    0.000    5.339    0.000 /usr/lib64/python3.14/json/__init__.py:185(dumps)\n2767443/1498068    1.805    0.000    2.773    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:52(_json_value)\n   395349    1.506    0.000    1.506    0.000 /usr/lib64/python3.14/json/encoder.py:207(iterencode)\n  8781009    1.250    0.000    1.250    0.000 {built-in method builtins.isinstance}\n  1498068    1.003    0.000    9.115    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:66(_canonical)\n        1    0.998    0.998   14.252   14.252 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:486(_query_result)\n  1498068    0.957    0.000    3.136    0.000 /usr/lib64/python3.14/json/encoder.py:185(encode)\n   395349    0.878    0.000    5.017    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:513(matches)\n   453686    0.725    0.000    0.725    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}\n   353685    0.440    0.000    5.182    0.000 /mnt/Warehouse/projects/Mind Palace/api/services/memory.py:70(_hash)\n  1102719    0.332    0.000    0.332    0.000 {built-in method _json.encode_basestring}\n  1498068    0.310    0.000    0.310    0.000 /usr/lib64/python3.14/json/encoder.py:105(__init__)\n   395350    0.218    0.000    0.301    0.000 /usr/lib64/python3.14/re/__init__.py:330(_compile)\n\n\n",
+      "project_ms": 10714.241533998575,
+      "query_result_ms": 6958.644828000009,
+      "versions": 25000
+    }
+  ]
+}

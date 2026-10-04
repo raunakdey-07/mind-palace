@@ -580,6 +580,63 @@ recalibrate abstention deliberately and re-prove it on the abstention class, whi
 is a semantic decision, not a performance one. Option (a) is the obvious next
 attempt and was not tried here.
 
+### EXECUTED: evidence-aware embedding is DISPROVEN (score-only diagnostic)
+
+`evidence/260-semantic-channel-diagnostic.txt`.
+
+Before implementing anything, the semantic channel was measured in isolation:
+`S_old = cos(query, claim+key+path)` against
+`S_new = cos(query, claim+key+path+evidence)`, 88 candidates, nothing selected on
+the new score.
+
+| dataset | gold newly clears floor | mean margin change | gold up / down |
+|---|---:|---:|---:|
+| dev | 0 | **−0.0031** | 81 / **94** |
+| v1 | 1 | **−0.0036** | 49 / **91** |
+| v2 | 0 | **−0.0020** | 10 / **18** |
+
+**Evidence-aware embedding makes the semantic channel slightly worse.** Gold
+scores fall more often than they rise on every dataset, and the gold-vs-nearest-
+negative margin moves negative on all three.
+
+The mechanism is dilution. Appending evidence lengthens every candidate, and a
+sentence embedding compresses longer inputs toward the mean, so all similarities
+converge and separation is lost.
+
+### The structural finding, which matters more
+
+The brief's premise — that the lexical gate is a separate acceptance stage that can
+be held fixed — **is not what the code does**:
+
+```
+memory_relevance.py:274-282   score():  lexical -> token overlap
+                                  else    -> cosine(topic, claim)
+memory_relevance.py:301-303   gate E:
+    accepted = value >= 0.30 and (overlap or value >= 0.65 or isclose(value, 0.30))
+```
+
+In production (`lexical=False`) `value` **is** the semantic cosine, and it **is**
+the acceptance threshold. `overlap` is lexical overlap computed from the *same*
+`representations` list. The representation is the input to both the cosine that
+decides acceptance and the lexical term that also decides it.
+
+**There is no way to enrich the embedding while holding the acceptance boundary
+fixed, because the acceptance boundary is the embedding.** This is why the earlier
+contextual-L2 change moved 63 packs, and why separating two functions cannot work:
+they were never separate.
+
+That also refines the earlier diagnosis: the 63-pack regression was not only
+`overlap` widening — the cosine floor itself moved.
+
+### Decision: REJECT
+
+Milestone case B — semantic scores do not improve and no true candidates become
+reachable. Production retrieval is untouched.
+
+The offline study's 10/29 was measured on **lexical token overlap**, where extra
+terms genuinely add signal. It does not transfer to a bi-encoder, where extra text
+dilutes. Those two channels must not be conflated again.
+
 ---
 
 ## Known limitations
@@ -629,6 +686,7 @@ attempt and was not tried here.
 | The tokenizer fix generalises **[M013]** | **No. Rejected.** +10 rescued on held-out v1, **0 rescued / 0 regressed on frozen held-out v2**. Lexical recall identical in both arms on both datasets | The v1 benefit measured how v1 was *worded*, not the retrieval system. In v2 identifier questions carry content words that already reach the claim, so the numeric token adds nothing |
 | An LLM-derived L2 representation is needed for the representation gap **[M013]** | **Not justified yet.** Deterministic evidence + document context closes 8/19 v1 and 2/10 v2 blind failures with no model | The remaining 8 failures are vocabulary absent from L0/L1 entirely. An LLM would invent it, which is an authoring decision, not a retrieval one |
 | Deterministic contextual L2 representation (claim + key + path + evidence) **[M013]** | **Implemented and REJECTED.** 63 of 202 authoritative packs changed; an abstention question started answering | The dev score *rose* 194→197, so an aggregate criterion would have shipped a semantic regression as a win. Evidence in the representation widens what clears the relevance floor, which was calibrated against the narrower text |
+| Evidence-aware embedding with an evidence-free lexical gate **[M013]** | **REJECTED on a score-only diagnostic; never implemented.** Gold scores fell more often than they rose on all three sets; margin change −0.0031 dev, −0.0036 v1, −0.0020 v2 | Also structurally impossible as specified: in production `value` IS the semantic cosine AND the acceptance threshold, so the acceptance boundary cannot be held fixed while the embedding changes. Appending evidence dilutes a sentence embedding rather than sharpening it |
 | PostgreSQL full-text search as the lexical arm **[M013]** | **Non-functional on natural-language questions.** R@5 0.371 dev / 0.000 held-out against the shipped Python lexical arm's 0.897 / 0.793 | `plainto_tsquery` ANDs every token, so one word present in the question and absent from the claim takes 6 matches to 0. OR semantics (`websearch_to_tsquery`) also returned 0 |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x

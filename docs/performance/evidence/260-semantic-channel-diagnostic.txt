@@ -1,0 +1,82 @@
+=== M013 evidence-aware embedding — SCORE-ONLY DIAGNOSTIC, DISPROVEN ===
+Commit: 55df9fe20fa4f5a3ffb76bebffe2299d9c716bac
+COMMAND:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_semantic_channel_diagnostic.py \
+      --datasets dev,v1,v2 --out /tmp/m013-semantic-diag.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+
+Research only. Nothing was selected on the new score. No production code changed.
+
+--- WHAT WAS COMPARED ---
+
+  S_old = cos(query, claim + key + path)                 # production
+  S_new = cos(query, claim + key + path + own evidence) # candidate
+
+88 candidates, same corpus, same model, same query.
+
+--- RESULT ---
+
+  dataset  gold newly    gold stops    mean margin   negatives >= floor
+           clears floor  clearing      change        (net)
+  dev            0             0        -0.0031           -66
+  v1             1             1        -0.0036           -70
+  v2             0             0        -0.0020           -11
+
+  dataset  gold score UP   gold score DOWN   net
+  dev              81               94         -13
+  v1               49               91         -42
+  v2               10               18          -8
+
+--- WHY IT FAILS ---
+
+Evidence-aware embedding makes the semantic channel slightly WORSE, not better.
+Gold scores fall more often than they rise on every dataset. The mean margin
+between gold and the nearest negative moves NEGATIVE on all three.
+
+The mechanism is dilution. Appending evidence lengthens every candidate, and a
+sentence embedding compresses longer inputs toward the mean. All similarities
+converge, so separation is lost. The "negatives >= floor" count falls, which is
+not a safety gain: those negatives no longer clear the floor on similarity alone
+because the whole scale shifted, not because they became less relevant.
+
+--- THE STRUCTURAL FINDING (more important than the number) ---
+
+The requested design assumed the lexical gate is a separate acceptance stage that
+could be left untouched. Reading the code, it is not:
+
+  api/services/memory_relevance.py:274-282   score(): lexical -> token overlap,
+                                             else   -> cosine(topic, claim)
+  api/services/memory_relevance.py:301-303   gate E:
+        accepted = value >= 0.30 and (
+            overlap or value >= 0.65 or isclose(value, 0.30))
+
+In PRODUCTION (lexical=False) `value` IS the semantic cosine score, and it is the
+acceptance threshold. `overlap` is lexical token overlap, computed from the SAME
+`representations` list at line 230-231.
+
+So the representation is not one channel with two consumers. It is the input to
+BOTH:
+  - the cosine that decides acceptance (through `value`)
+  - the lexical overlap that also decides acceptance (through `overlap`)
+
+There is no way to enrich the embedding while holding the acceptance boundary
+fixed, because the acceptance boundary IS the embedding. That is precisely why
+the previous contextual-L2 change moved 63 packs and why the fix cannot be
+applied by separating two functions: they were never separate.
+
+This also explains the earlier result more precisely. The 63-pack regression was
+not only `overlap` widening. It was the cosine floor itself moving.
+
+--- DECISION ---
+
+REJECT. Do not implement the production change.
+
+Case B from the milestone's own classification: semantic scores do not improve,
+and no true candidates become newly reachable. Nothing here justifies touching
+production retrieval.
+
+The correct next question is NOT a representation change. The offline study
+promised 10/29 recoveries from adding evidence text; the embedding channel cannot
+deliver them, because adding text dilutes a sentence embedding rather than
+sharpening it. That offline number was measured on LEXICAL token overlap, where
+extra terms genuinely add signal. It does not transfer to a bi-encoder.

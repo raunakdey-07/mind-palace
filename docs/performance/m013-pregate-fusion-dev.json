@@ -1,0 +1,181 @@
+{
+  "commit": "d5e15dc0c0cf990edcc2335fc2107da8dc0a0948",
+  "dataset": "dev",
+  "gold_in_lexical_but_not_semantic": [
+    "mul-tech-queue",
+    "mul-tech-redis",
+    "mul-tech-search",
+    "mul-tech-storage",
+    "mul-tech-warehouse",
+    "prv-inc-2024-03",
+    "prv-inc-2024-07",
+    "prv-inc-2024-09",
+    "prv-inc-2024-11",
+    "rel-esc-orders",
+    "rel-esc-web",
+    "rel-impact-ledger",
+    "tmp-why-queue",
+    "tmp-why-redis",
+    "tmp-why-storage",
+    "tmp-why-warehouse"
+  ],
+  "gold_in_neither_gate": [
+    "adv-192",
+    "mul-tech-postgres",
+    "rel-impact-orders",
+    "rel-why-queue",
+    "rel-why-storage",
+    "tmp-why-postgres"
+  ],
+  "keyed_questions": 175,
+  "note": "union_* arms admit a key if EITHER gate would have, then rank by RRF. This is the change under test; semantic_only is the shipped behaviour.",
+  "python": "3.14.7",
+  "recoverable_count": 16,
+  "rrf_k_values": [
+    10,
+    60
+  ],
+  "table": {
+    "lexical_only": {
+      "mean_candidates": 2.52,
+      "mrr": 0.6245,
+      "mrr_ci95": [
+        0.5637,
+        0.6846
+      ],
+      "ndcg5": 0.2261,
+      "ndcg5_ci95": [
+        0.2068,
+        0.2455
+      ],
+      "r1": 0.5029,
+      "r10": 0.8,
+      "r10_ci95": [
+        0.7429,
+        0.8571
+      ],
+      "r1_ci95": [
+        0.4286,
+        0.5771
+      ],
+      "r5": 0.7943,
+      "r5_ci95": [
+        0.7314,
+        0.8514
+      ]
+    },
+    "semantic_only": {
+      "mean_candidates": 1.81,
+      "mrr": 0.7957,
+      "mrr_ci95": [
+        0.7371,
+        0.85
+      ],
+      "ndcg5": 0.2768,
+      "ndcg5_ci95": [
+        0.2578,
+        0.2942
+      ],
+      "r1": 0.7257,
+      "r10": 0.8743,
+      "r10_ci95": [
+        0.8229,
+        0.9257
+      ],
+      "r1_ci95": [
+        0.6571,
+        0.7886
+      ],
+      "r5": 0.8743,
+      "r5_ci95": [
+        0.8229,
+        0.9257
+      ]
+    },
+    "union_concat": {
+      "mean_candidates": 3.03,
+      "mrr": 0.7878,
+      "mrr_ci95": [
+        0.7397,
+        0.8333
+      ],
+      "ndcg5": 0.2826,
+      "ndcg5_ci95": [
+        0.269,
+        0.2951
+      ],
+      "r1": 0.6514,
+      "r10": 0.9657,
+      "r10_ci95": [
+        0.9371,
+        0.9886
+      ],
+      "r1_ci95": [
+        0.5771,
+        0.72
+      ],
+      "r5": 0.9657,
+      "r5_ci95": [
+        0.9371,
+        0.9886
+      ]
+    },
+    "union_rrf_k10": {
+      "mean_candidates": 3.03,
+      "mrr": 0.7878,
+      "mrr_ci95": [
+        0.7397,
+        0.8333
+      ],
+      "ndcg5": 0.2826,
+      "ndcg5_ci95": [
+        0.269,
+        0.2951
+      ],
+      "r1": 0.6514,
+      "r10": 0.9657,
+      "r10_ci95": [
+        0.9371,
+        0.9886
+      ],
+      "r1_ci95": [
+        0.5771,
+        0.72
+      ],
+      "r5": 0.9657,
+      "r5_ci95": [
+        0.9371,
+        0.9886
+      ]
+    },
+    "union_rrf_k60": {
+      "mean_candidates": 3.03,
+      "mrr": 0.7878,
+      "mrr_ci95": [
+        0.7397,
+        0.8333
+      ],
+      "ndcg5": 0.2826,
+      "ndcg5_ci95": [
+        0.269,
+        0.2951
+      ],
+      "r1": 0.6514,
+      "r10": 0.9657,
+      "r10_ci95": [
+        0.9371,
+        0.9886
+      ],
+      "r1_ci95": [
+        0.5771,
+        0.72
+      ],
+      "r5": 0.9657,
+      "r5_ci95": [
+        0.9371,
+        0.9886
+      ]
+    }
+  },
+  "unrecoverable_count": 6
+}

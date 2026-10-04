@@ -118,6 +118,67 @@ already-slow path.
 
 ---
 
+## Measured: pre-gate fusion (the headroom test)
+
+`evidence/211-pregate-fusion.txt`, artifacts `m013-pregate-fusion-{dev,heldout}.json`.
+The union arms admit a key if **either** gate would have, then rank by RRF. This is
+the change under test; `semantic_only` is the shipped behaviour.
+
+| arm | dev R@1 | dev R@5 | dev MRR | held-out R@1 | held-out R@5 | held-out MRR |
+|---|---:|---:|---:|---:|---:|---:|
+| lexical only | 0.503 | 0.794 | 0.625 | 0.293 | 0.664 | 0.457 |
+| **semantic only (shipped)** | **0.726** | **0.874** | **0.796** | **0.586** | **0.814** | **0.687** |
+| union, RRF k=10 | 0.651 | **0.966** | 0.788 | 0.457 | **0.843** | 0.621 |
+| union, RRF k=60 | 0.651 | **0.966** | 0.788 | 0.471 | **0.843** | 0.628 |
+
+Bootstrap 95% CIs (seed 12345) are in the artifact and evidence file. RRF k made
+almost no difference: k=10 and k=60 agree to within one question on both sets.
+
+**What fusion buys:** recall at depth. R@5 rises 0.874 → 0.966 on dev and
+0.814 → 0.843 on held-out. Unrecoverable misses fall from 22 to 6 on dev.
+
+**What fusion costs:** precision at rank 1. R@1 *falls* on both sets (0.726 →
+0.651 dev; 0.586 → 0.471 held-out), and MRR falls with it. The reason is visible in
+the candidate counts: the union carries 3.03 keys on dev and 4.28 on held-out
+against semantic's 1.81 and 2.35, and the extra keys are inserted near the top,
+displacing the correct one from first place.
+
+### The honest read: this is a recall/precision trade, not a win
+
+Fusion as measured **is not a default**. It trades rank-1 accuracy for rank-5
+recall, and the shipped behaviour is already the better rank-1 ranker. Anyone
+needing more than ~3 facts from one query would gain; anyone needing the single
+best fact would lose.
+
+Two findings that matter more than the trade itself:
+
+1. **The two datasets disagree about how much is recoverable.** Dev has 16
+   recoverable misses out of 175; held-out has only 7 out of 140, with **19 of
+   140 questions where the gold key is in neither gate at all**. Fusion cannot
+   reach those 19 by any means. That is the generalisation limit, and it is not a
+   ranking problem.
+
+2. **Dev overstates the opportunity.** 16 recoverable vs 7 recoverable is the same
+   phenomenon as 194/202 vs 131/157. Tuning fusion on dev would have produced a
+   confident recommendation built on a set that does not generalise.
+
+### Decision: REJECT fusion as the default, on this evidence
+
+Not because fusion is useless, but because the default serves the common case
+(best single fact) better, and the held-out set — the one that generalises — shows
+only 7 recoverable cases and 19 that no fusion can reach.
+
+The R@5 gain is real and worth keeping as an **opt-in breadth mode**, which is a
+future decision rather than a change to make now. Before that, a reranker on the
+union candidate set is the more promising experiment: it would let the extra
+candidates compete on relevance rather than on rank fusion, which is precisely
+what fails here.
+
+No production retrieval code has been changed. All of the above is measured through
+the shipped `relevance()` gate; the union arms are harness-side.
+
+---
+
 ## Known limitations
 
 - **Held-out v1 is no longer blind.** Its 26 failures drove diagnosis. Any number
@@ -157,6 +218,8 @@ already-slow path.
 | Graph storage for relationships | Not justified | Relationship failures are representation gaps, not a missing graph |
 | Rewriting the archive-load query to dodge the plan cliff | Seven variants, all byte-identical, **none removes it** | With the search space narrowed to index scans only, the planner still chose wrong. Estimation failure, not search failure |
 | `default_statistics_target` to fix the cliff | Byte-identical plan at every size | Inert: it only applies at the next collection, and nothing collected |
+| Hybrid / RRF fusion as the default retrieval configuration **[M013]** | R@5 0.874 → 0.966 dev, 0.814 → 0.843 held-out, but R@1 **falls** 0.726 → 0.651 dev and 0.586 → 0.471 held-out | A recall/precision trade, not a win. The union inserts extra keys near the top and displaces the correct one from first place. Opt-in breadth mode is the plausible future use |
+| "Fusion is inert because the gate prunes to ~2 keys" **[M013]** | **Wrong, and disproved.** The union is 3.03 keys on dev; on 16 of 22 dev misses the gold key was already in the lexical set but pruned by the semantic gate | Recorded because it was my own first hypothesis and it was wrong. The measurement that killed it is `m013_fusion_diagnostic.py` |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x
 background load" explained latency variance. A diagnostic showed 21% utilisation

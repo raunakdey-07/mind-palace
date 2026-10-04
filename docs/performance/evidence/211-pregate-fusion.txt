@@ -1,0 +1,30 @@
+=== M013 pre-gate fusion experiment ===
+Commit: d5e15dc0c0cf990edcc2335fc2107da8dc0a0948
+COMMANDS:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_pregate_fusion.py \
+      --dataset dev     --out /tmp/m013-pregate-dev.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_pregate_fusion.py \
+      --dataset heldout --out /tmp/m013-pregate-heldout.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+model: all-MiniLM-L6-v2
+
+=== DEV (175 keyed questions) ===
+arm                   R@1    R@5   R@10    MRR  nDCG5   cand  R@1 95% CI
+lexical_only        0.503  0.794  0.800  0.625  0.226   2.52  [0.4286, 0.5771]
+semantic_only       0.726  0.874  0.874  0.796  0.277   1.81  [0.6571, 0.7886]
+union_concat        0.651  0.966  0.966  0.788  0.283   3.03  [0.5771, 0.72]
+union_rrf_k10       0.651  0.966  0.966  0.788  0.283   3.03  [0.5771, 0.72]
+union_rrf_k60       0.651  0.966  0.966  0.788  0.283   3.03  [0.5771, 0.72]
+  gold in lexical-but-not-semantic (recoverable by union): 16
+  gold in NEITHER gate (unrecoverable by ANY fusion): 6
+
+=== HELDOUT (140 keyed questions) ===
+arm                   R@1    R@5   R@10    MRR  nDCG5   cand  R@1 95% CI
+lexical_only        0.293  0.664  0.714  0.457  0.171   3.80  [0.2143, 0.3643]
+semantic_only       0.586  0.814  0.814  0.687  0.244   2.35  [0.5071, 0.6643]
+union_concat        0.471  0.843  0.864  0.628  0.231   4.28  [0.3857, 0.55]
+union_rrf_k10       0.457  0.843  0.864  0.621  0.229   4.28  [0.3714, 0.5357]
+union_rrf_k60       0.471  0.843  0.864  0.628  0.231   4.28  [0.3857, 0.55]
+  gold in lexical-but-not-semantic (recoverable by union): 7
+  gold in NEITHER gate (unrecoverable by ANY fusion): 19
+

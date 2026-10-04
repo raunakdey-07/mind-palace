@@ -22,6 +22,19 @@ through [`docs/release-map.md`](docs/release-map.md).
   relevance fallback so authoritative query answers when the embedding model
   cannot load.
 - Dependency-free Memory Pack reading, verified from a clean install.
+- **Corpus scoping for live retrieval.** `/api/search`, `/api/query` and
+  `/api/context` now resolve an explicit corpus before retrieving. With a single
+  corpus the parameter may be omitted; with several, omitting it returns **422**
+  and naming an unknown corpus returns **404**, rather than silently searching
+  across namespaces. Callers that relied on the previous cross-namespace default
+  must pass `corpus`.
+- **Sync reports per-file failures.** A sync response now carries a bounded list
+  of `errors` (at most 50, each a path and a non-sensitive reason) alongside the
+  existing aggregate counters, exposed through the SDK and the CLI.
+- Semantic loading stays lazy: neither the embedder nor the reranker loads a
+  model until first use, and the reranker is a thread-safe singleton.
+- The OpenAPI document now reports the installed package version, so it cannot
+  disagree with the distribution.
 
 ### Fixed
 
@@ -36,6 +49,15 @@ through [`docs/release-map.md`](docs/release-map.md).
   answer to an unanswerable question is distinguishable from an empty envelope.
 - The archive load no longer ships chunk text to the public projection, which
   reads only a chunk's id and heading.
+- **Deleting a corpus whose durable archive still references it is refused** with
+  **409** and a named error, instead of failing on a foreign key or removing
+  manifest rows before documents.
+- **A missing semantic model is reported as 503**, not 500, on ingest, search,
+  query and context, and the dependency detail is not echoed to the caller.
+- **Feed cursors are validated and canonicalised** against the corpus name before
+  use, so a malformed or foreign cursor is rejected rather than compared.
+- `memory_rehydrate` preserves the document id the archive recorded, so a rebuild
+  cannot change `Source.document_id` in a replay.
 - The API description reads "The Durable AI Memory Substrate" and is pinned by a
   test, so it cannot drift back to the previous RAG framing.
 - `memory_pack` is declared in the package, so `pip install` makes it importable.
@@ -48,6 +70,16 @@ through [`docs/release-map.md`](docs/release-map.md).
   and per topic. Neither showed a measurable end-to-end change on the measuring
   host and neither is presented as a performance result.
 - The public projection no longer receives full chunk text.
+- Process startup no longer registers a no-op ASGI lifespan handler. Startup
+  remains independent of PostgreSQL connectivity, which was the handler's only
+  stated purpose.
+
+### Compatibility
+
+Backward compatible for the Memory Pack schema, which stays at version 1, and for
+every public response field. The one behaviour a caller can notice is corpus
+scoping on live retrieval: where several corpora exist, `corpus` is now required
+and an omitted value returns 422 rather than searching all namespaces.
 
 ### Upgrade
 

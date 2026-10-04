@@ -568,23 +568,47 @@ by a claim that generation or production validation is complete.
 
 ## Known limitations
 
-- **Measured latency envelope, and its edges.** Warm, real public query path,
-  claim-representation cache warm, 20 samples per size (12 at 10,000):
+- **Query cost grows with the archive, and the latency envelope is not currently
+  established.** Projection does work that grows faster than the corpus. The
+  strongest evidence is a call count rather than a stopwatch, because call counts do
+  not move when the host is busy: between 5,002 and 25,000 claims the number of
+  conflict comparisons computed in `api/services/memory.py` grows **26.2x for a 5x
+  larger corpus** (fitted exponent 2.03), and the regex matching behind it grows
+  18.1x. Much of that is an artefact of the synthetic benchmark corpus, which packs
+  every size into only 295 distinct claim keys, so claims per key grow with the
+  corpus and pairwise comparison grows quadratically. A real corpus with a wide key
+  distribution should be measured before this is treated as a product figure.
 
-  | claims | warm p50 |
-  | ---: | ---: |
-  | 100 | 47 ms |
-  | 1,000 | 1.0 s |
-  | 5,000 | 1.7 s |
-  | 10,000 | 4.4 s |
+  Wall-clock exponents are deliberately not quoted here. Two runs of the same
+  profile produced 1.11 and 1.60 for the same function on this host, because the host
+  runs at varying background load. Those numbers are not comparable and are not
+  published as a product claim.
 
-  **25,000 and above were not measured.** These are medians on one host with
-  roughly 2x run-to-run variance, not guarantees, and not a comparison against
-  any other system. Above about 5,000 claims, projection dominates: the
-  projection builds a model per archived claim and keeps roughly one. Reducing
-  that needs the dependency closure solved first, because narrowing the archive
-  before projection was measured to change 32 of 202 benchmark answers.
+  Previously published latency numbers are withdrawn: the figures they cited did not
+  appear in the artifact they were attributed to. Repeated measurements of the same
+  work on the development host have also landed roughly 2.5x apart, and the cause is
+  **not established**; a diagnostic taken while investigating it recorded the host at
+  21% utilisation with 87-94% idle CPU, which rules out sustained load but does not
+  identify the real cause. The measurement harness now refuses to publish a latency
+  point when the host is loaded, so a busy window cannot silently become a baseline.
+  No current latency envelope is claimed until one is re-measured on a host that
+  passes that gate.
+
+  Separately and more consequentially, a **query plan cliff** was found and its cause
+  identified. Between roughly 250 and 1,000 versions the archive-load query picks
+  corpus-only indexes and filters on `version_id` afterwards, discarding 999 of every
+  1,000 rows: 1,075,310 shared buffer hits at 1,000 versions against 26,674 at 2,000.
+  The cause is that these tables have never been analysed (`reltuples = -1`,
+  `last_analyze` null), so the planner underestimates the row count by ~250x and
+  picks the wrong index. Running `ANALYZE` removes the cliff entirely. This is a
+  real defect and is being addressed; see `docs/STATUS.md`.
   [Measurement and rejected candidates](docs/research/m0123-projection-release-gate.md).
+- **Accuracy is lower on unseen questions than the headline benchmark suggests.** The
+  202-question benchmark reports 194/202, but it is a development set whose failures
+  are known. On a separately authored 157-question held-out set, frozen before any
+  retrieval code was touched, the same system answers 131/157. Questions phrased
+  indirectly, especially asking *why* a decision was made, are answered noticeably
+  less often. See [docs/STATUS.md](docs/STATUS.md).
 - Existing lexical operations remain lexical AND. M006.5 adds heuristic semantic
   question retrieval, not universally reliable question answering or automatic
   claim extraction. Related concepts, multi-part questions, and abstention remain

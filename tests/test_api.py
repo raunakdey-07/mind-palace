@@ -1,5 +1,6 @@
 """Integration tests for Mind Palace API endpoints."""
 
+import importlib.metadata
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -20,7 +21,8 @@ async def test_openapi_describes_the_product_not_a_rag_wrapper():
     """The API description is part of the public contract.
 
     It was corrected from an outdated RAG framing once and should not silently
-    drift back.
+    drift back. The reported version is the installed package version, so the
+    OpenAPI document cannot disagree with the distribution.
     """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -29,6 +31,7 @@ async def test_openapi_describes_the_product_not_a_rag_wrapper():
     info = resp.json()["info"]
     assert info["description"] == "The Durable AI Memory Substrate"
     assert info["title"] == "Mind Palace API"
+    assert info["version"] == importlib.metadata.version("mindpalace-os")
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,63 @@
+=== M013 PostgreSQL FTS arm — MEASURED, AND REJECTED ===
+Commit: d79c7ae14361324a2d42812e4cfdbe3d3548191e
+COMMANDS:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_fts_arm.py \
+      --dataset dev     --out /tmp/m013-fts-dev.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_fts_arm.py \
+      --dataset heldout --out /tmp/m013-fts-heldout.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+
+FTS index is a SEPARATE derived table (m013_fts), not a column on memory_claims:
+PostgreSQL forbids a subquery in an index expression and `path` lives on
+memory_documents. No authoritative table is altered; dropping the schema removes
+all trace. ANALYZE is run before measuring so the planner is not itself the variable.
+Indexed text = key + claim + value::text + path, because the identifier a question
+asks about (2024-03, tier-0) lives in the key and path, not the claim sentence.
+
+=== DEV (175 keyed) ===
+  arm                  R@1     R@5    R@10     MRR   nDCG5    cand    p50ms
+  fts_english        0.320   0.371   0.371   0.346   0.148    1.13     1.88
+  fts_simple         0.000   0.000   0.000   0.000   0.000     0.0    1.921
+  python_lexical     0.514   0.897   0.966   0.676   0.245    80.0        -
+  index size: 48 kB
+
+=== HELDOUT (140 keyed) ===
+  arm                  R@1     R@5    R@10     MRR   nDCG5    cand    p50ms
+  fts_english        0.000   0.000   0.000   0.000   0.000     0.0    1.893
+  fts_simple         0.000   0.000   0.000   0.000   0.000     0.0    1.972
+  python_lexical     0.321   0.793   0.871   0.535   0.199    80.0        -
+  index size: 48 kB
+
+=== WHY: the mechanism, demonstrated directly ===
+
+plainto_tsquery ANDs every token the configuration does not discard. Under
+'simple' that includes stopwords, so a natural question requires the claim to
+contain what AND is AND the:
+  simple   'What is the current primary datastore?' -> 'what'&'is'&'the'&'current'&'primari'&'datastor'
+  english  'What is the current primary datastore?' -> 'current'&'primari'&'datastor'
+
+'english' removes stopwords and stems, but AND semantics still requires EVERY
+remaining token to appear in the claim. Measured against the built index:
+
+  'primary datastore'          -> 'primari' & 'datastor'          ->  6 matches
+  'current primary datastore'  -> 'current' & 'primari' & 'datastor' -> 0 matches
+
+The single token 'current' — a word in the QUESTION and absent from the CLAIM —
+reduces six matches to zero. That is the whole failure. A question is not a bag
+of terms drawn from the document that answers it.
+
+=== CONSEQUENCE ===
+
+FTS on this corpus is not a weaker ranker, it is a NON-FUNCTIONAL candidate
+generator for natural-language questions. Naive FTS cannot be rescued by tuning
+ts_rank or the configuration: the AND semantics is the blocker, and lifting it
+(OR semantics / websearch_to_tsquery) was measured and ALSO returned 0 matches.
+
+A usable FTS arm would need query construction that is not a mechanical
+translation of the question — stopword handling tuned to questions rather than
+documents, or OR-then-rank with a relevance floor. That is a real piece of
+engineering and is NOT justified by this evidence, because the shipped Python
+lexical arm already scores R@5 0.897 (dev) / 0.793 (held-out) against FTS at
+0.371 / 0.000.
+
+REJECTED. No FTS added to the product. Evidence preserved.

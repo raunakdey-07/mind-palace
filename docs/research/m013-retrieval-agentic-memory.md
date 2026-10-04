@@ -315,6 +315,72 @@ Still not established, and deliberately not claimed:
 
 ---
 
+## Measured: PostgreSQL FTS arm — built, measured, REJECTED
+
+`evidence/221-fts-arm.txt`, `m013_fts_arm.py`.
+
+Built for real: a GIN `tsvector` index over key + claim + value + path, on a
+**separate derived table**. Not a column on `memory_claims`, because PostgreSQL
+forbids a subquery in an index expression and `path` lives on `memory_documents`.
+No authoritative table was altered; `ANALYZE` ran before measuring so the planner
+was not itself the variable. Index size 48 kB.
+
+| arm | dev R@1 | dev R@5 | held-out R@1 | held-out R@5 | mean candidates |
+|---|---:|---:|---:|---:|---:|
+| **python lexical (shipped)** | **0.514** | **0.897** | **0.321** | **0.793** | 80.0 |
+| FTS `english` | 0.320 | 0.371 | **0.000** | **0.000** | 1.13 / 0.0 |
+| FTS `simple` | 0.000 | 0.000 | 0.000 | 0.000 | 0.0 |
+
+**Rejected.** But the reason is more useful than the number, and it was verified
+rather than assumed.
+
+### The mechanism
+
+`plainto_tsquery` ANDs every token the configuration does not discard:
+
+```
+simple   'What is the current primary datastore?' -> 'what'&'is'&'the'&'current'&'primari'&'datastor'
+english  'What is the current primary datastore?' -> 'current'&'primari'&'datastor'
+```
+
+`english` removes stopwords and stems, which is why it works at all. But AND
+semantics still requires *every* remaining token to appear in the claim. Measured
+against the built index:
+
+```
+'primary datastore'          -> 'primari' & 'datastor'           ->  6 matches
+'current primary datastore'  -> 'current' & 'primari' & 'datastor' -> 0 matches
+```
+
+**One word — "current" — present in the question and absent from the claim — takes
+six matches to zero.** A question is not a bag of terms drawn from the document
+that answers it, and any arm that mechanically translates a question into an AND
+query inherits that.
+
+Lifting the AND was tested too: `websearch_to_tsquery` (OR semantics) also returned
+0 matches on the same queries, so the blocker is not only the operator.
+
+### What this means for the milestone
+
+FTS here is not a weaker ranker, it is a **non-functional candidate generator for
+natural-language questions**. Making it work would require question-aware query
+construction — stopwords tuned to questions rather than documents, or OR-then-rank
+with a relevance floor. That is real engineering, and this evidence does not
+justify it: the shipped Python lexical arm already reaches R@5 0.897 / 0.793.
+
+This also retires the hybrid-RRF question in its PostgreSQL form. RRF was rejected
+earlier because it traded R@1 for R@5; combining a *non-functional* lexical arm with
+a semantic arm cannot improve on that.
+
+### Not established
+
+- Whether question-aware FTS query construction would work here. Not tested; not
+  justified on this evidence.
+- Latency is reported for context only and is not a claim while the envelope is NOT
+  ESTABLISHED.
+
+---
+
 ## Known limitations
 
 - **Held-out v1 is no longer blind.** Its 26 failures drove diagnosis. Any number
@@ -359,6 +425,7 @@ Still not established, and deliberately not claimed:
 | Numeric tokeniser variant `[a-z0-9]+` **[M013]** | held-out +10, **dev −4** | Admits the bare pronoun "I" into the query denominator |
 | Numeric tokeniser variant `[a-z0-9][a-z0-9]+` **[M013]** | held-out +3, dev 0 | Splits "0.6" into "0" and "6", losing the version identity |
 | "The 17 zero-bridge failures are a vocabulary gap" **[M013]** | **Mostly wrong.** They are a tokeniser defect: `[a-z][a-z0-9]+` discards every version and incident identifier | The adopted variant recovers 10 of 10 with zero regressions |
+| PostgreSQL full-text search as the lexical arm **[M013]** | **Non-functional on natural-language questions.** R@5 0.371 dev / 0.000 held-out against the shipped Python lexical arm's 0.897 / 0.793 | `plainto_tsquery` ANDs every token, so one word present in the question and absent from the claim takes 6 matches to 0. OR semantics (`websearch_to_tsquery`) also returned 0 |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x
 background load" explained latency variance. A diagnostic showed 21% utilisation

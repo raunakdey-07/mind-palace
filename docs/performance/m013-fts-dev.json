@@ -1,0 +1,102 @@
+{
+  "commit": "d79c7ae14361324a2d42812e4cfdbe3d3548191e",
+  "dataset": "dev",
+  "index_size": "48 kB",
+  "indexed_columns": [
+    "key",
+    "claim",
+    "value::text",
+    "path"
+  ],
+  "keyed_questions": 175,
+  "note": "FTS arm indexes key+claim+value+path because the identifier a question asks about (2024-03, tier-0) lives in the key and path, not the claim sentence. Candidate generation only; returns ranked keys.",
+  "python": "3.14.7",
+  "table": {
+    "fts_english": {
+      "mean_candidates": 1.13,
+      "mrr": 0.3457,
+      "mrr_ci95": [
+        0.28,
+        0.4114
+      ],
+      "ndcg5": 0.1485,
+      "ndcg5_ci95": [
+        0.1145,
+        0.1834
+      ],
+      "p50_ms": 1.88,
+      "r1": 0.32,
+      "r10": 0.3714,
+      "r10_ci95": [
+        0.3029,
+        0.44
+      ],
+      "r1_ci95": [
+        0.2514,
+        0.3886
+      ],
+      "r5": 0.3714,
+      "r5_ci95": [
+        0.3029,
+        0.44
+      ]
+    },
+    "fts_simple": {
+      "mean_candidates": 0.0,
+      "mrr": 0.0,
+      "mrr_ci95": [
+        0.0,
+        0.0
+      ],
+      "ndcg5": 0.0,
+      "ndcg5_ci95": [
+        0.0,
+        0.0
+      ],
+      "p50_ms": 1.921,
+      "r1": 0.0,
+      "r10": 0.0,
+      "r10_ci95": [
+        0.0,
+        0.0
+      ],
+      "r1_ci95": [
+        0.0,
+        0.0
+      ],
+      "r5": 0.0,
+      "r5_ci95": [
+        0.0,
+        0.0
+      ]
+    },
+    "python_lexical": {
+      "mean_candidates": 80.0,
+      "mrr": 0.6759,
+      "mrr_ci95": [
+        0.6251,
+        0.7263
+      ],
+      "ndcg5": 0.2455,
+      "ndcg5_ci95": [
+        0.2292,
+        0.2613
+      ],
+      "r1": 0.5143,
+      "r10": 0.9657,
+      "r10_ci95": [
+        0.9371,
+        0.9886
+      ],
+      "r1_ci95": [
+        0.44,
+        0.5886
+      ],
+      "r5": 0.8971,
+      "r5_ci95": [
+        0.8514,
+        0.9371
+      ]
+    }
+  }
+}

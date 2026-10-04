@@ -1,0 +1,454 @@
+{
+  "categories": {
+    "abstention": 2,
+    "conflict": 3,
+    "cross_document": 3,
+    "identifier": 3,
+    "negative_evidence": 2,
+    "relationship": 3,
+    "supersession": 3,
+    "temporal_state": 4,
+    "version_update": 4,
+    "why_decision": 5
+  },
+  "commit": "01980f5040c1d67f40a46063d0c2b1056dcdba4e",
+  "corpus_hash": "9cdecda73cbdc8ae055926320b85402d47dd7eed0cb28c96b9b191e5bed154a7",
+  "dataset_hash": "5cf098908d1a0ead91113a675998ac13500b82c5b98416568fe1eaf4d46c9fac",
+  "frozen_at": "2026-10-04T13:54:40.105256+00:00",
+  "question_rows": [
+    {
+      "answerable": true,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "JSONB"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "decision.database.reason",
+      "qid": "hv2-why_decision-01",
+      "text": "The team moved off the earlier database engine. What capability drove that?"
+    },
+    {
+      "answerable": true,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "TTL"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "decision.cache.reason",
+      "qid": "hv2-why_decision-02",
+      "text": "Why was the old caching layer replaced rather than kept?"
+    },
+    {
+      "answerable": true,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "dead lettering"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "decision.queue.reason",
+      "qid": "hv2-why_decision-03",
+      "text": "What was the operational argument for changing the messaging broker?"
+    },
+    {
+      "answerable": true,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "licence"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "decision.search.reason",
+      "qid": "hv2-why_decision-04",
+      "text": "Licensing concerns influenced one technology change. Which one, and what else mattered?"
+    },
+    {
+      "answerable": true,
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "columnar"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "decision.warehouse.reason",
+      "qid": "hv2-why_decision-05",
+      "text": "The reporting store was migrated for performance reasons. What workload drove it?"
+    },
+    {
+      "answerable": true,
+      "category": "identifier",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "idempotent"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "constraint.ledger.settlement",
+      "qid": "hv2-identifier-01",
+      "text": "Which constraint was established after the 2024-11 incident?"
+    },
+    {
+      "answerable": true,
+      "category": "identifier",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "single writer"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "constraint.deploy.tier-0",
+      "qid": "hv2-identifier-02",
+      "text": "What limit does tier-0 deployment impose?"
+    },
+    {
+      "answerable": true,
+      "category": "identifier",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "ledger"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "release.0.7",
+      "qid": "hv2-identifier-03",
+      "text": "Following release 0.7, what changed?"
+    },
+    {
+      "answerable": true,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "PostgreSQL"
+      ],
+      "forbid_values": [
+        "MySQL"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.postgres",
+      "qid": "hv2-temporal_state-01",
+      "text": "Which datastore is in production today?"
+    },
+    {
+      "answerable": true,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "OpenSearch"
+      ],
+      "forbid_values": [
+        "Elasticsearch"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.search",
+      "qid": "hv2-temporal_state-02",
+      "text": "Name the search component currently serving queries."
+    },
+    {
+      "answerable": true,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "S3"
+      ],
+      "forbid_values": [
+        "EBS"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.storage",
+      "qid": "hv2-temporal_state-03",
+      "text": "What binary store backs the media pipeline at present?"
+    },
+    {
+      "answerable": true,
+      "category": "temporal_state",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "RabbitMQ"
+      ],
+      "forbid_values": [
+        "SQS"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.queue",
+      "qid": "hv2-temporal_state-04",
+      "text": "Which component handles background messaging in production?"
+    },
+    {
+      "answerable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "ClickHouse"
+      ],
+      "forbid_values": [
+        "Redshift"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.warehouse",
+      "qid": "hv2-version_update-01",
+      "text": "What replaced the previous warehouse technology?"
+    },
+    {
+      "answerable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "S3"
+      ],
+      "forbid_values": [
+        "EBS"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.storage",
+      "qid": "hv2-version_update-02",
+      "text": "The object storage choice changed at some point. What is it now?"
+    },
+    {
+      "answerable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "RabbitMQ"
+      ],
+      "forbid_values": [
+        "SQS"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.queue",
+      "qid": "hv2-version_update-03",
+      "text": "Which queue technology superseded the previous one?"
+    },
+    {
+      "answerable": true,
+      "category": "version_update",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "Redis"
+      ],
+      "forbid_values": [
+        "Memcached"
+      ],
+      "gold_evidence_ids": [],
+      "key": "architecture.redis",
+      "qid": "hv2-version_update-04",
+      "text": "The shared cache was migrated once. Which product is used now?"
+    },
+    {
+      "answerable": true,
+      "category": "supersession",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "SQLite"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "architecture.datastore",
+      "qid": "hv2-supersession-01",
+      "text": "An ADR claims to supersede an earlier one about the edge store. What does it assert about the datastore?"
+    },
+    {
+      "answerable": true,
+      "category": "supersession",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "data"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "service.risk.owner",
+      "qid": "hv2-supersession-02",
+      "text": "Which team is responsible for the component that escalated risk using the ledger?"
+    },
+    {
+      "answerable": true,
+      "category": "supersession",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "data"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "runbook.archive.escalation",
+      "qid": "hv2-supersession-03",
+      "text": "When someone must be paged about the Archive Job, which team answers?"
+    },
+    {
+      "answerable": true,
+      "category": "conflict",
+      "expect_state": "CONFLICTING",
+      "expect_values": [
+        "PostgreSQL",
+        "SQLite"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "architecture.postgres",
+      "qid": "hv2-conflict-01",
+      "text": "Two records disagree about the primary datastore. What are the competing values?"
+    },
+    {
+      "answerable": true,
+      "category": "conflict",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "SQLite"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "architecture.datastore",
+      "qid": "hv2-conflict-02",
+      "text": "Is there an unreconciled architectural record naming a different primary store?"
+    },
+    {
+      "answerable": true,
+      "category": "conflict",
+      "expect_state": "CONFLICTING",
+      "expect_values": [
+        "SQLite"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "architecture.postgres",
+      "qid": "hv2-conflict-03",
+      "text": "Which documented position contradicts the datastore actually in production?"
+    },
+    {
+      "answerable": true,
+      "category": "cross_document",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "Gateway",
+        "Identity"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "team.platform.services",
+      "qid": "hv2-cross_document-01",
+      "text": "Which team owns every service that sits directly behind the API Gateway?"
+    },
+    {
+      "answerable": true,
+      "category": "cross_document",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "Analytics",
+        "Archive",
+        "Risk"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "team.data.services",
+      "qid": "hv2-cross_document-02",
+      "text": "Name the services the data team is accountable for."
+    },
+    {
+      "answerable": true,
+      "category": "cross_document",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "Orders",
+        "Ledger"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "team.payments.services",
+      "qid": "hv2-cross_document-03",
+      "text": "Which services run at tier-1?"
+    },
+    {
+      "answerable": true,
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "ledger",
+        "gateway"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "service.risk.depends_on",
+      "qid": "hv2-relationship-01",
+      "text": "The Risk Engine relies on other components to function. Name them."
+    },
+    {
+      "answerable": true,
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "gateway",
+        "storage"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "service.media.depends_on",
+      "qid": "hv2-relationship-02",
+      "text": "What must be present for the Media Service to operate?"
+    },
+    {
+      "answerable": true,
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "expect_values": [
+        "queue",
+        "search",
+        "postgres"
+      ],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": "service.search-indexer.depends_on",
+      "qid": "hv2-relationship-03",
+      "text": "Which components does the Search Indexer need before it can run?"
+    },
+    {
+      "answerable": false,
+      "category": "negative_evidence",
+      "expect_state": "ABSENT",
+      "expect_values": [],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": null,
+      "qid": "hv2-negative_evidence-01",
+      "text": "Was the gateway left unowned?"
+    },
+    {
+      "answerable": false,
+      "category": "negative_evidence",
+      "expect_state": "ABSENT",
+      "expect_values": [],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": null,
+      "qid": "hv2-negative_evidence-02",
+      "text": "What is the sanctioned way to remove records that are no longer on disk?"
+    },
+    {
+      "answerable": false,
+      "category": "abstention",
+      "expect_state": "ABSENT",
+      "expect_values": [],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": null,
+      "qid": "hv2-abstention-01",
+      "text": "Which vendor supplies the production message broker?"
+    },
+    {
+      "answerable": false,
+      "category": "abstention",
+      "expect_state": "ABSENT",
+      "expect_values": [],
+      "forbid_values": [],
+      "gold_evidence_ids": [],
+      "key": null,
+      "qid": "hv2-abstention-02",
+      "text": "How many replicas does the API Gateway run?"
+    }
+  ],
+  "questions": 32
+}

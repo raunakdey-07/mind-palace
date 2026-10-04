@@ -253,6 +253,68 @@ the corpus's own vocabulary recovers these before considering anything heavier.
 
 ---
 
+## Measured: the cause is a tokeniser defect, not a vocabulary gap
+
+`evidence/213-numeric-tokens.txt`, `m013_numeric_tokens.py`.
+
+Inspecting the 17 zero-bridge cases showed something sharper than missing synonyms.
+`memory_relevance.terms()` tokenises with `[a-z][a-z0-9]+`, which **requires a
+leading letter**. Every version number and incident identifier is therefore
+discarded before any comparison happens:
+
+```
+"Shipping 0.6 introduced what?"                  -> ['introduc', 'shipp']
+"What rule did the 2024-07 incident put in place?" -> ['incident', 'place', 'put', 'rule']
+```
+
+A question naming a specific release becomes indistinguishable from one naming any
+release. This is a defect in the shipped tokeniser, not a property of the question
+wording.
+
+### Two variants rejected by measurement before the third was adopted
+
+| tokeniser | held-out | dev | why |
+|---|---:|---:|---|
+| `[a-z0-9]+` | **+10** | **−4** | admits the bare pronoun "I", which enters the query denominator with nothing to match |
+| `[a-z0-9][a-z0-9]+` | +3 | 0 | keeps a 2-char minimum but splits "0.6" into "0" and "6" |
+| `[a-z][a-z0-9]+\|\d+(?:\.\d+)?` + mutual-presence gate | **+10** | **0** | **adopted** |
+
+The gate is the important half: an identifier is dropped from the denominator
+unless it appears on **both** sides. Without it, a question mentioning "2024-03"
+against a claim that merely says "orders service" pays for a year it can never
+match. That single detail is the whole difference between +10/−4 and +10/0.
+
+### Result
+
+| | held-out | dev |
+|---|---:|---:|
+| gold reachable at the shipped 0.30 floor, before | 97 (0.6929) | 162 (0.9257) |
+| after | **107 (0.7643)** | 162 (0.9257) |
+| rescued / regressed | **+10 / 0** | 0 / 0 |
+
+All ten rescues are attributable to identifiers (`0.6`, `2024`, `07`, tier numbers).
+No question on either dataset loses reachability. Lexical recall at the gate floor
+rises **0.6929 → 0.7643** on held-out with zero cost anywhere.
+
+### What this means for the milestone
+
+The candidate-recall ceiling was diagnosed as 0.8643 with "vocabulary, not
+ranking" as the cause. **The ceiling is partly a tokeniser bug.** Fixing it moves
+the ceiling without any new architecture, dependency, or model. This is exactly
+the kind of change the evidence should select over a reranker or a hybrid stack,
+and it is why the ceiling analysis was worth doing before the reranking experiment.
+
+Still not established, and deliberately not claimed:
+
+- **No production change has been made.** This is a measured candidate against the
+  shipped tokeniser.
+- Held-out v1 is analysed, so this number is a *development* result until held-out
+  v2 exists. It cannot be reported as generalisation.
+- The fix targets identifier-bearing questions specifically. The remaining
+  zero-bridge cases are genuine paraphrase gaps and are untouched by it.
+
+---
+
 ## Known limitations
 
 - **Held-out v1 is no longer blind.** Its 26 failures drove diagnosis. Any number
@@ -294,6 +356,9 @@ the corpus's own vocabulary recovers these before considering anything heavier.
 | `default_statistics_target` to fix the cliff | Byte-identical plan at every size | Inert: it only applies at the next collection, and nothing collected |
 | Hybrid / RRF fusion as the default retrieval configuration **[M013]** | R@5 0.874 → 0.966 dev, 0.814 → 0.843 held-out, but R@1 **falls** 0.726 → 0.651 dev and 0.586 → 0.471 held-out | A recall/precision trade, not a win. The union inserts extra keys near the top and displaces the correct one from first place. Opt-in breadth mode is the plausible future use |
 | "Fusion is inert because the gate prunes to ~2 keys" **[M013]** | **Wrong, and disproved.** The union is 3.03 keys on dev; on 16 of 22 dev misses the gold key was already in the lexical set but pruned by the semantic gate | Recorded because it was my own first hypothesis and it was wrong. The measurement that killed it is `m013_fusion_diagnostic.py` |
+| Numeric tokeniser variant `[a-z0-9]+` **[M013]** | held-out +10, **dev −4** | Admits the bare pronoun "I" into the query denominator |
+| Numeric tokeniser variant `[a-z0-9][a-z0-9]+` **[M013]** | held-out +3, dev 0 | Splits "0.6" into "0" and "6", losing the version identity |
+| "The 17 zero-bridge failures are a vocabulary gap" **[M013]** | **Mostly wrong.** They are a tokeniser defect: `[a-z][a-z0-9]+` discards every version and incident identifier | The adopted variant recovers 10 of 10 with zero regressions |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x
 background load" explained latency variance. A diagnostic showed 21% utilisation

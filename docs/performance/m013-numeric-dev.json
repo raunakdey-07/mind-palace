@@ -1,0 +1,21 @@
+{
+  "candidate": {
+    "gold_reachable_at_floor": 162,
+    "rate": 0.9257
+  },
+  "commit": "6fb1b2185e01307bf865c9eab21be012fcefb587",
+  "dataset": "dev",
+  "identifier_rescue_count": 0,
+  "keyed_questions": 175,
+  "lexical_floor": 0.3,
+  "net_gain": 0,
+  "python": "3.14.7",
+  "regressed": [],
+  "regressed_count": 0,
+  "rescued": [],
+  "rescued_count": 0,
+  "shipped": {
+    "gold_reachable_at_floor": 162,
+    "rate": 0.9257
+  }
+}

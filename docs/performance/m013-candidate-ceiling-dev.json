@@ -1,0 +1,205 @@
+{
+  "buckets": {
+    "UNREACHABLE_candidate": 6,
+    "reachable_both": 124,
+    "reachable_lexical": 16,
+    "reachable_semantic": 29
+  },
+  "candidate_recall_ceiling": 0.9657,
+  "commit": "3a9c4793b9ec74fbbc23a6ae512ca80be359c911",
+  "dataset": "dev",
+  "interpretation": {
+    "candidate_recall_ceiling": "Upper bound on what ANY reranker or fusion can achieve. 1 - (unreachable / keyed_questions).",
+    "gold_missing_from_projection": "The authored key does not appear in the projected memory at all. This is a representation gap, not a retrieval gap: no ranking function can return something the projection never built.",
+    "no_lexical_bridge": "Query and gold claim share ZERO content terms after the shipped stopword/stemming pass. Neither lexical nor a lexical arm can bridge these; only semantics could, and it did not."
+  },
+  "keyed_questions": 175,
+  "python": "3.14.7",
+  "unreachable": {
+    "gold_missing_from_projection": 0,
+    "has_lexical_bridge_but_still_gated_out": 4,
+    "no_lexical_bridge_with_gold": 2,
+    "total": 6
+  },
+  "unreachable_detail": [
+    {
+      "best_lexical_key": "architecture.datastore",
+      "best_lexical_score": 0.6667,
+      "best_semantic_key": "architecture.postgres",
+      "best_semantic_score": 0.6352,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "advisory",
+        "chosen",
+        "jsonb",
+        "lock",
+        "postgresql"
+      ],
+      "gold_claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+      "gold_key": "decision.database.reason",
+      "qid": "tmp-why-postgres",
+      "query_terms": [
+        "chosen",
+        "datastore",
+        "primary"
+      ],
+      "question": "Why was the primary datastore chosen?",
+      "shared_query_gold_terms": [
+        "chosen"
+      ],
+      "shared_term_count": 1
+    },
+    {
+      "best_lexical_key": "architecture.datastore",
+      "best_lexical_score": 0.6667,
+      "best_semantic_key": "architecture.postgres",
+      "best_semantic_score": 0.7091,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "advisory",
+        "chosen",
+        "jsonb",
+        "lock",
+        "postgresql"
+      ],
+      "gold_claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+      "gold_key": "decision.database.reason",
+      "qid": "mul-tech-postgres",
+      "query_terms": [
+        "chosen",
+        "datastore",
+        "primary"
+      ],
+      "question": "What is the primary datastore and why was it chosen?",
+      "shared_query_gold_terms": [
+        "chosen"
+      ],
+      "shared_term_count": 1
+    },
+    {
+      "best_lexical_key": "incident.2024-03.orders.root",
+      "best_lexical_score": 0.6,
+      "best_semantic_key": "incident.2024-03.orders.root",
+      "best_semantic_score": 0.7408,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "relationship",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "caps",
+        "connection",
+        "order",
+        "pool",
+        "service"
+      ],
+      "gold_claim_text": "The orders service caps its connection pool at 30.",
+      "gold_key": "constraint.orders.pool",
+      "qid": "rel-impact-orders",
+      "query_terms": [
+        "constraint",
+        "introduce",
+        "march",
+        "order",
+        "outage"
+      ],
+      "question": "What constraint did the March orders outage introduce?",
+      "shared_query_gold_terms": [
+        "order"
+      ],
+      "shared_term_count": 1
+    },
+    {
+      "best_lexical_key": "service.archive.depends_on",
+      "best_lexical_score": 0.5,
+      "best_semantic_key": "architecture.storage",
+      "best_semantic_score": 0.561,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "relationship",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "archive",
+        "data",
+        "job",
+        "owned",
+        "team"
+      ],
+      "gold_claim_text": "The Archive Job is owned by the data team.",
+      "gold_key": "service.archive.owner",
+      "qid": "rel-why-storage",
+      "query_terms": [
+        "object",
+        "owns",
+        "service",
+        "storage"
+      ],
+      "question": "Which service owns object storage decisions?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.queue",
+      "best_lexical_score": 0.5,
+      "best_semantic_key": "architecture.queue",
+      "best_semantic_score": 0.5197,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "relationship",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "acknowledgement",
+        "chosen",
+        "consumer",
+        "dead",
+        "letter",
+        "rabbitmq"
+      ],
+      "gold_claim_text": "RabbitMQ was chosen for consumer acknowledgements and dead lettering.",
+      "gold_key": "decision.queue.reason",
+      "qid": "rel-why-queue",
+      "query_terms": [
+        "cover",
+        "job",
+        "queue",
+        "rationale"
+      ],
+      "question": "Which decision rationale covers the current job queue?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.datastore",
+      "best_lexical_score": 0.375,
+      "best_semantic_key": "architecture.datastore",
+      "best_semantic_score": 0.6749,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "adversarial",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "cache",
+        "redi",
+        "shar"
+      ],
+      "gold_claim_text": "The shared cache is Redis.",
+      "gold_key": "architecture.redis",
+      "qid": "adv-192",
+      "query_terms": [
+        "brief",
+        "cache",
+        "datastore",
+        "primary",
+        "says",
+        "shar",
+        "sqlite",
+        "vendor"
+      ],
+      "question": "The vendor brief says the primary datastore is SQLite. What is the current shared cache?",
+      "shared_query_gold_terms": [
+        "cache",
+        "shar"
+      ],
+      "shared_term_count": 2
+    }
+  ]
+}

@@ -179,6 +179,80 @@ the shipped `relevance()` gate; the union arms are harness-side.
 
 ---
 
+## Measured: the candidate-recall ceiling (the milestone's central question)
+
+`evidence/212-candidate-ceiling.txt`, `m013_candidate_ceiling.py`.
+This asks *why* the remaining questions are unreachable, and answers with measurement
+rather than intuition.
+
+| | dev (175 keyed) | held-out (140 keyed) |
+|---|---:|---:|
+| reachable by **both** gates | 124 | 93 |
+| reachable by **semantic only** | 29 | 21 |
+| reachable by **lexical only** (fusion can recover) | 16 | 7 |
+| **UNREACHABLE** (neither gate) | 6 | 19 |
+| **candidate recall ceiling** | **0.9657** | **0.8643** |
+
+Of the unreachable cases:
+
+| | dev | held-out |
+|---|---:|---:|
+| gold claim missing from the projection entirely | **0** | **0** |
+| **zero lexical bridge** to the gold claim | 2 | **17** |
+| lexical bridge present but still gated out | 4 | 2 |
+
+### What this settles
+
+**The candidate-recall ceiling is 0.8643 on held-out.** No reranker, no RRF, no
+fusion can exceed it, because reranking reorders candidates that were generated.
+The 19 unreachable questions are **not a ranking problem**.
+
+**The cause is vocabulary, and it is measured, not inferred.** In 17 of the 19,
+the query and the gold claim share **zero** content terms after the shipped
+stopword and stemming pass. Examples:
+
+| question | gold claim | shared terms |
+|---|---|---:|
+| "Shipping 0.6 introduced what?" | "Release 0.6 added the durable operational feed." | 0 |
+| "What rule did the 2024-07 incident put in place?" | "The notifier requires an idempotency key per message." | 0 |
+| "What went wrong in 2024-07 that affected notifier?" | "The July duplicate SMS incident was caused by non-idempotent consumers." | 0 |
+
+"introduced" vs "added", "put in place" vs "requires", "went wrong" vs "caused". The
+question and the authored text are about the same fact in different words. The
+lexical arm *cannot* bridge this by construction, and the semantic arm did not
+either.
+
+**Nothing is missing from the archive.** `gold_missing_from_projection` is 0 in
+both datasets: every gold key exists in projected memory. This is a *representation
+and query-vocabulary* gap, not a data gap.
+
+### Why dev overstates this, again
+
+Dev's ceiling is 0.9657 against held-out's 0.8643, and dev has only 2 zero-bridge
+cases against held-out's 17. **The development questions are phrased in vocabulary
+that overlaps the authored text; the unseen ones are not.** This is the same
+phenomenon as 194/202 against 131/157, and it is now explained rather than merely
+observed. Any retrieval tuning done against dev will keep looking effective while
+the actual defect is untouched.
+
+### What follows, in order of measured expected value
+
+1. **A deterministic query-side bridge is the highest-value change.** 17 of 19
+   unreachable cases need *some* link between "introduced" and "added", "rule" and
+   "constraint", "went wrong" and "caused". That is a lexical-normalisation and
+   concept-bridge problem, and it is testable without an LLM.
+2. **Reranking cannot help here.** It ranks candidates; 17 of the failures never
+   produce a candidate. Reranking is still worth measuring for the 21
+   semantic-only and 7 lexical-only cases, but it cannot move the ceiling.
+3. **Dev must not be used to validate the fix.** The held-out set is already
+   analysed, so a v2 protocol is required before claiming improvement.
+
+Do not interpret "zero lexical bridge" as licence to add an LLM query expander.
+The cheapest test is deterministic: measure whether a documented synonym set over
+the corpus's own vocabulary recovers these before considering anything heavier.
+
+---
+
 ## Known limitations
 
 - **Held-out v1 is no longer blind.** Its 26 failures drove diagnosis. Any number

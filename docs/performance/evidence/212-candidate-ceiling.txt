@@ -1,0 +1,167 @@
+=== M013 candidate-recall ceiling / failure taxonomy ===
+Commit: 3a9c4793b9ec74fbbc23a6ae512ca80be359c911
+COMMANDS:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_candidate_ceiling.py \
+      --dataset heldout --out /tmp/m013-ceiling-heldout.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_candidate_ceiling.py \
+      --dataset dev     --out /tmp/m013-ceiling-dev.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+model: all-MiniLM-L6-v2
+
+=== DEV (175 keyed questions) ===
+  UNREACHABLE_candidate          6
+  reachable_both                 124
+  reachable_lexical              16
+  reachable_semantic             29
+  CANDIDATE RECALL CEILING: 0.9657
+    unreachable total               : 6
+    gold missing from projection    : 0
+    ZERO lexical bridge to gold     : 2
+    bridge present, still gated out : 4
+
+=== HELDOUT (140 keyed questions) ===
+  UNREACHABLE_candidate          19
+  reachable_both                 93
+  reachable_lexical              7
+  reachable_semantic             21
+  CANDIDATE RECALL CEILING: 0.8643
+    unreachable total               : 19
+    gold missing from projection    : 0
+    ZERO lexical bridge to gold     : 17
+    bridge present, still gated out : 2
+
+=== HELD-OUT: the 19 unreachable, verbatim ===
+No fusion, RRF or cross-encoder can reach these: neither arm proposed gold.
+
+  ho-chg-why-postgres [temporal] shared_terms=0
+    Q        : What reasoning led to picking the present primary datastore?
+    gold key : decision.database.reason
+    gold text: PostgreSQL was chosen for JSONB and advisory locks.
+    q terms  : ['datastore', 'led', 'pick', 'present', 'primary', 'reason']
+    gold terms: ['advisory', 'chosen', 'jsonb', 'lock', 'postgresql']
+
+  ho-chg-inc-2024-07 [temporal] shared_terms=0
+    Q        : What went wrong in 2024-07 that affected notifier?
+    gold key : incident.2024-07.notifier.root
+    gold text: The July duplicate SMS incident was caused by non-idempotent consumers.
+    q terms  : ['affect', 'notifier', 'went', 'wrong']
+    gold terms: ['caus', 'consumer', 'duplicate', 'idempotent', 'incident', 'july', 'non', 'sms']
+
+  ho-chg-rel-0.6 [temporal] shared_terms=0
+    Q        : Shipping 0.6 introduced what?
+    gold key : release.0.6
+    gold text: Release 0.6 added the durable operational feed.
+    q terms  : ['introduc', 'shipp']
+    gold terms: ['added', 'durable', 'feed', 'operational', 'release']
+
+  ho-chg-rel-0.7 [temporal] shared_terms=0
+    Q        : Shipping 0.7 introduced what?
+    gold key : release.0.7
+    gold text: Release 0.7 moved settlement to the ledger service.
+    q terms  : ['introduc', 'shipp']
+    gold terms: ['ledger', 'moved', 'release', 'service', 'settlement']
+
+  ho-chg-rel-0.8 [temporal] shared_terms=0
+    Q        : Shipping 0.8 introduced what?
+    gold key : release.0.8
+    gold text: Release 0.8 added snapshot membership sealing.
+    q terms  : ['introduc', 'shipp']
+    gold terms: ['added', 'membership', 'release', 'seal', 'snapshot']
+
+  ho-chg-deploy-tier-0 [temporal] shared_terms=2
+    Q        : What rule governs how tier-0 services get rolled out?
+    gold key : constraint.deploy.tier-0
+    gold text: Deployments for tier-0 services run as a single writer job.
+    q terms  : ['get', 'govern', 'out', 'roll', 'rule', 'service', 'tier']
+    gold terms: ['deployment', 'job', 'run', 'service', 'single', 'tier', 'writer']
+
+  ho-ev-inc-2024-03 [provenance] shared_terms=0
+    Q        : What rule did the 2024-03 incident put in place?
+    gold key : constraint.orders.pool
+    gold text: The orders service caps its connection pool at 30.
+    q terms  : ['incident', 'place', 'put', 'rule']
+    gold terms: ['caps', 'connection', 'order', 'pool', 'service']
+
+  ho-ev-inc-2024-07 [provenance] shared_terms=0
+    Q        : What rule did the 2024-07 incident put in place?
+    gold key : constraint.notifier.idempotency
+    gold text: The notifier requires an idempotency key per message.
+    q terms  : ['incident', 'place', 'put', 'rule']
+    gold terms: ['idempotency', 'key', 'message', 'notifier', 'per', 'require']
+
+  ho-ev-inc-2024-09 [provenance] shared_terms=0
+    Q        : What rule did the 2024-09 incident put in place?
+    gold key : constraint.search.batch
+    gold text: Reindex batches are capped at 500 documents.
+    q terms  : ['incident', 'place', 'put', 'rule']
+    gold terms: ['batche', 'capp', 'reindex']
+
+  ho-ev-inc-2024-11 [provenance] shared_terms=0
+    Q        : What rule did the 2024-11 incident put in place?
+    gold key : constraint.ledger.settlement
+    gold text: Settlement jobs must be idempotent on ledger entry id.
+    q terms  : ['incident', 'place', 'put', 'rule']
+    gold terms: ['entry', 'id', 'idempotent', 'jobs', 'ledger', 'must', 'settlement']
+
+  ho-rel-impact-orders [relationship] shared_terms=1
+    Q        : After the orders outage, what limit was imposed?
+    gold key : constraint.orders.pool
+    gold text: The orders service caps its connection pool at 30.
+    q terms  : ['impos', 'limit', 'order', 'outage']
+    gold terms: ['caps', 'connection', 'order', 'pool', 'service']
+
+  ho-rel-why-storage [relationship] shared_terms=0
+    Q        : Decisions about object storage belong to whom?
+    gold key : service.archive.owner
+    gold text: The Archive Job is owned by the data team.
+    q terms  : ['belong', 'object', 'storage', 'whom']
+    gold terms: ['archive', 'data', 'job', 'owned', 'team']
+
+  ho-mul-tech-postgres [multi-topic] shared_terms=0
+    Q        : State the present primary datastore and the case for it.
+    gold key : decision.database.reason
+    gold text: PostgreSQL was chosen for JSONB and advisory locks.
+    q terms  : ['case', 'datastore', 'present', 'primary', 'state']
+    gold terms: ['advisory', 'chosen', 'jsonb', 'lock', 'postgresql']
+
+  ho-mul-tech-redis [multi-topic] shared_terms=0
+    Q        : State the present shared cache and the case for it.
+    gold key : decision.cache.reason
+    gold text: Redis was chosen for its native TTL and pub/sub support.
+    q terms  : ['cache', 'case', 'present', 'shar', 'state']
+    gold terms: ['chosen', 'native', 'pub', 'redi', 'sub', 'support', 'ttl']
+
+  ho-mul-tech-queue [multi-topic] shared_terms=0
+    Q        : State the present job queue and the case for it.
+    gold key : decision.queue.reason
+    gold text: RabbitMQ was chosen for consumer acknowledgements and dead lettering.
+    q terms  : ['case', 'job', 'present', 'queue', 'state']
+    gold terms: ['acknowledgement', 'chosen', 'consumer', 'dead', 'letter', 'rabbitmq']
+
+  ho-mul-tech-search [multi-topic] shared_terms=0
+    Q        : State the present search engine and the case for it.
+    gold key : decision.search.reason
+    gold text: OpenSearch was chosen for the permissive licence and active maintenance.
+    q terms  : ['case', 'engine', 'present', 'search', 'state']
+    gold terms: ['active', 'chosen', 'licence', 'maintenance', 'opensearch', 'permissive']
+
+  ho-mul-tech-storage [multi-topic] shared_terms=0
+    Q        : State the present object storage and the case for it.
+    gold key : decision.storage.reason
+    gold text: S3 was chosen for lifecycle policies and durable versioning.
+    q terms  : ['case', 'object', 'present', 'state', 'storage']
+    gold terms: ['chosen', 'durable', 'lifecycle', 'policie', 's3', 'version']
+
+  ho-mul-tech-warehouse [multi-topic] shared_terms=0
+    Q        : State the present analytics warehouse and the case for it.
+    gold key : decision.warehouse.reason
+    gold text: ClickHouse was chosen for columnar scans over event data.
+    q terms  : ['analytic', 'case', 'present', 'state', 'warehouse']
+    gold terms: ['chosen', 'clickhouse', 'columnar', 'data', 'event', 'over', 'scan']
+
+  ho-adv-sandbox [adversarial] shared_terms=0
+    Q        : The onboarding guide says the sandbox runs on SQLite. What does production use?
+    gold key : architecture.postgres
+    gold text: The primary datastore is MySQL.
+    q terms  : ['guide', 'onboard', 'production', 'runs', 'sandbox', 'says', 'sqlite']
+    gold terms: ['datastore', 'mysql', 'primary']

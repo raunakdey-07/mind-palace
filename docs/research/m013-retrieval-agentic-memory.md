@@ -533,6 +533,53 @@ No deterministic re-projection can close these, because the words are not in L0/
   that is **not in the corpus**. That is a representation-authoring decision, not a
   retrieval one, and it must be chosen explicitly rather than drifted into.
 
+### EXECUTED: the deterministic representation was implemented and rejected
+
+`evidence/250-contextual-l2-gate.txt`.
+
+Implemented exactly the measured change — representation = claim + key + path + the
+claim's own authoritative evidence, versioned, deterministic, with
+`representation_hash` covering the rule version so old embeddings cannot be reused.
+
+- Full suite **1225 passed** (1206 + 19 new tests)
+- flake8 / black clean
+- **Authoritative gate: FAILED — 63 of 202 questions differ**, digest `5a3b8049…`
+  → `ceae31b0…`
+
+The failure is semantic, not cosmetic. Folding evidence into the representation
+raises what clears the relevance floor, so an **abstention** question now returns
+memories instead of declining:
+
+```
+abs-sso   baseline: runbook.identity.escalation, service.identity.depends_on,
+                    service.identity.owner, service.identity.tier
+          current : service.identity.tier, service.identity.depends_on,
+                    service.identity.owner
+```
+
+### The trap worth remembering
+
+| | dev benchmark |
+|---|---:|
+| before | 194/202 |
+| after | **197/202** |
+
+**The score improved by 3 while 63 questions' authoritative output changed,
+including abstention.** Had the criterion been the aggregate, this would have
+shipped as a 1.5% win that quietly answers unanswerable questions. Reverted.
+
+### What this establishes
+
+The study's 10/29 is **not reachable by this route without weakening abstention.**
+The gate's floor was calibrated against the narrower representation, so widening
+the searchable text widens what is accepted.
+
+A future attempt must either keep evidence out of the *lexical* gate and use it
+for embedding only — smaller, and leaves abstention thresholds untouched — or
+recalibrate abstention deliberately and re-prove it on the abstention class, which
+is a semantic decision, not a performance one. Option (a) is the obvious next
+attempt and was not tried here.
+
 ---
 
 ## Known limitations
@@ -581,6 +628,7 @@ No deterministic re-projection can close these, because the words are not in L0/
 | "The 17 zero-bridge failures are a vocabulary gap" **[M013]** | **Mostly wrong.** They are a tokeniser defect: `[a-z][a-z0-9]+` discards every version and incident identifier | The adopted variant recovers 10 of 10 with zero regressions |
 | The tokenizer fix generalises **[M013]** | **No. Rejected.** +10 rescued on held-out v1, **0 rescued / 0 regressed on frozen held-out v2**. Lexical recall identical in both arms on both datasets | The v1 benefit measured how v1 was *worded*, not the retrieval system. In v2 identifier questions carry content words that already reach the claim, so the numeric token adds nothing |
 | An LLM-derived L2 representation is needed for the representation gap **[M013]** | **Not justified yet.** Deterministic evidence + document context closes 8/19 v1 and 2/10 v2 blind failures with no model | The remaining 8 failures are vocabulary absent from L0/L1 entirely. An LLM would invent it, which is an authoring decision, not a retrieval one |
+| Deterministic contextual L2 representation (claim + key + path + evidence) **[M013]** | **Implemented and REJECTED.** 63 of 202 authoritative packs changed; an abstention question started answering | The dev score *rose* 194→197, so an aggregate criterion would have shipped a semantic regression as a win. Evidence in the representation widens what clears the relevance floor, which was calibrated against the narrower text |
 | PostgreSQL full-text search as the lexical arm **[M013]** | **Non-functional on natural-language questions.** R@5 0.371 dev / 0.000 held-out against the shipped Python lexical arm's 0.897 / 0.793 | `plainto_tsquery` ANDs every token, so one word present in the question and absent from the claim takes 6 matches to 0. OR semantics (`websearch_to_tsquery`) also returned 0 |
 
 **Explicitly retracted:** the earlier claim that a "loaded host" or "2.4x–2.8x

@@ -1,0 +1,68 @@
+=== M014.1 end-to-end: installed wheel, outside the source tree ===
+cwd: /tmp/m014-e2e
+command: /tmp/m014-e2e/venv/bin/mindpalace-proof
+python: 3.14.7
+
+--- 1. VERIFY (unmodified) ---
+VERIFIED
+claim: architecture.postgres
+versions: v-new, v-old
+as_of: -
+valid_at: 2025-06-01T00:00:00+00:00
+authoritative digest: b2a1c8dee7e6d16dcfc1fbc59bb044c550450ef0f326d86551b156f0e7f31045
+proof digest: acea4a2d1c1332b64d9c42718d549ddb8183784b305fe2995da07e9f3c014585
+exit=0
+
+--- 2. tamper ONE byte of the authoritative artifact ---
+changed 'PostgreSQL' -> 'MySQL' in the current claim
+REJECTED
+reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+reason: claim 'c-new' content does not match its proof entry
+exit=1
+
+--- 3. restored artifact ---
+VERIFIED
+claim: architecture.postgres
+versions: v-new, v-old
+as_of: -
+valid_at: 2025-06-01T00:00:00+00:00
+authoritative digest: b2a1c8dee7e6d16dcfc1fbc59bb044c550450ef0f326d86551b156f0e7f31045
+proof digest: acea4a2d1c1332b64d9c42718d549ddb8183784b305fe2995da07e9f3c014585
+exit=0
+
+--- 4. EXPLAIN ---
+ANSWER
+  query: What datastore did production use?
+  claim key: architecture.postgres
+
+STATE
+  as_of: -
+  valid_at: 2025-06-01T00:00:00+00:00
+  snapshot: -
+
+CLAIM
+  key: architecture.postgres
+  claim: The primary datastore is PostgreSQL.
+  value: PostgreSQL
+  status: CURRENT
+  version: v-new
+
+SOURCE
+  document: d-new
+  path: docs/tech/postgres.md
+  version: v-new
+  observed_at: 2025-06-01T00:00:00+00:00
+
+EVIDENCE
+  [Datastore] The primary datastore is PostgreSQL.
+    id=e-new offset=0-35
+
+HISTORY
+  supersedes: c-old
+  superseded by: -
+  valid_from: 2025-06-01T00:00:00+00:00
+  valid_to: -
+  in force at valid_at: True
+
+--- 5. no server/db/model/network used ---
+heavy modules loaded: NONE

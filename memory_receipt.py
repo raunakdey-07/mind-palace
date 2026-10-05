@@ -497,13 +497,18 @@ def receipt_for_response(response, *, query: str | None = None) -> dict | None:
 def verify_response_receipt(receipt: dict, artifact: MemoryPack | dict) -> dict:
     """Verify every receipt in a response bundle against the artifact.
 
-    The bundle's own digest is checked first: if it does not match, the receipts
-    inside it describe a different artifact and there is nothing to check them
-    against.
+    The artifact is re-read WITHOUT its receipt. `MemoryPack.from_dict` keeps
+    unknown keys, so a payload that still carries the receipt would re-digest to
+    something the bundle never claimed, and every honest response would fail its
+    own check. The authoritative layer already excludes it from
+    `canonical_json`; this is the same rule on the verification side.
     """
     if not isinstance(receipt, dict) or "receipts" not in receipt:
         raise ReceiptError("not a response receipt bundle")
-    pack = artifact if isinstance(artifact, MemoryPack) else MemoryPack.from_dict(artifact)
+    if isinstance(artifact, MemoryPack):
+        pack = artifact
+    else:
+        pack = MemoryPack.from_dict({k: v for k, v in artifact.items() if k != "receipt"})
     failed: list[dict] = []
     for entry in receipt["receipts"]:
         result = verify_receipt(entry, pack)

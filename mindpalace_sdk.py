@@ -165,8 +165,15 @@ class MemoryClient:
         path: str | None = None,
         claim_id: str | None = None,
         snapshot_id: str | None = None,
+        include_receipt: bool = False,
     ) -> MemoryResponse:
-        """Query memory with intent-aware evidence bounded in Unicode characters."""
+        """Query memory with intent-aware evidence bounded in Unicode characters.
+
+        ``include_receipt=True`` attaches the canonical Memory Receipt to
+        ``result.receipt``: what was returned, from which version, with what
+        evidence, and how to verify it later. The receipt is built by the same
+        service REST and MCP use, so it cannot differ between surfaces.
+        """
         return self._execute(
             "query",
             corpus,
@@ -178,6 +185,7 @@ class MemoryClient:
             path=path,
             claim_id=claim_id,
             snapshot_id=snapshot_id,
+            include_receipt=include_receipt,
         )
 
     def current(
@@ -507,3 +515,30 @@ class MindPalace:
         if not corpus:
             raise CorpusNotFoundError(f"corpus '{self.name}' not found")
         return corpus["id"]
+
+
+# ---------------------------------------------------------------------------
+# Receipt verification, re-exported
+# ---------------------------------------------------------------------------
+# A caller who received `result.receipt` should not have to import server or
+# database code to check it. These are the same stdlib-only functions the CLI
+# uses, re-exported so the SDK surface is one import.
+
+from memory_receipt import (  # noqa: E402
+    ReceiptError,
+    verify_response_receipt,
+    verify_receipt,
+    verify_trust,
+)
+
+__all__ = [
+    "CorpusNotFoundError",
+    "MemoryClient",
+    "MemoryClientError",
+    "MindPalace",
+    "ReceiptError",
+    "SyncSummary",
+    "verify_receipt",
+    "verify_response_receipt",
+    "verify_trust",
+]

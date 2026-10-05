@@ -4,30 +4,45 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
-[Current release: v0.7.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.8.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-**Mind Palace is a persistent, portable memory layer for AI applications that
-need persistent, versioned, evidence-backed knowledge over an evolving corpus.**
+**Mind Palace is a persistent memory substrate for AI applications. It preserves
+versioned, evidence-backed authoritative state, and can issue portable Memory
+Receipts that let an application inspect and independently verify the memory
+state it received.**
 It turns authored Markdown into versioned source assertions: current knowledge,
 history, changes, conflicts, provenance, and reproducible context. It remembers
 what sources asserted—not perfect truth.
 
+```text
+  persistent memory  →  versioned authoritative state  →  evidence + provenance
+                     →  Memory Receipt  →  portable Memory Pack  →  offline verification
+```
+
 Memory belongs to the corpus, not a particular model or chat session. PostgreSQL
-persists it across application restarts; Python, HTTP, CLI, and MCP expose the
-same memory contract. This is **corpus memory for AI**, not human memory,
-conversation/preferences storage, a chatbot, or an agent framework. Portability
-means model-independent interfaces, not a promised archive export/import tool.
+persists it across application restarts; REST, the Python SDK, MCP and the CLI
+expose the same memory contract and the same receipt. This is **corpus memory for
+AI**, not human memory, conversation/preferences storage, a chatbot, or an agent
+framework. Portability means model-independent interfaces *and* an artifact you
+can hand to another process, which can verify it with no Mind Palace runtime,
+database, embedding model or network present.
 
 ## Project status
 
 ### Current product
 
-`v0.7.0` is the current public release. It packages the unified authoritative
-`context()` surface, the portable Memory Pack reader, the claim-representation
-cache, and a cached-query fix, alongside the released M009 operational memory
-feed and the existing persistent corpus-memory model. The current product also
-includes the live REST/Python/CLI retrieval surfaces, MCP for ordinary memory
-operations, and dependency-aware liveness and readiness checks.
+`v0.8.0` is the current public release. It packages **Verifiable Memory**: the
+portable Memory Pack reader, the standard-library-only proof and receipt
+verifiers, the `mindpalace-proof` CLI, and opt-in Memory Receipts on the REST,
+Python SDK and MCP memory-query surfaces. Alongside that it carries the released
+M009 operational memory feed, the unified authoritative `context()` surface, the
+claim-representation cache, and dependency-aware liveness and readiness checks.
+
+A developer retrieves authoritative memory, receives a receipt describing what
+came back and why, exports the Memory Pack, and verifies the artifact later from a
+clean environment. Verification establishes integrity and recorded provenance; it
+does not establish that the original source was factually correct, and it does
+not establish authenticity without a trust anchor the caller pinned.
 
 The durable feed is a corpus-scoped read interface over immutable
 `memory_versions` rows. It uses an opaque, integrity-protected cursor for bounded
@@ -569,8 +584,35 @@ by a claim that generation or production validation is complete.
 ## Verifiable Memory
 
 Mind Palace stores persistent, versioned, evidence-backed memory. It can export
-that memory as a portable artifact and produce a **proof** that another process
-can verify without the Mind Palace server.
+that memory as a portable artifact and hand your application a **Memory Receipt**
+that another process can verify without the Mind Palace server.
+
+Ask for a receipt on any memory query and you get the answer plus a record of
+what it is: the claim, the document version that carried it, the evidence with
+offsets, its validity window, its supersession lineage and the authoritative
+digest.
+
+```python
+result = client.query(corpus="docs", query="What is the current database?",
+                      include_receipt=True)
+result.receipt["receipts"][0]["answer"]["claim"]
+```
+
+```bash
+# REST is the same contract
+curl -X POST localhost:8000/api/memory/query -H 'content-type: application/json' \
+  -d '{"corpus":"docs","query":"What is the current database?","include_receipt":true}'
+
+# MCP is the same contract, with the receipt always on
+memory_explain {"request": {"corpus": "docs", "query": "What is the current database?"}}
+```
+
+`include_receipt` is opt-in and purely additive: a client that does not ask for
+it sees no new field at all. All three surfaces call the same service and return
+the same receipt, and a contract test asserts they agree byte for byte.
+
+Export the artifact and verify it anywhere — no server, database, embedding
+model, network or credentials:
 
 ```bash
 # mint a proof from an exported Memory Pack
@@ -608,6 +650,29 @@ source was factually correct, and it is not a third-party signature.
 
 Both modules are standard-library-only and ship in the distribution, so this works
 from a clean install with no Mind Palace runtime present.
+
+### The workflow, end to end
+
+This is the path the release test walks, on a real supersession chain from the
+repository's own corpus:
+
+```text
+1. query the archive          → an authoritative answer, with a Memory Receipt
+2. export the Memory Pack     → files, not a database connection
+3. leave the runtime          → a clean environment, nothing of Mind Palace installed
+4. verify                     → VERIFIED
+5. change one authoritative byte
+6. verify                     → REJECTED, naming the invariant that failed
+7. restore                    → VERIFIED again
+8. ask what it used to know    → the earlier authoritative state, and a receipt for it
+9. verify that too            → VERIFIED
+```
+
+The historical step is the one that earns the rest. MySQL becoming PostgreSQL is
+a real supersession, and asking the same question with `as_of` set to before the
+second write returns the answer the archive gave *then*, with a receipt that says
+which instant it describes. Each receipt is valid only against the artifact it
+was cut from, so verification catches a receipt paired with the wrong pack.
 
 ### The Memory Receipt
 
@@ -667,6 +732,15 @@ historical  The primary datastore is SQLite.       [SUPERSEDED] valid_at=2025-02
 `mindpalace-proof explain` prints the claim, its source version, the evidence
 with offsets, the temporal window and the supersession lineage — provenance and
 state, never model reasoning.
+
+### Retrieval status
+
+Retrieval is unchanged by this release. M013's measured arms — a tokenizer
+rewrite, PostgreSQL FTS candidate generation, naive RRF, a contextual
+claim+evidence representation and an evidence-aware embedding — were all
+rejected on measurement, and nothing here reopens them. The acceptance boundary
+remains a separate research question, and cosine similarity is treated as a
+ranking signal rather than a defensible acceptance policy.
 
 ## Known limitations
 

@@ -22,12 +22,12 @@ def main() -> None:
     m0065 = (ROOT / "docs/evaluation/m0065.md").read_text(encoding="utf-8")
     m00675 = (ROOT / "docs/evaluation/m00675-reproducibility.md").read_text(encoding="utf-8")
 
-    require(pyproject, r'^version = "0\.7\.0"$', "package version is v0.7.0")
-    require(changelog, r"^## \[v0\.7\.0\]", "v0.7.0 changelog entry")
+    require(pyproject, r'^version = "0\.8\.0"$', "package version is v0.8.0")
+    require(changelog, r"^## \[v0\.8\.0\]", "v0.8.0 changelog entry")
     require(release_map, r"\| M006\.75 \|.*\| `v0\.5\.0` \|", "M006.75 release mapping")
     require(
         readme,
-        r"\[Current release: v0\.7\.0\]\(docs/release-map\.md\)",
+        r"\[Current release: v0\.8\.0\]\(docs/release-map\.md\)",
         "README release-map link",
     )
     require(m006, r"^Public release: `v0\.5\.0`$", "M006 release metadata")
@@ -62,6 +62,19 @@ def main() -> None:
         release_map,
         r"\| M012 / M012\.3 \|.*\| `v0\.7\.0` \|",
         "M012 release mapping",
+    )
+    # The trust boundary is part of the public contract, not a comment. A release
+    # that ships verification without stating what verification does not establish
+    # is worse than one that ships no verification.
+    require(
+        changelog,
+        r"does \*\*not\*\* establish that the original source was factually correct",
+        "v0.8.0 trust boundary",
+    )
+    require(
+        release_map,
+        r"does not\nestablish that the original source was factually correct",
+        "release map trust boundary",
     )
     print("release metadata: PASS")
 

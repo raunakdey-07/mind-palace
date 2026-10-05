@@ -154,18 +154,23 @@ def test_prove_then_verify_round_trip(workspace):
 def test_explain_shows_provenance_not_reasoning(workspace):
     result = _run(["explain", "proof.json", "--pack", "pack.json"], workspace)
     assert result.returncode == EXIT_OK, result.stderr
-    for section in ("ANSWER", "STATE", "CLAIM", "SOURCE", "EVIDENCE", "HISTORY", "PROOF"):
+    for section in ("ANSWER", "WHY THIS MEMORY", "TIME", "EVIDENCE", "HISTORY", "RECEIPT"):
         assert section in result.stdout, f"missing {section}"
     assert "The primary datastore is PostgreSQL." in result.stdout
-    # It states its own trust boundary rather than implying external truth.
+    # It states its own limits rather than implying external truth.
     assert "does not establish that the original source was factually correct" in result.stdout
+    assert "does not establish authenticity" in result.stdout
 
 
 def test_verify_json_output_is_machine_readable(workspace):
     result = _run(["verify", "proof.json", "--pack", "pack.json", "--json"], workspace)
     payload = json.loads(result.stdout)
     assert payload["verified"] is True
-    assert all(payload["checks"].values())
+    # The three properties are reported separately, never collapsed.
+    for key in ("integrity", "provenance", "temporal", "supersession"):
+        assert payload[key] is True, key
+    assert payload["authenticity"]["authenticated"] is False
+    assert "not established" in payload["authenticity"]["reason"]
 
 
 # --- tamper, at CLI level ----------------------------------------------------
@@ -250,10 +255,149 @@ def test_prove_refuses_an_unknown_claim_key(workspace):
 
 
 def test_cli_exposes_help_for_each_command():
-    for argv in (["--help"], ["verify", "--help"], ["prove", "--help"], ["explain", "--help"]):
+    for argv in (
+        ["--help"],
+        ["verify", "--help"],
+        ["prove", "--help"],
+        ["explain", "--help"],
+        ["receipt", "--help"],
+    ):
         result = _run(argv, ROOT)
         assert result.returncode == EXIT_OK, argv
         assert "usage:" in result.stdout
+
+
+# --- the product workflow ----------------------------------------------------
+
+
+def test_receipt_round_trip_through_the_cli(workspace):
+    """The full loop: receipt -> export -> verify -> tamper -> restore."""
+    minted = _run(
+        [
+            "receipt",
+            "--pack",
+            "pack.json",
+            "--claim-key",
+            "architecture.postgres",
+            "--query",
+            "What datastore did production use?",
+            "-o",
+            "receipt.json",
+        ],
+        workspace,
+    )
+    assert minted.returncode == EXIT_OK, minted.stderr
+    assert "receipt id:" in minted.stdout
+
+    verified = _run(["verify", "receipt.json", "--pack", "pack.json"], workspace)
+    assert verified.returncode == EXIT_OK, verified.stderr
+    assert "VERIFIED" in verified.stdout
+    # The trust boundary is stated, not implied.
+    assert "authenticity: NOT ESTABLISHED" in verified.stdout
+
+    tampered = workspace / "tampered.json"
+    raw = json.loads((workspace / "pack.json").read_text())
+    raw["current_memories"][0]["value"] = "MySQL"
+    tampered.write_text(json.dumps(raw, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+    rejected = _run(["verify", "receipt.json", "--pack", "tampered.json"], workspace)
+    assert rejected.returncode == EXIT_REJECTED
+    assert _run(["verify", "receipt.json", "--pack", "pack.json"], workspace).returncode == EXIT_OK
+
+
+def test_cli_trust_anchor_changes_the_authenticity_verdict(workspace):
+    """With a pinned digest authenticity becomes checkable; without one it does not."""
+    pack = MemoryPack.from_dict(PACK_FIXTURE)
+    _run(
+        [
+            "receipt",
+            "--pack",
+            "pack.json",
+            "--claim-key",
+            "architecture.postgres",
+            "-o",
+            "receipt.json",
+        ],
+        workspace,
+    )
+
+    pinned = _run(
+        ["verify", "receipt.json", "--pack", "pack.json", "--trusted-digest", pack.digest()],
+        workspace,
+    )
+    assert pinned.returncode == EXIT_OK
+    assert "authenticity: VERIFIED (trust anchor matched)" in pinned.stdout
+
+    wrong = _run(
+        ["verify", "receipt.json", "--pack", "pack.json", "--trusted-digest", "b" * 64], workspace
+    )
+    assert wrong.returncode == EXIT_OK
+    assert "authenticity: REJECTED" in wrong.stdout
+
+
+def test_cli_historical_receipt_names_the_old_truth(workspace):
+    """At an earlier instant the archive recorded SQLite -- a real supersession chain."""
+    _run(
+        [
+            "receipt",
+            "--pack",
+            "pack.json",
+            "--claim-key",
+            "architecture.postgres",
+            "--query",
+            "What datastore was production using?",
+            "--valid-at",
+            "2025-02-01T00:00:00+00:00",
+            "-o",
+            "historical.json",
+        ],
+        workspace,
+    )
+    verified = _run(["verify", "historical.json", "--pack", "pack.json"], workspace)
+    assert verified.returncode == EXIT_OK, verified.stderr
+    assert "VERIFIED" in verified.stdout
+
+    explained = _run(["explain", "historical.json", "--pack", "pack.json"], workspace)
+    assert explained.returncode == EXIT_OK
+    assert "The primary datastore is SQLite." in explained.stdout
+    assert "2025-02-01T00:00:00+00:00" in explained.stdout
+
+
+def test_cli_receipt_without_proof_still_verifies(workspace):
+    _run(
+        [
+            "receipt",
+            "--pack",
+            "pack.json",
+            "--claim-key",
+            "architecture.postgres",
+            "--no-proof",
+            "-o",
+            "minimal.json",
+        ],
+        workspace,
+    )
+    minimal = json.loads((workspace / "minimal.json").read_text())
+    assert "proof" not in minimal
+    assert _run(["verify", "minimal.json", "--pack", "pack.json"], workspace).returncode == EXIT_OK
+
+
+def test_cli_explain_reports_both_honest_limits(workspace):
+    _run(
+        [
+            "receipt",
+            "--pack",
+            "pack.json",
+            "--claim-key",
+            "architecture.postgres",
+            "-o",
+            "receipt.json",
+        ],
+        workspace,
+    )
+    result = _run(["explain", "receipt.json", "--pack", "pack.json"], workspace)
+    assert result.returncode == EXIT_OK
+    assert "does not establish that the original source was factually correct" in result.stdout
+    assert "does not establish authenticity" in result.stdout
 
 
 # --- packaging boundary ------------------------------------------------------
@@ -262,17 +406,17 @@ def test_cli_exposes_help_for_each_command():
 def test_standalone_modules_are_declared_for_shipping():
     """The exact failure mode: works in the source tree, absent from the wheel."""
     text = (ROOT / "pyproject.toml").read_text()
-    for module in STANDALONE_MODULES:
+    for module in STANDALONE_MODULES + ("memory_receipt.py",):
         stem = module.removesuffix(".py")
         assert f'"{stem}"' in text, f"{module} is not declared in py-modules"
     assert 'mindpalace-proof = "memory_proof_cli:main"' in text
 
 
 def test_cli_and_proof_import_nothing_heavy():
-    """Import isolation: the proof path must not pull in the runtime."""
+    """Import isolation: the receipt path must not pull in the runtime."""
     code = (
         "import sys;"
-        "import memory_pack, memory_proof, memory_proof_cli;"
+        "import memory_pack, memory_proof, memory_proof_cli, memory_receipt;"
         "heavy=[m for m in ('fastapi','sqlalchemy','asyncpg','torch',"
         "'sentence_transformers','pgvector','psycopg','pydantic','alembic') "
         "if m in sys.modules];"
@@ -293,7 +437,7 @@ def test_built_wheel_contains_the_standalone_modules():
     """Build artifacts are the distributable, not the source checkout."""
     wheel = sorted((ROOT / "dist").glob("*.whl"))[-1]
     names = set(zipfile.ZipFile(wheel).namelist())
-    for module in STANDALONE_MODULES:
+    for module in STANDALONE_MODULES + ("memory_receipt.py",):
         assert module in names, f"{module} is missing from {wheel.name}"
     entry = (
         zipfile.ZipFile(wheel)

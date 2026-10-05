@@ -50,6 +50,7 @@ honest verdict is that authenticity is unestablished, and the CLI says so.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 from memory_pack import MemoryPack
@@ -107,6 +108,35 @@ def receipt_digest(receipt: dict) -> str:
     return sha256_hex(canonical_bytes(body))
 
 
+def _moment(value: str | None) -> datetime | None:
+    """Parse an ISO-8601 instant, normalising the offset spelling.
+
+    Fixtures and clients write the same instant two ways -- ``...T00:00:00Z`` and
+    ``...T00:00:00+00:00`` -- and comparing those as STRINGS is wrong, because
+    ``Z`` sorts after ``+``. That silently excluded a claim whose validity had
+    actually begun, so a receipt for "PostgreSQL" quoted the superseded SQLite.
+    Instant comparisons are done on parsed datetimes here, never on text.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _contains(valid_at: str | None, start: str | None, end: str | None) -> bool:
+    """Half-open containment: ``valid_until`` is exclusive, as the archive treats it."""
+    at = _moment(valid_at)
+    if at is None:
+        return False
+    begins = _moment(start)
+    if begins is not None and at < begins:
+        return False
+    ends = _moment(end)
+    return not (ends is not None and at >= ends)
+
+
 def _claim_in_force(entries: list[dict], valid_at: str | None):
     """The entry that was authoritative at ``valid_at``.
 
@@ -115,19 +145,27 @@ def _claim_in_force(entries: list[dict], valid_at: str | None):
       2. otherwise the CURRENT entry, so an ordinary current-state receipt is
          unchanged.
 
-    Ties resolve in the proof's evidence order, which is already fixed, so the
-    choice is deterministic.
+    Within (1) the CURRENT entry wins the tie. Validity windows are half-open, but
+    at the exact instant a claim takes over, both neighbours can satisfy
+    containment. Taking the first match in evidence order then named the claim that
+    had just been superseded, so a receipt for "PostgreSQL" quoted SQLite. The
+    response's own claim set is the authority on what was returned.
     """
     current = next((e for e in entries if e["claim"].get("status") == "CURRENT"), None)
     if valid_at:
-        for entry in entries:
-            temporal = entry.get("temporal", {})
-            start, end = temporal.get("valid_from"), temporal.get("valid_to")
-            if start and valid_at < start:
-                continue
-            if end and valid_at >= end:
-                continue
-            return entry
+        in_force = [
+            entry
+            for entry in entries
+            if _contains(
+                valid_at,
+                entry.get("temporal", {}).get("valid_from"),
+                entry.get("temporal", {}).get("valid_to"),
+            )
+        ]
+        if in_force:
+            if current is not None and any(current is e for e in in_force):
+                return current
+            return in_force[0]
     return current if current is not None else entries[0]
 
 
@@ -325,17 +363,18 @@ def verify_receipt(receipt: dict, artifact: MemoryPack | dict) -> dict:
     # -- temporal state, recomputed from the artifact
     valid_at = receipt["state"].get("valid_at")
     if actual is not None and valid_at:
-        if actual.valid_from and valid_at < actual.valid_from:
+        # Parsed, not compared as text: the same instant is written with a Z in
+        # some fixtures and +00:00 in others, and string comparison silently gets
+        # that wrong.
+        if not _contains(valid_at, actual.valid_from, actual.valid_until):
             temporal.append(
-                f"claim was not valid at valid_at={valid_at} (valid_from={actual.valid_from})"
-            )
-        if actual.valid_until and valid_at >= actual.valid_until:
-            temporal.append(
-                f"claim had already expired at valid_at={valid_at} "
-                f"(valid_until={actual.valid_until})"
+                f"claim was not valid at valid_at={valid_at} "
+                f"(valid_from={actual.valid_from}, valid_to={actual.valid_until})"
             )
     if receipt["temporal"].get("in_force_at_valid_at") is False and actual is not None:
-        if actual.status == "CURRENT":
+        if actual.status == "CURRENT" and _contains(
+            valid_at, actual.valid_from, actual.valid_until
+        ):
             temporal.append(
                 "receipt records the claim as not in force, but the artifact records it as CURRENT"
             )
@@ -393,6 +432,97 @@ def verify_trust(result: dict, expected_digest: str, actual_digest: str) -> dict
     }
 
 
+def _iso(value):
+    """An aware datetime as its ISO-8601 string; None and strings pass through.
+
+    The response model carries datetimes and the portable contracts carry strings.
+    Converting once at this boundary is what lets REST, SDK and MCP produce
+    byte-identical receipts from the same answer.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    isoformat = getattr(value, "isoformat", None)
+    return isoformat() if callable(isoformat) else str(value)
+
+
+def receipt_for_response(response, *, query: str | None = None) -> dict | None:
+    """Build receipts describing an authoritative response, or None.
+
+    ONE canonical receipt, shared by REST, SDK, MCP and CLI. Surfaces differ only
+    in how they SERIALISE it, never in what they assert, so an answer cannot mean
+    two different things depending on which surface asked.
+
+    A receipt is emitted per authored key the response actually returned as
+    CURRENT. A response with no current memory -- an abstention, or a purely
+    historical one -- yields no receipt, because there is no answer to attest to.
+    The field is then absent rather than present-and-empty, so a client can tell
+    "nothing was returned" from "a receipt was withheld".
+
+    The enclosing pack digest covers the WHOLE authoritative response, so it is an
+    integrity anchor for everything returned, not only the claims named here.
+    """
+    current = list(getattr(response, "current_memories", []) or [])
+    if not current:
+        return None
+
+    keys = sorted({c.key for c in current})
+    state = getattr(response, "state", None)
+    as_of = _iso(getattr(state, "as_of", None))
+    valid_at = _iso(getattr(state, "valid_at", None))
+    resolved_query = query if query is not None else getattr(response, "query", "")
+    pack = MemoryPack.from_dict(response.model_dump(mode="json"))
+    digest = pack.digest()
+
+    return {
+        "schema_version": RECEIPT_SCHEMA_VERSION,
+        "corpus": getattr(response, "corpus", ""),
+        "query": resolved_query,
+        "query_digest": query_digest(resolved_query),
+        # Binding is checked against the ARTIFACT's query, not against this field:
+        # a self-consistent digest would only prove the writer computed it correctly.
+        "answered_query": pack.raw.get("query", ""),
+        "answered_query_digest": query_digest(pack.raw.get("query", "")),
+        "claim_ids": sorted(c.id for c in current),
+        "claim_keys": keys,
+        "state": {"as_of": as_of, "valid_at": valid_at},
+        "memory_pack_digest": digest,
+        "receipt_count": len(keys),
+        "receipts": [
+            build_receipt(pack, key, query=resolved_query, as_of=as_of, valid_at=valid_at)
+            for key in keys
+        ],
+    }
+
+
+def verify_response_receipt(receipt: dict, artifact: MemoryPack | dict) -> dict:
+    """Verify every receipt in a response bundle against the artifact.
+
+    The bundle's own digest is checked first: if it does not match, the receipts
+    inside it describe a different artifact and there is nothing to check them
+    against.
+    """
+    if not isinstance(receipt, dict) or "receipts" not in receipt:
+        raise ReceiptError("not a response receipt bundle")
+    pack = artifact if isinstance(artifact, MemoryPack) else MemoryPack.from_dict(artifact)
+    failed: list[dict] = []
+    for entry in receipt["receipts"]:
+        result = verify_receipt(entry, pack)
+        if not result["verified"]:
+            failed.append({"receipt_id": entry.get("receipt_id"), **result})
+    digest_ok = receipt.get("memory_pack_digest") == pack.digest()
+    # Compared against the artifact's own query, so a caller cannot substitute a
+    # different question and re-derive a matching digest.
+    query_ok = receipt.get("answered_query_digest") == query_digest(pack.raw.get("query", ""))
+    return {
+        "verified": not failed and digest_ok and query_ok,
+        "memory_pack_digest": digest_ok,
+        "query_binding": query_ok,
+        "receipts_checked": len(receipt["receipts"]),
+        "failures": failed,
+        "authenticity": "NOT ESTABLISHED",
+    }
+
+
 __all__ = [
     "RECEIPT_SCHEMA_VERSION",
     "ReceiptError",
@@ -401,6 +531,8 @@ __all__ = [
     "load_receipt",
     "query_digest",
     "receipt_digest",
+    "receipt_for_response",
     "verify_receipt",
+    "verify_response_receipt",
     "verify_trust",
 ]

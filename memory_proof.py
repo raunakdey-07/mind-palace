@@ -46,6 +46,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from memory_pack import MemoryPack
@@ -200,14 +201,34 @@ def build_proof(
 
 
 def _in_force_at(claim, valid_at: str | None) -> bool | None:
-    """Was this claim's validity interval open at ``valid_at``?"""
+    """Was this claim's validity interval open at ``valid_at``?
+
+    Parses before comparing. The same instant is spelled ``...T00:00:00Z`` in
+    some fixtures and ``...T00:00:00+00:00`` in others, and as text ``Z`` sorts
+    after ``+``, which made a claim look not-yet-valid when it had just become
+    valid. ``valid_until`` is exclusive, matching the authoritative layer.
+    """
     if not valid_at:
         return None
-    if claim.valid_from and valid_at < claim.valid_from:
+    at = _parse(valid_at)
+    if at is None:
+        return None
+    begins = _parse(getattr(claim, "valid_from", None))
+    if begins is not None and at < begins:
         return False
-    if claim.valid_until and valid_at >= claim.valid_until:
+    ends = _parse(getattr(claim, "valid_until", None))
+    if ends is not None and at >= ends:
         return False
     return True
+
+
+def _parse(value):
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _lineage(pack: MemoryPack, claim) -> dict:

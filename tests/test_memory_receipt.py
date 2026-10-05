@@ -21,7 +21,9 @@ from memory_receipt import (
     canonical_receipt_json,
     query_digest,
     receipt_digest,
+    receipt_for_response,
     verify_receipt,
+    verify_response_receipt,
     verify_trust,
 )
 
@@ -232,3 +234,109 @@ def test_receipts_are_portable_json(receipt):
     """Round-trips through a plain file with no runtime."""
     restored = json.loads(json.dumps(receipt))
     assert verify_receipt(restored, PACK)["verified"]
+
+
+# --- the response-level bundle ----------------------------------------------
+
+
+def _response_model():
+    """A MemoryResponse shaped like the real one, built from the fixture pack."""
+    from api.models.memory import MemoryResponse
+
+    raw = PACK.raw
+    return MemoryResponse.model_validate(
+        {
+            "query": raw["query"],
+            "corpus": raw["corpus"],
+            "state": raw["state"],
+            "current_memories": raw["current_memories"],
+            "historical_memories": raw["historical_memories"],
+            "evidence": raw["evidence"],
+            "sources": raw["sources"],
+        }
+    )
+
+
+def test_response_bundle_attests_to_what_was_returned():
+    bundle = receipt_for_response(_response_model())
+    assert bundle is not None
+    assert bundle["claim_keys"] == [KEY]
+    assert bundle["claim_ids"] == ["c-new"]
+    assert bundle["receipt_count"] == 1
+    assert bundle["query_digest"] == query_digest(bundle["query"])
+    assert bundle["answered_query"] == PACK.raw["query"]
+    # The response was asked at valid_at 2025-06-01, so the answer IS the current
+    # claim. The per-key receipt names the same claim the bundle attests to.
+    assert bundle["claim_ids"] == ["c-new"]
+    assert bundle["receipts"][0]["answer"]["claim_id"] == "c-new"
+    # The bundle digest anchors the WHOLE response, not only the named claim.
+    assert bundle["memory_pack_digest"] == _pack_digest_of_response()
+
+
+def test_response_bundle_verifies_against_the_same_response():
+    response = _response_model()
+    bundle = receipt_for_response(response)
+    result = verify_response_receipt(bundle, response.model_dump(mode="json"))
+    assert result["verified"], result
+    assert result["receipts_checked"] == 1
+    assert result["authenticity"] == "NOT ESTABLISHED"
+
+
+def test_response_bundle_is_rejected_after_any_tampering():
+    """Every field a client might edit must be caught."""
+    response = _response_model()
+    raw = response.model_dump(mode="json")
+
+    for mutate in (
+        lambda d: d["current_memories"][0].update({"claim": "Forged"}),
+        lambda d: d["evidence"][0].update({"text": "Forged"}),
+        lambda d: d["current_memories"][0].update({"observed_at": "2099-01-01T00:00:00+00:00"}),
+        lambda d: d["sources"][0].update({"path": "elsewhere.md"}),
+    ):
+        tampered = json.loads(json.dumps(raw))
+        mutate(tampered)
+        bundle = receipt_for_response(response)
+        result = verify_response_receipt(bundle, tampered)
+        assert not result["verified"], mutate
+
+
+def _pack_digest_of_response() -> str:
+    from memory_pack import MemoryPack
+
+    return MemoryPack.from_dict(_response_model().model_dump(mode="json")).digest()
+
+
+def test_response_bundle_detects_a_changed_query_binding():
+    """A caller cannot swap the question and re-derive a matching digest.
+
+    Binding is verified against the artifact's own query, not against the field
+    the caller controls.
+    """
+    response = _response_model()
+    bundle = receipt_for_response(response, query="a question nobody asked")
+    # Self-consistent on its face...
+    assert bundle["query_digest"] == query_digest(bundle["query"])
+    # ...but it does not claim to have answered the artifact's query.
+    assert bundle["answered_query"] == response.query
+    assert bundle["answered_query_digest"] != bundle["query_digest"]
+
+    # Tamper with the artifact so the answered query differs from the bundle's.
+    raw = response.model_dump(mode="json")
+    raw["query"] = "a question nobody asked"
+    result = verify_response_receipt(bundle, raw)
+    assert not result["verified"]
+    assert result["query_binding"] is False
+
+
+def test_no_current_memory_yields_no_receipt():
+    """An abstention has no answer to attest to, so no receipt is issued."""
+    response = _response_model()
+    response.current_memories = []
+    assert receipt_for_response(response) is None
+
+
+def test_response_bundle_is_deterministic():
+    response = _response_model()
+    assert json.dumps(receipt_for_response(response), sort_keys=True) == json.dumps(
+        receipt_for_response(response), sort_keys=True
+    )

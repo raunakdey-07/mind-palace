@@ -4,6 +4,47 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [Unreleased]
+
+### Added
+
+- **Verifiable Memory: portable proofs of recorded memory state, provenance,
+  evidence, temporal validity and supersession.** A proof is a small canonical
+  artifact naming the authoritative claim, the document version that carried it,
+  its evidence, its temporal position and its supersession lineage, together with
+  an `authoritative_digest` over the Memory Pack and a `proof_digest` over the
+  proof itself. The proof reuses `MemoryPack.canonical_json` exactly, so there is
+  one canonicalisation contract, not two.
+- `memory_proof.py`, a standard-library-only builder and verifier. It is shipped
+  in the distribution alongside `memory_pack.py`, so a consumer can verify a
+  recorded memory with **no server, no database, no embedding model, no network
+  and no API credentials**.
+- `mindpalace-proof`, a dependency-free CLI with three commands:
+  `verify` checks a proof against its authoritative artifact, `prove` mints one
+  from an existing Memory Pack, and `explain` shows the recorded provenance,
+  evidence, temporal state and supersession lineage for a proven memory.
+  `verify` also accepts `--json` for machine-readable verdicts. Exit codes are
+  stable: `0` verified, `1` rejected, `2` malformed input.
+
+### Trust boundary
+
+Verification establishes **integrity and recorded provenance** — that the
+artifact still represents the state the proof describes, and that no covered
+record has been altered since. It does **not** establish that the original source
+was factually correct, and it is not a third-party signature. `explain` states
+this in its own output.
+
+### Verified
+
+Verification checks the proof digest, the artifact digest, claim identity and
+content, evidence ownership (each record must belong to the named claim *and*
+version, with unaltered text), document provenance, temporal validity, observation
+state at `as_of`, and supersession consistency in both directions, so neither
+hiding a supersession nor inventing one passes. Tampering with the claim text,
+evidence text, a timestamp, a document identity or the proof itself is rejected
+with the failed invariant named. Verified from a built wheel installed into a
+fresh virtual environment, run outside the source tree.
+
 ## [v0.7.0] - 2026-09-28
 
 ### Added

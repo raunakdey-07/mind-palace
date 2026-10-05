@@ -566,6 +566,49 @@ fair end-to-end latency comparison**, nor a general latency guarantee.
 The historical [M006 report](docs/evaluation/m006.md) is preserved, not superseded
 by a claim that generation or production validation is complete.
 
+## Verifiable Memory
+
+Mind Palace stores persistent, versioned, evidence-backed memory. It can export
+that memory as a portable artifact and produce a **proof** that another process
+can verify without the Mind Palace server.
+
+```bash
+# mint a proof from an exported Memory Pack
+mindpalace-proof prove --pack memory-pack.json --claim-key architecture.postgres -o proof.json
+
+# verify it anywhere: no server, database, embedding model, network or credentials
+mindpalace-proof verify proof.json --pack memory-pack.json
+```
+
+```text
+VERIFIED
+claim: architecture.postgres
+versions: v-new, v-old
+valid_at: 2025-06-01T00:00:00+00:00
+authoritative digest: b2a1c8de...
+proof digest: acea4a2d...
+```
+
+Change one byte of the authoritative artifact and verification rejects it, naming
+the invariant that failed:
+
+```text
+REJECTED
+reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+reason: claim 'c-new' content does not match its proof entry
+```
+
+`mindpalace-proof explain` shows the recorded provenance, evidence, temporal state
+and supersession lineage for a memory.
+
+**What this does and does not establish.** It establishes integrity and recorded
+provenance: the artifact still represents the state the proof describes, and no
+covered record has been altered since. It does **not** establish that the original
+source was factually correct, and it is not a third-party signature.
+
+Both modules are standard-library-only and ship in the distribution, so this works
+from a clean install with no Mind Palace runtime present.
+
 ## Known limitations
 
 - **Query cost grows with the archive, and the latency envelope is not currently

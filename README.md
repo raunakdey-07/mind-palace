@@ -609,6 +609,65 @@ source was factually correct, and it is not a third-party signature.
 Both modules are standard-library-only and ship in the distribution, so this works
 from a clean install with no Mind Palace runtime present.
 
+### The Memory Receipt
+
+A receipt records what Mind Palace actually returned to one application, for one
+query, at one historical state. `mindpalace-proof verify` reports the trust model
+explicitly rather than letting a digest imply everything:
+
+```text
+VERIFIED
+
+Integrity:
+  authoritative artifact: MATCH
+  receipt: MATCH
+
+Provenance:
+  claim: MATCH
+  evidence: MATCH
+  document: MATCH
+
+Temporal state:
+  valid_at: MATCH
+  supersession: MATCH
+
+Trust:
+  authenticity: NOT ESTABLISHED (no trust anchor supplied)
+```
+
+That last line is deliberate. Verification establishes **integrity and recorded
+provenance**. It does **not** establish that the original source was factually
+correct, and a digest alone cannot establish **authenticity** — anyone able to
+replace both the artifact and the receipt can recompute the digests. Supply
+`--trusted-digest` with a digest you pinned out of band, and authenticity becomes
+checkable:
+
+```bash
+mindpalace-proof verify receipt.json --pack memory-pack.json --trusted-digest "$PINNED"
+```
+
+### Time travel, with the corpus that genuinely supports it
+
+The same authored key, two instants, two authoritative answers:
+
+```bash
+mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
+  --query "What datastore did production use?" -o current.json
+
+mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
+  --query "What datastore was production using?" \
+  --valid-at 2025-02-01T00:00:00+00:00 -o historical.json
+```
+
+```text
+current     The primary datastore is PostgreSQL.   [CURRENT   ] valid_at=2025-06-01
+historical  The primary datastore is SQLite.       [SUPERSEDED] valid_at=2025-02-01
+```
+
+`mindpalace-proof explain` prints the claim, its source version, the evidence
+with offsets, the temporal window and the supersession lineage — provenance and
+state, never model reasoning.
+
 ## Known limitations
 
 - **Query cost grows with the archive, and the latency envelope is not currently

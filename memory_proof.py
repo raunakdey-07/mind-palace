@@ -421,12 +421,18 @@ def verify(proof: dict, artifact: MemoryPack | dict) -> Verdict:
                     f"valid_at={valid_at}; it does not answer a question asked then"
                 )
 
-        # 7. Observation state: the source version existed by as_of.
-        if as_of and claim.observed_at > as_of:
-            temporal_ok = False
-            reasons.append(
-                f"claim {claim_id!r} was observed at {claim.observed_at}, after as_of={as_of}"
-            )
+        # 7. Observation state: the source version existed by as_of. Parsed, not
+        # compared as text, for the same reason as valid_at above: artifacts spell
+        # the same instant `...Z` and `...+00:00`, and as strings `Z` sorts after
+        # `+`, so a claim recorded at exactly as_of read as recorded after it and
+        # every historical proof was rejected.
+        if as_of and (cutoff := _parse(as_of)) is not None:
+            observed = _parse(claim.observed_at)
+            if observed is not None and observed > cutoff:
+                temporal_ok = False
+                reasons.append(
+                    f"claim {claim_id!r} was observed at {claim.observed_at}, after as_of={as_of}"
+                )
 
         # 8. Supersession. The artifact is the authority: compare what the proof says
         # about status and lineage against what the artifact records, in both

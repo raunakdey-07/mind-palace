@@ -250,3 +250,33 @@ def test_unsupported_proof_version_is_an_error_not_a_verdict():
 def test_canonicalisation_matches_the_pack(pack):
     """One canonicalisation, so a proof and its pack cannot disagree."""
     assert canonical_bytes(pack.raw) == pack.canonical_json().encode("utf-8")
+
+
+def test_observation_cutoff_compares_instants_not_spellings(pack):
+    """`as_of` must hold for a claim recorded at exactly that instant.
+
+    The same moment is written `...Z` by a serialised model and `...+00:00` by a
+    hand-written fixture, and as TEXT `Z` sorts after `+`, so a claim observed at
+    the cutoff read as observed after it. This rejected every honest historical
+    proof over a real archive while leaving the all-`+00:00` fixture green.
+
+    The `Z` spelling below is the one a real response produces, which is why this
+    is a separate test rather than another assertion on `pack`.
+    """
+    raw = json.loads(pack.canonical_json())
+    for collection in ("current_memories", "historical_memories", "evidence", "sources"):
+        for row in raw[collection]:
+            row["observed_at"] = row["observed_at"].replace("+00:00", "Z")
+    zulu = MemoryPack.from_dict(raw)
+    assert zulu.raw["current_memories"][0]["observed_at"].endswith("Z")
+
+    # Observed at exactly the cutoff: in force, and must verify.
+    proof = build_proof(zulu, "architecture.postgres", as_of="2025-06-01T00:00:00+00:00")
+    verdict = verify(proof, zulu)
+    assert verdict.verified, verdict.reasons
+
+    # The boundary must still bite when the claim really is later.
+    late = build_proof(zulu, "architecture.postgres", as_of="2025-05-31T23:59:59+00:00")
+    rejected = verify(late, zulu)
+    assert not rejected.verified
+    assert any("after as_of" in reason for reason in rejected.reasons), rejected.reasons

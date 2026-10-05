@@ -44,10 +44,15 @@ def tool_name(operation):
 async def test_tools_are_async_typed_and_preserve_legacy_tools():
     tools = {tool.name: tool for tool in await mcp_server.mcp.list_tools()}
     assert {"context", "search", "sync", "list_corpora"} <= tools.keys()
+    # `memory_explain` is `memory_query` with the receipt forced on: the same
+    # request model, the same output schema, the same service. It is listed
+    # separately so an agent can ask "why should I trust this?" and discover the
+    # answer without knowing the opt-in flag.
+    explained = (*OPERATIONS, "query", "explain")
     assert {name for name in tools if name.startswith("memory_")} == {
-        tool_name(operation) for operation in (*OPERATIONS, "query")
+        tool_name(operation) for operation in explained
     }
-    for operation in (*OPERATIONS, "query"):
+    for operation in explained:
         tool = tools[tool_name(operation)]
         assert inspect.iscoroutinefunction(getattr(mcp_server, tool.name))
         schema = tool.input_schema
@@ -103,6 +108,30 @@ async def test_invalid_tool_input_never_reaches_service(service, operation, body
     with pytest.raises(ToolError):
         await mcp_server.mcp.call_tool(tool_name(operation), {"request": body})
     service.execute.assert_not_called()
+
+
+async def test_explain_is_query_with_the_receipt_forced_on(service):
+    """One service, no MCP-only receipt semantics.
+
+    `memory_explain` must reach the same `query` operation REST and the SDK reach,
+    differing only in that the receipt is on. If it ever grew its own receipt
+    logic, the two surfaces could assert different things about one answer.
+    """
+    body = {"corpus": "docs", "query": "雪", "as_of": "2026-01-01T00:00:00Z"}
+    result = await mcp_server.mcp.call_tool("memory_explain", {"request": body})
+    assert not result.is_error
+    service.execute.assert_awaited_once_with(
+        "query",
+        MemoryRequest(**body, include_receipt=True),
+    )
+
+    # Including it explicitly is idempotent: explaining twice is still one call.
+    await mcp_server.mcp.call_tool("memory_explain", {"request": dict(body, include_receipt=True)})
+    assert service.execute.await_args.args[1].include_receipt is True
+
+    # And the receipt is opt-in, never implied: a plain query does not get one.
+    await mcp_server.mcp.call_tool("memory_query", {"request": body})
+    assert service.execute.await_args.args[1].include_receipt is False
 
 
 @pytest.mark.parametrize("operation", OPERATIONS)

@@ -124,8 +124,31 @@ async def _execute_memory(operation: str, request: MemoryRequest) -> CallToolRes
 
 @mcp.tool(annotations=_READ_MEMORY, structured_output=True)
 async def memory_query(request: MemoryRequest) -> MemoryToolResult:
-    """Query corpus memory with intent-aware evidence bounded in Unicode characters."""
+    """Query corpus memory with intent-aware evidence bounded in Unicode characters.
+
+    Pass ``include_receipt=true`` to also receive a Memory Receipt: what was
+    returned, from which version, with what evidence, and how to verify it later.
+    """
     return await _execute_memory("query", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_explain(request: MemoryRequest) -> MemoryToolResult:
+    """Answer "why should I trust this memory?" with authoritative provenance.
+
+    Returns the same query result as `memory_query` -- same authoritative memory,
+    same evidence, same temporal state, same conflicts -- plus the Memory Receipt,
+    which names the claim identity, its source version and path, its evidence with
+    offsets, its validity window, its supersession lineage and the authoritative
+    digest.
+
+    This explains the recorded provenance and temporal basis for a memory. It does
+    not expose model reasoning, and it does not establish that the original source
+    was factually correct. Integrity and provenance are verified; authenticity is
+    only established when the caller supplies a trust anchor it pinned itself.
+    """
+    explained = request.model_copy(update={"include_receipt": True})
+    return await _execute_memory("query", explained)
 
 
 @mcp.tool(annotations=_READ_MEMORY, structured_output=True)

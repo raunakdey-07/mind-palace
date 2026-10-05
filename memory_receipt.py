@@ -137,21 +137,27 @@ def _contains(valid_at: str | None, start: str | None, end: str | None) -> bool:
     return not (ends is not None and at >= ends)
 
 
-def _claim_in_force(entries: list[dict], valid_at: str | None):
-    """The entry that was authoritative at ``valid_at``.
+def _claim_in_force(entries: list[dict], valid_at: str | None, as_of: str | None = None):
+    """The entry that was authoritative at ``valid_at`` / ``as_of``.
 
-    Preference order:
-      1. an entry whose validity interval contains ``valid_at``;
-      2. otherwise the CURRENT entry, so an ordinary current-state receipt is
+    Preference order, all measured against the archive's own semantics:
+
+      1. an entry whose AUTHORED validity interval contains ``valid_at``;
+      2. otherwise the entry that had been recorded by ``as_of``, taken as the
+         latest observation at or before it -- this is what supersession alone
+         records. Authoring a replacement links the claim and marks the predecessor
+         SUPERSEDED, but does NOT close the predecessor's validity interval, so a
+         supersession chain with no authored validity has no interval to match on.
+         Without this step such a receipt names the CURRENT claim for a question
+         asked before it existed;
+      3. otherwise the CURRENT entry, so an ordinary current-state receipt is
          unchanged.
 
-    Within (1) the CURRENT entry wins the tie. Validity windows are half-open, but
-    at the exact instant a claim takes over, both neighbours can satisfy
-    containment. Taking the first match in evidence order then named the claim that
-    had just been superseded, so a receipt for "PostgreSQL" quoted SQLite. The
-    response's own claim set is the authority on what was returned.
+    Ties break toward CURRENT, because validity windows are half-open and both
+    neighbours can contain a boundary instant.
     """
     current = next((e for e in entries if e["claim"].get("status") == "CURRENT"), None)
+
     if valid_at:
         in_force = [
             entry
@@ -166,6 +172,20 @@ def _claim_in_force(entries: list[dict], valid_at: str | None):
             if current is not None and any(current is e for e in in_force):
                 return current
             return in_force[0]
+
+    if as_of:
+        recorded = [
+            entry
+            for entry in entries
+            if (moment := _moment(entry.get("temporal", {}).get("observed_at"))) is not None
+            and moment <= _moment(as_of)
+        ]
+        if recorded:
+            latest = max(_moment(entry["temporal"]["observed_at"]) for entry in recorded)
+            return next(
+                entry for entry in recorded if _moment(entry["temporal"]["observed_at"]) == latest
+            )
+
     return current if current is not None else entries[0]
 
 
@@ -191,7 +211,11 @@ def build_receipt(
     # INSTANT. Picking the CURRENT claim unconditionally is wrong for a historical
     # valid_at: it would attach a receipt naming PostgreSQL to a question asked in
     # February, when the archive recorded SQLite.
-    primary = _claim_in_force(entries, valid_at or proof["state"].get("valid_at"))
+    primary = _claim_in_force(
+        entries,
+        valid_at or proof["state"].get("valid_at"),
+        as_of or proof["state"].get("as_of"),
+    )
     claim = primary["claim"]
     document = primary.get("document", {})
     temporal = primary.get("temporal", {})

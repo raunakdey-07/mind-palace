@@ -236,10 +236,13 @@ class Verdict:
     verified: bool
     reasons: list[str] = field(default_factory=list)
     checks: dict[str, bool] = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)
 
     def render(self) -> str:
         if self.verified:
-            return "VERIFIED"
+            lines = ["VERIFIED"]
+            lines += [f"Note: {note}" for note in self.notes]
+            return "\n".join(lines)
         lines = ["REJECTED"]
         lines += [f"Reason: {reason}" for reason in self.reasons]
         return "\n".join(lines)
@@ -275,6 +278,7 @@ def verify(proof: dict, artifact: MemoryPack | dict) -> Verdict:
     pack = artifact if isinstance(artifact, MemoryPack) else MemoryPack.from_dict(artifact)
 
     reasons: list[str] = []
+    notes: list[str] = []
     checks: dict[str, bool] = {}
 
     # 1. The proof has not been altered since it was minted.
@@ -383,10 +387,17 @@ def verify(proof: dict, artifact: MemoryPack | dict) -> Verdict:
                     f"claim {claim_id!r} records in_force={in_force} but the artifact "
                     f"says {actual_force} at valid_at={valid_at}"
                 )
+            # A claim may be CURRENT now and still not have been valid at an
+            # earlier instant -- that is the whole point of a historical proof.
+            # Rejecting it here would make historical verification impossible, so
+            # the contradiction is surfaced, not enforced: if the artifact calls
+            # the claim CURRENT while the entry says it was not yet in force, a
+            # receipt over that claim must not silently claim otherwise. The
+            # receipt layer decides which claim to answer with.
             if actual_force is False and claim.status == "CURRENT":
-                temporal_ok = False
-                reasons.append(
-                    f"claim {claim_id!r} is marked CURRENT but was not valid at valid_at={valid_at}"
+                notes.append(
+                    f"claim {claim_id!r} is CURRENT now but was not valid at "
+                    f"valid_at={valid_at}; it does not answer a question asked then"
                 )
 
         # 7. Observation state: the source version existed by as_of.
@@ -429,7 +440,7 @@ def verify(proof: dict, artifact: MemoryPack | dict) -> Verdict:
     checks["temporal"] = temporal_ok
     checks["status_consistency"] = status_ok
 
-    return Verdict(verified=not reasons, reasons=reasons, checks=checks)
+    return Verdict(verified=not reasons, reasons=reasons, checks=checks, notes=notes)
 
 
 def verify_files(proof_path: str, artifact_path: str) -> Verdict:

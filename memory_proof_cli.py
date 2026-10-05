@@ -273,16 +273,25 @@ def cmd_explain(args) -> int:
         query = proof.get("query", "")
         selector = proof["claim_key"]
 
+    # A proof entry and a receipt name the same things with different keys, and
+    # printing one shape's keys against the other showed `claim: None` for every
+    # receipt. Normalise once here, so the output below reads one vocabulary.
+    text = answer.get("text") or answer.get("claim")
+    claim_id = answer.get("id") or answer.get("claim_id")
+    version = (
+        answer.get("version_id") or source.get("document_version_id") or source.get("version_id")
+    )
+
     print("ANSWER")
     print(f"  query: {query or '-'}")
     print(f"  claim key: {selector}")
-    print(f"  claim: {answer.get('text')}")
+    print(f"  claim: {text}")
     print(f"  value: {answer.get('value')}")
     print(f"  status: {answer.get('status')}")
     print()
     print("WHY THIS MEMORY")
-    print(f"  claim id: {answer.get('id')}")
-    print(f"  version: {answer.get('version_id')}")
+    print(f"  claim id: {claim_id}")
+    print(f"  version: {version}")
     print(f"  document: {source.get('document_id') or source.get('version_id') or '-'}")
     print(f"  path: {source.get('path') or '-'}")
     print()

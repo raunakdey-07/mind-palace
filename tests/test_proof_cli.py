@@ -21,10 +21,18 @@ import pytest
 from memory_pack import MemoryPack
 from memory_proof import build_proof
 from memory_proof_cli import EXIT_BAD_INPUT, EXIT_OK, EXIT_REJECTED
+from memory_receipt import build_receipt
 
 ROOT = Path(__file__).resolve().parents[1]
 
-STANDALONE_MODULES = ("memory_pack.py", "memory_proof.py", "memory_proof_cli.py")
+#: Every top-level module the standalone reader and verifier are made of. All of
+#: them must reach the installed environment, not just the source checkout.
+STANDALONE_MODULES = (
+    "memory_pack.py",
+    "memory_proof.py",
+    "memory_receipt.py",
+    "memory_proof_cli.py",
+)
 
 #: A pack with a real supersession chain: c-old was valid until c-new replaced it.
 PACK_FIXTURE = {
@@ -112,6 +120,19 @@ PACK_FIXTURE = {
     ],
 }
 
+#: The exported artifacts the packaging test ships to a clean environment. Built
+#: from the same fixture as `workspace`, but as text: the installed command must
+#: consume files, and nothing may reach back into the checkout to make them.
+_PACK = MemoryPack.from_dict(PACK_FIXTURE)
+PACK_JSON = _PACK.canonical_json()
+RECEIPT_JSON = json.dumps(
+    build_receipt(_PACK, "architecture.postgres", query="What datastore did production use?"),
+    indent=2,
+    sort_keys=True,
+)
+#: One authoritative byte changed. Everything else is byte-identical to PACK_JSON.
+TAMPERED_PACK_JSON = PACK_JSON.replace("The primary datastore is PostgreSQL.", "PostgreSQL.")
+
 
 @pytest.fixture
 def workspace(tmp_path) -> Path:
@@ -149,6 +170,39 @@ def test_prove_then_verify_round_trip(workspace):
     assert verified.returncode == EXIT_OK, verified.stderr
     assert "VERIFIED" in verified.stdout
     assert "architecture.postgres" in verified.stdout
+
+
+def test_explain_reports_a_receipt_as_well_as_a_proof(workspace):
+    """A receipt names the same things under different keys; both must print.
+
+    `explain` read the proof entry's field names (`text`, `id`, `version_id`)
+    for both artifacts, so every receipt printed `claim: None`, `claim id: None`
+    and `version: None` while still exiting 0. The existing explain test only
+    ever passed a proof, so the receipt branch was never exercised.
+    """
+    minted = _run(
+        [
+            "receipt",
+            "--pack",
+            "pack.json",
+            "--claim-key",
+            "architecture.postgres",
+            "--query",
+            "What datastore did production use?",
+            "-o",
+            "receipt.json",
+        ],
+        workspace,
+    )
+    assert minted.returncode == EXIT_OK, minted.stderr
+
+    for artifact in ("proof.json", "receipt.json"):
+        result = _run(["explain", artifact, "--pack", "pack.json"], workspace)
+        assert result.returncode == EXIT_OK, result.stderr
+        assert "The primary datastore is PostgreSQL." in result.stdout, artifact
+        assert "c-new" in result.stdout, artifact
+        assert "v-new" in result.stdout, artifact
+        assert "None" not in result.stdout, f"{artifact} printed an unresolved field"
 
 
 def test_explain_shows_provenance_not_reasoning(workspace):
@@ -406,7 +460,7 @@ def test_cli_explain_reports_both_honest_limits(workspace):
 def test_standalone_modules_are_declared_for_shipping():
     """The exact failure mode: works in the source tree, absent from the wheel."""
     text = (ROOT / "pyproject.toml").read_text()
-    for module in STANDALONE_MODULES + ("memory_receipt.py",):
+    for module in STANDALONE_MODULES:
         stem = module.removesuffix(".py")
         assert f'"{stem}"' in text, f"{module} is not declared in py-modules"
     assert 'mindpalace-proof = "memory_proof_cli:main"' in text
@@ -432,12 +486,37 @@ def test_cli_and_proof_import_nothing_heavy():
     assert result.stdout.strip() == "", f"heavy modules imported: {result.stdout}"
 
 
-@pytest.mark.skipif(not list((ROOT / "dist").glob("*.whl")), reason="no built wheel in dist/")
-def test_built_wheel_contains_the_standalone_modules():
+@pytest.fixture(scope="session")
+def wheel(tmp_path_factory) -> Path:
+    """A real wheel, built on demand.
+
+    This used to be `skipif(not dist/*.whl)`, which meant the one test that proves
+    the packaging boundary only ran on a machine that happened to have built
+    first. CI never does, so the exact regression it guards -- working in the
+    source tree, absent from the distribution -- was unguarded in practice.
+    Building takes under two seconds; skipping saved that and lost the test.
+
+    A wheel already sitting in `dist/` is deliberately NOT reused. It is
+    gitignored, so nothing keeps it in step with the tree, and testing a stale
+    artifact is the very mistake this test exists to catch.
+    """
+    out = tmp_path_factory.mktemp("wheel")
+    result = subprocess.run(
+        [sys.executable, "-m", "build", "--wheel", "--outdir", str(out)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"wheel build failed:\n{result.stdout}\n{result.stderr}"
+    built = sorted(out.glob("*.whl"))
+    assert built, "the build produced no wheel"
+    return built[-1]
+
+
+def test_built_wheel_contains_the_standalone_modules(wheel):
     """Build artifacts are the distributable, not the source checkout."""
-    wheel = sorted((ROOT / "dist").glob("*.whl"))[-1]
     names = set(zipfile.ZipFile(wheel).namelist())
-    for module in STANDALONE_MODULES + ("memory_receipt.py",):
+    for module in STANDALONE_MODULES:
         assert module in names, f"{module} is missing from {wheel.name}"
     entry = (
         zipfile.ZipFile(wheel)
@@ -445,3 +524,85 @@ def test_built_wheel_contains_the_standalone_modules():
         .decode()
     )
     assert "mindpalace-proof = memory_proof_cli:main" in entry
+
+
+def test_the_installed_wheel_verifies_without_the_runtime(wheel, tmp_path):
+    """Install the artifact into an empty environment and verify a receipt in it.
+
+    `--no-deps` is the point, not a shortcut: it installs the package exactly as
+    shipped and deliberately withholds every runtime dependency, so the check
+    cannot pass by accident through FastAPI, SQLAlchemy, asyncpg or torch being
+    present. The venv is built outside the source tree and the CLI is invoked by
+    its installed entry point, so a stale `memory_proof_cli.py` sitting in the
+    checkout cannot stand in for the packaged one.
+    """
+    import venv
+
+    # The artifacts travel to a directory the source tree knows nothing about,
+    # which is where the installed command is run from.
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (outside / "pack.json").write_text(PACK_JSON, encoding="utf-8")
+    (outside / "receipt.json").write_text(RECEIPT_JSON, encoding="utf-8")
+    env_dir = tmp_path / "env"
+    venv.EnvBuilder(with_pip=True).create(str(env_dir))
+    python = env_dir / "bin" / "python"
+    cli = env_dir / "bin" / "mindpalace-proof"
+
+    install = subprocess.run(
+        [str(python), "-m", "pip", "install", "--quiet", "--no-deps", str(wheel)],
+        capture_output=True,
+        text=True,
+    )
+    assert install.returncode == 0, install.stderr
+
+    # The environment really is empty of the runtime.
+    absent = subprocess.run(
+        [
+            str(python),
+            "-c",
+            "import importlib.util as u;"
+            "print([m for m in ('fastapi','sqlalchemy','asyncpg','torch',"
+            "'sentence_transformers','pgvector') if u.find_spec(m)])",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert absent.stdout.strip() == "[]", f"runtime leaked in: {absent.stdout}"
+
+    # The packaged modules import, from outside the source tree.
+    imports = subprocess.run(
+        [
+            str(python),
+            "-c",
+            "import memory_pack, memory_proof, memory_receipt;print(memory_proof.__file__)",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(outside),
+    )
+    assert imports.returncode == 0, imports.stderr
+    assert str(ROOT) not in imports.stdout, imports.stdout
+
+    # And the installed command verifies the exported artifact.
+    verified = subprocess.run(
+        [str(cli), "verify", "receipt.json", "--pack", "pack.json"],
+        capture_output=True,
+        text=True,
+        cwd=str(outside),
+    )
+    assert verified.returncode == EXIT_OK, verified.stderr + verified.stdout
+    assert "VERIFIED" in verified.stdout
+
+    # Tampering one authoritative byte is still caught from the installed command.
+    (outside / "tampered.json").write_text(TAMPERED_PACK_JSON, encoding="utf-8")
+    rejected = subprocess.run(
+        [str(cli), "verify", "receipt.json", "--pack", "tampered.json"],
+        capture_output=True,
+        text=True,
+        cwd=str(outside),
+    )
+    assert rejected.returncode == EXIT_REJECTED
+    # The receipt layer names its own digest, and says why the receipt no longer
+    # describes the artifact, rather than collapsing to a bare INVALID.
+    assert "memory pack digest mismatch" in rejected.stdout

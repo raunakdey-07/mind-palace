@@ -30,7 +30,7 @@ jobs:
           --health-retries=10
 
     env:
-      DATABASE_URL: postgresql+psycopg://mpadmin:secret@localhost:5432/mindpalace
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:

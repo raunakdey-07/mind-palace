@@ -1,0 +1,284 @@
+================================================================
+80 - FINAL VERIFICATION
+================================================================
+Repo: /mnt/Warehouse/projects/Mind Palace
+Python: venvmp/bin/python
+
+================================================================
+SECTION 1: QUALITY GATES (all must be 0)
+================================================================
+
+--- 1.1 flake8 api cli tests --max-line-length=100 ---
+FLAKE8=0
+
+--- 1.2 black --check api cli tests --line-length 100 ---
+All done! ✨ 🍰 ✨
+109 files would be left unchanged.
+BLACK=0
+
+--- 1.3 flake8 scripts (5 benchmark files) ---
+FLAKE8_SCRIPTS=0
+
+--- 1.4 black --check scripts (5 benchmark files) ---
+All done! ✨ 🍰 ✨
+5 files would be left unchanged.
+BLACK_SCRIPTS=0
+
+--- 1.5 scripts/release/check_versioning.py ---
+release metadata: PASS
+VERSIONING=0
+
+================================================================
+SECTION 2: FULL TEST SUITE
+================================================================
+$ DATABASE_URL=... HF_HUB_OFFLINE=1 venvmp/bin/python -m pytest -q --maxfail=1
+
+  tests/test_security.py:70: PytestWarning: The test <Function test_oversized_document_is_chunked_not_crashed> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_oversized_document_is_chunked_not_crashed():
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1200 passed, 12 warnings in 100.18s (0:01:40)
+PYTEST_EXIT=0
+
+================================================================
+SECTION 3: AUTHORITATIVE EQUIVALENCE GATE (MUTATION-CROSSCHECK)
+================================================================
+$ baseline_packs.py capture --out /tmp/mp-preserve/close-packs.json
+
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8536.80it/s]
+captured 202 packs
+dataset hash   : 9cdecda73cbdc8ae
+set digest     : 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+commit         : f52272db635c
+written        : /tmp/mp-preserve/close-packs.json
+CAPTURE_EXIT=0
+
+$ baseline_packs.py compare --baseline docs/performance/baseline-packs.json --current /tmp/mp-preserve/close-packs.json
+
+baseline commit : f52272db635c
+current  commit : f52272db635c
+questions       : 202
+set digest      : 5a3b80490af52c85
+authoritative output: IDENTICAL to baseline
+COMPARE=0
+
+================================================================
+SECTION 4: DEVELOPMENT BENCHMARK (m0115_experiments.py)
+================================================================
+$ grep -E 'semantic always|lexical always|lexical->sem|failures|dataset'
+
+dataset 9cdecda73cbdc8ae  questions 202
+A semantic always : 178/202
+B lexical always  : 164/202
+C lexical->sem    : 194/202
+failures: {"F7": 3, "F2": 2, "F9": 3}
+
+================================================================
+SECTION 5: HELD-OUT HASH FREEZE (m0130_heldout.py)
+================================================================
+$ venvmp/bin/python scripts/benchmark/m0130_heldout.py
+
+  "dataset_hash": "13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0",
+  "questions": 157
+
+================================================================
+SECTION 6: LOAD GATE STILL WORKS AFTER REMOVING THE DEAD PARAMETER
+================================================================
+$ m0122_instrumented.py --sizes 100 --repeats 3 --max-load 0.001 --out /tmp/mp-preserve/g3-low.json
+
+     100: db_corpus_lookup=4.6% archive_load=31.4% project=12.0% vector_cache=20.8% select=29.1% pack=0.4%
+
+REFUSING TO PUBLISH: load average 3.73 over 8 cores exceeds --max-load 0.001.
+Timings are reported above for diagnosis but this file is not a baseline.
+EXIT_LOW=2
+
+Note: --out is under /tmp only. No repository file was written.
+The artifact IS written, but stamped as not-a-baseline (CONTENDED verdict),
+which is the designed behaviour: exit non-zero AND record why it is untrustworthy.
+host_load block recorded in /tmp/mp-preserve/g3-low.json:
+  "host_load": {
+    "cores": 8,
+    "loadavg_1m": 3.73,
+    "per_core": 0.467,
+    "threshold": 0.001,
+    "verdict": "CONTENDED: timings above are not a clean measurement"
+  },
+
+================================================================
+SECTION 7: STATUS.md SANITY
+================================================================
+--- 7.1 headings: grep -n '^#' docs/STATUS.md ---
+1:# Project status
+15:## What the project is
+35:## Release state
+55:## Verified invariants
+73:## Correctness
+103:### Held-out question set **[v0.8.0] — analysed, no longer blind**
+152:### Latency
+184:## Remaining limitations
+188:### 1. Query cost grows with the archive, and projection is superlinear **[v0.8.0]**
+210:### 2. The archive load does not scale the way the row count says it should
+240:### 3. Conflict detection is keyed, and that is visible to users
+250:### 4. Relationship reasoning is narrow
+258:### 5. A handful of gates are unmeasured
+267:### 6. The wheel ships research tooling
+274:## Rejected work, with the measurement that rejected it
+289:## Measurement caveats learned the hard way **[v0.8.0]**
+304:## Where the evidence lives
+319:## Reproducing the numbers
+HEADINGS_EXIT=0
+
+--- 7.2 stale-number grep: 695|4,291|17,055|1,634|880 ms ---
+STALE_GREP=1
+
+VERDICT: zero hits, exit 1. No stale live claims survive in docs/STATUS.md.
+
+Cross-check with alternate digit formats (no commas) also returned zero:
+VARIANTS_EXIT=1
+
+--- 7.3 context: Latency section (docs/STATUS.md L152-184) ---
+### Latency
+
+**[v0.8.0] The latency table below is currently NOT ESTABLISHED and must not be cited.**
+
+The figures previously published for 100 and 1,000 claims (43 ms and 842 ms) could
+not be reproduced, and do not appear in any artifact. `docs/performance/status-latency.json`
+held 99.57 ms and 2,308.49 ms for those sizes while STATUS.md cited that file as
+their source, so the citation did not resolve to the numbers it claimed. Both the
+JSON and this document are untracked, so git history cannot adjudicate what any
+artifact said at `f52272d`.
+
+What is established: this host runs at roughly 2.4x to 2.8x under sustained
+background load, and a loaded host inflates every stage together, including
+projection, which is pure Python and never touches the database. Two separate
+measurement sessions landed ~2.5x apart on identical work. The cause of that
+background load is **not established**.
+
+The harness now refuses to publish a point when the one-minute load average
+exceeds a threshold (default 0.5, `--max-load`), records the observed load in the
+artifact, and exits non-zero rather than writing a baseline. It also measures each
+size in its own process by default. Both changes exist because a loaded host
+produced an artifact that was read as a clean baseline.
+
+Retained from earlier measurements, for shape only and not as citations:
+projection share rises with size, and pack construction is ~0.2 ms at every size
+measured, which is not a cost. Every latency number must be re-measured on a host
+whose load gate passes before any of it is quoted.
+
+Note also that with 12 samples the harness's reported p95 is the index nearest the
+95th percentile and is in practice the maximum. It is a worst observed value, not a
+tail estimate.
+
+## Remaining limitations
+
+--- 7.4 withdrawn figures in STATUS.md, all are explicit withdrawals ---
+156:The figures previously published for 100 and 1,000 claims (43 ms and 842 ms) could
+158:held 99.57 ms and 2,308.49 ms for those sizes while STATUS.md cited that file as
+287:| The claim "the 100 and 1,000-claim latencies were 43 ms and 842 ms" **[v0.8.0]** | Withdrawn. Those numbers are in no artifact. The artifact STATUS.md cited contains 99.57 ms and 2,308.49 ms for those sizes |
+EXIT=0
+
+Line 156: withdrawal narrative naming the numbers.
+Line 158: the artifact mismatch (99.57 / 2,308.49) that caused the withdrawal.
+Line 287: 'Rejected work' table row - 'Withdrawn. Those numbers are in no artifact.'
+
+CONCLUSION: none of these survive as live claims. Every occurrence names a
+withdrawn number and is explicitly marked as withdrawn. Expected and correct.
+
+================================================================
+SECTION 8: README CHECK
+================================================================
+$ grep -n -E '47 ms|1\.0 s|1\.7 s|4\.4 s|warm p50' README.md
+
+730:quality fast path. Reranking shows point-estimate gains but costs ~1.7 s per
+README_GREP=0
+
+The single '1.7 s' hit is NOT part of the withdrawn table. It is the reranking
+cost figure, appearing twice and consistent with each other:
+  L617: "reranking's roughly 1.7-second latency remains opt-in"
+  L730: "Reranking shows point-estimate gains but costs ~1.7 s per query-opt-in only."
+
+The withdrawn query-latency table is GONE from README. No hit for any of its
+figures (43 ms, 842 ms, 99.57 ms, 2,308.49 ms, 47 ms, 4.4 s, 695, 4,291,
+17,055, 1,634, 880 ms). Exit 1 on the figure sweep:
+EXIT=1
+
+README instead carries an explicit withdrawal at L579:
+  Previously published latency numbers are withdrawn: the figures they cited did not
+  appear in the artifact they were attributed to, and the host used runs at roughly
+  2.4x-2.8x under background load, which inflates every stage together. The
+  measurement harness now refuses to publish a latency point when the host is
+  loaded, so a busy window cannot silently become a baseline. No current latency
+  envelope is claimed until one is re-measured on a host that passes that gate.
+
+
+================================================================
+SECTION 9: FINAL TREE STATE
+================================================================
+--- 9.1 git diff --stat ---
+ .gitignore                                |    1 +
+ CHANGELOG.md                              |   32 +
+ README.md                                 |   40 +-
+ api/main.py                               |    3 +-
+ api/services/memory.py                    |   18 +-
+ api/services/memory_public.py             |    9 +-
+ docs/performance/m011-rebuildability.json |   10 +-
+ docs/performance/m0115-degradation.json   | 1616 ++++++++++++++---------------
+ docs/performance/m0115-experiments.json   |   14 +-
+ scripts/benchmark/m0122_instrumented.py   |  173 ++-
+ tests/test_api.py                         |    5 +-
+ 11 files changed, 1052 insertions(+), 869 deletions(-)
+
+--- 9.2 git status --short ---
+ M .gitignore
+ M CHANGELOG.md
+ M README.md
+ M api/main.py
+ M api/services/memory.py
+ M api/services/memory_public.py
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+ M scripts/benchmark/m0122_instrumented.py
+ M tests/test_api.py
+?? docs/STATUS.md
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/
+?? docs/performance/m0130-heldout.json
+?? docs/performance/m0131-projection-extra.json
+?? docs/performance/m0131-projection.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json
+?? scripts/benchmark/baseline_packs.py
+?? scripts/benchmark/m0130_heldout.py
+?? scripts/benchmark/m0130_run_heldout.py
+?? scripts/benchmark/m0131_profile_projection.py
+
+--- 9.3 ls docs/performance/evidence/ | wc -l ---
+64
+
+(64 files, including this one: 80-final-verification.txt)
+
+================================================================
+SUMMARY
+================================================================
+  1.1 FLAKE8            = 0   PASS
+  1.2 BLACK             = 0   PASS  (109 files unchanged)
+  1.3 FLAKE8_SCRIPTS    = 0   PASS
+  1.4 BLACK_SCRIPTS     = 0   PASS  (5 files unchanged)
+  1.5 VERSIONING        = 0   PASS  (release metadata: PASS)
+  2   PYTEST_EXIT        = 0   PASS  1200 passed, 12 warnings in 100.18s
+  3   CAPTURE_EXIT       = 0   202 packs, digest 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+  3   COMPARE            = 0   PASS  authoritative output: IDENTICAL to baseline
+  4   M0115_EXIT         = 0   PASS  178/164/194, failures {F7:3, F2:2, F9:3}
+  5   HELDOUT_EXIT       = 0   PASS  13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0, 157 questions
+  6   EXIT_LOW           = 2   PASS  load gate correctly refuses (3.73 load vs 0.001 threshold)
+  7   HEADINGS_EXIT      = 0   21 headings, structure intact
+  7   STALE_GREP         = 1   PASS  zero stale hits
+  8   README_GREP        = 0   only reranking 1.7 s (unrelated to withdrawn table)
+      figure sweep       = 1   PASS  withdrawn table absent from README
+
+OVERALL: GREEN. Nothing is RED.
+
+No source file was edited. No state-changing git command was run
+(git diff / git status only, both read-only). All generated artifacts
+were written under /tmp/mp-preserve/ or docs/performance/evidence/.

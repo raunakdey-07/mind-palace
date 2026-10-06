@@ -1,0 +1,88 @@
+================================================================================
+CONCURRENT-MODIFICATION NOTICE
+Recorded during TASK 0.2, after the inventory was first written.
+Repo: /mnt/Warehouse/projects/Mind Palace
+Branch: milestone/v0.8.0-dev
+================================================================================
+
+FINDING: one path appeared in `git status --short` that was NOT present in the
+pre-branch snapshot (90-git-state-before.txt). It was NOT created by TASK 0.1
+or TASK 0.2.
+
+  + ?? scripts/benchmark/host_calibration.py   10223 bytes
+
+Evidence:
+
+  birth / mtime / ctime  2026-10-03 10:32:42 +0530  ==  2026-10-03 05:02:42 UTC
+  timestamp at detection  2026-10-03 05:03:10 UTC
+  -> the file was created roughly 28 seconds before it was detected, i.e. while
+     this task was running, and well after the pre-branch snapshot was taken.
+
+  The only files under the repo modified in the window
+  `find -newermt '2026-10-03 04:50:00 UTC'` are:
+
+    docs/performance/evidence/90-git-state-before.txt   (written by TASK 0.1)
+    docs/performance/evidence/90b-git-state-after.txt   (written by TASK 0.1)
+    docs/performance/evidence/91-branch-created.txt     (written by TASK 0.1)
+    docs/performance/evidence/92-file-inventory.txt     (written by TASK 0.2)
+    docs/performance/evidence/93-status-citations.txt   (written by TASK 0.2)
+    scripts/benchmark/host_calibration.py              (NOT written by this task)
+
+  TASK 0.1 and 0.2 only wrote files under docs/performance/evidence/.
+  host_calibration.py is outside that directory and was never created,
+  written, or touched by any command in this task. No source file was edited.
+
+What the file is:
+
+  scripts/benchmark/host_calibration.py - "Host calibration probe: was this
+  machine quiet when we measured?" Two timed stages: a pure-Python fixed
+  arithmetic probe (CPU contention only) and a `SELECT 1` round-trip through
+  the product's own asyncpg/SQLAlchemy path (database contention). Verdict
+  keys off the pure-Python ratio only. Constants:
+    CALIBRATED_MAX = 1.25
+    EXIT_CODES = {"CALIBRATED": 0, "MARGINAL": 1, "CONTENDED": 2}
+  It has a --self-check mode and writes no artifact (no docs/performance/*.json
+  path appears anywhere in it). `grep -rln host_calibration` finds only itself,
+  so nothing in the tree references it yet.
+
+  It is thematically consistent with this milestone: evidence/52-loadgate.txt
+  and evidence/80-final-verification.txt concern host-load gating, and README.md
+  states "the measurement harness now refuses to publish a latency point when
+  the host is loaded".
+
+Impact on the TASK 0.1 verification:
+
+  None for the branch operation itself. The tracked-file state is byte-identical
+  before and after:
+
+    git diff --stat   11 files changed, 1052 insertions(+), 869 deletions(-)
+                      (identical before and after the branch creation)
+
+  Every one of the 11 modified tracked files is unchanged in content and status
+  between the pre-branch snapshot and now. The branch pointer moved from detached
+  f52272d to refs/heads/milestone/v0.8.0-dev at the same commit; no working-tree
+  bytes were touched by the checkout.
+
+  The only delta is this one ADDED untracked path. Untracked files are not
+  affected by `git checkout -b`; it appeared after the branch was created, by an
+  external writer.
+
+Action required by the operator:
+
+  Something else is writing into this working tree concurrently - another
+  agent, editor session, or background process. Resolve who owns it before
+  committing, because:
+
+    1. It is untracked and belongs to no bucket in the task's (a)-(f) scheme.
+       It is not one of the named harness files (m0122_instrumented,
+       baseline_packs, m0130_*, m0131_*), and it is not cited by STATUS.md.
+    2. If another writer is still active, further tree changes can appear at any
+       moment and any inventory taken now can go stale.
+    3. It has NOT been staged, committed, deleted or otherwise touched here.
+       Nothing was discarded.
+
+The inventory in 92-file-inventory.txt is accurate as of the moment the
+pre/post-branch comparison passed (23 paths). Re-run `git status --short` to
+pick up this and any later additions before writing commit instructions.
+
+================================================================================

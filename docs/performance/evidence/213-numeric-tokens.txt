@@ -1,0 +1,46 @@
+=== M013 numeric/identifier token retention ===
+Commit: 6fb1b2185e01307bf865c9eab21be012fcefb587
+COMMANDS:
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_numeric_tokens.py \
+      --dataset heldout --out /tmp/m013-num-heldout.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_numeric_tokens.py \
+      --dataset dev     --out /tmp/m013-num-dev.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+lexical floor: 0.30 (the shipped relevance minimum)
+
+DEFECT: memory_relevance.terms() tokenises with [a-z][a-z0-9]+, which requires a
+leading letter. Every version number and incident identifier is discarded before
+any comparison:
+  "Shipping 0.6 introduced what?"            -> ["introduc", "shipp"]
+  "What rule did the 2024-07 incident put in place?" -> ["incident","place","put","rule"]
+
+=== HELDOUT (140 keyed) ===
+  shipped   gold reachable @0.30:   97  (0.6929)
+  candidate gold reachable @0.30:  107  (0.7643)
+  rescued=10  regressed=0  NET=10
+  rescues attributable to identifiers: 10
+
+  qid                       shipped    gated  rescued tokens
+  ho-chg-inc-2024-03          0.250    0.500  ['03', '2024']
+  ho-chg-inc-2024-07          0.250    0.500  ['07', '2024']
+  ho-chg-inc-2024-11          0.250    0.500  ['11', '2024']
+  ho-chg-rel-0.6              0.000    0.333  ['0.6']
+  ho-chg-rel-0.7              0.000    0.333  ['0.7']
+  ho-chg-rel-0.8              0.000    0.333  ['0.8']
+  ho-chg-deploy-tier-0        0.286    0.375  ['0']
+  ho-chg-deploy-tier-1        0.286    0.375  ['1']
+  ho-chg-deploy-tier-2        0.286    0.375  ['2']
+  ho-chg-deploy-tier-3        0.286    0.375  ['3']
+
+=== DEV (175 keyed) ===
+  shipped   gold reachable @0.30:  162  (0.9257)
+  candidate gold reachable @0.30:  162  (0.9257)
+  rescued=0  regressed=0  NET=0
+  rescues attributable to identifiers: 0
+
+=== VARIANT REJECTED BY MEASUREMENT ===
+  [a-z0-9]+            held-out +10 / dev -4  (admits the bare pronoun "I",
+                                    which lands in the query denominator)
+  [a-z0-9][a-z0-9]+     held-out  +3 / dev  0  (splits "0.6" into "0" and "6")
+  [a-z][a-z0-9]+|\d+(\d.)?  held-out +10 / dev  0  (ADOPTED)
+    with identifiers dropped from the denominator unless present on BOTH sides

@@ -1,0 +1,22 @@
+=== git diff --stat -- api/services/ ===
+ api/services/memory.py        | 18 ++++++++++++++++--
+ api/services/memory_public.py |  9 ++++++---
+ 2 files changed, 22 insertions(+), 5 deletions(-)
+
+=== files changed under api/ (name-status) ===
+M	api/main.py
+M	api/services/memory.py
+M	api/services/memory_public.py
+
+=== keywords that would signal archive/projection semantic change (outside version_text) ===
++        "v.*"
++        else (
++        )
++    )
+-        SELECT v.*, d.path,
+-    # still returns it.
++    )
+
+=== lines removed (- only) in api/services/memory.py ===
+-async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+-        SELECT v.*, d.path,

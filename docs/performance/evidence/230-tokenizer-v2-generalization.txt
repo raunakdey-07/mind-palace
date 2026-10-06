@@ -1,0 +1,76 @@
+=== M013: does the tokenizer improvement generalize beyond v1? ===
+Commit: b6ff4f7fcaa6bbfecd76d938372a9fafc4badf18
+
+held-out v2 is FROZEN and was never used to author or select questions:
+  corpus hash   : 9cdecda73cbdc8ae
+  question hash : 5cf098908d1a0ead91113a675998ac13500b82c5b98416568fe1eaf4d46c9fac
+  questions     : 32 across 10 categories
+COMMANDS:
+  ... m013_heldout_v2.py freeze                     # BEFORE any benchmark
+  ... m013_heldout_v2.py verify                     # hash unchanged
+  ... m013_heldout_v2.py run --arm semantic --out docs/performance/heldout-v2-baseline.json
+  ... m013_tokenizer_v2_eval.py --dataset heldout --out docs/performance/heldout-v2-tokenizer.json
+  ... m013_tokenizer_v2_eval.py --dataset dev --out docs/performance/dev-tokenizer.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+
+=== BASELINE on blind v2 (shipped configuration) ===
+  scored (answerable)     : 28
+  abstention questions    : 4
+  r1                       0.4286   CI [0.25, 0.6071]
+  r5                       0.6429   CI [0.4643, 0.8214]
+  r10                      0.6429   CI [0.4643, 0.8214]
+  mrr                      0.5298   CI [0.3571, 0.6905]
+  ndcg5                    0.1896   CI [0.1319, 0.2428]
+  candidate recall ceiling : 0.6429
+  abstention accuracy      : 0.5
+  unreachable (10): ['hv2-why_decision-01', 'hv2-why_decision-02', 'hv2-why_decision-03', 'hv2-why_decision-04', 'hv2-identifier-01', 'hv2-identifier-03', 'hv2-temporal_state-03', 'hv2-temporal_state-04', 'hv2-supersession-02', 'hv2-cross_document-03']
+
+=== TOKENIZER EXPERIMENT: shipped vs candidate, per dataset ===
+  dataset       shipped lex candidate lex  rescued  regressed
+  dev                0.9314        0.9314        0          0
+  v2 (blind)         0.5714        0.5714        0          0
+
+=== THE ANSWER ===
+
+The tokenizer improvement does NOT generalize beyond held-out v1.
+
+  v1 (used for diagnosis) : rescued 10, regressed 0 of 140
+  v2 (blind, frozen)      : rescued 0, regressed 0 of 32
+
+Lexical candidate recall is IDENTICAL in both arms on both datasets. The fix is
+a genuine null on unseen questions. It neither helps nor hurts.
+
+=== WHY -- this is the transferable finding ===
+
+The fix works correctly. Tokenisation verified token by token:
+
+  hv2-identifier-01  '...the 2024-11 incident'
+     shipped   : [after constraint established incident the was which]  <- no digits
+     candidate : [11 2024 after constraint ...]                         <- digits kept
+
+The tokenizer defect is real and the candidate repairs it. But in v2 the
+identifier questions were phrased with CONTENT WORDS that already reach the
+claim ('constraint', 'deployment', 'release'), so the numeric token adds nothing
+the lexical arm did not already have.
+
+In v1 the rescued questions were the opposite shape:
+  'Shipping 0.6 introduced what?'   tokens = [introduc, shipp]
+  'What went wrong in 2024-03 ...'   tokens = [affect, order, went, wrong]
+
+They contain NO content word from the gold claim. The identifier was the SOLE
+bridge, which is exactly the case the tokenizer fix addresses.
+
+CONCLUSION: the v1 result was real but non-generalising. It measured a property
+of how v1 was WORDED, not a property of the retrieval system. The tokenizer
+defect is genuine; its measured benefit was an artefact of question phrasing in
+the set used to discover it. This is precisely why v2 existed.
+
+=== DECISION ===
+
+DO NOT SHIP the tokenizer fix. It is a null on unseen data and adds a parameter
+plus a gate rule for no measured benefit. Per the shipping criterion, 'if v2
+shows no improvement, revert/reject the tokenizer fix.'
+
+It is recorded rather than erased: the tokenizer defect is real, and a future set
+containing identifier-only questions would benefit. No such set exists outside
+the one that produced the finding.

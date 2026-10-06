@@ -4,6 +4,72 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.8.0] - 2026-10-05
+
+### Verifiable Memory
+
+- **Portable Memory Receipts.** A receipt records what Mind Palace actually
+  returned to one application, for one query, at one historical state: the claim
+  identity and version, the document version and path that carried it, its
+  evidence with offsets, its validity window, its supersession lineage, the
+  authoritative digest and an embedded proof. `memory_receipt.py` is
+  standard-library-only and ships in the distribution.
+- **Receipts through every public surface.** `include_receipt=true` on
+  `POST /api/memory/query` (and the SDK's `query(...)`) attaches the same
+  canonical receipt to the existing response. Clients that do not ask for it see
+  no new field at all: `receipt` is absent rather than null. The MCP
+  `memory_explain` tool is `memory_query` with the receipt forced on, so an agent
+  can ask why a memory is trustworthy without knowing the flag. All three
+  surfaces call the same service and return the same object.
+- **Historical memory.** `as_of` reconstructs the archive as it was, so a
+  question asked before a supersession is answered with the claim that was
+  authoritative then, and its receipt says which instant it describes. A claim
+  that was `CURRENT` now but not yet valid at the queried instant is reported as
+  a note rather than silently accepted.
+- **Offline verification.** `mindpalace-proof` gained `receipt` alongside
+  `verify`, `prove` and `explain`. Verification needs no server, database,
+  embedding model, network or credentials, and `verify --json` reports integrity,
+  provenance, temporal and supersession separately, never collapsed into one
+  verdict.
+
+### Trust boundary
+
+Verification establishes **integrity and recorded provenance**: that the artifact
+still represents the state the receipt describes, and that no covered record has
+been altered since. It does **not** establish that the original source was factually correct,
+and a digest alone does not establish **authenticity** — a party able to replace
+both the artifact and the receipt can recompute the digests. Supply
+`--trusted-digest` with a digest pinned out of band and authenticity becomes
+checkable. `verify` states the unestablished case explicitly rather than letting
+a digest imply more than it shows.
+
+### Compatibility
+
+- Existing responses, SDK behaviour, MCP tools, feed semantics and Memory Pack
+  authoritative semantics are unchanged. The receipt is purely additive and is
+  absent unless requested.
+- The Memory Pack schema stays at version 1. The proof reuses
+  `MemoryPack.canonical_json` exactly, so there is one canonicalisation contract
+  rather than two.
+- Retrieval is unchanged. No tokenizer, threshold, acceptance-policy or
+  candidate-selection behaviour was modified; M013's rejected rewrites stay
+  rejected.
+
+### Fixed
+
+- Verifying a historical proof compared the observation cutoff as text, so a
+  claim recorded at exactly `as_of` was rejected whenever the artifact spelled
+  the instant `...Z` and the proof `...+00:00` — which is what a real response
+  does. Instants are now compared as instants, as they already were for
+  `valid_at`.
+- A receipt for a supersession chain authored without validity intervals named
+  today's claim for a question asked earlier. Supersession is the only record of
+  observation time, so it is now the fallback.
+- The packaging-boundary test skipped unless a wheel happened to be built first,
+  which is never true in CI. It builds on demand now, and additionally installs
+  the wheel with `--no-deps` into an empty virtual environment and verifies an
+  exported receipt through the installed command, outside the source tree.
+
 ## [v0.7.0] - 2026-09-28
 
 ### Added
@@ -22,6 +88,19 @@ through [`docs/release-map.md`](docs/release-map.md).
   relevance fallback so authoritative query answers when the embedding model
   cannot load.
 - Dependency-free Memory Pack reading, verified from a clean install.
+- **Corpus scoping for live retrieval.** `/api/search`, `/api/query` and
+  `/api/context` now resolve an explicit corpus before retrieving. With a single
+  corpus the parameter may be omitted; with several, omitting it returns **422**
+  and naming an unknown corpus returns **404**, rather than silently searching
+  across namespaces. Callers that relied on the previous cross-namespace default
+  must pass `corpus`.
+- **Sync reports per-file failures.** A sync response now carries a bounded list
+  of `errors` (at most 50, each a path and a non-sensitive reason) alongside the
+  existing aggregate counters, exposed through the SDK and the CLI.
+- Semantic loading stays lazy: neither the embedder nor the reranker loads a
+  model until first use, and the reranker is a thread-safe singleton.
+- The OpenAPI document now reports the installed package version, so it cannot
+  disagree with the distribution.
 
 ### Fixed
 
@@ -36,6 +115,15 @@ through [`docs/release-map.md`](docs/release-map.md).
   answer to an unanswerable question is distinguishable from an empty envelope.
 - The archive load no longer ships chunk text to the public projection, which
   reads only a chunk's id and heading.
+- **Deleting a corpus whose durable archive still references it is refused** with
+  **409** and a named error, instead of failing on a foreign key or removing
+  manifest rows before documents.
+- **A missing semantic model is reported as 503**, not 500, on ingest, search,
+  query and context, and the dependency detail is not echoed to the caller.
+- **Feed cursors are validated and canonicalised** against the corpus name before
+  use, so a malformed or foreign cursor is rejected rather than compared.
+- `memory_rehydrate` preserves the document id the archive recorded, so a rebuild
+  cannot change `Source.document_id` in a replay.
 - The API description reads "The Durable AI Memory Substrate" and is pinned by a
   test, so it cannot drift back to the previous RAG framing.
 - `memory_pack` is declared in the package, so `pip install` makes it importable.
@@ -48,6 +136,16 @@ through [`docs/release-map.md`](docs/release-map.md).
   and per topic. Neither showed a measurable end-to-end change on the measuring
   host and neither is presented as a performance result.
 - The public projection no longer receives full chunk text.
+- Process startup no longer registers a no-op ASGI lifespan handler. Startup
+  remains independent of PostgreSQL connectivity, which was the handler's only
+  stated purpose.
+
+### Compatibility
+
+Backward compatible for the Memory Pack schema, which stays at version 1, and for
+every public response field. The one behaviour a caller can notice is corpus
+scoping on live retrieval: where several corpora exist, `corpus` is now required
+and an omitted value returns 422 rather than searching all namespaces.
 
 ### Upgrade
 

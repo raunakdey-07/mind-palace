@@ -1,0 +1,110 @@
+$ git --no-pager diff -- api/services/ingestion.py
+
+diff --git a/api/services/ingestion.py b/api/services/ingestion.py
+index ade211f..7bc573b 100644
+--- a/api/services/ingestion.py
++++ b/api/services/ingestion.py
+@@ -10,6 +10,8 @@ import time
+ from pathlib import Path
+ from typing import Optional
+ 
++from sqlalchemy import text
++
+ from api.services.corpora import DEFAULT_CORPUS_ID
+ from api.services.db import session_scope
+ from api.services.embedder import Embedder
+@@ -33,6 +35,9 @@ logger = logging.getLogger(__name__)
+ # Fallback document type when frontmatter is missing or invalid.
+ DEFAULT_DOC_TYPE = "note"
+ MAX_SYNC_ERRORS = 50
++#: Below this many written rows a sync cannot have moved the planner off a
++#: heuristic estimate, so statistics are not worth the ANALYZE.
++STATISTICS_REFRESH_MINIMUM = 200
+ 
+ 
+ def _sync_error(path: str, exc: Exception) -> str:
+@@ -366,6 +371,8 @@ class IngestionService:
+                     )
+             deleted = removed
+ 
++        await self._refresh_planner_statistics(corpus_id, added + changed + deleted)
++
+         duration_ms = int((time.perf_counter() - start) * 1000)
+         return {
+             "success": failed == 0,
+@@ -394,6 +401,75 @@ class IngestionService:
+         )
+         return result.first() is not None
+ 
++    async def _refresh_planner_statistics(self, corpus_id: str, touched: int) -> None:
++        """Collect statistics once a bulk sync has written enough to change a plan.
++
++        PostgreSQL only ever guesses how many rows a table holds, and it guesses
++        badly when it has no statistics at all. ``reltuples = -1`` means "never
++        analysed", and on that basis the planner estimated about 4 rows where a
++        1,000-version corpus holds 1,000. It then chose an index on ``corpus_id``
++        alone and applied ``version_id`` as a filter, discarding 999 of every 1,000
++        rows: 1,079,038 shared buffers where 9,190 were needed, a 117x difference.
++        The returned rows were byte-identical either way, so this is a cost
++        problem, not a correctness one.
++
++        Autovacuum fixes this on its own in about a minute on a committed corpus
++        (measured: it fired unaided at t+55s with stock settings), so this is not
++        urgent. It matters where autovacuum cannot keep up or does not run: a bulk
++        load, a restore, or a database with autovacuum disabled. Right after a sync
++        the rows are committed and the estimates are certainly wrong, which is
++        exactly when a developer is most likely to run the query that exposes it.
++
++        The corpus lock is taken deliberately. ANALYZE does not deadlock against the
++        advisory lock used for writes, but a concurrent ANALYZE from another session
++        was observed writing ``reltuples = 0`` while 200 rows were still
++        uncommitted, so the two must be serialised or the statistics collected here
++        will be wrong in the other direction.
++
++        Bounded: once per sync, not once per document. Non-fatal: a failure to
++        refresh statistics must never fail an otherwise successful ingest, because
++        statistics affect cost only and never what a query returns. Observable: the
++        outcome is logged either way.
++        """
++        if touched <= STATISTICS_REFRESH_MINIMUM:
++            return
++        tables = (
++            "memory_versions",
++            "memory_documents",
++            "memory_chunks",
++            "memory_claims",
++            "memory_evidence",
++        )
++        try:
++            async with session_scope() as db:
++                async with db.begin():
++                    from api.services import memory
++
++                    await memory.lock_corpus(db, corpus_id)
++                    for table in tables:
++                        await db.execute(text(f"ANALYZE {table}"))
++            logging.getLogger(__name__).info(
++                "planner_statistics_refreshed",
++                extra={
++                    "corpus_id": corpus_id,
++                    "event": "PLANNER_STATISTICS_REFRESHED",
++                    "touched": touched,
++                    "tables": len(tables),
++                },
++            )
++        except Exception as exc:
++            # Statistics are an optimisation. Losing them costs speed, not truth.
++            logging.getLogger(__name__).warning(
++                "planner_statistics_refresh_failed",
++                extra={
++                    "corpus_id": corpus_id,
++                    "event": "PLANNER_STATISTICS_REFRESH_FAILED",
++                    "touched": touched,
++                    "error_type": type(exc).__name__,
++                    "reason": _sync_error("ANALYZE", exc),
++                },
++            )
++
+     @staticmethod
+     async def _delete_stale_paths(
+         db, corpus_id: str, keep_paths: set[str], *, memory_enabled: bool = False

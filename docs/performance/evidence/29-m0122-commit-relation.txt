@@ -1,0 +1,9 @@
+--- 2deebaee relation to HEAD ---
+2deebae research: record the M012.2 outcome and the unexplained harness discrepancy
+IS_ANCESTOR_OF_HEAD
+--- commits 2deebaee..HEAD ---
+3
+--- is m0122-instrumented.json tracked? ---
+docs/performance/m0122-instrumented-10k.json
+docs/performance/m0122-instrumented.json
+(none listed = untracked)

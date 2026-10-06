@@ -1,0 +1,9 @@
+ claims    n  db_corpus  archive_l  project_m  vector_ca  select_ms    pack_ms   total_ms
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2632.43it/s]
+  10000   12       4.89    1480.42    5865.45    1993.69     937.46       0.47   10900.02
+             ingest=1065.0s backfill=228.6s
+
+stage share of p50 total:
+   10000: db_corpus_lookup=0.0% archive_load=13.6% project=53.8% vector_cache=18.3% select=8.6% pack=0.0%
+
+written: /tmp/mp-preserve/iso-10000.json

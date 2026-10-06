@@ -1,0 +1,4 @@
+postgres: already up
+extensions: ready
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+migrations: at head

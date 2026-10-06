@@ -1,0 +1,112 @@
+=== item 1.6b: load gate in scripts/benchmark/m0122_instrumented.py ===
+
+--- 1. lint ---
+$ venvmp/bin/python -m flake8 scripts/benchmark/m0122_instrumented.py --max-line-length=100
+FLAKE8_EXIT=0
+$ venvmp/bin/python -m black --check scripts/benchmark/m0122_instrumented.py --line-length 100
+All done! ✨ 🍰 ✨
+1 file would be left unchanged.
+BLACK_EXIT=0
+
+--- 2. host load before the runs ---
+$ cat /proc/loadavg
+1.48 1.36 1.24 2/1203 1050925
+
+--- 3. threshold 999: gate must NOT fire, artifact must be written ---
+$ ... m0122_instrumented.py --sizes 100 --repeats 3 --max-load 999 --out /tmp/mp-preserve/gate-high.json
+ claims    n  db_corpus  archive_l  project_m  vector_ca  select_ms    pack_ms   total_ms
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8571.69it/s]
+Traceback (most recent call last):
+  File "/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py", line 378, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py", line 327, in main
+    point = _measure_isolated(size, args.repeats, workdir)
+  File "/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py", line 257, in _measure_isolated
+    subprocess.run(
+    ~~~~~~~~~~~~~~^
+        [
+        ^
+    ...<12 lines>...
+        env={**os.environ, "MP_ISOLATED_CHILD": "1"},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/lib64/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/mnt/Warehouse/projects/Mind Palace/venvmp/bin/python', '/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py', '--sizes', '100', '--repeats', '3', '--out', '/tmp/m0122-4yoqoauq/point-100.json', '--quiet']' returned non-zero exit status 2.
+EXIT_HIGH=1
+
+--- 4. threshold 0.001: gate must FIRE, exit 2, artifact flagged ---
+$ ... m0122_instrumented.py --sizes 100 --repeats 3 --max-load 0.001 --out /tmp/mp-preserve/gate-low.json
+ claims    n  db_corpus  archive_l  project_m  vector_ca  select_ms    pack_ms   total_ms
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8452.29it/s]
+Traceback (most recent call last):
+  File "/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py", line 378, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py", line 327, in main
+    point = _measure_isolated(size, args.repeats, workdir)
+  File "/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py", line 257, in _measure_isolated
+    subprocess.run(
+    ~~~~~~~~~~~~~~^
+        [
+        ^
+    ...<12 lines>...
+        env={**os.environ, "MP_ISOLATED_CHILD": "1"},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/lib64/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/mnt/Warehouse/projects/Mind Palace/venvmp/bin/python', '/mnt/Warehouse/projects/Mind Palace/scripts/benchmark/m0122_instrumented.py', '--sizes', '100', '--repeats', '3', '--out', '/tmp/m0122-m7ktgapy/point-100.json', '--quiet']' returned non-zero exit status 2.
+EXIT_LOW=1
+
+=== RESULT: both expected runs FAILED. EXIT_HIGH=1, EXIT_LOW=1, neither artifact written. ===
+
+--- artifacts requested by the original two runs ---
+ls: cannot access '/tmp/mp-preserve/gate-high.json': No such file or directory
+ls: cannot access '/tmp/mp-preserve/gate-low.json': No such file or directory
+
+--- isolating runs to find the cause ---
+
+A. child alone (MP_ISOLATED_CHILD=1), --max-load 999:
+   -> exit 0, artifact written. The child's own gate honours its own flag.
+
+B. parent, --in-process --max-load 999 (no subprocess):
+   -> exit 0, artifact written, no host_load block. Gate correctly does not fire.
+
+C. parent, --in-process --max-load 0.001:
+   -> exit 2, 'REFUSING TO PUBLISH', host_load block written with verdict CONTENDED.
+   host_load = {cores: 8, loadavg_1m: 1.69, per_core: 0.211, threshold: 0.001,
+                verdict: 'CONTENDED: timings above are not a clean measurement'}
+
+=== DIAGNOSIS ===
+The gate logic itself is correct (A, B, C all behave as specified).
+It is broken by the isolation wrapper, which is the DEFAULT path:
+
+  _measure_isolated() builds the child argv as
+      --sizes N --repeats R --out PATH --quiet
+  and omits --max-load. The child therefore re-derives the threshold from
+  env MP_MAX_LOADAVG (default 0.5), discarding the parent's CLI value.
+
+  Consequence on this host (load 1.48-1.69, threshold 0.5):
+    * --max-load 999  -> child still gates at 0.5, fires, exits 2
+    * --max-load 0.001 -> child still gates at 0.5, fires, exits 2
+  In both cases subprocess.run(check=True) raises CalledProcessError, the
+  parent dies with a traceback and exit status 1, and NO artifact is written.
+  The intended behaviour (clean exit 2 + host_load/CONTENDED artifact)
+  is unreachable while isolation is on, which is the default.
+
+Two distinct defects:
+  1. --max-load is not forwarded to the isolated child.
+  2. The gate runs in the child, where a non-zero exit is an error to the
+     parent rather than a publish decision. The parent already samples
+     os.getloadavg() and owns the artifact, so the child should never gate.
+
+Not fixed here: the task forbade editing source files. A one-line forward of
+--max-load in _measure_isolated would restore the high-threshold case, but
+the low-threshold case still needs the child to stop gating, or the parent
+to tolerate a child exit of 2.

@@ -1,0 +1,11 @@
+$ venvmp/bin/python -m black --line-length 100 tests/test_ingestion_statistics.py
+reformatted tests/test_ingestion_statistics.py
+
+All done! ✨ 🍰 ✨
+1 file reformatted.
+BLACK_FIX=0
+
+$ venvmp/bin/python -m black --check api cli tests --line-length 100
+All done! ✨ 🍰 ✨
+110 files would be left unchanged.
+BLACK=0

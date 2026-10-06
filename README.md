@@ -4,30 +4,45 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
-[Current release: v0.7.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.8.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-**Mind Palace is a persistent, portable memory layer for AI applications that
-need persistent, versioned, evidence-backed knowledge over an evolving corpus.**
+**Mind Palace is a persistent memory substrate for AI applications. It preserves
+versioned, evidence-backed authoritative state, and can issue portable Memory
+Receipts that let an application inspect and independently verify the memory
+state it received.**
 It turns authored Markdown into versioned source assertions: current knowledge,
 history, changes, conflicts, provenance, and reproducible context. It remembers
 what sources asserted—not perfect truth.
 
+```text
+  persistent memory  →  versioned authoritative state  →  evidence + provenance
+                     →  Memory Receipt  →  portable Memory Pack  →  offline verification
+```
+
 Memory belongs to the corpus, not a particular model or chat session. PostgreSQL
-persists it across application restarts; Python, HTTP, CLI, and MCP expose the
-same memory contract. This is **corpus memory for AI**, not human memory,
-conversation/preferences storage, a chatbot, or an agent framework. Portability
-means model-independent interfaces, not a promised archive export/import tool.
+persists it across application restarts; REST, the Python SDK, MCP and the CLI
+expose the same memory contract and the same receipt. This is **corpus memory for
+AI**, not human memory, conversation/preferences storage, a chatbot, or an agent
+framework. Portability means model-independent interfaces *and* an artifact you
+can hand to another process, which can verify it with no Mind Palace runtime,
+database, embedding model or network present.
 
 ## Project status
 
 ### Current product
 
-`v0.7.0` is the current public release. It packages the unified authoritative
-`context()` surface, the portable Memory Pack reader, the claim-representation
-cache, and a cached-query fix, alongside the released M009 operational memory
-feed and the existing persistent corpus-memory model. The current product also
-includes the live REST/Python/CLI retrieval surfaces, MCP for ordinary memory
-operations, and dependency-aware liveness and readiness checks.
+`v0.8.0` is the current public release. It packages **Verifiable Memory**: the
+portable Memory Pack reader, the standard-library-only proof and receipt
+verifiers, the `mindpalace-proof` CLI, and opt-in Memory Receipts on the REST,
+Python SDK and MCP memory-query surfaces. Alongside that it carries the released
+M009 operational memory feed, the unified authoritative `context()` surface, the
+claim-representation cache, and dependency-aware liveness and readiness checks.
+
+A developer retrieves authoritative memory, receives a receipt describing what
+came back and why, exports the Memory Pack, and verifies the artifact later from a
+clean environment. Verification establishes integrity and recorded provenance; it
+does not establish that the original source was factually correct, and it does
+not establish authenticity without a trust anchor the caller pinned.
 
 The durable feed is a corpus-scoped read interface over immutable
 `memory_versions` rows. It uses an opaque, integrity-protected cursor for bounded
@@ -566,28 +581,210 @@ fair end-to-end latency comparison**, nor a general latency guarantee.
 The historical [M006 report](docs/evaluation/m006.md) is preserved, not superseded
 by a claim that generation or production validation is complete.
 
+## Verifiable Memory
+
+Mind Palace stores persistent, versioned, evidence-backed memory. It can export
+that memory as a portable artifact and hand your application a **Memory Receipt**
+that another process can verify without the Mind Palace server.
+
+Ask for a receipt on any memory query and you get the answer plus a record of
+what it is: the claim, the document version that carried it, the evidence with
+offsets, its validity window, its supersession lineage and the authoritative
+digest.
+
+```python
+result = client.query(corpus="docs", query="What is the current database?",
+                      include_receipt=True)
+result.receipt["receipts"][0]["answer"]["claim"]
+```
+
+```bash
+# REST is the same contract
+curl -X POST localhost:8000/api/memory/query -H 'content-type: application/json' \
+  -d '{"corpus":"docs","query":"What is the current database?","include_receipt":true}'
+
+# MCP is the same contract, with the receipt always on
+memory_explain {"request": {"corpus": "docs", "query": "What is the current database?"}}
+```
+
+`include_receipt` is opt-in and purely additive: a client that does not ask for
+it sees no new field at all. All three surfaces call the same service and return
+the same receipt, and a contract test asserts they agree byte for byte.
+
+Export the artifact and verify it anywhere — no server, database, embedding
+model, network or credentials:
+
+```bash
+# mint a proof from an exported Memory Pack
+mindpalace-proof prove --pack memory-pack.json --claim-key architecture.postgres -o proof.json
+
+# verify it anywhere: no server, database, embedding model, network or credentials
+mindpalace-proof verify proof.json --pack memory-pack.json
+```
+
+```text
+VERIFIED
+claim: architecture.postgres
+versions: v-new, v-old
+valid_at: 2025-06-01T00:00:00+00:00
+authoritative digest: b2a1c8de...
+proof digest: acea4a2d...
+```
+
+Change one byte of the authoritative artifact and verification rejects it, naming
+the invariant that failed:
+
+```text
+REJECTED
+reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+reason: claim 'c-new' content does not match its proof entry
+```
+
+`mindpalace-proof explain` shows the recorded provenance, evidence, temporal state
+and supersession lineage for a memory.
+
+**What this does and does not establish.** It establishes integrity and recorded
+provenance: the artifact still represents the state the proof describes, and no
+covered record has been altered since. It does **not** establish that the original
+source was factually correct, and it is not a third-party signature.
+
+Both modules are standard-library-only and ship in the distribution, so this works
+from a clean install with no Mind Palace runtime present.
+
+### The workflow, end to end
+
+This is the path the release test walks, on a real supersession chain from the
+repository's own corpus:
+
+```text
+1. query the archive          → an authoritative answer, with a Memory Receipt
+2. export the Memory Pack     → files, not a database connection
+3. leave the runtime          → a clean environment, nothing of Mind Palace installed
+4. verify                     → VERIFIED
+5. change one authoritative byte
+6. verify                     → REJECTED, naming the invariant that failed
+7. restore                    → VERIFIED again
+8. ask what it used to know    → the earlier authoritative state, and a receipt for it
+9. verify that too            → VERIFIED
+```
+
+The historical step is the one that earns the rest. MySQL becoming PostgreSQL is
+a real supersession, and asking the same question with `as_of` set to before the
+second write returns the answer the archive gave *then*, with a receipt that says
+which instant it describes. Each receipt is valid only against the artifact it
+was cut from, so verification catches a receipt paired with the wrong pack.
+
+### The Memory Receipt
+
+A receipt records what Mind Palace actually returned to one application, for one
+query, at one historical state. `mindpalace-proof verify` reports the trust model
+explicitly rather than letting a digest imply everything:
+
+```text
+VERIFIED
+
+Integrity:
+  authoritative artifact: MATCH
+  receipt: MATCH
+
+Provenance:
+  claim: MATCH
+  evidence: MATCH
+  document: MATCH
+
+Temporal state:
+  valid_at: MATCH
+  supersession: MATCH
+
+Trust:
+  authenticity: NOT ESTABLISHED (no trust anchor supplied)
+```
+
+That last line is deliberate. Verification establishes **integrity and recorded
+provenance**. It does **not** establish that the original source was factually
+correct, and a digest alone cannot establish **authenticity** — anyone able to
+replace both the artifact and the receipt can recompute the digests. Supply
+`--trusted-digest` with a digest you pinned out of band, and authenticity becomes
+checkable:
+
+```bash
+mindpalace-proof verify receipt.json --pack memory-pack.json --trusted-digest "$PINNED"
+```
+
+### Time travel, with the corpus that genuinely supports it
+
+The same authored key, two instants, two authoritative answers:
+
+```bash
+mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
+  --query "What datastore did production use?" -o current.json
+
+mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
+  --query "What datastore was production using?" \
+  --valid-at 2025-02-01T00:00:00+00:00 -o historical.json
+```
+
+```text
+current     The primary datastore is PostgreSQL.   [CURRENT   ] valid_at=2025-06-01
+historical  The primary datastore is SQLite.       [SUPERSEDED] valid_at=2025-02-01
+```
+
+`mindpalace-proof explain` prints the claim, its source version, the evidence
+with offsets, the temporal window and the supersession lineage — provenance and
+state, never model reasoning.
+
+### Retrieval status
+
+Retrieval is unchanged by this release. M013's measured arms — a tokenizer
+rewrite, PostgreSQL FTS candidate generation, naive RRF, a contextual
+claim+evidence representation and an evidence-aware embedding — were all
+rejected on measurement, and nothing here reopens them. The acceptance boundary
+remains a separate research question, and cosine similarity is treated as a
+ranking signal rather than a defensible acceptance policy.
+
 ## Known limitations
 
-- **Measured latency envelope, and its edges.** Warm, real public query path,
-  claim-representation cache warm, 12 samples per size, measured at `v0.7.0`:
+- **Query cost grows with the archive, and the latency envelope is not currently
+  established.** Projection does work that grows faster than the corpus. The
+  strongest evidence is a call count rather than a stopwatch, because call counts do
+  not move when the host is busy: between 5,002 and 25,000 claims the number of
+  conflict comparisons computed in `api/services/memory.py` grows **26.2x for a 5x
+  larger corpus** (fitted exponent 2.03), and the regex matching behind it grows
+  18.1x. Much of that is an artefact of the synthetic benchmark corpus, which packs
+  every size into only 295 distinct claim keys, so claims per key grow with the
+  corpus and pairwise comparison grows quadratically. A real corpus with a wide key
+  distribution should be measured before this is treated as a product figure.
 
-  | claims | warm p50 | warm p95 |
-  | ---: | ---: | ---: |
-  | 100 | 49 ms | 54 ms |
-  | 1,000 | 880 ms | 1,135 ms |
-  | 5,000 | 1.63 s | 1.65 s |
-  | 10,000 | 4.29 s | 5.09 s |
+  Wall-clock exponents are deliberately not quoted here. Two runs of the same
+  profile produced 1.11 and 1.60 for the same function on this host, because the host
+  runs at varying background load. Those numbers are not comparable and are not
+  published as a product claim.
 
-  **25,000 and above were not measured.** These are medians on one host with
-  roughly 2x run-to-run variance, not guarantees, and not a comparison against
-  any other system. Above about 5,000 claims, projection dominates: the
-  projection builds a model per archived claim and keeps roughly one. Reducing
-  that needs the dependency closure solved first, because narrowing the archive
-  before projection was measured to change 32 of 202 benchmark answers.
-  [`docs/STATUS.md`](docs/STATUS.md) is the authoritative current-state summary,
-  with the full stage breakdown, the verified invariants, and every remaining
-  limitation; [this experiment](docs/research/m0123-projection-release-gate.md)
-  has the detail behind it.
+  Previously published latency numbers are withdrawn: the figures they cited did not
+  appear in the artifact they were attributed to. Repeated measurements of the same
+  work on the development host have also landed roughly 2.5x apart, and the cause is
+  **not established**; a diagnostic taken while investigating it recorded the host at
+  21% utilisation with 87-94% idle CPU, which rules out sustained load but does not
+  identify the real cause. The measurement harness now refuses to publish a latency
+  point when the host is loaded, so a busy window cannot silently become a baseline.
+  No current latency envelope is claimed until one is re-measured on a host that
+  passes that gate.
+
+  Separately and more consequentially, a **query plan cliff** was found and its cause
+  identified. Between roughly 250 and 1,000 versions the archive-load query picks
+  corpus-only indexes and filters on `version_id` afterwards, discarding 999 of every
+  1,000 rows: 1,075,310 shared buffer hits at 1,000 versions against 26,674 at 2,000.
+  The cause is that these tables have never been analysed (`reltuples = -1`,
+  `last_analyze` null), so the planner underestimates the row count by ~250x and
+  picks the wrong index. Running `ANALYZE` removes the cliff entirely. This is a
+  real defect and is being addressed; see `docs/STATUS.md`.
+  [Measurement and rejected candidates](docs/research/m0123-projection-release-gate.md).
+- **Accuracy is lower on unseen questions than the headline benchmark suggests.** The
+  202-question benchmark reports 194/202, but it is a development set whose failures
+  are known. On a separately authored 157-question held-out set, frozen before any
+  retrieval code was touched, the same system answers 131/157. Questions phrased
+  indirectly, especially asking *why* a decision was made, are answered noticeably
+  less often. See [docs/STATUS.md](docs/STATUS.md).
 - Existing lexical operations remain lexical AND. M006.5 adds heuristic semantic
   question retrieval, not universally reliable question answering or automatic
   claim extraction. Related concepts, multi-part questions, and abstention remain

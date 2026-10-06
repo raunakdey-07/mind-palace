@@ -1,0 +1,72 @@
+=== M014.2 flagship: Memory Receipt, historical state, offline verification ===
+cwd: /tmp/m142  (outside the source tree)
+command: /mnt/Warehouse/projects/Mind Palace/venvmp/bin/python /mnt/Warehouse/projects/Mind Palace/memory_proof_cli.py
+
+--- 1. current-state receipt ---
+receipt written: receipt-current.json
+receipt id: 3fb2e084b7c6e6d0fd19f16b479b0e3603e83f53bf77dbbb11a750db0cdccf4c
+answer: The primary datastore is PostgreSQL.
+
+--- 2. historical receipt (valid_at 2025-02-01) ---
+receipt written: receipt-historical.json
+receipt id: c45dc7ac89fc3a8bf3b50a660734848254baf9a7d94075a26c508854b5b6ce7d
+answer: The primary datastore is SQLite.
+
+--- 3. the same key, two instants, two authoritative answers ---
+  current     The primary datastore is PostgreSQL.   [CURRENT   ] valid_at=2025-06-01T00:00:00+00:00
+  historical  The primary datastore is SQLite.       [SUPERSEDED] valid_at=2025-02-01T00:00:00+00:00
+
+--- 4. verify the current receipt (offline) ---
+VERIFIED
+
+Integrity:
+  authoritative artifact: MATCH
+  receipt: MATCH
+
+Provenance:
+  claim: MATCH
+  evidence: MATCH
+  document: MATCH
+
+Temporal state:
+  valid_at: MATCH
+  supersession: MATCH
+
+Trust:
+  authenticity: NOT ESTABLISHED (no trust anchor supplied)
+
+query: What datastore did production use?
+answer: The primary datastore is PostgreSQL.
+valid_at: 2025-06-01T00:00:00+00:00
+source: docs/tech/postgres.md @ v-new
+memory pack digest: b2a1c8dee7e6d16dcfc1fbc59bb044c550450ef0f326d86551b156f0e7f31045
+receipt id: 3fb2e084b7c6e6d0fd19f16b479b0e3603e83f53bf77dbbb11a750db0cdccf4c
+exit=0
+--- 5. verify the HISTORICAL receipt ---
+valid_at: 2025-02-01T00:00:00+00:00
+source: adrs/adr-011.md @ v-old
+memory pack digest: b2a1c8dee7e6d16dcfc1fbc59bb044c550450ef0f326d86551b156f0e7f31045
+receipt id: c45dc7ac89fc3a8bf3b50a660734848254baf9a7d94075a26c508854b5b6ce7d
+exit=0
+
+--- 6. tamper ONE authoritative byte ---
+  rewrote evidence[0].text
+REJECTED
+reason: memory pack digest mismatch: the artifact is not the one this receipt was created from
+reason: embedded proof rejected against the artifact
+reason: evidence 'e-new' text has been altered
+exit=1
+
+--- 7. a trust anchor catches what integrity alone cannot ---
+  attacker replaced artifact AND rebuilt a consistent receipt over it
+  integrity alone (no anchor):
+VERIFIED
+  authenticity: NOT ESTABLISHED (no trust anchor supplied)
+  with the ORIGINAL digest pinned out of band:
+VERIFIED
+  authenticity: REJECTED (trust anchor does not match)
+
+--- 8. restore ---
+VERIFIED
+
+exit=0

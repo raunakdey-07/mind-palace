@@ -1,0 +1,11 @@
+building 2000 claims...
+  claims=  2002 project=     180.2ms query_result=     72.7ms model_layer=    107.5ms active=     4 conflicts= 1959
+building 20000 claims...
+  claims= 20002 project=    7185.7ms query_result=   4614.5ms model_layer=   2571.2ms active=     4 conflicts=225726
+
+log-log exponents (1.0 = linear, 2.0 = quadratic):
+  project_ms         1.601
+  query_result_ms    1.803
+  model_layer_ms     1.379
+
+written: docs/performance/m0131-projection-extra.json

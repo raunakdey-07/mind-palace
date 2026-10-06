@@ -1,0 +1,17 @@
+name | setting | unit | source
+autovacuum | on | None | default
+autovacuum_analyze_scale_factor | 0.1 | None | default
+autovacuum_analyze_threshold | 50 | None | default
+autovacuum_max_workers | 3 | None | default
+autovacuum_naptime | 60 | s | default
+autovacuum_vacuum_scale_factor | 0.2 | None | default
+autovacuum_vacuum_threshold | 50 | None | default
+effective_cache_size | 524288 | 8kB | default
+idle_in_transaction_session_timeout | 0 | ms | default
+jit | on | None | default
+maintenance_work_mem | 65536 | kB | default
+max_connections | 100 | None | configuration file
+max_parallel_workers_per_gather | 2 | None | default
+max_worker_processes | 8 | None | default
+shared_buffers | 16384 | 8kB | configuration file
+work_mem | 4096 | kB | default

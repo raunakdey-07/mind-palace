@@ -1,0 +1,328 @@
+{
+  "environment": {
+    "boundary": "archive load, projection, vector cache, select and pack, as the public query path runs them",
+    "cache": "claim vector cache asserted fully populated; zero misses allowed",
+    "commit": "f52272db635cbd17171d3d3b02eaeb855efefe69",
+    "isolation": "one process per size",
+    "model": "all-MiniLM-L6-v2",
+    "numpy": "2.5.2",
+    "pgvector": "0.8.6",
+    "postgres": "15.19",
+    "python": "3.14.7",
+    "questions": 4,
+    "repeats": 3
+  },
+  "points": [
+    {
+      "backfill_s": 264.1,
+      "cached_rows": 25000,
+      "claims": 25000,
+      "ingest_s": 2237.8,
+      "raw": [
+        {
+          "archive_load_ms": 1578.268620000017,
+          "db_corpus_lookup_ms": 2.443185998345143,
+          "pack_ms": 0.24537100034649484,
+          "project_ms": 12233.492456000022,
+          "select_ms": 1028.829635000875,
+          "total_ms": 17437.7413050006,
+          "vector_cache_ms": 1736.9872330000362
+        },
+        {
+          "archive_load_ms": 1565.7000490009523,
+          "db_corpus_lookup_ms": 2.335433999178349,
+          "pack_ms": 0.22283799989963882,
+          "project_ms": 11167.971618999218,
+          "select_ms": 1431.8042089998926,
+          "total_ms": 17719.393339999442,
+          "vector_cache_ms": 2536.462437999944
+        },
+        {
+          "archive_load_ms": 1821.0888960002194,
+          "db_corpus_lookup_ms": 2.5146100015263073,
+          "pack_ms": 0.22482199892692734,
+          "project_ms": 12770.026026999403,
+          "select_ms": 1023.2950259996869,
+          "total_ms": 18143.178345000706,
+          "vector_cache_ms": 1680.699647999063
+        },
+        {
+          "archive_load_ms": 1552.429168999879,
+          "db_corpus_lookup_ms": 2.2779959999752464,
+          "pack_ms": 0.2805359999911161,
+          "project_ms": 11316.080746999432,
+          "select_ms": 1444.2656689989235,
+          "total_ms": 16995.568454000022,
+          "vector_cache_ms": 1843.4190010011662
+        },
+        {
+          "archive_load_ms": 2152.2906989994226,
+          "db_corpus_lookup_ms": 3.1947360002959613,
+          "pack_ms": 0.248455999098951,
+          "project_ms": 11308.792826999706,
+          "select_ms": 1035.6976869989012,
+          "total_ms": 17054.58076300056,
+          "vector_cache_ms": 1715.633510999396
+        },
+        {
+          "archive_load_ms": 1538.9556879999873,
+          "db_corpus_lookup_ms": 2.350841999941622,
+          "pack_ms": 0.2190510003856616,
+          "project_ms": 11186.48543999916,
+          "select_ms": 1046.847996998622,
+          "total_ms": 16340.766105999137,
+          "vector_cache_ms": 1729.6128410016536
+        },
+        {
+          "archive_load_ms": 1811.6890720011725,
+          "db_corpus_lookup_ms": 2.582737999546225,
+          "pack_ms": 0.22118500055512413,
+          "project_ms": 11722.119483001734,
+          "select_ms": 1011.0796369990567,
+          "total_ms": 17151.381272000435,
+          "vector_cache_ms": 1765.326807000747
+        },
+        {
+          "archive_load_ms": 1533.8559659994644,
+          "db_corpus_lookup_ms": 2.354840000407421,
+          "pack_ms": 0.2280589997099014,
+          "project_ms": 11323.81411300048,
+          "select_ms": 1027.23278799931,
+          "total_ms": 16444.341021999207,
+          "vector_cache_ms": 1719.446507999237
+        },
+        {
+          "archive_load_ms": 1532.036982000136,
+          "db_corpus_lookup_ms": 2.2145370003272546,
+          "pack_ms": 0.2213850002590334,
+          "project_ms": 11238.638994998837,
+          "select_ms": 1044.614313999773,
+          "total_ms": 16372.620909000034,
+          "vector_cache_ms": 1716.455062998648
+        },
+        {
+          "archive_load_ms": 1802.036914999917,
+          "db_corpus_lookup_ms": 2.299036001204513,
+          "pack_ms": 0.260750000961707,
+          "project_ms": 11705.31432900134,
+          "select_ms": 1104.0695650008274,
+          "total_ms": 17164.410830000634,
+          "vector_cache_ms": 1704.772964998483
+        },
+        {
+          "archive_load_ms": 1557.221674000175,
+          "db_corpus_lookup_ms": 2.3481270000047516,
+          "pack_ms": 0.22732700017513707,
+          "project_ms": 11359.165879999637,
+          "select_ms": 1071.7853259993717,
+          "total_ms": 16590.718860999914,
+          "vector_cache_ms": 1754.0675029995327
+        },
+        {
+          "archive_load_ms": 1555.7042060008826,
+          "db_corpus_lookup_ms": 2.5066149992198916,
+          "pack_ms": 0.21861000095668714,
+          "project_ms": 11412.076696999065,
+          "select_ms": 1044.908605999808,
+          "total_ms": 16561.76665499879,
+          "vector_cache_ms": 1706.697849000193
+        }
+      ],
+      "repeats": 3,
+      "rows": [
+        {
+          "archive_load_ms": 1578.268620000017,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.443185998345143,
+          "pack_bytes": 1851,
+          "pack_ms": 0.24537100034649484,
+          "project_ms": 12233.492456000022,
+          "select_ms": 1028.829635000875,
+          "total_ms": 17437.7413050006,
+          "vector_cache_ms": 1736.9872330000362
+        },
+        {
+          "archive_load_ms": 1565.7000490009523,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.335433999178349,
+          "pack_bytes": 1902,
+          "pack_ms": 0.22283799989963882,
+          "project_ms": 11167.971618999218,
+          "select_ms": 1431.8042089998926,
+          "total_ms": 17719.393339999442,
+          "vector_cache_ms": 2536.462437999944
+        },
+        {
+          "archive_load_ms": 1821.0888960002194,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.5146100015263073,
+          "pack_bytes": 1810,
+          "pack_ms": 0.22482199892692734,
+          "project_ms": 12770.026026999403,
+          "select_ms": 1023.2950259996869,
+          "total_ms": 18143.178345000706,
+          "vector_cache_ms": 1680.699647999063
+        },
+        {
+          "archive_load_ms": 1552.429168999879,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.2779959999752464,
+          "pack_bytes": 1837,
+          "pack_ms": 0.2805359999911161,
+          "project_ms": 11316.080746999432,
+          "select_ms": 1444.2656689989235,
+          "total_ms": 16995.568454000022,
+          "vector_cache_ms": 1843.4190010011662
+        },
+        {
+          "archive_load_ms": 2152.2906989994226,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 3.1947360002959613,
+          "pack_bytes": 1851,
+          "pack_ms": 0.248455999098951,
+          "project_ms": 11308.792826999706,
+          "select_ms": 1035.6976869989012,
+          "total_ms": 17054.58076300056,
+          "vector_cache_ms": 1715.633510999396
+        },
+        {
+          "archive_load_ms": 1538.9556879999873,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.350841999941622,
+          "pack_bytes": 1902,
+          "pack_ms": 0.2190510003856616,
+          "project_ms": 11186.48543999916,
+          "select_ms": 1046.847996998622,
+          "total_ms": 16340.766105999137,
+          "vector_cache_ms": 1729.6128410016536
+        },
+        {
+          "archive_load_ms": 1811.6890720011725,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.582737999546225,
+          "pack_bytes": 1810,
+          "pack_ms": 0.22118500055512413,
+          "project_ms": 11722.119483001734,
+          "select_ms": 1011.0796369990567,
+          "total_ms": 17151.381272000435,
+          "vector_cache_ms": 1765.326807000747
+        },
+        {
+          "archive_load_ms": 1533.8559659994644,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.354840000407421,
+          "pack_bytes": 1837,
+          "pack_ms": 0.2280589997099014,
+          "project_ms": 11323.81411300048,
+          "select_ms": 1027.23278799931,
+          "total_ms": 16444.341021999207,
+          "vector_cache_ms": 1719.446507999237
+        },
+        {
+          "archive_load_ms": 1532.036982000136,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.2145370003272546,
+          "pack_bytes": 1851,
+          "pack_ms": 0.2213850002590334,
+          "project_ms": 11238.638994998837,
+          "select_ms": 1044.614313999773,
+          "total_ms": 16372.620909000034,
+          "vector_cache_ms": 1716.455062998648
+        },
+        {
+          "archive_load_ms": 1802.036914999917,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.299036001204513,
+          "pack_bytes": 1902,
+          "pack_ms": 0.260750000961707,
+          "project_ms": 11705.31432900134,
+          "select_ms": 1104.0695650008274,
+          "total_ms": 17164.410830000634,
+          "vector_cache_ms": 1704.772964998483
+        },
+        {
+          "archive_load_ms": 1557.221674000175,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.3481270000047516,
+          "pack_bytes": 1810,
+          "pack_ms": 0.22732700017513707,
+          "project_ms": 11359.165879999637,
+          "select_ms": 1071.7853259993717,
+          "total_ms": 16590.718860999914,
+          "vector_cache_ms": 1754.0675029995327
+        },
+        {
+          "archive_load_ms": 1555.7042060008826,
+          "cache_hits": 25000,
+          "cache_misses": 0,
+          "db_corpus_lookup_ms": 2.5066149992198916,
+          "pack_bytes": 1837,
+          "pack_ms": 0.21861000095668714,
+          "project_ms": 11412.076696999065,
+          "select_ms": 1044.908605999808,
+          "total_ms": 16561.76665499879,
+          "vector_cache_ms": 1706.697849000193
+        }
+      ],
+      "summary": {
+        "archive_load_ms": {
+          "max": 2152.29,
+          "min": 1532.04,
+          "p50": 1565.7,
+          "p95": 2152.29
+        },
+        "db_corpus_lookup_ms": {
+          "max": 3.19,
+          "min": 2.21,
+          "p50": 2.35,
+          "p95": 3.19
+        },
+        "pack_ms": {
+          "max": 0.28,
+          "min": 0.22,
+          "p50": 0.23,
+          "p95": 0.28
+        },
+        "project_ms": {
+          "max": 12770.03,
+          "min": 11167.97,
+          "p50": 11359.17,
+          "p95": 12770.03
+        },
+        "select_ms": {
+          "max": 1444.27,
+          "min": 1011.08,
+          "p50": 1044.91,
+          "p95": 1444.27
+        },
+        "total_ms": {
+          "max": 18143.18,
+          "min": 16340.77,
+          "p50": 17054.58,
+          "p95": 18143.18
+        },
+        "vector_cache_ms": {
+          "max": 2536.46,
+          "min": 1680.7,
+          "p50": 1729.61,
+          "p95": 2536.46
+        }
+      }
+    }
+  ],
+  "unmeasured": [
+    50000,
+    100000
+  ]
+}

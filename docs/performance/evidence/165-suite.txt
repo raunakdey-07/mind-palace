@@ -1,0 +1,66 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1 venvmp/bin/python -m pytest -q --maxfail=1
+........................................................................ [  6%]
+........................................................................ [ 12%]
+........................................................................ [ 18%]
+........................................................................ [ 24%]
+........................................................................ [ 30%]
+........................................................................ [ 36%]
+........................................................................ [ 42%]
+........................................................................ [ 48%]
+........................................................................ [ 54%]
+........................................................................ [ 60%]
+........................................................................ [ 66%]
+........................................................................ [ 72%]
+.......................memory_public current: 0.064458s (100 docs, 300 versions)
+memory_public history: 0.060308s (100 docs, 300 versions)
+memory_public changes: 0.065893s (100 docs, 300 versions)
+memory_public evidence: 0.064648s (100 docs, 300 versions)
+memory_public as-of: 0.061921s (100 docs, 300 versions)
+memory_public pack: 0.261388s (100 docs, 300 versions)
+memory_public replay: 0.063168s (100 docs, 300 versions)
+................................................. [ 78%]
+........................................................................ [ 84%]
+........................................................................ [ 90%]
+........................................................................ [ 96%]
+................................................                         [100%]
+=============================== warnings summary ===============================
+tests/test_memory_query_adapters.py::test_sdk_remote_query[None]
+tests/test_memory_query_adapters.py::test_sdk_remote_query[other-docs]
+tests/test_memory_query_adapters.py::test_cli_query[None]
+tests/test_memory_query_adapters.py::test_cli_query[change]
+tests/test_memory_query_adapters.py::test_sdk_and_cli_query_errors
+  /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/httpx2/_client.py:1204: StarletteDeprecationWarning: You should not use the 'timeout' argument with the TestClient. See https://github.com/Kludex/starlette/issues/1108 for more information.
+    return self.request(
+
+tests/test_search_semantics.py::test_rrf_scores_descending_contract
+  tests/test_search_semantics.py:177: PytestWarning: The test <Function test_rrf_scores_descending_contract> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_rrf_scores_descending_contract():
+
+tests/test_search_semantics.py::test_metrics_on_ranked_results
+  tests/test_search_semantics.py:184: PytestWarning: The test <Function test_metrics_on_ranked_results> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_metrics_on_ranked_results():
+
+tests/test_search_semantics.py::test_k_bounds_result_count
+  /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/torch/nn/modules/module.py:1782: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <asyncpg.connection.Connection object at 0x7f0b08332a80>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def _call_impl(self, *args, **kwargs):
+
+tests/test_search_semantics.py::test_k_bounds_result_count
+  /mnt/Warehouse/projects/Mind Palace/venvmp/lib64/python3.14/site-packages/torch/nn/modules/module.py:1782: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <asyncpg.connection.Connection object at 0x7f0b083334d0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def _call_impl(self, *args, **kwargs):
+
+tests/test_security.py::test_sync_paths_are_relative_to_root
+  tests/test_security.py:46: PytestWarning: The test <Function test_sync_paths_are_relative_to_root> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_sync_paths_are_relative_to_root(tmp_path):
+
+tests/test_security.py::test_unsupported_extension_rejected_not_executed
+  tests/test_security.py:61: PytestWarning: The test <Function test_unsupported_extension_rejected_not_executed> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_unsupported_extension_rejected_not_executed(tmp_path):
+
+tests/test_security.py::test_oversized_document_is_chunked_not_crashed
+  tests/test_security.py:70: PytestWarning: The test <Function test_oversized_document_is_chunked_not_crashed> is marked with '@pytest.mark.asyncio' but it is not an async function. Please remove the asyncio mark. If the test is not marked explicitly, check for global marks applied via 'pytestmark'.
+    def test_oversized_document_is_chunked_not_crashed():
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1200 passed, 12 warnings in 130.47s (0:02:10)
+EXIT_CODE=0

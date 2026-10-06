@@ -1,0 +1,6 @@
+datname | size | bytes
+mindpalace | 20 MB | 20462951
+template1 | 7527 kB | 7708007
+postgres | 7455 kB | 7634279
+template0 | 7297 kB | 7471619
+total: 43276856

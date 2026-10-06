@@ -1,0 +1,54 @@
+==============================================================================
+HARNESS SQL FIDELITY CHECK
+==============================================================================
+  purpose                   : The sweep must measure the real statement, not a transcription. memory._load is called with a stub session that captures the SQL it emits, then compared against the strings this harness executes.
+
+
+==============================================================================
+FORM: NARROW  (chunk_text=False, version_text=False)
+==============================================================================
+MATCH: YES
+  source len=981   harness len=981
+
+--- captured verbatim from api/services/memory.py::_load ---
+SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,
+            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS chunks,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS claims,
+            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+                '[]'::jsonb) AS evidence
+        FROM memory_versions v JOIN memory_documents d
+          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+        ORDER BY v.observed_at, d.path, v.version_number
+
+==============================================================================
+FORM: WIDE    (chunk_text=True,  version_text=True)
+==============================================================================
+MATCH: YES
+  source len=804   harness len=804
+
+--- captured verbatim from api/services/memory.py::_load ---
+SELECT v.*, d.path,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.order_index)
+                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS chunks,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS claims,
+            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+                '[]'::jsonb) AS evidence
+        FROM memory_versions v JOIN memory_documents d
+          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+        ORDER BY v.observed_at, d.path, v.version_number
+
+==============================================================================
+OVERALL: harness SQL matches production _load exactly

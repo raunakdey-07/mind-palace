@@ -1,0 +1,11 @@
+=== find _*.py ===
+./api/__init__.py
+./api/services/__init__.py
+./api/routers/__init__.py
+./scripts/benchmark/__init__.py
+./scripts/__init__.py
+./cli/__init__.py
+=== log for memory_public.py ===
+372901b perf: reject the vectorised scorer, and correct where the time actually goes
+350d6b8 perf: stop shipping chunk text to the public projection
+8c5891f perf: cache claim representations so relevance stops re-encoding the archive

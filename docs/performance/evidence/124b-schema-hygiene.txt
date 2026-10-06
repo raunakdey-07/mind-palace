@@ -1,0 +1,3 @@
+leftover throwaway schemas: NONE (all rolled back)
+total schemas in db      : 4
+public memory_* relations: 27

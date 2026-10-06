@@ -1,0 +1,52 @@
+=== project-related temp dirs ===
+192K	/tmp/mp-analyze
+2.1M	/tmp/mp-preserve
+556K	/tmp/mpscratch
+1.6M	/tmp/pytest-of-rdx
+
+=== contents of /tmp/mp-preserve ===
+total 2148
+drwxr-xr-x.  2 rdx  rdx     100 Oct  3 14:00 .
+drwxrwxrwt. 75 root root   1940 Oct  3 14:56 ..
+-rw-r--r--.  1 rdx  rdx  729550 Oct  3 14:00 final-packs.json
+-rw-r--r--.  1 rdx  rdx  729550 Oct  3 13:52 post-analyze-packs.json
+-rw-r--r--.  1 rdx  rdx  729550 Oct  3 13:36 pre-analyze-packs.json
+
+=== contents of /tmp/mp-analyze ===
+total 168
+drwxr-xr-x.  3 rdx  rdx    260 Oct  3 13:54 .
+drwxrwxrwt. 75 root root  1940 Oct  3 14:56 ..
+-rw-r--r--.  1 rdx  rdx   6807 Oct  3 13:52 av.py
+-rw-r--r--.  1 rdx  rdx    917 Oct  3 13:54 gate.json
+-rw-r--r--.  1 rdx  rdx   4825 Oct  3 13:53 gate.py
+-rw-r--r--.  1 rdx  rdx  67113 Oct  3 13:47 matrix.json
+-rw-r--r--.  1 rdx  rdx   5969 Oct  3 13:47 matrix.log
+-rw-r--r--.  1 rdx  rdx  13790 Oct  3 13:38 matrix.py
+-rw-r--r--.  1 rdx  rdx  32984 Oct  3 13:50 probe.json
+-rw-r--r--.  1 rdx  rdx   2860 Oct  3 13:50 probe.log
+-rw-r--r--.  1 rdx  rdx    429 Oct  3 13:47 probe.py
+drwxr-xr-x.  2 rdx  rdx     60 Oct  3 13:47 __pycache__
+-rw-r--r--.  1 rdx  rdx   8329 Oct  3 13:50 report.py
+
+=== deleted-but-open files ===
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 103 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 10:23 113 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 115 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 118 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 121 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 123 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 124 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 125 -> /memfd:mozilla-ipc (deleted)
+lrwx------. 1 rdx rdx 64 Oct  3 14:57 127 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 10:23 133 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 134 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 135 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 136 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 145 -> /memfd:mozilla-ipc (deleted)
+lrwx------. 1 rdx rdx 64 Oct  3 14:57 19 -> /memfd:wayland-cursor (deleted)
+lrwx------. 1 rdx rdx 64 Oct  3 14:57 221 -> /memfd:pulseaudio (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 242 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 41 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 10:23 45 -> /memfd:mozilla-ipc (deleted)
+lr-x------. 1 rdx rdx 64 Oct  3 14:57 53 -> /memfd:mozilla-ipc (deleted)
+(end deleted-fd scan)

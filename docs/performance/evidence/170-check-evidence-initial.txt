@@ -1,0 +1,25 @@
+=== SUB-AGENT-RUN (non-timing; script execution and inspection) ===
+
+COMMAND: cd /mnt/Warehouse/projects/Mind Palace && venvmp/bin/python -m flake8 scripts/check_evidence.py --max-line-length=100; echo "FLAKE8=$?"
+scripts/check_evidence.py:28:1: F401 'sys' imported but unused
+scripts/check_evidence.py:43:101: E501 line too long (102 > 100 characters)
+FLAKE8=1
+
+COMMAND: cd /mnt/Warehouse/projects/Mind Palace && venvmp/bin/python -m black --check scripts/check_evidence.py --line-length 100; echo "BLACK=$?"
+All done! ✨ 🍰 ✨
+1 file would be left unchanged.
+BLACK=0
+
+COMMAND: cd /mnt/Warehouse/projects/Mind Palace && venvmp/bin/python scripts/check_evidence.py 2>&1 | tee docs/performance/evidence/170-check-evidence-initial.txt
+documents scanned : 2
+artifacts referenced: 10
+machine-checkable citations: 0
+
+PROBLEMS (6):
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+CHECKER_EXIT=0

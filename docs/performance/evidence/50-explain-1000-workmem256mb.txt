@@ -1,0 +1,54 @@
+# EXPLAIN (ANALYZE, BUFFERS, VERBOSE) -- narrow production projection, work_mem=256MB
+# work_mem=256MB; corpus=xpl_71fab33359 target=1000 counts={'versions': 1000, 'documents': 336, 'claims': 1000, 'chunks': 1000, 'evidence_rows': 1000}
+# per-run execution ms: [574.255, 558.789, 570.919]
+# EXPLAIN ANALYZE does not serialize or transfer rows to the client.
+# Output: tuple payload elided: 0 lines, 42 bytes; the complete un-elided text and its sha256 are recorded in 51-explain-summary.txt.
+#------------------------------------------------------------------------------
+Sort  (cost=115.85..115.86 rows=4 width=1504) (actual time=574.055..574.173 rows=1000 loops=1)
+  Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path, (COALESCE((SubPlan 1), '[]'::jsonb)), (COALESCE((SubPlan 2), '[]'::jsonb)), (COALESCE((SubP
+  Sort Key: v.observed_at, d.path, v.version_number
+  Sort Method: quicksort  Memory: 1694kB
+  Buffers: shared hit=1068311
+  ->  Nested Loop  (cost=0.55..115.81 rows=4 width=1504) (actual time=0.926..573.276 rows=1000 loops=1)
+        Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path, COALESCE((SubPlan 1), '[]'::jsonb), COALESCE((SubPlan 2), '[]'::jsonb), COALESCE((Sub
+        Buffers: shared hit=1068311
+        ->  Index Scan using memory_documents_pkey on xpl_71fab33359.memory_documents d  (cost=0.27..8.29 rows=1 width=552) (actual time=0.018..0.461 rows=336 loops=1)
+              Output: d.corpus_id, d.id, d.path
+              Index Cond: (d.corpus_id = '5c1d0219ccbf51c3aa99e606b68f1b573ad1097d855e4ebfb9c4ccdc013ba884'::bpchar)
+              Buffers: shared hit=303
+        ->  Index Scan using memory_versions_corpus_id_memory_document_id_version_number_key on xpl_71fab33359.memory_versions v  (cost=0.28..8.29 rows=1 width=1376) (actual time=0.005..0.006 rows=3 loops=336)
+              Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.content, v.metadata, v.fingerprint
+              Index Cond: ((v.corpus_id = '5c1d0219ccbf51c3aa99e606b68f1b573ad1097d855e4ebfb9c4ccdc013ba884'::bpchar) AND (v.memory_document_id = d.id))
+              Buffers: shared hit=1008
+        SubPlan 1
+          ->  Aggregate  (cost=8.30..8.31 rows=1 width=32) (actual time=0.008..0.008 rows=1 loops=1000)
+                Output: jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+                Buffers: shared hit=3000
+                ->  Index Scan using memory_chunks_corpus_id_version_id_order_index_key on xpl_71fab33359.memory_chunks c  (cost=0.27..8.29 rows=1 width=296) (actual time=0.004..0.004 rows=1 loops=1000)
+                      Output: c.corpus_id, c.version_id, c.id, c.text, c.heading_path, c.order_index
+                      Index Cond: ((c.corpus_id = v.corpus_id) AND (c.version_id = v.id))
+                      Buffers: shared hit=3000
+        SubPlan 2
+          ->  Aggregate  (cost=8.18..8.19 rows=1 width=32) (actual time=0.195..0.195 rows=1 loops=1000)
+                Output: jsonb_agg(to_jsonb(c_1.*) ORDER BY c_1.key, c_1.id)
+                Buffers: shared hit=56000
+                ->  Index Scan using idx_memory_claims_validity on xpl_71fab33359.memory_claims c_1  (cost=0.15..8.17 rows=1 width=1760) (actual time=0.095..0.187 rows=1 loops=1000)
+                      Output: c_1.*, c_1.key, c_1.id
+                      Index Cond: (c_1.corpus_id = v.corpus_id)
+                      Filter: (c_1.version_id = v.id)
+                      Rows Removed by Filter: 999
+                      Buffers: shared hit=56000
+        SubPlan 3
+          ->  Aggregate  (cost=8.30..8.31 rows=1 width=32) (actual time=0.364..0.365 rows=1 loops=1000)
+                Output: jsonb_agg(to_jsonb(e.*) ORDER BY e.id)
+                Buffers: shared hit=1008000
+                ->  Index Scan using idx_memory_evidence_claim on xpl_71fab33359.memory_evidence e  (cost=0.27..8.29 rows=1 width=1624) (actual time=0.180..0.357 rows=1 loops=1000)
+                      Output: e.*, e.id
+                      Index Cond: (e.corpus_id = v.corpus_id)
+                      Filter: (e.version_id = v.id)
+                      Rows Removed by Filter: 999
+                      Buffers: shared hit=1008000
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.306 ms
+Execution Time: 574.255 ms

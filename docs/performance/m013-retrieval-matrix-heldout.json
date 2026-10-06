@@ -1,0 +1,222 @@
+{
+  "dataset": "heldout",
+  "meta": {
+    "bootstrap": "percentile, 2000 iterations, seed 12345 (deterministic)",
+    "commit": "d825f0659d853a8d2c322deaf48fa41d8b0257fb",
+    "dataset": "heldout",
+    "generated_at": "2026-10-04T11:18:00.712401+00:00",
+    "gold": "authored key; ABSENT questions scored on abstention only",
+    "latency_note": "reported for context only; host has unexplained ~2.5x variance",
+    "model": "all-MiniLM-L6-v2",
+    "python": "3.14.7",
+    "repeats": 1
+  },
+  "questions": 157,
+  "table": [
+    {
+      "abstention_accuracy": 0.9375,
+      "abstention_questions": 16,
+      "configuration": "current",
+      "mean_candidate_keys": 2.36,
+      "mrr": 0.6819,
+      "mrr_ci95": [
+        0.6137,
+        0.7499
+      ],
+      "ndcg5": 0.7143,
+      "ndcg5_ci95": [
+        0.6464,
+        0.7796
+      ],
+      "p50_ms": 898.913,
+      "p95_ms": 1747.306,
+      "r1": 0.5816,
+      "r10": 0.8085,
+      "r10_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "r1_ci95": [
+        0.4965,
+        0.6667
+      ],
+      "r5": 0.8085,
+      "r5_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "scored_questions": 141
+    },
+    {
+      "abstention_accuracy": 0.9375,
+      "abstention_questions": 16,
+      "configuration": "semantic",
+      "mean_candidate_keys": 2.36,
+      "mrr": 0.6819,
+      "mrr_ci95": [
+        0.6137,
+        0.7499
+      ],
+      "ndcg5": 0.7143,
+      "ndcg5_ci95": [
+        0.6464,
+        0.7796
+      ],
+      "p50_ms": 907.769,
+      "p95_ms": 1769.318,
+      "r1": 0.5816,
+      "r10": 0.8085,
+      "r10_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "r1_ci95": [
+        0.4965,
+        0.6667
+      ],
+      "r5": 0.8085,
+      "r5_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "scored_questions": 141
+    },
+    {
+      "abstention_accuracy": 0.9375,
+      "abstention_questions": 16,
+      "configuration": "lexical",
+      "mean_candidate_keys": 3.77,
+      "mrr": 0.4538,
+      "mrr_ci95": [
+        0.3865,
+        0.5173
+      ],
+      "ndcg5": 0.5005,
+      "ndcg5_ci95": [
+        0.4311,
+        0.5663
+      ],
+      "p50_ms": 0.677,
+      "p95_ms": 1.332,
+      "r1": 0.2908,
+      "r10": 0.7092,
+      "r10_ci95": [
+        0.6312,
+        0.7872
+      ],
+      "r1_ci95": [
+        0.2128,
+        0.3617
+      ],
+      "r5": 0.6596,
+      "r5_ci95": [
+        0.5816,
+        0.7376
+      ],
+      "scored_questions": 141
+    },
+    {
+      "abstention_accuracy": 0.9375,
+      "abstention_questions": 16,
+      "configuration": "hybrid",
+      "mean_candidate_keys": 2.36,
+      "mrr": 0.6819,
+      "mrr_ci95": [
+        0.6137,
+        0.7499
+      ],
+      "ndcg5": 0.7143,
+      "ndcg5_ci95": [
+        0.6464,
+        0.7796
+      ],
+      "p50_ms": 1776.917,
+      "p95_ms": 3387.895,
+      "r1": 0.5816,
+      "r10": 0.8085,
+      "r10_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "r1_ci95": [
+        0.4965,
+        0.6667
+      ],
+      "r5": 0.8085,
+      "r5_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "scored_questions": 141
+    },
+    {
+      "abstention_accuracy": 0.9375,
+      "abstention_questions": 16,
+      "configuration": "rrf",
+      "mean_candidate_keys": 2.36,
+      "mrr": 0.6819,
+      "mrr_ci95": [
+        0.6137,
+        0.7499
+      ],
+      "ndcg5": 0.7143,
+      "ndcg5_ci95": [
+        0.6464,
+        0.7796
+      ],
+      "p50_ms": 1774.489,
+      "p95_ms": 3529.804,
+      "r1": 0.5816,
+      "r10": 0.8085,
+      "r10_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "r1_ci95": [
+        0.4965,
+        0.6667
+      ],
+      "r5": 0.8085,
+      "r5_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "scored_questions": 141
+    },
+    {
+      "abstention_accuracy": 0.9375,
+      "abstention_questions": 16,
+      "configuration": "semantic_then_lexical",
+      "mean_candidate_keys": 2.36,
+      "mrr": 0.6819,
+      "mrr_ci95": [
+        0.6137,
+        0.7499
+      ],
+      "ndcg5": 0.7143,
+      "ndcg5_ci95": [
+        0.6464,
+        0.7796
+      ],
+      "p50_ms": 1395.955,
+      "p95_ms": 1790.748,
+      "r1": 0.5816,
+      "r10": 0.8085,
+      "r10_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "r1_ci95": [
+        0.4965,
+        0.6667
+      ],
+      "r5": 0.8085,
+      "r5_ci95": [
+        0.7376,
+        0.8723
+      ],
+      "scored_questions": 141
+    }
+  ],
+  "versions_loaded": 72
+}

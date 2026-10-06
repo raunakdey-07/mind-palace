@@ -397,7 +397,7 @@ async def record_deletion(db: AsyncSession, corpus_id: str, path: str) -> bool:
     return True
 
 
-async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True, version_text=True):
     """Load versions with their claims, evidence and chunks.
 
     The child aggregates are correlated subqueries rather than one set-based pass
@@ -414,7 +414,21 @@ async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
     projection reads nothing else from a chunk, and chunk text is the bulk of a
     real document. The raw ``history`` surface keeps the text, because a
     developer asking for history wants the source.
+
+    ``version_text=False`` drops each version's ``content`` and ``metadata``.
+    Those two columns hold the whole document body and are the widest part of a
+    version row, but the projection never reads either: authority comes from the
+    claims, evidence and the version graph. Same reasoning as ``chunk_text``, and
+    the raw ``history`` surface keeps both for the same reason.
     """
+    columns = (
+        "v.*"
+        if version_text
+        else (
+            "v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, "
+            "v.document_id, v.event, v.observed_at, v.fingerprint"
+        )
+    )
     chunk_expr = (
         "jsonb_build_object('id', c.id, 'heading_path', c.heading_path)"
         if not chunk_text
@@ -423,7 +437,7 @@ async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
     # One statement gives every read a coherent MVCC view, even without a read lock.
     result = await db.execute(
         text(f"""
-        SELECT v.*, d.path,
+        SELECT {columns}, d.path,
             COALESCE((SELECT jsonb_agg({chunk_expr} ORDER BY c.order_index)
                 FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
                 '[]'::jsonb) AS chunks,

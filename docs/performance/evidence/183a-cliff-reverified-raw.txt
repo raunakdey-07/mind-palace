@@ -1,0 +1,67 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace):
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m part_c
+
+RAW OUTPUT
+==============================================================================
+production narrow _load SQL captured from api.services.memory._load:
+
+        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,
+            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)
+                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS chunks,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS claims,
+            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+                '[]'::jsonb) AS evidence
+        FROM memory_versions v JOIN memory_documents d
+          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+        ORDER BY v.observed_at, d.path, v.version_number
+    
+
+rows: {'claims': 1000, 'evidence': 1000, 'chunks': 1000, 'versions': 1000, 'documents': 1000}
+fresh-install ASSERTED: memory_claims reltuples=-1, last_analyze=None, pg_statistic_rows=0
+
+--- BEFORE ANALYZE ---
+  shared_hit_blocks per rep: [1079038, 1079038, 1079038]   steady (min) = 1079038
+  memory_claims: Index Scan on idx_memory_claims_validity
+      Index Cond             = (corpus_id = v.corpus_id)
+      Filter                 = (version_id = v.id)
+      Rows Removed by Filter = 999  loops=1000
+  memory_evidence: Index Scan on idx_memory_evidence_claim
+      Index Cond             = (corpus_id = v.corpus_id)
+      Filter                 = (version_id = v.id)
+      Rows Removed by Filter = 999  loops=1000
+  memory_chunks: Index Scan on memory_chunks_corpus_id_version_id_order_index_key
+      Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+      Filter                 = None
+      Rows Removed by Filter = None  loops=1000
+  rows sha256=d6fa4583c6ea1f25994f82b64a112777476a67fb45b5b2411818326485c236ec n_rows=1000 n_cols=13
+
+--- AFTER ANALYZE ---
+  shared_hit_blocks per rep: [9190, 9190, 9190]   steady (min) = 9190
+  memory_claims: Index Scan on memory_claims_corpus_id_version_id_id_key
+      Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+      Filter                 = None
+      Rows Removed by Filter = None  loops=1000
+  memory_evidence: Index Scan on idx_memory_evidence_chunk
+      Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+      Filter                 = None
+      Rows Removed by Filter = None  loops=1000
+  memory_chunks: Index Scan on memory_chunks_corpus_id_version_id_order_index_key
+      Index Cond             = ((corpus_id = v.corpus_id) AND (version_id = v.id))
+      Filter                 = None
+      Rows Removed by Filter = None  loops=1000
+  rows sha256=d6fa4583c6ea1f25994f82b64a112777476a67fb45b5b2411818326485c236ec n_rows=1000 n_cols=13
+
+ratio before/after = 117.41x
+rows byte-identical across the ANALYZE: True
+wrote /mnt/Warehouse/projects/Mind Palace/docs/performance/evidence/182-cliff-reverified-n1000.json

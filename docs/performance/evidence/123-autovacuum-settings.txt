@@ -1,0 +1,83 @@
+psql is NOT installed on this host (`sh: psql: command not found`), so the
+values below were read with the documented fallback: python + sqlalchemy, from
+the pg_settings catalog. These are ACTUAL server values, not defaults assumed.
+
+name | setting | unit | source | boot_val | short_desc
+----------------------------------------------------------------------------------------------------------------------------------
+autovacuum | on | None | default | on | Starts the autovacuum subprocess.
+autovacuum_analyze_scale_factor | 0.1 | None | default | 0.1 | Number of tuple inserts, updates, or deletes prior to analyze as a fraction of reltuples.
+autovacuum_analyze_threshold | 50 | None | default | 50 | Minimum number of tuple inserts, updates, or deletes prior to analyze.
+autovacuum_max_workers | 3 | None | default | 3 | Sets the maximum number of simultaneously running autovacuum worker processes.
+autovacuum_naptime | 60 | s | default | 60 | Time to sleep between autovacuum runs.
+autovacuum_vacuum_insert_threshold | 1000 | None | default | 1000 | Minimum number of tuple inserts prior to vacuum, or -1 to disable insert vacuums.
+autovacuum_vacuum_scale_factor | 0.2 | None | default | 0.2 | Number of tuple updates or deletes prior to vacuum as a fraction of reltuples.
+autovacuum_vacuum_threshold | 50 | None | default | 50 | Minimum number of tuple updates or deletes prior to vacuum.
+
+--- is the autovacuum launcher actually running? ---
+    backend_type=autovacuum launcher
+    -> the launcher process IS present, so autoanalyze is capable of firing.
+
+--- worker capacity ---
+    max_worker_processes = 8
+    max_connections = 100
+    track_counts = on
+    autovacuum_worker_slots = n/a (PostgreSQL 18 parameter; server is 15.19)
+
+==============================================================================
+COMPUTED PRODUCTION WINDOW  -- COMPUTED, NOT MEASURED
+==============================================================================
+  Formula used, as documented in the task:
+      row changes needed to trigger autoanalyze = threshold + scale_factor * reltuples
+
+  For a table holding 1,000 rows:
+      50 + 0.1 * 1000 = 150 row changes
+
+  All numbers in the paragraphs below are DERIVED from the settings above by that
+  formula. No wait was timed in this session to produce any of them.
+
+  * ANALYZE trigger at 1,000 rows        : 150 changed tuples
+  * ANALYZE trigger at  100 rows        : 60 changed tuples
+  * ANALYZE trigger at   10 rows        : 51 changed tuples
+  * VACUUM trigger at 1,000 rows        : 250 changed tuples
+  * VACUUM insert trigger               : 1000 inserts (autovacuum_vacuum_insert_threshold)
+  * Launcher nap interval               : 60 s
+
+  IMPORTANT CAVEAT ON THE FRESH-INSTALL CASE, which is the one that matters here.
+  The 1,000-row figure above assumes reltuples has already been refreshed to 1000.
+  Under the fresh-install condition proved in Step 3, reltuples is -1, not 1000.
+  Substituting -1 into the documented formula gives
+      50 + 0.1 * (-1) = 49.9 row changes,
+  so IF the server evaluates the never-analysed case literally the trigger is
+  smaller still, not larger. I did NOT verify in this session whether PostgreSQL 15
+  clamps a negative reltuples to 0 before applying the formula, so treat the exact
+  never-analysed threshold as UNVERIFIED. Either reading puts it near 50, which is
+  the same order as the 150 above, and both are far below the 1,000+ rows a real
+  corpus needs before its first read. That conclusion is robust to the ambiguity.
+
+  THE INFERRED WALL-CLOCK WINDOW. From the settings alone:
+  * autoanalyze becomes ELIGIBLE after ~50-150 changed tuples, which any bulk
+    corpus ingest passes almost immediately;
+  * the launcher wakes every 60 s, and with autovacuum_max_workers = 3
+    sharing all databases on the cluster, the queueing delay before the worker
+    reaches one of the four tables is the dominant unknown;
+  * therefore the bad plan is INFERRED to last on the order of ~60s to a
+    few minutes after a bulk ingest, and to clear itself on its own. This is an
+    INFERENCE FROM SETTINGS. It was NOT measured here.
+
+  It is NOT unbounded, and it is NOT a permanent state, PROVIDED the rows are
+  COMMITTED and visible to autovacuum. Two things break that precondition:
+   1. Rollback-only or in-transaction corpora (what the Step 3 harness builds)
+      are invisible to autovacuum forever, so there the bad plan is permanent.
+      That is a property of the benchmark harness, not of production.
+   2. A deployment that disables autovacuum, or runs with autovacuum_max_workers
+      saturated, keeps the cliff indefinitely. Nothing in this repo sets either.
+
+  PRIOR DIRECT MEASUREMENT, for contrast (not re-run in this session).
+  docs/performance/evidence/105-autovacuum-state.txt, the persist=True case, did
+  exactly this experiment with COMMITTED rows: plan immediately after ingest was
+  claims=idx_memory_claims_validity evidence=idx_memory_evidence_claim hit=1072311,
+  then it slept 75 s and found all four tables auto-analysed with
+  last_autoanalyze populated, and the plan had already flipped to
+  claims=memory_claims_corpus_id_version_id_id_key evidence=idx_memory_evidence_chunk
+  hit=9175. That 75 s figure is MEASURED. It corroborates the computed order of
+  magnitude above; it does not replace it, and it was not reproduced in this run.

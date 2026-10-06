@@ -1,0 +1,267 @@
+{
+  "commit": "d825f0659d853a8d2c322deaf48fa41d8b0257fb",
+  "dataset": "dev",
+  "interpretation": "Fusion can only help if a lexical-only key contains the gold key on a question the semantic gate missed. 'recoverable_by_fusion' counts exactly those. Recoverable == 0 means fusion cannot improve recall at all, regardless of RRF parameters.",
+  "keyed_questions": 175,
+  "lexical_gold_rate": 0.8,
+  "lexical_only_keys_on_semantic_misses": 41,
+  "mean_lexical_candidates": 2.52,
+  "mean_semantic_candidates": 1.81,
+  "mean_union_candidates": 3.03,
+  "recoverable_by_fusion": 16,
+  "sample_semantic_misses": [
+    {
+      "gold": "decision.database.reason",
+      "lexical_has_gold": false,
+      "lexical_keys": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_only": [],
+      "qid": "tmp-why-postgres",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "semantic_only": [],
+      "union": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ]
+    },
+    {
+      "gold": "decision.cache.reason",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "architecture.redis",
+        "decision.cache.reason"
+      ],
+      "lexical_only": [
+        "decision.cache.reason"
+      ],
+      "qid": "tmp-why-redis",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "architecture.redis"
+      ],
+      "semantic_only": [],
+      "union": [
+        "architecture.redis",
+        "decision.cache.reason"
+      ]
+    },
+    {
+      "gold": "decision.queue.reason",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "architecture.queue",
+        "decision.queue.reason"
+      ],
+      "lexical_only": [
+        "decision.queue.reason"
+      ],
+      "qid": "tmp-why-queue",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "architecture.queue"
+      ],
+      "semantic_only": [],
+      "union": [
+        "architecture.queue",
+        "decision.queue.reason"
+      ]
+    },
+    {
+      "gold": "decision.storage.reason",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "architecture.storage",
+        "decision.storage.reason"
+      ],
+      "lexical_only": [
+        "decision.storage.reason"
+      ],
+      "qid": "tmp-why-storage",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "architecture.storage"
+      ],
+      "semantic_only": [],
+      "union": [
+        "architecture.storage",
+        "decision.storage.reason"
+      ]
+    },
+    {
+      "gold": "decision.warehouse.reason",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "architecture.warehouse",
+        "decision.warehouse.reason",
+        "service.analytics.depends_on"
+      ],
+      "lexical_only": [
+        "decision.warehouse.reason",
+        "service.analytics.depends_on"
+      ],
+      "qid": "tmp-why-warehouse",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "architecture.warehouse"
+      ],
+      "semantic_only": [],
+      "union": [
+        "architecture.warehouse",
+        "decision.warehouse.reason",
+        "service.analytics.depends_on"
+      ]
+    },
+    {
+      "gold": "constraint.orders.pool",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "lexical_only": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "qid": "prv-inc-2024-03",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "incident.2024-11.ledger.root"
+      ],
+      "semantic_only": [
+        "incident.2024-11.ledger.root"
+      ],
+      "union": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch",
+        "incident.2024-11.ledger.root"
+      ]
+    },
+    {
+      "gold": "constraint.notifier.idempotency",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "lexical_only": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "qid": "prv-inc-2024-07",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "incident.2024-11.ledger.root"
+      ],
+      "semantic_only": [
+        "incident.2024-11.ledger.root"
+      ],
+      "union": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch",
+        "incident.2024-11.ledger.root"
+      ]
+    },
+    {
+      "gold": "constraint.search.batch",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "lexical_only": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "qid": "prv-inc-2024-09",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "incident.2024-11.ledger.root"
+      ],
+      "semantic_only": [
+        "incident.2024-11.ledger.root"
+      ],
+      "union": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch",
+        "incident.2024-11.ledger.root"
+      ]
+    },
+    {
+      "gold": "constraint.ledger.settlement",
+      "lexical_has_gold": true,
+      "lexical_keys": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "lexical_only": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch"
+      ],
+      "qid": "prv-inc-2024-11",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "incident.2024-11.ledger.root"
+      ],
+      "semantic_only": [
+        "incident.2024-11.ledger.root"
+      ],
+      "union": [
+        "constraint.ledger.settlement",
+        "constraint.notifier.idempotency",
+        "constraint.orders.pool",
+        "constraint.search.batch",
+        "incident.2024-11.ledger.root"
+      ]
+    },
+    {
+      "gold": "decision.database.reason",
+      "lexical_has_gold": false,
+      "lexical_keys": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_only": [],
+      "qid": "mul-tech-postgres",
+      "semantic_has_gold": false,
+      "semantic_keys": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "semantic_only": [],
+      "union": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ]
+    }
+  ],
+  "semantic_gold_rate": 0.8743,
+  "semantic_misses": 22
+}

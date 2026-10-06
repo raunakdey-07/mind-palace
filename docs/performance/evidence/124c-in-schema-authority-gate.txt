@@ -1,0 +1,9 @@
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 6954.72it/s]
+PRE-ANALYZE stats: {"memory_claims": {"reltuples": -1.0, "relpages": 0}, "memory_documents": {"reltuples": -1.0, "relpages": 0}, "memory_evidence": {"reltuples": -1.0, "relpages": 0}, "memory_versions": {"reltuples": -1.0, "relpages": 0}}
+PRE-ANALYZE  : 202 packs  digest 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+POST-ANALYZE stats: {"memory_claims": {"reltuples": 88.0, "relpages": 5}, "memory_documents": {"reltuples": 63.0, "relpages": 2}, "memory_evidence": {"reltuples": 88.0, "relpages": 5}, "memory_versions": {"reltuples": 72.0, "relpages": 11}}
+POST-ANALYZE : 202 packs  digest 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+packs that moved across ANALYZE: 0 []
+IDENTICAL ACROSS ANALYZE: True
+dataset_hash: 9cdecda73cbdc8ae055926320b85402d47dd7eed0cb28c96b9b191e5bed154a7
+written: /tmp/mp-analyze/gate.json

@@ -1,0 +1,6207 @@
+[
+  {
+    "n": 100,
+    "schema": "var_74ffb6f7ae",
+    "corpus_id": "f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736",
+    "fidelity": {
+      "match": true,
+      "prod_len": 1171,
+      "v0_len": 1171
+    },
+    "production_sql": "\n        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,\n            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)\n                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS chunks,\n            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)\n                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS claims,\n            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)\n                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),\n                '[]'::jsonb) AS evidence\n        FROM memory_versions v JOIN memory_documents d\n          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id\n        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)\n          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)\n        ORDER BY v.observed_at, d.path, v.version_number\n    ",
+    "variants": {
+      "V0": {
+        "why": "BASELINE: production _load narrow SQL, verbatim",
+        "pre": [],
+        "planning_ms": [
+          0.613,
+          0.473,
+          0.306
+        ],
+        "exec_ms": [
+          8.698,
+          8.766,
+          9.115
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": "SELF"
+      },
+      "V1": {
+        "why": "LEFT JOIN LATERAL for the three aggregates",
+        "pre": [],
+        "planning_ms": [
+          0.358,
+          0.399,
+          0.265
+        ],
+        "exec_ms": [
+          8.883,
+          9.061,
+          9.299
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V2": {
+        "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+        "pre": [],
+        "planning_ms": [
+          0.53,
+          0.421,
+          0.432
+        ],
+        "exec_ms": [
+          9.698,
+          12.907,
+          10.589
+        ],
+        "shared_hit": [
+          396,
+          396,
+          396
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 7,
+          "rows": 100,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 86,
+          "rows": 100,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 82,
+          "rows": 100,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V3": {
+        "why": "correlated subqueries, version_id predicate written first",
+        "pre": [],
+        "planning_ms": [
+          0.505,
+          0.26,
+          0.533
+        ],
+        "exec_ms": [
+          8.189,
+          8.911,
+          8.354
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V4": {
+        "why": "inline pre-grouped derived tables instead of CTEs",
+        "pre": [],
+        "planning_ms": [
+          0.765,
+          0.919,
+          0.668
+        ],
+        "exec_ms": [
+          99.108,
+          97.288,
+          100.528
+        ],
+        "shared_hit": [
+          8589,
+          8589,
+          8589
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 7,
+          "rows": 100,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 4294,
+          "rows": 51,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 4067,
+          "rows": 51,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V5": {
+        "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+        "pre": [
+          "SET LOCAL default_statistics_target = 1000"
+        ],
+        "planning_ms": [
+          0.342,
+          0.433,
+          0.368
+        ],
+        "exec_ms": [
+          11.001,
+          11.343,
+          11.679
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V6a": {
+        "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+        "pre": [
+          "SET LOCAL enable_indexscan = off"
+        ],
+        "planning_ms": [
+          0.384,
+          0.355,
+          0.336
+        ],
+        "exec_ms": [
+          13.19,
+          12.621,
+          11.43
+        ],
+        "shared_hit": [
+          2821,
+          2821,
+          2821
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 1000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "memory_chunks_pkey",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 900,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V6b": {
+        "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+        "pre": [
+          "SET LOCAL enable_seqscan = off",
+          "SET LOCAL enable_bitmapscan = off"
+        ],
+        "planning_ms": [
+          0.331,
+          0.276,
+          0.336
+        ],
+        "exec_ms": [
+          8.482,
+          8.162,
+          8.366
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V6c": {
+        "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+        "pre": [
+          "SET LOCAL random_page_cost = 1.1"
+        ],
+        "planning_ms": [
+          0.273,
+          0.26,
+          0.706
+        ],
+        "exec_ms": [
+          8.566,
+          8.161,
+          8.438
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      },
+      "V7": {
+        "why": "corpus_id bound to the :c parameter instead of v.corpus_id",
+        "pre": [],
+        "planning_ms": [
+          0.432,
+          0.288,
+          0.265
+        ],
+        "exec_ms": [
+          8.648,
+          9.072,
+          8.083
+        ],
+        "shared_hit": [
+          9621,
+          9621,
+          9621
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 700,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 99,
+          "loops": 100,
+          "shared_hit": 8400,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 100,
+          "shared_hit": 300,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 100,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "9e5683cd722dc5a3c6e9b68dc3d7a24006f661fca0b5e430dddbc81b733e1ff2",
+        "identical_to_V0": true
+      }
+    },
+    "dump_v0": false,
+    "row_counts": {
+      "claims": 100,
+      "evidence": 100,
+      "chunks": 100,
+      "versions": 100,
+      "documents": 36
+    },
+    "pg_stat_user_tables": [
+      [
+        "memory_chunks",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_claims",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_evidence",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_versions",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ]
+    ],
+    "settings": {
+      "plan_cache_mode": "force_custom_plan",
+      "default_statistics_target": "100",
+      "jit": "on",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "seq_page_cost": "1",
+      "enable_indexscan": "on",
+      "enable_seqscan": "on",
+      "enable_bitmapscan": "on",
+      "server_version": "15.19 (Debian 15.19-1.pgdg12+2)"
+    },
+    "migrate_s": 0.2,
+    "ingest_s": 2.4,
+    "v0_explain_json": {
+      "Plan": {
+        "Node Type": "Sort",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 41.26,
+        "Total Cost": 41.26,
+        "Plan Rows": 1,
+        "Plan Width": 1504,
+        "Actual Startup Time": 8.607,
+        "Actual Total Time": 8.625,
+        "Actual Rows": 100,
+        "Actual Loops": 1,
+        "Sort Key": [
+          "v.observed_at",
+          "d.path",
+          "v.version_number"
+        ],
+        "Sort Method": "quicksort",
+        "Sort Space Used": 191,
+        "Sort Space Type": "Memory",
+        "Shared Hit Blocks": 9621,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Join Type": "Inner",
+            "Startup Cost": 0.41,
+            "Total Cost": 41.25,
+            "Plan Rows": 1,
+            "Plan Width": 1504,
+            "Actual Startup Time": 0.218,
+            "Actual Total Time": 8.531,
+            "Actual Rows": 100,
+            "Actual Loops": 1,
+            "Inner Unique": true,
+            "Join Filter": "(v.memory_document_id = d.id)",
+            "Rows Removed by Join Filter": 1800,
+            "Shared Hit Blocks": 9621,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "idx_memory_versions_observed",
+                "Relation Name": "memory_versions",
+                "Alias": "v",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 1376,
+                "Actual Startup Time": 0.018,
+                "Actual Total Time": 0.094,
+                "Actual Rows": 100,
+                "Actual Loops": 1,
+                "Index Cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 21,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Inner",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "memory_documents_pkey",
+                "Relation Name": "memory_documents",
+                "Alias": "d",
+                "Startup Cost": 0.14,
+                "Total Cost": 8.16,
+                "Plan Rows": 1,
+                "Plan Width": 552,
+                "Actual Startup Time": 0.002,
+                "Actual Total Time": 0.005,
+                "Actual Rows": 19,
+                "Actual Loops": 100,
+                "Index Cond": "(corpus_id = 'f82f77dadac54d12257cf4cc6f1c0b480be5ae21a71bc76baa2cbc8af0864736'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 200,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 1",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.007,
+                "Actual Total Time": 0.007,
+                "Actual Rows": 1,
+                "Actual Loops": 100,
+                "Shared Hit Blocks": 300,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "memory_chunks_corpus_id_version_id_order_index_key",
+                    "Relation Name": "memory_chunks",
+                    "Alias": "c",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 296,
+                    "Actual Startup Time": 0.003,
+                    "Actual Total Time": 0.003,
+                    "Actual Rows": 1,
+                    "Actual Loops": 100,
+                    "Index Cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 300,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 2",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.17,
+                "Total Cost": 8.18,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.028,
+                "Actual Total Time": 0.028,
+                "Actual Rows": 1,
+                "Actual Loops": 100,
+                "Shared Hit Blocks": 700,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_claims_validity",
+                    "Relation Name": "memory_claims",
+                    "Alias": "c_1",
+                    "Startup Cost": 0.14,
+                    "Total Cost": 8.16,
+                    "Plan Rows": 1,
+                    "Plan Width": 1760,
+                    "Actual Startup Time": 0.011,
+                    "Actual Total Time": 0.02,
+                    "Actual Rows": 1,
+                    "Actual Loops": 100,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 99,
+                    "Shared Hit Blocks": 700,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 3",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.041,
+                "Actual Total Time": 0.041,
+                "Actual Rows": 1,
+                "Actual Loops": 100,
+                "Shared Hit Blocks": 8400,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_evidence_claim",
+                    "Relation Name": "memory_evidence",
+                    "Alias": "e",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 1624,
+                    "Actual Startup Time": 0.018,
+                    "Actual Total Time": 0.034,
+                    "Actual Rows": 1,
+                    "Actual Loops": 100,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 99,
+                    "Shared Hit Blocks": 8400,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 16,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.613,
+      "Triggers": [],
+      "Execution Time": 8.698
+    },
+    "total_s": 3.6
+  },
+  {
+    "n": 150,
+    "schema": "var_cd84803587",
+    "corpus_id": "a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93",
+    "fidelity": {
+      "match": true,
+      "prod_len": 1171,
+      "v0_len": 1171
+    },
+    "production_sql": "\n        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,\n            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)\n                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS chunks,\n            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)\n                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS claims,\n            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)\n                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),\n                '[]'::jsonb) AS evidence\n        FROM memory_versions v JOIN memory_documents d\n          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id\n        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)\n          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)\n        ORDER BY v.observed_at, d.path, v.version_number\n    ",
+    "variants": {
+      "V0": {
+        "why": "BASELINE: production _load narrow SQL, verbatim",
+        "pre": [],
+        "planning_ms": [
+          0.568,
+          0.405,
+          0.267
+        ],
+        "exec_ms": [
+          19.758,
+          20.341,
+          23.563
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": "SELF"
+      },
+      "V1": {
+        "why": "LEFT JOIN LATERAL for the three aggregates",
+        "pre": [],
+        "planning_ms": [
+          0.309,
+          0.277,
+          0.641
+        ],
+        "exec_ms": [
+          19.356,
+          16.978,
+          19.274
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V2": {
+        "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+        "pre": [],
+        "planning_ms": [
+          0.525,
+          0.438,
+          0.598
+        ],
+        "exec_ms": [
+          21.654,
+          20.496,
+          19.718
+        ],
+        "shared_hit": [
+          1407,
+          1407,
+          1407
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 9,
+          "rows": 151,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 141,
+          "rows": 151,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 135,
+          "rows": 151,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V3": {
+        "why": "correlated subqueries, version_id predicate written first",
+        "pre": [],
+        "planning_ms": [
+          0.259,
+          0.257,
+          0.295
+        ],
+        "exec_ms": [
+          17.461,
+          17.679,
+          18.316
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V4": {
+        "why": "inline pre-grouped derived tables instead of CTEs",
+        "pre": [],
+        "planning_ms": [
+          0.437,
+          0.453,
+          0.582
+        ],
+        "exec_ms": [
+          222.342,
+          258.235,
+          233.331
+        ],
+        "shared_hit": [
+          22534,
+          22534,
+          22534
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 9,
+          "rows": 151,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 10858,
+          "rows": 77,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 10545,
+          "rows": 77,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V5": {
+        "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+        "pre": [
+          "SET LOCAL default_statistics_target = 1000"
+        ],
+        "planning_ms": [
+          0.291,
+          0.475,
+          0.282
+        ],
+        "exec_ms": [
+          17.954,
+          17.434,
+          18.652
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V6a": {
+        "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+        "pre": [
+          "SET LOCAL enable_indexscan = off"
+        ],
+        "planning_ms": [
+          0.297,
+          0.449,
+          0.294
+        ],
+        "exec_ms": [
+          19.231,
+          20.647,
+          18.989
+        ],
+        "shared_hit": [
+          5641,
+          5641,
+          5641
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1963,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "memory_chunks_pkey",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1963,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V6b": {
+        "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+        "pre": [
+          "SET LOCAL enable_seqscan = off",
+          "SET LOCAL enable_bitmapscan = off"
+        ],
+        "planning_ms": [
+          0.346,
+          0.325,
+          0.412
+        ],
+        "exec_ms": [
+          20.873,
+          18.9,
+          18.417
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V6c": {
+        "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+        "pre": [
+          "SET LOCAL random_page_cost = 1.1"
+        ],
+        "planning_ms": [
+          0.292,
+          0.293,
+          0.281
+        ],
+        "exec_ms": [
+          17.34,
+          18.838,
+          17.631
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      },
+      "V7": {
+        "why": "corpus_id bound to the :c parameter instead of v.corpus_id",
+        "pre": [],
+        "planning_ms": [
+          0.353,
+          0.683,
+          0.251
+        ],
+        "exec_ms": [
+          23.999,
+          21.327,
+          18.348
+        ],
+        "shared_hit": [
+          24527,
+          24527,
+          24527
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 1359,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 150,
+          "loops": 151,
+          "shared_hit": 21593,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 151,
+          "shared_hit": 453,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 151,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "78e8e722a5ca8408ed960b317cefd56c7acc58ff15857f9328cea50bff8e5429",
+        "identical_to_V0": true
+      }
+    },
+    "dump_v0": false,
+    "row_counts": {
+      "claims": 151,
+      "evidence": 151,
+      "chunks": 151,
+      "versions": 151,
+      "documents": 53
+    },
+    "pg_stat_user_tables": [
+      [
+        "memory_chunks",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_claims",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_evidence",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_versions",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ]
+    ],
+    "settings": {
+      "plan_cache_mode": "force_custom_plan",
+      "default_statistics_target": "100",
+      "jit": "on",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "seq_page_cost": "1",
+      "enable_indexscan": "on",
+      "enable_seqscan": "on",
+      "enable_bitmapscan": "on",
+      "server_version": "15.19 (Debian 15.19-1.pgdg12+2)"
+    },
+    "migrate_s": 0.3,
+    "ingest_s": 3.7,
+    "v0_explain_json": {
+      "Plan": {
+        "Node Type": "Sort",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 41.26,
+        "Total Cost": 41.26,
+        "Plan Rows": 1,
+        "Plan Width": 1504,
+        "Actual Startup Time": 19.571,
+        "Actual Total Time": 19.631,
+        "Actual Rows": 151,
+        "Actual Loops": 1,
+        "Sort Key": [
+          "v.observed_at",
+          "d.path",
+          "v.version_number"
+        ],
+        "Sort Method": "quicksort",
+        "Sort Space Used": 276,
+        "Sort Space Type": "Memory",
+        "Shared Hit Blocks": 24527,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Join Type": "Inner",
+            "Startup Cost": 0.41,
+            "Total Cost": 41.25,
+            "Plan Rows": 1,
+            "Plan Width": 1504,
+            "Actual Startup Time": 0.304,
+            "Actual Total Time": 19.426,
+            "Actual Rows": 151,
+            "Actual Loops": 1,
+            "Inner Unique": true,
+            "Join Filter": "(v.memory_document_id = d.id)",
+            "Rows Removed by Join Filter": 3846,
+            "Shared Hit Blocks": 24527,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "idx_memory_versions_observed",
+                "Relation Name": "memory_versions",
+                "Alias": "v",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 1376,
+                "Actual Startup Time": 0.013,
+                "Actual Total Time": 0.115,
+                "Actual Rows": 151,
+                "Actual Loops": 1,
+                "Index Cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 30,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Inner",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "memory_documents_pkey",
+                "Relation Name": "memory_documents",
+                "Alias": "d",
+                "Startup Cost": 0.14,
+                "Total Cost": 8.16,
+                "Plan Rows": 1,
+                "Plan Width": 552,
+                "Actual Startup Time": 0.003,
+                "Actual Total Time": 0.008,
+                "Actual Rows": 26,
+                "Actual Loops": 151,
+                "Index Cond": "(corpus_id = 'a5bd7ac97d5cfdf15f862fc40d32816f3f7eefbde060de5cd831d6a4c75f6a93'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 1092,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 1",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.008,
+                "Actual Total Time": 0.008,
+                "Actual Rows": 1,
+                "Actual Loops": 151,
+                "Shared Hit Blocks": 453,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "memory_chunks_corpus_id_version_id_order_index_key",
+                    "Relation Name": "memory_chunks",
+                    "Alias": "c",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 296,
+                    "Actual Startup Time": 0.004,
+                    "Actual Total Time": 0.004,
+                    "Actual Rows": 1,
+                    "Actual Loops": 151,
+                    "Index Cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 453,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 2",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.17,
+                "Total Cost": 8.18,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.042,
+                "Actual Total Time": 0.043,
+                "Actual Rows": 1,
+                "Actual Loops": 151,
+                "Shared Hit Blocks": 1359,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_claims_validity",
+                    "Relation Name": "memory_claims",
+                    "Alias": "c_1",
+                    "Startup Cost": 0.14,
+                    "Total Cost": 8.16,
+                    "Plan Rows": 1,
+                    "Plan Width": 1760,
+                    "Actual Startup Time": 0.02,
+                    "Actual Total Time": 0.034,
+                    "Actual Rows": 1,
+                    "Actual Loops": 151,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 150,
+                    "Shared Hit Blocks": 1359,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 3",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.064,
+                "Actual Total Time": 0.064,
+                "Actual Rows": 1,
+                "Actual Loops": 151,
+                "Shared Hit Blocks": 21593,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_evidence_claim",
+                    "Relation Name": "memory_evidence",
+                    "Alias": "e",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 1624,
+                    "Actual Startup Time": 0.029,
+                    "Actual Total Time": 0.055,
+                    "Actual Rows": 1,
+                    "Actual Loops": 151,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 150,
+                    "Shared Hit Blocks": 21593,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 16,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.568,
+      "Triggers": [],
+      "Execution Time": 19.758
+    },
+    "total_s": 5.9
+  },
+  {
+    "n": 200,
+    "schema": "var_8cd502a900",
+    "corpus_id": "39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0",
+    "fidelity": {
+      "match": true,
+      "prod_len": 1171,
+      "v0_len": 1171
+    },
+    "production_sql": "\n        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,\n            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)\n                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS chunks,\n            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)\n                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS claims,\n            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)\n                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),\n                '[]'::jsonb) AS evidence\n        FROM memory_versions v JOIN memory_documents d\n          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id\n        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)\n          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)\n        ORDER BY v.observed_at, d.path, v.version_number\n    ",
+    "variants": {
+      "V0": {
+        "why": "BASELINE: production _load narrow SQL, verbatim",
+        "pre": [],
+        "planning_ms": [
+          0.419,
+          0.319,
+          0.271
+        ],
+        "exec_ms": [
+          29.882,
+          29.21,
+          32.399
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": "SELF"
+      },
+      "V1": {
+        "why": "LEFT JOIN LATERAL for the three aggregates",
+        "pre": [],
+        "planning_ms": [
+          0.382,
+          0.402,
+          0.31
+        ],
+        "exec_ms": [
+          30.858,
+          36.857,
+          32.462
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V2": {
+        "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+        "pre": [],
+        "planning_ms": [
+          0.456,
+          0.909,
+          0.471
+        ],
+        "exec_ms": [
+          42.86,
+          36.481,
+          36.502
+        ],
+        "shared_hit": [
+          922,
+          922,
+          922
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 12,
+          "rows": 202,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 197,
+          "rows": 202,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 194,
+          "rows": 202,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V3": {
+        "why": "correlated subqueries, version_id predicate written first",
+        "pre": [],
+        "planning_ms": [
+          0.257,
+          0.281,
+          0.258
+        ],
+        "exec_ms": [
+          30.283,
+          29.484,
+          39.462
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V4": {
+        "why": "inline pre-grouped derived tables instead of CTEs",
+        "pre": [],
+        "planning_ms": [
+          1.055,
+          0.578,
+          0.791
+        ],
+        "exec_ms": [
+          412.09,
+          415.449,
+          401.448
+        ],
+        "shared_hit": [
+          41020,
+          41020,
+          41020
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 12,
+          "rows": 202,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 20407,
+          "rows": 102,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 20082,
+          "rows": 102,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V5": {
+        "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+        "pre": [
+          "SET LOCAL default_statistics_target = 1000"
+        ],
+        "planning_ms": [
+          0.346,
+          0.255,
+          0.261
+        ],
+        "exec_ms": [
+          31.983,
+          31.274,
+          29.922
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V6a": {
+        "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+        "pre": [
+          "SET LOCAL enable_indexscan = off"
+        ],
+        "planning_ms": [
+          0.288,
+          0.259,
+          0.31
+        ],
+        "exec_ms": [
+          32.995,
+          40.212,
+          32.851
+        ],
+        "shared_hit": [
+          9609,
+          9609,
+          9609
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 3434,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "memory_chunks_pkey",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 3232,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V6b": {
+        "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+        "pre": [
+          "SET LOCAL enable_seqscan = off",
+          "SET LOCAL enable_bitmapscan = off"
+        ],
+        "planning_ms": [
+          0.298,
+          0.362,
+          0.517
+        ],
+        "exec_ms": [
+          29.483,
+          30.141,
+          28.833
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V6c": {
+        "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+        "pre": [
+          "SET LOCAL random_page_cost = 1.1"
+        ],
+        "planning_ms": [
+          0.263,
+          0.257,
+          0.262
+        ],
+        "exec_ms": [
+          31.94,
+          31.487,
+          32.692
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      },
+      "V7": {
+        "why": "corpus_id bound to the :c parameter instead of v.corpus_id",
+        "pre": [],
+        "planning_ms": [
+          0.34,
+          0.368,
+          0.269
+        ],
+        "exec_ms": [
+          30.016,
+          29.536,
+          28.91
+        ],
+        "shared_hit": [
+          41727,
+          41727,
+          41727
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 2424,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 201,
+          "loops": 202,
+          "shared_hit": 38178,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 202,
+          "shared_hit": 606,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 202,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "36610afe1ee9739ae7efd023e8d257f291f25d285f0511e4e8177f3b0ae70b49",
+        "identical_to_V0": true
+      }
+    },
+    "dump_v0": false,
+    "row_counts": {
+      "claims": 202,
+      "evidence": 202,
+      "chunks": 202,
+      "versions": 202,
+      "documents": 70
+    },
+    "pg_stat_user_tables": [
+      [
+        "memory_chunks",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_claims",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_evidence",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_versions",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ]
+    ],
+    "settings": {
+      "plan_cache_mode": "force_custom_plan",
+      "default_statistics_target": "100",
+      "jit": "on",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "seq_page_cost": "1",
+      "enable_indexscan": "on",
+      "enable_seqscan": "on",
+      "enable_bitmapscan": "on",
+      "server_version": "15.19 (Debian 15.19-1.pgdg12+2)"
+    },
+    "migrate_s": 0.2,
+    "ingest_s": 5.0,
+    "v0_explain_json": {
+      "Plan": {
+        "Node Type": "Sort",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 41.26,
+        "Total Cost": 41.26,
+        "Plan Rows": 1,
+        "Plan Width": 1504,
+        "Actual Startup Time": 29.783,
+        "Actual Total Time": 29.817,
+        "Actual Rows": 202,
+        "Actual Loops": 1,
+        "Sort Key": [
+          "v.observed_at",
+          "d.path",
+          "v.version_number"
+        ],
+        "Sort Method": "quicksort",
+        "Sort Space Used": 361,
+        "Sort Space Type": "Memory",
+        "Shared Hit Blocks": 41727,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Join Type": "Inner",
+            "Startup Cost": 0.42,
+            "Total Cost": 41.25,
+            "Plan Rows": 1,
+            "Plan Width": 1504,
+            "Actual Startup Time": 0.306,
+            "Actual Total Time": 29.607,
+            "Actual Rows": 202,
+            "Actual Loops": 1,
+            "Inner Unique": true,
+            "Join Filter": "(v.memory_document_id = d.id)",
+            "Rows Removed by Join Filter": 7233,
+            "Shared Hit Blocks": 41727,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "idx_memory_versions_observed",
+                "Relation Name": "memory_versions",
+                "Alias": "v",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 1376,
+                "Actual Startup Time": 0.011,
+                "Actual Total Time": 0.14,
+                "Actual Rows": 202,
+                "Actual Loops": 1,
+                "Index Cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 40,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Inner",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "memory_documents_corpus_id_path_key",
+                "Relation Name": "memory_documents",
+                "Alias": "d",
+                "Startup Cost": 0.14,
+                "Total Cost": 8.16,
+                "Plan Rows": 1,
+                "Plan Width": 552,
+                "Actual Startup Time": 0.003,
+                "Actual Total Time": 0.008,
+                "Actual Rows": 37,
+                "Actual Loops": 202,
+                "Index Cond": "(corpus_id = '39bbc034ef4b82c175ad953d36a7c369528313e07f6de0d53a629ae953c008a0'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 479,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 1",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.008,
+                "Actual Total Time": 0.008,
+                "Actual Rows": 1,
+                "Actual Loops": 202,
+                "Shared Hit Blocks": 606,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "memory_chunks_corpus_id_version_id_order_index_key",
+                    "Relation Name": "memory_chunks",
+                    "Alias": "c",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 296,
+                    "Actual Startup Time": 0.004,
+                    "Actual Total Time": 0.004,
+                    "Actual Rows": 1,
+                    "Actual Loops": 202,
+                    "Index Cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 606,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 2",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.17,
+                "Total Cost": 8.18,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.047,
+                "Actual Total Time": 0.047,
+                "Actual Rows": 1,
+                "Actual Loops": 202,
+                "Shared Hit Blocks": 2424,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_claims_validity",
+                    "Relation Name": "memory_claims",
+                    "Alias": "c_1",
+                    "Startup Cost": 0.14,
+                    "Total Cost": 8.16,
+                    "Plan Rows": 1,
+                    "Plan Width": 1760,
+                    "Actual Startup Time": 0.021,
+                    "Actual Total Time": 0.039,
+                    "Actual Rows": 1,
+                    "Actual Loops": 202,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 201,
+                    "Shared Hit Blocks": 2424,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 3",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.076,
+                "Actual Total Time": 0.077,
+                "Actual Rows": 1,
+                "Actual Loops": 202,
+                "Shared Hit Blocks": 38178,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_evidence_claim",
+                    "Relation Name": "memory_evidence",
+                    "Alias": "e",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 1624,
+                    "Actual Startup Time": 0.036,
+                    "Actual Total Time": 0.069,
+                    "Actual Rows": 1,
+                    "Actual Loops": 202,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 201,
+                    "Shared Hit Blocks": 38178,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 16,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.419,
+      "Triggers": [],
+      "Execution Time": 29.882
+    },
+    "total_s": 8.4
+  },
+  {
+    "n": 250,
+    "schema": "var_12c6b69a80",
+    "corpus_id": "a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37",
+    "fidelity": {
+      "match": true,
+      "prod_len": 1171,
+      "v0_len": 1171
+    },
+    "production_sql": "\n        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,\n            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)\n                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS chunks,\n            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)\n                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS claims,\n            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)\n                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),\n                '[]'::jsonb) AS evidence\n        FROM memory_versions v JOIN memory_documents d\n          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id\n        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)\n          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)\n        ORDER BY v.observed_at, d.path, v.version_number\n    ",
+    "variants": {
+      "V0": {
+        "why": "BASELINE: production _load narrow SQL, verbatim",
+        "pre": [],
+        "planning_ms": [
+          0.326,
+          0.363,
+          0.271
+        ],
+        "exec_ms": [
+          63.113,
+          55.273,
+          45.735
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": "SELF"
+      },
+      "V1": {
+        "why": "LEFT JOIN LATERAL for the three aggregates",
+        "pre": [],
+        "planning_ms": [
+          0.27,
+          0.629,
+          0.275
+        ],
+        "exec_ms": [
+          44.814,
+          46.918,
+          46.974
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V2": {
+        "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+        "pre": [],
+        "planning_ms": [
+          0.428,
+          0.667,
+          0.901
+        ],
+        "exec_ms": [
+          53.904,
+          55.258,
+          56.117
+        ],
+        "shared_hit": [
+          7599,
+          7599,
+          7599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 15,
+          "rows": 250,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 244,
+          "rows": 250,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 241,
+          "rows": 250,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V3": {
+        "why": "correlated subqueries, version_id predicate written first",
+        "pre": [],
+        "planning_ms": [
+          0.25,
+          0.273,
+          0.634
+        ],
+        "exec_ms": [
+          47.867,
+          49.623,
+          56.198
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V4": {
+        "why": "inline pre-grouped derived tables instead of CTEs",
+        "pre": [],
+        "planning_ms": [
+          0.502,
+          0.445,
+          0.607
+        ],
+        "exec_ms": [
+          611.4,
+          613.899,
+          591.327
+        ],
+        "shared_hit": [
+          68807,
+          68807,
+          68807
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 15,
+          "rows": 250,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 30844,
+          "rows": 126,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 30849,
+          "rows": 126,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V5": {
+        "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+        "pre": [
+          "SET LOCAL default_statistics_target = 1000"
+        ],
+        "planning_ms": [
+          0.261,
+          0.268,
+          0.278
+        ],
+        "exec_ms": [
+          44.052,
+          54.253,
+          49.186
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V6a": {
+        "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+        "pre": [
+          "SET LOCAL enable_indexscan = off"
+        ],
+        "planning_ms": [
+          0.461,
+          0.365,
+          0.467
+        ],
+        "exec_ms": [
+          51.456,
+          51.082,
+          50.701
+        ],
+        "shared_hit": [
+          15422,
+          15422,
+          15422
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 5500,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "memory_chunks_pkey",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 5000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V6b": {
+        "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+        "pre": [
+          "SET LOCAL enable_seqscan = off",
+          "SET LOCAL enable_bitmapscan = off"
+        ],
+        "planning_ms": [
+          0.279,
+          0.337,
+          0.247
+        ],
+        "exec_ms": [
+          48.246,
+          47.773,
+          46.182
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V6c": {
+        "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+        "pre": [
+          "SET LOCAL random_page_cost = 1.1"
+        ],
+        "planning_ms": [
+          0.367,
+          0.256,
+          0.552
+        ],
+        "exec_ms": [
+          47.704,
+          51.754,
+          49.715
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      },
+      "V7": {
+        "why": "corpus_id bound to the :c parameter instead of v.corpus_id",
+        "pre": [],
+        "planning_ms": [
+          0.432,
+          0.257,
+          0.515
+        ],
+        "exec_ms": [
+          55.8,
+          51.725,
+          49.676
+        ],
+        "shared_hit": [
+          71599,
+          71599,
+          71599
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 3750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 249,
+          "loops": 250,
+          "shared_hit": 60000,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 250,
+          "shared_hit": 750,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 250,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "a0f42b44cdf88ea1d89ba38b1fe350ff2348715b1105ae9cd0aadf8369843064",
+        "identical_to_V0": true
+      }
+    },
+    "dump_v0": false,
+    "row_counts": {
+      "claims": 250,
+      "evidence": 250,
+      "chunks": 250,
+      "versions": 250,
+      "documents": 86
+    },
+    "pg_stat_user_tables": [
+      [
+        "memory_chunks",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_claims",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_evidence",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_versions",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ]
+    ],
+    "settings": {
+      "plan_cache_mode": "force_custom_plan",
+      "default_statistics_target": "100",
+      "jit": "on",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "seq_page_cost": "1",
+      "enable_indexscan": "on",
+      "enable_seqscan": "on",
+      "enable_bitmapscan": "on",
+      "server_version": "15.19 (Debian 15.19-1.pgdg12+2)"
+    },
+    "migrate_s": 0.2,
+    "ingest_s": 6.2,
+    "v0_explain_json": {
+      "Plan": {
+        "Node Type": "Sort",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 41.39,
+        "Total Cost": 41.39,
+        "Plan Rows": 1,
+        "Plan Width": 1504,
+        "Actual Startup Time": 63.003,
+        "Actual Total Time": 63.048,
+        "Actual Rows": 250,
+        "Actual Loops": 1,
+        "Sort Key": [
+          "v.observed_at",
+          "d.path",
+          "v.version_number"
+        ],
+        "Sort Method": "quicksort",
+        "Sort Space Used": 441,
+        "Sort Space Type": "Memory",
+        "Shared Hit Blocks": 71599,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Join Type": "Inner",
+            "Startup Cost": 0.54,
+            "Total Cost": 41.38,
+            "Plan Rows": 1,
+            "Plan Width": 1504,
+            "Actual Startup Time": 0.278,
+            "Actual Total Time": 62.686,
+            "Actual Rows": 250,
+            "Actual Loops": 1,
+            "Inner Unique": true,
+            "Join Filter": "(v.memory_document_id = d.id)",
+            "Rows Removed by Join Filter": 10677,
+            "Shared Hit Blocks": 71599,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "idx_memory_versions_observed",
+                "Relation Name": "memory_versions",
+                "Alias": "v",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 1376,
+                "Actual Startup Time": 0.009,
+                "Actual Total Time": 0.261,
+                "Actual Rows": 250,
+                "Actual Loops": 1,
+                "Index Cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 49,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Inner",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "memory_documents_pkey",
+                "Relation Name": "memory_documents",
+                "Alias": "d",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 552,
+                "Actual Startup Time": 0.004,
+                "Actual Total Time": 0.02,
+                "Actual Rows": 44,
+                "Actual Loops": 250,
+                "Index Cond": "(corpus_id = 'a9801fcbed6a73d9358ce0a4c6ed6718d99aeedec4ab1b263f25a6c00e65aa37'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 7050,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 1",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.013,
+                "Actual Total Time": 0.013,
+                "Actual Rows": 1,
+                "Actual Loops": 250,
+                "Shared Hit Blocks": 750,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "memory_chunks_corpus_id_version_id_order_index_key",
+                    "Relation Name": "memory_chunks",
+                    "Alias": "c",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 296,
+                    "Actual Startup Time": 0.006,
+                    "Actual Total Time": 0.006,
+                    "Actual Rows": 1,
+                    "Actual Loops": 250,
+                    "Index Cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 750,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 2",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.17,
+                "Total Cost": 8.18,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.076,
+                "Actual Total Time": 0.077,
+                "Actual Rows": 1,
+                "Actual Loops": 250,
+                "Shared Hit Blocks": 3750,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_claims_validity",
+                    "Relation Name": "memory_claims",
+                    "Alias": "c_1",
+                    "Startup Cost": 0.14,
+                    "Total Cost": 8.16,
+                    "Plan Rows": 1,
+                    "Plan Width": 1760,
+                    "Actual Startup Time": 0.035,
+                    "Actual Total Time": 0.064,
+                    "Actual Rows": 1,
+                    "Actual Loops": 250,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 249,
+                    "Shared Hit Blocks": 3750,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 3",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.13,
+                "Actual Total Time": 0.13,
+                "Actual Rows": 1,
+                "Actual Loops": 250,
+                "Shared Hit Blocks": 60000,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_evidence_claim",
+                    "Relation Name": "memory_evidence",
+                    "Alias": "e",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 1624,
+                    "Actual Startup Time": 0.061,
+                    "Actual Total Time": 0.117,
+                    "Actual Rows": 1,
+                    "Actual Loops": 250,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 249,
+                    "Shared Hit Blocks": 60000,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 16,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.326,
+      "Triggers": [],
+      "Execution Time": 63.113
+    },
+    "total_s": 11.0
+  },
+  {
+    "n": 300,
+    "schema": "var_aff4263435",
+    "corpus_id": "7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb",
+    "fidelity": {
+      "match": true,
+      "prod_len": 1171,
+      "v0_len": 1171
+    },
+    "production_sql": "\n        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,\n            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'heading_path', c.heading_path) ORDER BY c.order_index)\n                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS chunks,\n            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)\n                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),\n                '[]'::jsonb) AS claims,\n            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)\n                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),\n                '[]'::jsonb) AS evidence\n        FROM memory_versions v JOIN memory_documents d\n          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id\n        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)\n          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)\n        ORDER BY v.observed_at, d.path, v.version_number\n    ",
+    "variants": {
+      "V0": {
+        "why": "BASELINE: production _load narrow SQL, verbatim",
+        "pre": [],
+        "planning_ms": [
+          0.306,
+          0.256,
+          0.259
+        ],
+        "exec_ms": [
+          64.749,
+          64.195,
+          67.668
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": "SELF"
+      },
+      "V1": {
+        "why": "LEFT JOIN LATERAL for the three aggregates",
+        "pre": [],
+        "planning_ms": [
+          0.3,
+          0.306,
+          0.28
+        ],
+        "exec_ms": [
+          63.361,
+          64.259,
+          64.671
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V2": {
+        "why": "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+        "pre": [],
+        "planning_ms": [
+          0.456,
+          0.441,
+          0.594
+        ],
+        "exec_ms": [
+          77.092,
+          78.951,
+          78.468
+        ],
+        "shared_hit": [
+          10823,
+          10823,
+          10823
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 17,
+          "rows": 301,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 294,
+          "rows": 301,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 295,
+          "rows": 301,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V3": {
+        "why": "correlated subqueries, version_id predicate written first",
+        "pre": [],
+        "planning_ms": [
+          0.427,
+          0.267,
+          0.282
+        ],
+        "exec_ms": [
+          65.82,
+          66.563,
+          101.779
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V4": {
+        "why": "inline pre-grouped derived tables instead of CTEs",
+        "pre": [],
+        "planning_ms": [
+          0.567,
+          0.462,
+          0.727
+        ],
+        "exec_ms": [
+          845.806,
+          857.17,
+          884.989
+        ],
+        "shared_hit": [
+          99762,
+          99762,
+          99762
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 1,
+          "shared_hit": 17,
+          "rows": 301,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_chunk",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 44590,
+          "rows": 152,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 44938,
+          "rows": 152,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V5": {
+        "why": "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+        "pre": [
+          "SET LOCAL default_statistics_target = 1000"
+        ],
+        "planning_ms": [
+          0.395,
+          0.337,
+          0.255
+        ],
+        "exec_ms": [
+          65.403,
+          63.604,
+          67.111
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V6a": {
+        "why": "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+        "pre": [
+          "SET LOCAL enable_indexscan = off"
+        ],
+        "planning_ms": [
+          0.306,
+          0.328,
+          0.263
+        ],
+        "exec_ms": [
+          85.022,
+          71.535,
+          70.481
+        ],
+        "shared_hit": [
+          21642,
+          21642,
+          21642
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 7525,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Bitmap Heap Scan",
+          "index": "memory_chunks_pkey",
+          "index_cond": null,
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 7525,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V6b": {
+        "why": "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+        "pre": [
+          "SET LOCAL enable_seqscan = off",
+          "SET LOCAL enable_bitmapscan = off"
+        ],
+        "planning_ms": [
+          0.399,
+          0.403,
+          0.333
+        ],
+        "exec_ms": [
+          64.974,
+          67.585,
+          71.786
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V6c": {
+        "why": "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+        "pre": [
+          "SET LOCAL random_page_cost = 1.1"
+        ],
+        "planning_ms": [
+          0.288,
+          0.405,
+          0.272
+        ],
+        "exec_ms": [
+          84.475,
+          71.003,
+          64.138
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = v.corpus_id)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      },
+      "V7": {
+        "why": "corpus_id bound to the :c parameter instead of v.corpus_id",
+        "pre": [],
+        "planning_ms": [
+          0.285,
+          0.294,
+          0.352
+        ],
+        "exec_ms": [
+          68.06,
+          77.402,
+          66.944
+        ],
+        "shared_hit": [
+          105935,
+          105935,
+          105935
+        ],
+        "shared_read": [
+          0,
+          0,
+          0
+        ],
+        "temp_read": [
+          0,
+          0,
+          0
+        ],
+        "claims_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_claims_validity",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 5117,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "evidence_index": {
+          "node": "Index Scan",
+          "index": "idx_memory_evidence_claim",
+          "index_cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+          "filter": "(version_id = v.id)",
+          "rows_removed_by_filter": 300,
+          "loops": 301,
+          "shared_hit": 89698,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "chunks_index": {
+          "node": "Index Scan",
+          "index": "memory_chunks_corpus_id_version_id_order_index_key",
+          "index_cond": "((corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar) AND (version_id = v.id))",
+          "filter": null,
+          "rows_removed_by_filter": null,
+          "loops": 301,
+          "shared_hit": 903,
+          "rows": 1,
+          "plan_rows": 1
+        },
+        "root_node": "Sort",
+        "jit": {},
+        "jit_timing": {},
+        "nondefault_settings": {},
+        "n_rows": 301,
+        "cols": [
+          "corpus_id",
+          "memory_document_id",
+          "id",
+          "predecessor_id",
+          "version_number",
+          "document_id",
+          "event",
+          "observed_at",
+          "fingerprint",
+          "path",
+          "chunks",
+          "claims",
+          "evidence"
+        ],
+        "sha256": "e3bcf6c6db17ce68ba919e05280b266f076a37dce78f6a0681ec5dcff09c1293",
+        "identical_to_V0": true
+      }
+    },
+    "dump_v0": false,
+    "row_counts": {
+      "claims": 301,
+      "evidence": 301,
+      "chunks": 301,
+      "versions": 301,
+      "documents": 103
+    },
+    "pg_stat_user_tables": [
+      [
+        "memory_chunks",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_claims",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_evidence",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ],
+      [
+        "memory_versions",
+        "-1.0",
+        "0",
+        "0",
+        "NULL",
+        "NULL"
+      ]
+    ],
+    "settings": {
+      "plan_cache_mode": "force_custom_plan",
+      "default_statistics_target": "100",
+      "jit": "on",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "seq_page_cost": "1",
+      "enable_indexscan": "on",
+      "enable_seqscan": "on",
+      "enable_bitmapscan": "on",
+      "server_version": "15.19 (Debian 15.19-1.pgdg12+2)"
+    },
+    "migrate_s": 0.2,
+    "ingest_s": 7.3,
+    "v0_explain_json": {
+      "Plan": {
+        "Node Type": "Sort",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 41.39,
+        "Total Cost": 41.39,
+        "Plan Rows": 1,
+        "Plan Width": 1504,
+        "Actual Startup Time": 64.643,
+        "Actual Total Time": 64.683,
+        "Actual Rows": 301,
+        "Actual Loops": 1,
+        "Sort Key": [
+          "v.observed_at",
+          "d.path",
+          "v.version_number"
+        ],
+        "Sort Method": "quicksort",
+        "Sort Space Used": 526,
+        "Sort Space Type": "Memory",
+        "Shared Hit Blocks": 105935,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Join Type": "Inner",
+            "Startup Cost": 0.54,
+            "Total Cost": 41.38,
+            "Plan Rows": 1,
+            "Plan Width": 1504,
+            "Actual Startup Time": 0.334,
+            "Actual Total Time": 64.396,
+            "Actual Rows": 301,
+            "Actual Loops": 1,
+            "Inner Unique": true,
+            "Join Filter": "(v.memory_document_id = d.id)",
+            "Rows Removed by Join Filter": 15479,
+            "Shared Hit Blocks": 105935,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "idx_memory_versions_observed",
+                "Relation Name": "memory_versions",
+                "Alias": "v",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 1376,
+                "Actual Startup Time": 0.01,
+                "Actual Total Time": 0.201,
+                "Actual Rows": 301,
+                "Actual Loops": 1,
+                "Index Cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 58,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Inner",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "memory_documents_pkey",
+                "Relation Name": "memory_documents",
+                "Alias": "d",
+                "Startup Cost": 0.27,
+                "Total Cost": 8.29,
+                "Plan Rows": 1,
+                "Plan Width": 552,
+                "Actual Startup Time": 0.003,
+                "Actual Total Time": 0.016,
+                "Actual Rows": 52,
+                "Actual Loops": 301,
+                "Index Cond": "(corpus_id = '7c8997b75ccd4432c6178407dff81565de35303c576d81d7bc64073b06e8b2eb'::bpchar)",
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 10159,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 1",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.3,
+                "Total Cost": 8.31,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.008,
+                "Actual Total Time": 0.008,
+                "Actual Rows": 1,
+                "Actual Loops": 301,
+                "Shared Hit Blocks": 903,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "memory_chunks_corpus_id_version_id_order_index_key",
+                    "Relation Name": "memory_chunks",
+                    "Alias": "c",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 296,
+                    "Actual Startup Time": 0.004,
+                    "Actual Total Time": 0.004,
+                    "Actual Rows": 1,
+                    "Actual Loops": 301,
+                    "Index Cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 903,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 2",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.17,
+                "Total Cost": 8.18,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.067,
+                "Actual Total Time": 0.067,
+                "Actual Rows": 1,
+                "Actual Loops": 301,
+                "Shared Hit Blocks": 5117,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_claims_validity",
+                    "Relation Name": "memory_claims",
+                    "Alias": "c_1",
+                    "Startup Cost": 0.14,
+                    "Total Cost": 8.16,
+                    "Plan Rows": 1,
+                    "Plan Width": 1760,
+                    "Actual Startup Time": 0.031,
+                    "Actual Total Time": 0.059,
+                    "Actual Rows": 1,
+                    "Actual Loops": 301,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 300,
+                    "Shared Hit Blocks": 5117,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Simple",
+                "Parent Relationship": "SubPlan",
+                "Subplan Name": "SubPlan 3",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 8.29,
+                "Total Cost": 8.3,
+                "Plan Rows": 1,
+                "Plan Width": 32,
+                "Actual Startup Time": 0.115,
+                "Actual Total Time": 0.115,
+                "Actual Rows": 1,
+                "Actual Loops": 301,
+                "Shared Hit Blocks": 89698,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "idx_memory_evidence_claim",
+                    "Relation Name": "memory_evidence",
+                    "Alias": "e",
+                    "Startup Cost": 0.27,
+                    "Total Cost": 8.29,
+                    "Plan Rows": 1,
+                    "Plan Width": 1624,
+                    "Actual Startup Time": 0.055,
+                    "Actual Total Time": 0.107,
+                    "Actual Rows": 1,
+                    "Actual Loops": 301,
+                    "Index Cond": "(corpus_id = v.corpus_id)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Filter": "(version_id = v.id)",
+                    "Rows Removed by Filter": 300,
+                    "Shared Hit Blocks": 89698,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 16,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.306,
+      "Triggers": [],
+      "Execution Time": 64.749
+    },
+    "total_s": 13.8
+  }
+]

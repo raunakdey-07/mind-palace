@@ -1,0 +1,1239 @@
+{
+  "commit": "5aa27527ca99c337b807c3b5b566583e89a82ba2",
+  "corpus_claims": 88,
+  "floor": 0.3,
+  "sets": {
+    "v1": {
+      "failures": [
+        {
+          "category": "adversarial",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "The primary datastore is PostgreSQL.",
+          "front_matter_terms": [
+            "advisory",
+            "chosen",
+            "database",
+            "datastore",
+            "design",
+            "jsonb",
+            "key",
+            "lock",
+            "postgre",
+            "postgresql",
+            "primary",
+            "reason"
+          ],
+          "gold": "architecture.postgres",
+          "has_evidence": true,
+          "path": "docs/tech/postgres.md",
+          "qid": "ho-adv-sandbox",
+          "question": "The onboarding guide says the sandbox runs on SQLite. What does production use?"
+        },
+        {
+          "category": "temporal",
+          "claim_only": false,
+          "claim_only_shared": [
+            "service",
+            "tier"
+          ],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "service",
+            "tier"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "service",
+            "tier"
+          ],
+          "claim_plus_evidence_shared": [
+            "service",
+            "tier"
+          ],
+          "claim_text": "Deployments for tier-0 services run as a single writer job.",
+          "front_matter_terms": [
+            "constraint",
+            "deploy",
+            "deployment",
+            "job",
+            "key",
+            "note",
+            "run",
+            "service",
+            "single",
+            "tags",
+            "tier",
+            "value"
+          ],
+          "gold": "constraint.deploy.tier-0",
+          "has_evidence": true,
+          "path": "docs/deploy/tier-0.md",
+          "qid": "ho-chg-deploy-tier-0",
+          "question": "What rule governs how tier-0 services get rolled out?"
+        },
+        {
+          "category": "temporal",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "notifier"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "notifier"
+          ],
+          "claim_plus_evidence_shared": [
+            "notifier"
+          ],
+          "claim_text": "The July duplicate SMS incident was caused by non-idempotent consumers.",
+          "front_matter_terms": [
+            "caus",
+            "constraint",
+            "consumer",
+            "duplicate",
+            "idempotency",
+            "idempotent",
+            "incident",
+            "july",
+            "key",
+            "message",
+            "non",
+            "note"
+          ],
+          "gold": "incident.2024-07.notifier.root",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-07-notifier-duplicate-sms.md",
+          "qid": "ho-chg-inc-2024-07",
+          "question": "What went wrong in 2024-07 that affected notifier?"
+        },
+        {
+          "category": "temporal",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Release 0.6 added the durable operational feed.",
+          "front_matter_terms": [
+            "added",
+            "changelog",
+            "key",
+            "membership",
+            "note",
+            "release",
+            "seal",
+            "snapshot",
+            "tags",
+            "value"
+          ],
+          "gold": "release.0.6",
+          "has_evidence": true,
+          "path": "docs/changelog.md",
+          "qid": "ho-chg-rel-0.6",
+          "question": "Shipping 0.6 introduced what?"
+        },
+        {
+          "category": "temporal",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Release 0.7 moved settlement to the ledger service.",
+          "front_matter_terms": [
+            "added",
+            "changelog",
+            "key",
+            "membership",
+            "note",
+            "release",
+            "seal",
+            "snapshot",
+            "tags",
+            "value"
+          ],
+          "gold": "release.0.7",
+          "has_evidence": true,
+          "path": "docs/changelog.md",
+          "qid": "ho-chg-rel-0.7",
+          "question": "Shipping 0.7 introduced what?"
+        },
+        {
+          "category": "temporal",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Release 0.8 added snapshot membership sealing.",
+          "front_matter_terms": [
+            "added",
+            "changelog",
+            "key",
+            "membership",
+            "note",
+            "release",
+            "seal",
+            "snapshot",
+            "tags",
+            "value"
+          ],
+          "gold": "release.0.8",
+          "has_evidence": true,
+          "path": "docs/changelog.md",
+          "qid": "ho-chg-rel-0.8",
+          "question": "Shipping 0.8 introduced what?"
+        },
+        {
+          "category": "temporal",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "datastore",
+            "primary",
+            "reason"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "datastore",
+            "primary",
+            "reason"
+          ],
+          "claim_plus_evidence_shared": [
+            "datastore",
+            "primary"
+          ],
+          "claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+          "front_matter_terms": [
+            "advisory",
+            "chosen",
+            "database",
+            "datastore",
+            "design",
+            "jsonb",
+            "key",
+            "lock",
+            "postgre",
+            "postgresql",
+            "primary",
+            "reason"
+          ],
+          "gold": "decision.database.reason",
+          "has_evidence": true,
+          "path": "docs/tech/postgres.md",
+          "qid": "ho-chg-why-postgres",
+          "question": "What reasoning led to picking the present primary datastore?"
+        },
+        {
+          "category": "provenance",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "The orders service caps its connection pool at 30.",
+          "front_matter_terms": [
+            "caps",
+            "caus",
+            "connection",
+            "constraint",
+            "exhaustion",
+            "incident",
+            "key",
+            "march",
+            "note",
+            "order",
+            "outage",
+            "pool"
+          ],
+          "gold": "constraint.orders.pool",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-03-orders-connection-pool-exhaustion.md",
+          "qid": "ho-ev-inc-2024-03",
+          "question": "What rule did the 2024-03 incident put in place?"
+        },
+        {
+          "category": "provenance",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence_shared": [
+            "incident"
+          ],
+          "claim_text": "The notifier requires an idempotency key per message.",
+          "front_matter_terms": [
+            "caus",
+            "constraint",
+            "consumer",
+            "duplicate",
+            "idempotency",
+            "idempotent",
+            "incident",
+            "july",
+            "key",
+            "message",
+            "non",
+            "note"
+          ],
+          "gold": "constraint.notifier.idempotency",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-07-notifier-duplicate-sms.md",
+          "qid": "ho-ev-inc-2024-07",
+          "question": "What rule did the 2024-07 incident put in place?"
+        },
+        {
+          "category": "provenance",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Reindex batches are capped at 500 documents.",
+          "front_matter_terms": [
+            "backlog",
+            "batch",
+            "batche",
+            "capp",
+            "caus",
+            "constraint",
+            "incident",
+            "index",
+            "indexer",
+            "key",
+            "note",
+            "queue"
+          ],
+          "gold": "constraint.search.batch",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-09-search-indexer-backlog.md",
+          "qid": "ho-ev-inc-2024-09",
+          "question": "What rule did the 2024-09 incident put in place?"
+        },
+        {
+          "category": "provenance",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "incident"
+          ],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Settlement jobs must be idempotent on ledger entry id.",
+          "front_matter_terms": [
+            "caus",
+            "constraint",
+            "double",
+            "entry",
+            "id",
+            "idempotent",
+            "incident",
+            "job",
+            "jobs",
+            "key",
+            "ledger",
+            "must"
+          ],
+          "gold": "constraint.ledger.settlement",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-11-ledger-double-posting.md",
+          "qid": "ho-ev-inc-2024-11",
+          "question": "What rule did the 2024-11 incident put in place?"
+        },
+        {
+          "category": "multi-topic",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "datastore",
+            "primary"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "datastore",
+            "primary"
+          ],
+          "claim_plus_evidence_shared": [
+            "datastore",
+            "primary"
+          ],
+          "claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+          "front_matter_terms": [
+            "advisory",
+            "chosen",
+            "database",
+            "datastore",
+            "design",
+            "jsonb",
+            "key",
+            "lock",
+            "postgre",
+            "postgresql",
+            "primary",
+            "reason"
+          ],
+          "gold": "decision.database.reason",
+          "has_evidence": true,
+          "path": "docs/tech/postgres.md",
+          "qid": "ho-mul-tech-postgres",
+          "question": "State the present primary datastore and the case for it."
+        },
+        {
+          "category": "multi-topic",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "job",
+            "queue"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "job",
+            "queue"
+          ],
+          "claim_plus_evidence_shared": [
+            "job",
+            "queue"
+          ],
+          "claim_text": "RabbitMQ was chosen for consumer acknowledgements and dead lettering.",
+          "front_matter_terms": [
+            "acknowledgement",
+            "chosen",
+            "consumer",
+            "dead",
+            "design",
+            "job",
+            "key",
+            "letter",
+            "queue",
+            "rabbitmq",
+            "reason",
+            "value"
+          ],
+          "gold": "decision.queue.reason",
+          "has_evidence": true,
+          "path": "docs/tech/queue.md",
+          "qid": "ho-mul-tech-queue",
+          "question": "State the present job queue and the case for it."
+        },
+        {
+          "category": "multi-topic",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "cache",
+            "shar"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "cache",
+            "shar"
+          ],
+          "claim_plus_evidence_shared": [
+            "cache",
+            "shar"
+          ],
+          "claim_text": "Redis was chosen for its native TTL and pub/sub support.",
+          "front_matter_terms": [
+            "cache",
+            "chosen",
+            "design",
+            "key",
+            "native",
+            "pub",
+            "reason",
+            "redi",
+            "shar",
+            "sub",
+            "support",
+            "ttl"
+          ],
+          "gold": "decision.cache.reason",
+          "has_evidence": true,
+          "path": "docs/tech/redis.md",
+          "qid": "ho-mul-tech-redis",
+          "question": "State the present shared cache and the case for it."
+        },
+        {
+          "category": "multi-topic",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "engine",
+            "search"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "engine",
+            "search"
+          ],
+          "claim_plus_evidence_shared": [
+            "engine",
+            "search"
+          ],
+          "claim_text": "OpenSearch was chosen for the permissive licence and active maintenance.",
+          "front_matter_terms": [
+            "active",
+            "chosen",
+            "design",
+            "engine",
+            "key",
+            "licence",
+            "maintenance",
+            "opensearch",
+            "permissive",
+            "reason",
+            "search",
+            "value"
+          ],
+          "gold": "decision.search.reason",
+          "has_evidence": true,
+          "path": "docs/tech/search.md",
+          "qid": "ho-mul-tech-search",
+          "question": "State the present search engine and the case for it."
+        },
+        {
+          "category": "multi-topic",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "object",
+            "storage"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "object",
+            "storage"
+          ],
+          "claim_plus_evidence_shared": [
+            "object",
+            "storage"
+          ],
+          "claim_text": "S3 was chosen for lifecycle policies and durable versioning.",
+          "front_matter_terms": [
+            "chosen",
+            "design",
+            "durable",
+            "key",
+            "lifecycle",
+            "object",
+            "policie",
+            "reason",
+            "s3",
+            "storage",
+            "value",
+            "version"
+          ],
+          "gold": "decision.storage.reason",
+          "has_evidence": true,
+          "path": "docs/tech/storage.md",
+          "qid": "ho-mul-tech-storage",
+          "question": "State the present object storage and the case for it."
+        },
+        {
+          "category": "multi-topic",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "analytic",
+            "warehouse"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "analytic",
+            "warehouse"
+          ],
+          "claim_plus_evidence_shared": [
+            "analytic",
+            "warehouse"
+          ],
+          "claim_text": "ClickHouse was chosen for columnar scans over event data.",
+          "front_matter_terms": [
+            "analytic",
+            "chosen",
+            "clickhouse",
+            "columnar",
+            "data",
+            "design",
+            "event",
+            "key",
+            "over",
+            "reason",
+            "scan",
+            "value"
+          ],
+          "gold": "decision.warehouse.reason",
+          "has_evidence": true,
+          "path": "docs/tech/warehouse.md",
+          "qid": "ho-mul-tech-warehouse",
+          "question": "State the present analytics warehouse and the case for it."
+        },
+        {
+          "category": "relationship",
+          "claim_only": false,
+          "claim_only_shared": [
+            "order"
+          ],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "order",
+            "outage"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "order",
+            "outage"
+          ],
+          "claim_plus_evidence_shared": [
+            "order",
+            "outage"
+          ],
+          "claim_text": "The orders service caps its connection pool at 30.",
+          "front_matter_terms": [
+            "caps",
+            "caus",
+            "connection",
+            "constraint",
+            "exhaustion",
+            "incident",
+            "key",
+            "march",
+            "note",
+            "order",
+            "outage",
+            "pool"
+          ],
+          "gold": "constraint.orders.pool",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-03-orders-connection-pool-exhaustion.md",
+          "qid": "ho-rel-impact-orders",
+          "question": "After the orders outage, what limit was imposed?"
+        },
+        {
+          "category": "relationship",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "storage"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "storage"
+          ],
+          "claim_plus_evidence_shared": [
+            "storage"
+          ],
+          "claim_text": "The Archive Job is owned by the data team.",
+          "front_matter_terms": [
+            "archive",
+            "data",
+            "depend",
+            "design",
+            "job",
+            "key",
+            "owned",
+            "owner",
+            "runs",
+            "service",
+            "storage",
+            "tags"
+          ],
+          "gold": "service.archive.owner",
+          "has_evidence": true,
+          "path": "docs/services/archive.md",
+          "qid": "ho-rel-why-storage",
+          "question": "Decisions about object storage belong to whom?"
+        }
+      ],
+      "summary": {
+        "claim_only": {
+          "newly_reachable": [],
+          "of": 19,
+          "reachable": 0,
+          "still_unreachable": [
+            "ho-adv-sandbox",
+            "ho-chg-deploy-tier-0",
+            "ho-chg-inc-2024-07",
+            "ho-chg-rel-0.6",
+            "ho-chg-rel-0.7",
+            "ho-chg-rel-0.8",
+            "ho-chg-why-postgres",
+            "ho-ev-inc-2024-03",
+            "ho-ev-inc-2024-07",
+            "ho-ev-inc-2024-09",
+            "ho-ev-inc-2024-11",
+            "ho-mul-tech-postgres",
+            "ho-mul-tech-queue",
+            "ho-mul-tech-redis",
+            "ho-mul-tech-search",
+            "ho-mul-tech-storage",
+            "ho-mul-tech-warehouse",
+            "ho-rel-impact-orders",
+            "ho-rel-why-storage"
+          ]
+        },
+        "claim_plus_doc_context": {
+          "newly_reachable": [
+            "ho-chg-why-postgres",
+            "ho-mul-tech-postgres",
+            "ho-mul-tech-queue",
+            "ho-mul-tech-redis",
+            "ho-mul-tech-search",
+            "ho-mul-tech-storage",
+            "ho-mul-tech-warehouse",
+            "ho-rel-impact-orders"
+          ],
+          "of": 19,
+          "reachable": 8,
+          "still_unreachable": [
+            "ho-adv-sandbox",
+            "ho-chg-deploy-tier-0",
+            "ho-chg-inc-2024-07",
+            "ho-chg-rel-0.6",
+            "ho-chg-rel-0.7",
+            "ho-chg-rel-0.8",
+            "ho-ev-inc-2024-03",
+            "ho-ev-inc-2024-07",
+            "ho-ev-inc-2024-09",
+            "ho-ev-inc-2024-11",
+            "ho-rel-why-storage"
+          ]
+        },
+        "claim_plus_evidence": {
+          "newly_reachable": [
+            "ho-chg-why-postgres",
+            "ho-mul-tech-postgres",
+            "ho-mul-tech-queue",
+            "ho-mul-tech-redis",
+            "ho-mul-tech-search",
+            "ho-mul-tech-storage",
+            "ho-mul-tech-warehouse",
+            "ho-rel-impact-orders"
+          ],
+          "of": 19,
+          "reachable": 8,
+          "still_unreachable": [
+            "ho-adv-sandbox",
+            "ho-chg-deploy-tier-0",
+            "ho-chg-inc-2024-07",
+            "ho-chg-rel-0.6",
+            "ho-chg-rel-0.7",
+            "ho-chg-rel-0.8",
+            "ho-ev-inc-2024-03",
+            "ho-ev-inc-2024-07",
+            "ho-ev-inc-2024-09",
+            "ho-ev-inc-2024-11",
+            "ho-rel-why-storage"
+          ]
+        },
+        "claim_plus_evidence_and_context": {
+          "newly_reachable": [
+            "ho-chg-why-postgres",
+            "ho-mul-tech-postgres",
+            "ho-mul-tech-queue",
+            "ho-mul-tech-redis",
+            "ho-mul-tech-search",
+            "ho-mul-tech-storage",
+            "ho-mul-tech-warehouse",
+            "ho-rel-impact-orders"
+          ],
+          "of": 19,
+          "reachable": 8,
+          "still_unreachable": [
+            "ho-adv-sandbox",
+            "ho-chg-deploy-tier-0",
+            "ho-chg-inc-2024-07",
+            "ho-chg-rel-0.6",
+            "ho-chg-rel-0.7",
+            "ho-chg-rel-0.8",
+            "ho-ev-inc-2024-03",
+            "ho-ev-inc-2024-07",
+            "ho-ev-inc-2024-09",
+            "ho-ev-inc-2024-11",
+            "ho-rel-why-storage"
+          ]
+        }
+      }
+    },
+    "v2": {
+      "failures": [
+        {
+          "category": "cross_document",
+          "claim_only": true,
+          "claim_only_shared": [
+            "service"
+          ],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "service"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "service"
+          ],
+          "claim_plus_evidence_shared": [
+            "service"
+          ],
+          "claim_text": "The payments team owns Orders Service, Billing Worker, Notifier, Ledger Service.",
+          "front_matter_terms": [
+            "bill",
+            "key",
+            "ledger",
+            "note",
+            "notifier",
+            "order",
+            "ownership",
+            "owns",
+            "payment",
+            "service",
+            "tags",
+            "team"
+          ],
+          "gold": "team.payments.services",
+          "has_evidence": true,
+          "path": "docs/ownership/payments.md",
+          "qid": "hv2-cross_document-03",
+          "question": "Which services run at tier-1?"
+        },
+        {
+          "category": "identifier",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "constraint",
+            "incident"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "constraint",
+            "incident"
+          ],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Settlement jobs must be idempotent on ledger entry id.",
+          "front_matter_terms": [
+            "caus",
+            "constraint",
+            "double",
+            "entry",
+            "id",
+            "idempotent",
+            "incident",
+            "job",
+            "jobs",
+            "key",
+            "ledger",
+            "must"
+          ],
+          "gold": "constraint.ledger.settlement",
+          "has_evidence": true,
+          "path": "ops/incidents/2024-11-ledger-double-posting.md",
+          "qid": "hv2-identifier-01",
+          "question": "Which constraint was established after the 2024-11 incident?"
+        },
+        {
+          "category": "identifier",
+          "claim_only": true,
+          "claim_only_shared": [
+            "release"
+          ],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "release"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "release"
+          ],
+          "claim_plus_evidence_shared": [
+            "release"
+          ],
+          "claim_text": "Release 0.7 moved settlement to the ledger service.",
+          "front_matter_terms": [
+            "added",
+            "changelog",
+            "key",
+            "membership",
+            "note",
+            "release",
+            "seal",
+            "snapshot",
+            "tags",
+            "value"
+          ],
+          "gold": "release.0.7",
+          "has_evidence": true,
+          "path": "docs/changelog.md",
+          "qid": "hv2-identifier-03",
+          "question": "Following release 0.7, what changed?"
+        },
+        {
+          "category": "supersession",
+          "claim_only": false,
+          "claim_only_shared": [
+            "risk",
+            "team"
+          ],
+          "claim_plus_doc_context": true,
+          "claim_plus_doc_context_shared": [
+            "ledger",
+            "risk",
+            "team"
+          ],
+          "claim_plus_evidence": true,
+          "claim_plus_evidence_and_context": true,
+          "claim_plus_evidence_and_context_shared": [
+            "ledger",
+            "risk",
+            "team"
+          ],
+          "claim_plus_evidence_shared": [
+            "ledger",
+            "risk",
+            "team"
+          ],
+          "claim_text": "The Risk Engine is owned by the data team.",
+          "front_matter_terms": [
+            "data",
+            "depend",
+            "design",
+            "engine",
+            "gateway",
+            "key",
+            "ledger",
+            "owned",
+            "owner",
+            "risk",
+            "runs",
+            "service"
+          ],
+          "gold": "service.risk.owner",
+          "has_evidence": true,
+          "path": "docs/services/risk.md",
+          "qid": "hv2-supersession-02",
+          "question": "Which team is responsible for the component that escalated risk using the ledger?"
+        },
+        {
+          "category": "temporal_state",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "The object storage is S3.",
+          "front_matter_terms": [
+            "chosen",
+            "design",
+            "durable",
+            "key",
+            "lifecycle",
+            "object",
+            "policie",
+            "reason",
+            "s3",
+            "storage",
+            "value",
+            "version"
+          ],
+          "gold": "architecture.storage",
+          "has_evidence": true,
+          "path": "docs/tech/storage.md",
+          "qid": "hv2-temporal_state-03",
+          "question": "What binary store backs the media pipeline at present?"
+        },
+        {
+          "category": "temporal_state",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "The job queue is RabbitMQ.",
+          "front_matter_terms": [
+            "acknowledgement",
+            "chosen",
+            "consumer",
+            "dead",
+            "design",
+            "job",
+            "key",
+            "letter",
+            "queue",
+            "rabbitmq",
+            "reason",
+            "value"
+          ],
+          "gold": "architecture.queue",
+          "has_evidence": true,
+          "path": "docs/tech/queue.md",
+          "qid": "hv2-temporal_state-04",
+          "question": "Which component handles background messaging in production?"
+        },
+        {
+          "category": "why_decision",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [
+            "database"
+          ],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [
+            "database"
+          ],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+          "front_matter_terms": [
+            "advisory",
+            "chosen",
+            "database",
+            "datastore",
+            "design",
+            "jsonb",
+            "key",
+            "lock",
+            "postgre",
+            "postgresql",
+            "primary",
+            "reason"
+          ],
+          "gold": "decision.database.reason",
+          "has_evidence": true,
+          "path": "docs/tech/postgres.md",
+          "qid": "hv2-why_decision-01",
+          "question": "The team moved off the earlier database engine. What capability drove that?"
+        },
+        {
+          "category": "why_decision",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "Redis was chosen for its native TTL and pub/sub support.",
+          "front_matter_terms": [
+            "cache",
+            "chosen",
+            "design",
+            "key",
+            "native",
+            "pub",
+            "reason",
+            "redi",
+            "shar",
+            "sub",
+            "support",
+            "ttl"
+          ],
+          "gold": "decision.cache.reason",
+          "has_evidence": true,
+          "path": "docs/tech/redis.md",
+          "qid": "hv2-why_decision-02",
+          "question": "Why was the old caching layer replaced rather than kept?"
+        },
+        {
+          "category": "why_decision",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "RabbitMQ was chosen for consumer acknowledgements and dead lettering.",
+          "front_matter_terms": [
+            "acknowledgement",
+            "chosen",
+            "consumer",
+            "dead",
+            "design",
+            "job",
+            "key",
+            "letter",
+            "queue",
+            "rabbitmq",
+            "reason",
+            "value"
+          ],
+          "gold": "decision.queue.reason",
+          "has_evidence": true,
+          "path": "docs/tech/queue.md",
+          "qid": "hv2-why_decision-03",
+          "question": "What was the operational argument for changing the messaging broker?"
+        },
+        {
+          "category": "why_decision",
+          "claim_only": false,
+          "claim_only_shared": [],
+          "claim_plus_doc_context": false,
+          "claim_plus_doc_context_shared": [],
+          "claim_plus_evidence": false,
+          "claim_plus_evidence_and_context": false,
+          "claim_plus_evidence_and_context_shared": [],
+          "claim_plus_evidence_shared": [],
+          "claim_text": "OpenSearch was chosen for the permissive licence and active maintenance.",
+          "front_matter_terms": [
+            "active",
+            "chosen",
+            "design",
+            "engine",
+            "key",
+            "licence",
+            "maintenance",
+            "opensearch",
+            "permissive",
+            "reason",
+            "search",
+            "value"
+          ],
+          "gold": "decision.search.reason",
+          "has_evidence": true,
+          "path": "docs/tech/search.md",
+          "qid": "hv2-why_decision-04",
+          "question": "Licensing concerns influenced one technology change. Which one, and what else mattered?"
+        }
+      ],
+      "summary": {
+        "claim_only": {
+          "newly_reachable": [],
+          "of": 10,
+          "reachable": 2,
+          "still_unreachable": [
+            "hv2-identifier-01",
+            "hv2-supersession-02",
+            "hv2-temporal_state-03",
+            "hv2-temporal_state-04",
+            "hv2-why_decision-01",
+            "hv2-why_decision-02",
+            "hv2-why_decision-03",
+            "hv2-why_decision-04"
+          ]
+        },
+        "claim_plus_doc_context": {
+          "newly_reachable": [
+            "hv2-identifier-01",
+            "hv2-supersession-02"
+          ],
+          "of": 10,
+          "reachable": 4,
+          "still_unreachable": [
+            "hv2-temporal_state-03",
+            "hv2-temporal_state-04",
+            "hv2-why_decision-01",
+            "hv2-why_decision-02",
+            "hv2-why_decision-03",
+            "hv2-why_decision-04"
+          ]
+        },
+        "claim_plus_evidence": {
+          "newly_reachable": [
+            "hv2-supersession-02"
+          ],
+          "of": 10,
+          "reachable": 3,
+          "still_unreachable": [
+            "hv2-identifier-01",
+            "hv2-temporal_state-03",
+            "hv2-temporal_state-04",
+            "hv2-why_decision-01",
+            "hv2-why_decision-02",
+            "hv2-why_decision-03",
+            "hv2-why_decision-04"
+          ]
+        },
+        "claim_plus_evidence_and_context": {
+          "newly_reachable": [
+            "hv2-identifier-01",
+            "hv2-supersession-02"
+          ],
+          "of": 10,
+          "reachable": 4,
+          "still_unreachable": [
+            "hv2-temporal_state-03",
+            "hv2-temporal_state-04",
+            "hv2-why_decision-01",
+            "hv2-why_decision-02",
+            "hv2-why_decision-03",
+            "hv2-why_decision-04"
+          ]
+        }
+      }
+    }
+  }
+}

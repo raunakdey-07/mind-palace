@@ -1,0 +1,24 @@
+# EXPLAIN (ANALYZE, BUFFERS, VERBOSE) -- control, narrow columns and no jsonb_agg subqueries
+# work_mem=4MB; corpus=xpl_4bd29e5c15 target=2000 counts={'versions': 2002, 'documents': 670, 'claims': 2002, 'chunks': 2002, 'evidence_rows': 2002}
+# per-run execution ms: [4.772, 4.247, 4.232]
+# EXPLAIN ANALYZE does not serialize or transfer rows to the client.
+# Output: tuple payload elided: 0 lines, 0 bytes; the complete un-elided text and its sha256 are recorded in 51-explain-summary.txt.
+#------------------------------------------------------------------------------
+Sort  (cost=16.72..16.74 rows=8 width=1408) (actual time=4.572..4.691 rows=2002 loops=1)
+  Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path
+  Sort Key: v.observed_at, d.path, v.version_number
+  Sort Method: quicksort  Memory: 945kB
+  Buffers: shared hit=2654
+  ->  Nested Loop  (cost=0.55..16.60 rows=8 width=1408) (actual time=0.032..3.811 rows=2002 loops=1)
+        Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path
+        Buffers: shared hit=2654
+        ->  Index Scan using memory_documents_pkey on xpl_4bd29e5c15.memory_documents d  (cost=0.27..8.29 rows=1 width=552) (actual time=0.020..0.333 rows=670 loops=1)
+              Output: d.corpus_id, d.id, d.path
+              Index Cond: (d.corpus_id = '153fd3993b8c581a9916fdf8ea2e43805f70950ef4bae99574e2c8338361b282'::bpchar)
+              Buffers: shared hit=644
+        ->  Index Scan using memory_versions_corpus_id_memory_document_id_version_number_key on xpl_4bd29e5c15.memory_versions v  (cost=0.28..8.30 rows=1 width=1376) (actual time=0.003..0.004 rows=3 loops=670)
+              Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.content, v.metadata, v.fingerprint
+              Index Cond: ((v.corpus_id = '153fd3993b8c581a9916fdf8ea2e43805f70950ef4bae99574e2c8338361b282'::bpchar) AND (v.memory_document_id = d.id))
+              Buffers: shared hit=2010
+Planning Time: 0.168 ms
+Execution Time: 4.772 ms

@@ -1,0 +1,10 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+venvmp/bin/python -m flake8 api cli tests --max-line-length=100; echo "FLAKE8=$?"
+venvmp/bin/python -m black --check api cli tests --line-length 100; echo "BLACK=$?"
+venvmp/bin/python scripts/release/check_versioning.py; echo "VERSIONING=$?"
+FLAKE8=0
+All done! ✨ 🍰 ✨
+109 files would be left unchanged.
+BLACK=0
+release metadata: PASS
+VERSIONING=0

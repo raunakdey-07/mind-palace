@@ -1,0 +1,22 @@
+# L2 destroy/rebuild invariant -> NEW /tmp path (never the tracked artifact)
+$ PYTHONPATH=scripts/benchmark venvmp/bin/python -m scripts.benchmark.m011_rebuildability --out /tmp/analyze-m011-rebuildability.json
+M011 rebuildability: destroy L2, compare authoritative packs
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8049.29it/s]
+
+L2 with:      {'documents': 7, 'chunks': 7, 'manifest': 7, 'embedded': 7, 'versions': 8, 'claims': 10, 'evidence': 10}
+L2 destroyed: {'documents': 0, 'chunks': 0, 'manifest': 0, 'embedded': 0, 'versions': 8, 'claims': 10, 'evidence': 10}
+L2 rebuilt:   {'documents': 7, 'chunks': 7, 'manifest': 7, 'embedded': 7, 'versions': 8, 'claims': 10, 'evidence': 10}
+
+pack digest with L2       ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c
+pack digest L2 destroyed  ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c
+pack digest L2 rebuilt    ce74fe11a0dd3504b41187cd18419e87ee48c8d974dcc23309fa138a05708c9c
+
+identical with L2 destroyed: 12/12
+identical after rebuild    : 12/12
+written: /tmp/analyze-m011-rebuildability.json
+L2=0
+
+$ diff baseline(tracked, read-only) vs new capture
+tracked set_digest: None
+current set_digest: None
+BYTE-IDENTICAL: False

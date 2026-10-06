@@ -1,0 +1,85 @@
+diff --git a/api/main.py b/api/main.py
+index 3f09469..9a8e4d5 100644
+--- a/api/main.py
++++ b/api/main.py
+@@ -6,6 +6,7 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import importlib.metadata
+ import os
+ 
+ from fastapi import FastAPI, Request
+@@ -21,7 +22,7 @@ from api.routers import context, corpora, ingest, memory, query, search
+ app = FastAPI(
+     title="Mind Palace API",
+     description="The Durable AI Memory Substrate",
+-    version="0.6.0",
++    version=importlib.metadata.version("mindpalace-os"),
+ )
+ 
+ 
+diff --git a/api/services/memory.py b/api/services/memory.py
+index 25c3f54..fe35e43 100644
+--- a/api/services/memory.py
++++ b/api/services/memory.py
+@@ -397,7 +397,7 @@ async def record_deletion(db: AsyncSession, corpus_id: str, path: str) -> bool:
+     return True
+ 
+ 
+-async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
++async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True, version_text=True):
+     """Load versions with their claims, evidence and chunks.
+ 
+     The child aggregates are correlated subqueries rather than one set-based pass
+@@ -414,7 +414,21 @@ async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+     projection reads nothing else from a chunk, and chunk text is the bulk of a
+     real document. The raw ``history`` surface keeps the text, because a
+     developer asking for history wants the source.
++
++    ``version_text=False`` drops each version's ``content`` and ``metadata``.
++    Those two columns hold the whole document body and are the widest part of a
++    version row, but the projection never reads either: authority comes from the
++    claims, evidence and the version graph. Same reasoning as ``chunk_text``, and
++    the raw ``history`` surface keeps both for the same reason.
+     """
++    columns = (
++        "v.*"
++        if version_text
++        else (
++            "v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, "
++            "v.document_id, v.event, v.observed_at, v.fingerprint"
++        )
++    )
+     chunk_expr = (
+         "jsonb_build_object('id', c.id, 'heading_path', c.heading_path)"
+         if not chunk_text
+@@ -423,7 +437,7 @@ async def _load(db, corpus_id, path=None, as_of=None, *, chunk_text=True):
+     # One statement gives every read a coherent MVCC view, even without a read lock.
+     result = await db.execute(
+         text(f"""
+-        SELECT v.*, d.path,
++        SELECT {columns}, d.path,
+             COALESCE((SELECT jsonb_agg({chunk_expr} ORDER BY c.order_index)
+                 FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                 '[]'::jsonb) AS chunks,
+diff --git a/api/services/memory_public.py b/api/services/memory_public.py
+index eda5db6..6e392be 100644
+--- a/api/services/memory_public.py
++++ b/api/services/memory_public.py
+@@ -364,9 +364,12 @@ async def execute_in_session(db, operation: str, request: MemoryRequest, vectori
+     # Fix the validity clock once for the entire response, including conflicts.
+     valid_at = cutoff if saved else request.valid_at or cutoff or datetime.now(timezone.utc)
+     # The public projection reads only each chunk's id and heading, never its
+-    # text, and chunk text is the bulk of the payload. The raw history surface
+-    # still returns it.
+-    versions = await memory._load(db, corpus["id"], as_of=cutoff, chunk_text=False)
++    # text, and chunk text is the bulk of the payload. It also reads no version
++    # content or metadata: authority comes from claims, evidence and the version
++    # graph. The raw history surface still returns all of it.
++    versions = await memory._load(
++        db, corpus["id"], as_of=cutoff, chunk_text=False, version_text=False
++    )
+     if saved:
+         ids = set(saved["version_ids"])
+         versions = [v for v in versions if v["id"] in ids]

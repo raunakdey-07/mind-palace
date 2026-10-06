@@ -1,0 +1,60 @@
+[N=100] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=100] migrate 0.2s  ingest 2.4s  rows={'claims': 100, 'evidence': 100, 'chunks': 100, 'versions': 100, 'documents': 36}
+[N=100]   V0  plan=[0.613, 0.473, 0.306] exec=[8.7, 8.8, 9.1] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=SELF
+[N=100]   V1  plan=[0.358, 0.399, 0.265] exec=[8.9, 9.1, 9.3] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=100]   V2  plan=[0.53, 0.421, 0.432] exec=[9.7, 12.9, 10.6] hit=[396, 396, 396] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=100 same=True
+[N=100]   V3  plan=[0.505, 0.26, 0.533] exec=[8.2, 8.9, 8.4] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=100]   V4  plan=[0.765, 0.919, 0.668] exec=[99.1, 97.3, 100.5] hit=[8589, 8589, 8589] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=100 same=True
+[N=100]   V5  plan=[0.342, 0.433, 0.368] exec=[11.0, 11.3, 11.7] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=100]  V6a  plan=[0.384, 0.355, 0.336] exec=[13.2, 12.6, 11.4] hit=[2821, 2821, 2821] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=100]  V6b  plan=[0.331, 0.276, 0.336] exec=[8.5, 8.2, 8.4] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=100]  V6c  plan=[0.273, 0.26, 0.706] exec=[8.6, 8.2, 8.4] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=100]   V7  plan=[0.432, 0.288, 0.265] exec=[8.6, 9.1, 8.1] hit=[9621, 9621, 9621] claims_idx=idx_memory_claims_validity rf=99 | ev_idx=idx_memory_evidence_claim rf=99 | rows=100 same=True
+[N=150] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=150] migrate 0.3s  ingest 3.7s  rows={'claims': 151, 'evidence': 151, 'chunks': 151, 'versions': 151, 'documents': 53}
+[N=150]   V0  plan=[0.568, 0.405, 0.267] exec=[19.8, 20.3, 23.6] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=SELF
+[N=150]   V1  plan=[0.309, 0.277, 0.641] exec=[19.4, 17.0, 19.3] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=150]   V2  plan=[0.525, 0.438, 0.598] exec=[21.7, 20.5, 19.7] hit=[1407, 1407, 1407] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=151 same=True
+[N=150]   V3  plan=[0.259, 0.257, 0.295] exec=[17.5, 17.7, 18.3] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=150]   V4  plan=[0.437, 0.453, 0.582] exec=[222.3, 258.2, 233.3] hit=[22534, 22534, 22534] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=151 same=True
+[N=150]   V5  plan=[0.291, 0.475, 0.282] exec=[18.0, 17.4, 18.7] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=150]  V6a  plan=[0.297, 0.449, 0.294] exec=[19.2, 20.6, 19.0] hit=[5641, 5641, 5641] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=150]  V6b  plan=[0.346, 0.325, 0.412] exec=[20.9, 18.9, 18.4] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=150]  V6c  plan=[0.292, 0.293, 0.281] exec=[17.3, 18.8, 17.6] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=150]   V7  plan=[0.353, 0.683, 0.251] exec=[24.0, 21.3, 18.3] hit=[24527, 24527, 24527] claims_idx=idx_memory_claims_validity rf=150 | ev_idx=idx_memory_evidence_claim rf=150 | rows=151 same=True
+[N=200] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=200] migrate 0.2s  ingest 5.0s  rows={'claims': 202, 'evidence': 202, 'chunks': 202, 'versions': 202, 'documents': 70}
+[N=200]   V0  plan=[0.419, 0.319, 0.271] exec=[29.9, 29.2, 32.4] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=SELF
+[N=200]   V1  plan=[0.382, 0.402, 0.31] exec=[30.9, 36.9, 32.5] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=200]   V2  plan=[0.456, 0.909, 0.471] exec=[42.9, 36.5, 36.5] hit=[922, 922, 922] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=202 same=True
+[N=200]   V3  plan=[0.257, 0.281, 0.258] exec=[30.3, 29.5, 39.5] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=200]   V4  plan=[1.055, 0.578, 0.791] exec=[412.1, 415.4, 401.4] hit=[41020, 41020, 41020] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=202 same=True
+[N=200]   V5  plan=[0.346, 0.255, 0.261] exec=[32.0, 31.3, 29.9] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=200]  V6a  plan=[0.288, 0.259, 0.31] exec=[33.0, 40.2, 32.9] hit=[9609, 9609, 9609] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=200]  V6b  plan=[0.298, 0.362, 0.517] exec=[29.5, 30.1, 28.8] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=200]  V6c  plan=[0.263, 0.257, 0.262] exec=[31.9, 31.5, 32.7] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=200]   V7  plan=[0.34, 0.368, 0.269] exec=[30.0, 29.5, 28.9] hit=[41727, 41727, 41727] claims_idx=idx_memory_claims_validity rf=201 | ev_idx=idx_memory_evidence_claim rf=201 | rows=202 same=True
+[N=250] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=250] migrate 0.2s  ingest 6.2s  rows={'claims': 250, 'evidence': 250, 'chunks': 250, 'versions': 250, 'documents': 86}
+[N=250]   V0  plan=[0.326, 0.363, 0.271] exec=[63.1, 55.3, 45.7] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=SELF
+[N=250]   V1  plan=[0.27, 0.629, 0.275] exec=[44.8, 46.9, 47.0] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=250]   V2  plan=[0.428, 0.667, 0.901] exec=[53.9, 55.3, 56.1] hit=[7599, 7599, 7599] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=250 same=True
+[N=250]   V3  plan=[0.25, 0.273, 0.634] exec=[47.9, 49.6, 56.2] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=250]   V4  plan=[0.502, 0.445, 0.607] exec=[611.4, 613.9, 591.3] hit=[68807, 68807, 68807] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=250 same=True
+[N=250]   V5  plan=[0.261, 0.268, 0.278] exec=[44.1, 54.3, 49.2] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=250]  V6a  plan=[0.461, 0.365, 0.467] exec=[51.5, 51.1, 50.7] hit=[15422, 15422, 15422] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=250]  V6b  plan=[0.279, 0.337, 0.247] exec=[48.2, 47.8, 46.2] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=250]  V6c  plan=[0.367, 0.256, 0.552] exec=[47.7, 51.8, 49.7] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=250]   V7  plan=[0.432, 0.257, 0.515] exec=[55.8, 51.7, 49.7] hit=[71599, 71599, 71599] claims_idx=idx_memory_claims_validity rf=249 | ev_idx=idx_memory_evidence_claim rf=249 | rows=250 same=True
+[N=300] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=300] migrate 0.2s  ingest 7.3s  rows={'claims': 301, 'evidence': 301, 'chunks': 301, 'versions': 301, 'documents': 103}
+[N=300]   V0  plan=[0.306, 0.256, 0.259] exec=[64.7, 64.2, 67.7] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=SELF
+[N=300]   V1  plan=[0.3, 0.306, 0.28] exec=[63.4, 64.3, 64.7] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True
+[N=300]   V2  plan=[0.456, 0.441, 0.594] exec=[77.1, 79.0, 78.5] hit=[10823, 10823, 10823] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=301 same=True
+[N=300]   V3  plan=[0.427, 0.267, 0.282] exec=[65.8, 66.6, 101.8] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True
+[N=300]   V4  plan=[0.567, 0.462, 0.727] exec=[845.8, 857.2, 885.0] hit=[99762, 99762, 99762] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=301 same=True
+[N=300]   V5  plan=[0.395, 0.337, 0.255] exec=[65.4, 63.6, 67.1] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True
+[N=300]  V6a  plan=[0.306, 0.328, 0.263] exec=[85.0, 71.5, 70.5] hit=[21642, 21642, 21642] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True
+[N=300]  V6b  plan=[0.399, 0.403, 0.333] exec=[65.0, 67.6, 71.8] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True
+[N=300]  V6c  plan=[0.288, 0.405, 0.272] exec=[84.5, 71.0, 64.1] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True
+[N=300]   V7  plan=[0.285, 0.294, 0.352] exec=[68.1, 77.4, 66.9] hit=[105935, 105935, 105935] claims_idx=idx_memory_claims_validity rf=300 | ev_idx=idx_memory_evidence_claim rf=300 | rows=301 same=True

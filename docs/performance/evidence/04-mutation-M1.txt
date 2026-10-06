@@ -1,0 +1,7 @@
+baseline commit : f52272db635c
+current  commit : f52272db635c
+questions       : 202
+set digest      : 085d15c20b9b4966
+authoritative output: 1 QUESTION(S) DIFFER
+  cur-01: changed
+EXIT_CODE=1

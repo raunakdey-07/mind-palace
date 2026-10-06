@@ -1,0 +1,102 @@
+
+NOTE: the checker is REFERENCE-driven (it walks paths cited in STATUS.md/README.md),
+not directory-scanning. Creating docs/performance/__tmp-nonexistent.json alone would NOT be
+reported, because no document references it. So the negative test also adds a temporary
+citation to STATUS.md, and is reverted afterwards (sha256 of STATUS.md is checked).
+
+PRE-TEST sha256 docs/STATUS.md (WITH temp citation): 16f9ed5bacb8135aa3ceb25cdd29daad48eee21880fce95eb07300db4ca2f850  docs/STATUS.md
+
+--- PASS 0: temp CITATION present, temp FILE absent (first run of the test) ---
+COMMAND: venvmp/bin/python scripts/check_evidence.py
+documents scanned : 2
+artifacts referenced: 11
+machine-checkable citations: 0
+
+PROBLEMS (7):
+  !!  referenced but absent: docs/performance/__tmp-nonexistent.json
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+EXIT=0
+
+--- PASS 1: temp CITATION in STATUS.md, temp FILE ABSENT ---
+COMMAND: venvmp/bin/python scripts/check_evidence.py
+docs/performance/__tmp-nonexistent.json exists? NO
+documents scanned : 2
+artifacts referenced: 11
+machine-checkable citations: 0
+
+PROBLEMS (7):
+  !!  referenced but absent: docs/performance/__tmp-nonexistent.json
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+EXIT=0
+
+--- PASS 2: temp FILE CREATED (present but not in git) ---
+COMMAND: venvmp/bin/python scripts/check_evidence.py
+-rw-r--r--. 1 rdx rdx 16 Oct  3 15:26 docs/performance/__tmp-nonexistent.json
+documents scanned : 2
+artifacts referenced: 11
+machine-checkable citations: 0
+
+PROBLEMS (7):
+  !!  referenced but UNTRACKED: docs/performance/__tmp-nonexistent.json
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+EXIT=0
+
+--- PASS 3: temp FILE DELETED, temp CITATION still present ---
+COMMAND: venvmp/bin/python scripts/check_evidence.py
+temp file exists after rm? NO
+documents scanned : 2
+artifacts referenced: 11
+machine-checkable citations: 0
+
+PROBLEMS (7):
+  !!  referenced but absent: docs/performance/__tmp-nonexistent.json
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+EXIT=0
+
+--- PASS 4: temp FILE DELETED and temp CITATION REMOVED ---
+COMMAND: venvmp/bin/python scripts/check_evidence.py
+f093482cfcce806c3f15eb9a04cd059a12845308580ab7d209cf0404f7ff55ff  docs/STATUS.md
+0
+no residual references in STATUS.md
+documents scanned : 2
+artifacts referenced: 10
+machine-checkable citations: 0
+
+PROBLEMS (6):
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+EXIT=0
+
+
+RESULT: the checker distinguished all three states for the same path:
+  referenced + file absent          -> "referenced but absent"   (PASS 1, PASS 3, PASS 4)
+  referenced + file present, untracked -> "referenced but UNTRACKED" (PASS 2)
+  not referenced                    -> no line at all           (true baseline, 10 artifacts referenced)
+STATUS.md sha256 before and after this test is identical
+(f093482cfcce806c3f15eb9a04cd059a12845308580ab7d209cf0404f7ff55ff), and the temp
+file is deleted. The checker is not vacuous: it still fails on a missing or
+untracked artifact.

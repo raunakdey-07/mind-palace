@@ -1,0 +1,14 @@
+M011 rebuildability: destroy L2, compare authoritative packs
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2877.10it/s]
+
+L2 with:      {'documents': 7, 'chunks': 7, 'manifest': 7, 'embedded': 7, 'versions': 8, 'claims': 10, 'evidence': 10}
+L2 destroyed: {'documents': 0, 'chunks': 0, 'manifest': 0, 'embedded': 0, 'versions': 8, 'claims': 10, 'evidence': 10}
+L2 rebuilt:   {'documents': 7, 'chunks': 7, 'manifest': 7, 'embedded': 7, 'versions': 8, 'claims': 10, 'evidence': 10}
+
+pack digest with L2       92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89
+pack digest L2 destroyed  92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89
+pack digest L2 rebuilt    92e51b529dd391a5fd630c56148c61e018814240980f2aff3c43cab87053cf89
+
+identical with L2 destroyed: 12/12
+identical after rebuild    : 12/12
+written: /mnt/Warehouse/projects/Mind Palace/docs/performance/m011-rebuildability.json

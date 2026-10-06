@@ -1,0 +1,328 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace)
+
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m b2_locks   -> 181a-advisory-lock-analyze-raw.txt
+
+  Everything else in this file is file:line reading of the working tree.
+  No file in the repository was edited. No database was written to for this
+  section except the throwaway schema that b2_locks creates and drops.
+
+
+==============================================================================
+B1 -- api/services/ingestion.py, read in full (438 lines)
+==============================================================================
+
+(a) SINGLE-DOCUMENT INGEST
+    ingestion.py:264-272  IngestionService.ingest_file(content, path, corpus_id)
+                          -- opens session_scope() and delegates to
+                             _ingest_content. This is the one-document path.
+
+(b) BULK / REPO INGEST
+    ingestion.py:274-280  ingest_repo(repo_path, corpus_id)
+                          -- thin wrapper: `return await self.sync_repo(
+                             repo_path, corpus_id, delete_removed=False)`
+    ingestion.py:282-385  sync_repo(repo_path, corpus_id, delete_removed=True)
+                          -- THE real bulk path. Walks `repo_path.rglob("*.md")`
+                             at L309 and loops at L312-355.
+    ingestion.py:357-367  the delete_removed reconciliation, one extra
+                          transaction.
+    ingestion.py:387-395  _path_known (a read used to classify added/changed)
+    ingestion.py:397-438  _delete_stale_paths
+
+    Shared per-document pipeline:
+    ingestion.py:51-78    _ingest_content       -- opens the transaction
+    ingestion.py:80-155   _ingest_live_content  -- no archive (memory off)
+    ingestion.py:157-235  _ingest_memory_content -- archive + version history
+    ingestion.py:237-262  _cache_claim_vectors  -- L2 cache, best-effort
+
+(c) WHERE A TRANSACTION BEGINS AND ENDS  -- this is the important part
+    ingestion.py:59       `async with db.begin():` inside _ingest_content.
+                          THIS is the commit boundary. On clean exit it COMMITS
+                          and releases pg_advisory_xact_lock.
+
+    In sync_repo the bulk path therefore runs ONE TRANSACTION PER DOCUMENT:
+      ingestion.py:317-318  session_scope() -> _path_known  (read, then the
+                            session closes and rolls back; session_scope in
+                            api/services/db.py:67-71 does NOT commit)
+      ingestion.py:321-322  session_scope() -> _ingest_content
+                            -> commits at ingestion.py:59's block exit
+      (one iteration of the `for md_file in md_files:` loop at L312)
+      ingestion.py:358-366  session_scope() + explicit `async with db.begin():`
+                            for delete_removed, commits once at the end.
+
+    So a 10,000-file sync is 10,000 commits and 10,000 acquisitions of the
+    corpus advisory lock, inside a single HTTP request. A hook placed inside
+    _ingest_content would therefore fire 10,000 times.
+
+(d) EXISTING POST-COMMIT HOOK
+    There is no post-commit callback mechanism anywhere in the codebase: no
+    SQLAlchemy event listener on "commit", no outbox, no deferred task queue.
+
+    But there IS already a post-commit side effect, and it is the precedent to
+    copy. ingestion.py:69-77:
+
+        async with db.begin():
+            ...
+        logging.getLogger(__name__).info(      # <-- line 69, AFTER the block
+            "document_ingested", extra={...},
+        )
+        return result
+
+    That logging call sits outside the `async with db.begin():` block, i.e. it
+    runs after the commit. It is the exact structural position a bounded
+    ANALYZE belongs in, and it is proven to be a valid place to do work
+    (it already runs on every successful document).
+
+
+==============================================================================
+B2 -- api/services/memory.py: record_version and lock_corpus
+==============================================================================
+
+    memory.py:210-221  lock_corpus(db, corpus_id)
+        lock_id = sha256(f"memory:{corpus_id}")[:8] as a signed big-endian int
+        `SELECT pg_advisory_xact_lock(:lock_id)`
+        Docstring: "Acquire the transaction-scoped memory/ingestion lock; never
+        commit. All writers and snapshot creators must use this function, in
+        the same transaction as their live writes. Use READ COMMITTED."
+
+        TRANSACTION-scoped: it is released at COMMIT/ROLLBACK, so it is
+        re-acquired once per document by the sync_repo loop.
+
+        Called from: ingestion.py:60, ingestion.py:163, memory.py:294
+        (record_version), memory.py:391 (record_deletion), ingestion.py:362,
+        rehydrate.py:76. Re-entrant within one session, so the double call at
+        ingestion.py:60 + 163 + 294 does not self-deadlock.
+
+    memory.py:274-386  record_version(...)
+        Validates source, takes lock_corpus at L294, reads _latest, inserts into
+        memory_documents / memory_versions / memory_chunks / memory_claims /
+        memory_evidence. Docstring: "No commit; propagate errors." It writes
+        every table the ANALYZE cliff depends on.
+
+MEASURED, not assumed (181a-advisory-lock-analyze-raw.txt):
+
+  Writer connection: BEGIN, pg_advisory_xact_lock(id), ingest 200 documents,
+  transaction left OPEN. A second, independent session then tried ANALYZE.
+
+    advisory lock id for corpus              = 3356224176658733208
+    writer uncommitted rows                  = claims 200 (and 200 each of
+                                                evidence/chunks/versions/docs)
+    before other-session ANALYZE             = reltuples=-1 pg_statistic_rows=0
+
+    other-session ANALYZE while writer open  = succeeded WITHOUT blocking
+      -> and what it wrote:                  = reltuples=0 pg_statistic_rows=0
+         while the writer still held 200 UNCOMMITTED claims
+    ANALYZE inside the lock-holding txn      = succeeded
+      -> reltuples=200 pg_statistic_rows=11
+    after COMMIT + fresh-session ANALYZE     = reltuples=200 pg_statistic_rows=11
+
+  Three conclusions:
+
+  1. ANALYZE does NOT conflict with the corpus advisory lock. Advisory locks and
+     relation locks are different lock managers, so there is NO deadlock risk
+     between ANALYZE and pg_advisory_xact_lock. Any claim otherwise is wrong.
+
+  2. But an ANALYZE issued from a DIFFERENT connection while an ingest
+     transaction is still open is actively HARMFUL. It did not block, and it
+     published reltuples = 0 for a table that was about to hold 200 rows. That
+     is a concurrent-statistics hazard, and it is the reason a hook must be
+     serialized against writers rather than merely "not deadlocky".
+
+  3. ANALYZE inside the lock-holding transaction is safe from deadlock but
+     still wrong, for two reasons that this session measured:
+       - it would fire once per document in the sync_repo loop
+         (ingestion.py:321-322), i.e. N times for N files;
+       - if that transaction rolls back, evidence 180 A2 shows pg_class
+         .reltuples SURVIVES the rollback and would go on describing rows that
+         were never committed.
+     It should run OUTSIDE the write transaction, after commit.
+
+
+==============================================================================
+B3 -- EVERY CALLER OF THE INGESTION SERVICE (grep)
+==============================================================================
+
+  PRODUCTION ENTRY POINTS THAT REACH sync_repo (the bulk path):
+    api/routers/ingest.py:15    ingestion_service = IngestionService()
+    api/routers/ingest.py:34    ingestion_service.ingest_repo(request.repo_path)
+                                -> ingestion.py:274 -> sync_repo
+    api/routers/corpora.py:93   svc = IngestionService()
+    api/routers/corpora.py:94   svc.sync_repo(...)  (POST /api/corpora/{name}/sync)
+    mindpalace_sdk.py:357       self._ingestion = IngestionService()
+    mindpalace_sdk.py:406       self._ingestion.sync_repo(path, corpus_id,
+                                delete_removed=...)   -- MindPalace.sync()
+    mcp_server.py:79-82         MCP tool `sync(corpus, path)` -> _client(corpus)
+                                .sync(path) -> sdk:406 -> sync_repo
+    cli/main.py:55-57           POST http://localhost:8000/api/ingest/repo
+                                -> api/routers/ingest.py:34 -> sync_repo
+
+  PRODUCTION ENTRY POINTS THAT REACH _ingest_content ONLY (one document):
+    api/routers/ingest.py:22    ingestion_service.ingest_file(request.content,
+                                request.path) -> ingestion.py:264
+    cli/main.py:31-36           POST /api/ingest/file  (single document)
+
+  NON-production / test callers of the same private method:
+    api/services/memory_benchmark.py:277  class EvaluationIngestion(IngestionService)
+    api/services/memory_benchmark.py:312  self.ingestion._ingest_content(...)
+    scripts/benchmark/m0117_scale.py, m0122_plan_cliff.py,
+    scripts/benchmark/baseline_packs.py, docs/performance/evidence/122c,
+    docs/performance/evidence/118  -- all call _ingest_content directly.
+
+  CONSTRUCTED BUT NOT A WRITE CALLER:
+    api/services/rehydrate.py:71  IngestionService(memory_enabled=False).
+        It does NOT call _ingest_content. It writes with commit=False inside a
+        caller-owned transaction (rehydrate.py:160, :168, :209) and its
+        docstring forbids committing. A hook placed inside _ingest_content would
+        not reach it, which is correct -- rehydrate is explicitly
+        caller-transaction-scoped.
+
+  So: a hook in sync_repo is reached by FOUR production surfaces (REST
+  /api/ingest/repo, REST /api/corpora/{name}/sync, the SDK's sync(), the MCP
+  sync tool) and transitively by the CLI `ingest-repo` command, which is just a
+  thin httpx client for the first of those.
+
+
+==============================================================================
+B4 -- RECOMMENDED LOCATION (one)
+==============================================================================
+
+  >>> api/services/ingestion.py:368  <<<
+      the blank line between `deleted = removed` (L367) and
+      `duration_ms = int((time.perf_counter() - start) * 1000)` (L369),
+      i.e. inside sync_repo, after the per-document loop AND after the
+      delete_removed transaction have both committed.
+
+  Sketch (NOT applied -- this file is analysis only, no code was edited):
+
+      # after ingestion.py:367  `deleted = removed`
+      await self._analyze_after_sync(corpus_id)
+
+      async def _analyze_after_sync(self, corpus_id: str) -> None:
+          """Best-effort: give the planner a row count after a bulk sync."""
+          try:
+              from api.services import memory
+              async with session_scope() as db:
+                  async with db.begin():
+                      # serialize against concurrent writers for this corpus
+                      await memory.lock_corpus(db, corpus_id)
+                      for tbl in ("memory_claims", "memory_evidence",
+                                  "memory_chunks", "memory_versions"):
+                          await db.execute(text(f"ANALYZE {tbl}"))
+          except Exception:                      # noqa: BLE001
+              logger.warning("post_sync_analyze_failed", exc_info=True)
+
+  Requirement-by-requirement:
+
+    BOUNDED -- Fires once per sync_repo call, i.e. once per repo sync, not once
+    per document. sync_repo commits N transactions (ingestion.py:321-322); this
+    point is reached once after all N. The single-document path
+    (ingestion.py:264 ingest_file) never reaches it, which is correct: one
+    document does not change the planner's decision.
+
+    NON-FATAL -- wrapped in try/except that logs and returns. A statistics
+    refresh must never turn a successful ingest into a 500. This mirrors the
+    existing precedent at ingestion.py:260-262, where _cache_claim_vectors
+    catches Exception, logs "claim_embedding_cache_fill_failed" and returns 0
+    for exactly the same reason ("the claim is already authoritative").
+
+    LOGGED -- the except branch logs a named warning, matching the codebase's
+    snake_case logger.event_name convention used at ingestion.py:70 and :261.
+
+    SAFE WITH CONCURRENT READERS -- ANALYZE takes only ShareUpdateExclusiveLock,
+    which does not conflict with a reader's AccessShareLock, so readers are
+    never blocked. Measured in 181a: a second session's ANALYZE did not block
+    while another session held 200 uncommitted rows, i.e. it took its lock
+    immediately.
+
+    SAFE AGAINST CONCURRENT WRITERS -- this is the part the naive hook gets
+    wrong. Taking memory.lock_corpus(db, corpus_id) first (B2 finding 2) makes
+    the ANALYZE wait for any in-flight ingest of the same corpus to commit, so
+    it cannot publish reltuples for a half-written table. Without that lock the
+    hook would reproduce exactly the reltuples=0-for-200-rows bug measured in
+    181a. Note this deliberately REUSES the existing lock helper; no new lock
+    namespace is introduced.
+
+    NO PUBLIC RESPONSE FIELD CHANGE -- the return dict at ingestion.py:370-385
+    is untouched. The new call sits before it and returns nothing.
+
+    NO MIGRATION -- ANALYZE is a utility statement, not DDL. It creates no
+    object, writes no catalog row that survives a rollback in a way that matters
+    (and it is not in a transaction that will be rolled back, so even the A2
+    reltuples behaviour cannot bite: the transaction commits).
+
+  WHY NOT THE OBVIOUS ALTERNATIVES
+
+    ingestion.py:69 (right after `async with db.begin():` in _ingest_content)
+    -- structurally the most elegant spot and it already hosts a post-commit
+    log line, but it executes once per DOCUMENT. For a 10k-file sync that is
+    10,000 ANALYZEs, and it also puts the ANALYZE inside the transaction that
+    holds the advisory lock, which A2 shows is the wrong place to write
+    reltuples from. Rejected: unbounded.
+
+    Inside _ingest_content's transaction at all -- same unboundedness, plus
+    the A2 rollback hazard. Rejected.
+
+    A CLI bulk path (cli/main.py) -- the CLI is a pure httpx client that never
+    touches the database (cli/main.py:28, :53). A hook there would not fire for
+    REST callers, the SDK, or MCP, i.e. it would miss three of the four
+    production surfaces. Rejected: wrong layer.
+
+    A "post-commit callback" abstraction -- there is no such mechanism, and
+    building one is a framework change to answer a one-line problem. Rejected:
+    no abstraction that was not asked for.
+
+    Rely on autovacuum alone -- it does work (evidence 180 A5: it fired unaided
+    at t+55s with stock settings and produced the good plan). But for a bulk
+    import the window is exactly when it matters: the import runs for minutes
+    with no statistics at all, and every concurrent public read in that window
+    pays the 117x plan. This hook narrows that window to zero at the end of the
+    sync; it does not replace autovacuum.
+
+
+==============================================================================
+B5 -- HOW THE PRODUCT ACTUALLY DOES BULK INGESTION
+==============================================================================
+
+  There IS a documented bulk path, and it is NOT "N documents x 1 API call".
+
+  The bulk path is IngestionService.sync_repo (ingestion.py:282-385). It
+  enumerates the tree server-side with `repo_path.rglob("*.md")` (L309) and
+  ingests every file itself (L312-355). One HTTP request drives the whole
+  directory.
+
+  It is reachable from four production surfaces:
+    - REST  POST /api/ingest/repo            (api/routers/ingest.py:30-39)
+    - REST  POST /api/corpora/{name}/sync    (api/routers/corpora.py:85-95)
+    - SDK   MindPalace.sync(path)            (mindpalace_sdk.py:398-418)
+    - MCP   tool `sync(corpus, path)`        (mcp_server.py:79-82)
+  and the CLI `ingest-repo` command is a thin client for the first of these
+  (cli/main.py:48-63).
+
+  The "one document per call" shape exists too, but only for single files:
+    - REST POST /api/ingest/file  (api/routers/ingest.py:18-27)
+    - CLI `mindpalace ingest PATH` (cli/main.py:23-45)
+
+  WORTH FLAGGING: the CLI help string for `ingest` says "Path to a Markdown
+  file or directory" (cli/main.py:25), but the body does a plain
+  `open(path, "r", encoding="utf-8")` (cli/main.py:34) and only catches
+  FileNotFoundError and httpx.HTTPError. Passing a directory raises
+  IsADirectoryError, which is not caught. So the documented single-command bulk
+  ingest is `ingest-repo`, and `ingest <directory>` does not work despite the
+  help text. Not a bug this change needs to fix, but it is the sort of thing
+  that makes people believe bulk ingest is N API calls, and it is why B4 was
+  worth checking carefully.
+
+  IS THE CLIFF REACHABLE IN PRODUCTION? YES, unconditionally.
+  Nothing in the production path runs ANALYZE. IngestionService
+  (ingestion.py:44-49) never issues one, sync_repo never issues one, and no
+  migration does. So a corpus built through sync_repo enters the world with
+  pg_class.reltuples = -1 and pg_statistic_rows = 0 -- exactly the
+  fresh-install condition measured in evidence 180 A4a and Part C -- and stays
+  there for the roughly one autovacuum naptime window (measured: 55s for a
+  1,000-document corpus; longer for a larger one, since the worker must also
+  finish its other tables). Every public memory read in that window runs the
+  1,079,038-block plan instead of the 9,190-block one.

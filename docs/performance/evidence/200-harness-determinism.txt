@@ -1,0 +1,20 @@
+=== DIRECT RUN — harness determinism probe (Phase 1 baseline) ===
+Commit: dbdc35f3854a9c88703fe3777aeb5b16a282668b
+Purpose: can the 202-question harness reproduce its own digest twice?
+
+--- capture run 1 -> /tmp/det-1.json ---
+dataset hash   : 9cdecda73cbdc8ae
+set digest     : 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+commit         : dbdc35f3854a
+--- capture run 2 -> /tmp/det-2.json ---
+dataset hash   : 9cdecda73cbdc8ae
+set digest     : 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+commit         : dbdc35f3854a
+
+--- compare run1 vs run2 (same commit, same code) ---
+baseline commit : dbdc35f3854a
+current  commit : dbdc35f3854a
+questions       : 202
+set digest      : 5a3b80490af52c85
+authoritative output: IDENTICAL to baseline
+COMPARE_EXIT=0

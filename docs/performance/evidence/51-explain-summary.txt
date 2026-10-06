@@ -1,0 +1,233 @@
+====================================================================================================
+ITEM 1.6 -- EXPLAIN of the archive-load query, _load in api/services/memory.py
+====================================================================================================
+
+Server: PostgreSQL 15.19, shared_buffers=128MB, work_mem=4MB (session default), jit=on,
+max_parallel_workers_per_gather=2, effective_cache_size=4GB. 8 cores.
+Query: the exact statement from _load, narrow form (version_text=False, chunk_text=False),
+which is what the public projection passes. Params path=NULL, as_of=NULL.
+Corpus: m0117_scale.build_documents(n) + IngestionService(Offline embedder), throwaway
+schema per size, rolled back after measurement. plan_cache_mode=force_custom_plan.
+Runs: 3 per configuration, median reported. All three runs agreed closely at every size.
+
+NOTE ON THE EVIDENCE FILES: VERBOSE emits an Output: line per returned tuple, so a
+10,000-version result embeds tens of MB of jsonb. The evidence files keep the plan
+structure and every timing/buffer/sort line verbatim, and collapse only that repeated
+tuple payload with an explicit [ELIDED n Output: tuple lines] marker. The complete
+un-elided text is at /tmp/mp-explain-work/<file>.full with the sha256 listed below.
+
+----------------------------------------------------------------------------------------------------
+1. THE PRODUCTION QUERY AT EACH SIZE (work_mem=4MB, the server default)
+----------------------------------------------------------------------------------------------------
+
+ target  versions  plan_ms   exec_ms  actual/est rows       hit   read  tempRd  tempWr sort method        sort space
+----------------------------------------------------------------------------------------------------
+   1000      1000     0.34     566.1 1000/4                1068311      0       0       0 quicksort          quicksort  Memory: 1694kB
+        per-run exec ms: [562.542, 566.064, 569.806]
+   2000      2002     0.33      64.6 2002/8                  26678      0       0       0 quicksort          quicksort  Memory: 3392kB
+        per-run exec ms: [64.686, 64.567, 63.275]
+   3000      3001     0.34     102.6 3001/15                 40062      0     616     617 external           Sort Space used=0 kB (no in-memory sort line)
+        per-run exec ms: [104.281, 102.57, 101.441]
+   5000      5002     0.48     249.2 5002/24                 66767      0    1028    1030 external           Sort Space used=0 kB (no in-memory sort line)
+        per-run exec ms: [253.298, 248.76, 249.151]
+  10000     10000     0.39     357.5 10000/40                133448      0    2056    2060 external           Sort Space used=0 kB (no in-memory sort line)
+        per-run exec ms: [359.431, 356.243, 357.524]
+
+Sort space, verbatim from the plans:
+  n= 1000  Sort Method: quicksort  Memory: 1694kB
+  n= 2000  Sort Method: quicksort  Memory: 3392kB
+  n= 3000  Sort Method: external merge  Disk: 4928kB
+  n= 5000  Sort Method: external merge  Disk: 8224kB
+  n=10000  Sort Method: external merge  Disk: 16448kB
+
+----------------------------------------------------------------------------------------------------
+2. CONTROL: SAME QUERY WITH THE THREE jsonb_agg SUBQUERIES REMOVED
+----------------------------------------------------------------------------------------------------
+
+This is the hypothesis test. Identical columns, identical join, identical WHERE,
+identical ORDER BY; the only difference is the three correlated aggregates.
+
+ target  versions  full exec  control exec  full hit  ctrl hit   agg share of exec  full tempW  ctrl tempW
+----------------------------------------------------------------------------------------------------
+   1000      1000      566.1           2.3   1068311      1311               99.6%           0           0
+   2000      2002       64.6           4.2     26678      2654               93.4%           0           0
+   3000      3001      102.6           6.6     40062      4050               93.5%         617           0
+   5000      5002      249.2          15.5     66767      6743               93.8%        1030           0
+  10000     10000      357.5          29.5    133448     13467               91.8%        2060         523
+
+----------------------------------------------------------------------------------------------------
+3. work_mem = 256MB (tests whether the external merge disk is what costs)
+----------------------------------------------------------------------------------------------------
+
+ target   4MB exec 4MB sort            4MB tempW |  256MB exec 256MB sort         256MB tempW   speedup
+----------------------------------------------------------------------------------------------------
+   1000      566.1 quicksort                   0 |       570.9 quicksort                    0     0.99x
+   5000      249.2 external                 1030 |       167.5 quicksort                    0     1.49x
+
+Buffer counts are identical between the two work_mem settings at each size, which is
+expected: work_mem changes where the sort is materialised, not what it reads.
+
+----------------------------------------------------------------------------------------------------
+4. ON-THE-WIRE WIDTH: pg_column_size, narrow vs wide projection
+----------------------------------------------------------------------------------------------------
+
+Aggregated server-side so the payload never leaves the database.
+narrow_bytes = the nine version columns the production projection reads, plus d.path.
+wide_to_jsonb_bytes = to_jsonb(v), i.e. the same version row as a jsonb object.
+
+ target      narrow     content    metadata      chunks      claims    evidence    agg total   wide total    saving
+----------------------------------------------------------------------------------------------------
+   1000      286184      457959      320893      130517      584541      529724      1244782      2634346     89.1%
+   2000      574092      918503      643759      261419     1171069     1060784      2493272      5278572     89.1%
+   3000      861138     1377544      965482      391808     1755794     1590254      3737856      7914500     89.1%
+   5000     1436092     2305161     1616095      653099     2931063     2650784      6234946     13211430     89.1%
+  10000     2872184     4622137     3241219     1305797     5866595     5299724     12472116     26441988     89.1%
+
+The three aggregates are the dominant payload at every size, and they are IDENTICAL in
+the wide and narrow projections. Dropping content+metadata is a real saving, but it is
+a saving on the smaller half of the row.
+
+NOTE: pg_column_size is the on-heap datum size, not the wire size. The wire adds a
+text-format header and escaping per field, so these are a lower bound.
+
+----------------------------------------------------------------------------------------------------
+5. THE PLAN-SHAPE CLIFF AT n=1000
+----------------------------------------------------------------------------------------------------
+
+The plan is IDENTICAL in shape at 2000, 3000, 5000 and 10000:
+  Sort -> Nested Loop -> (memory_documents scan) x (memory_versions index scan),
+  with three SubPlan aggregates, each on:
+    chunks   memory_chunks_corpus_id_version_id_order_index_key
+    claims   memory_claims_corpus_id_version_id_id_key
+    evidence idx_memory_evidence_chunk
+  and each carrying version_id in its Index Cond.
+
+At n=1000 the plan is DIFFERENT. Two of the three aggregates switch to a
+corpus-only index with no version_id:
+    claims   idx_memory_claims_validity     Index Cond: (c_1.corpus_id = v.corpus_id)
+    evidence idx_memory_evidence_claim      Index Cond: (e.corpus_id = v.corpus_id)
+
+Reproduced 3/3 times at n=1000 and 3/3 at n=2000, in fresh schemas:
+
+  n=1000 trial=1 exec= 559.162ms total_hit=  1073311
+      SubPlan 1: memory_chunks_corpus_id_version_id_order_index_key   hit=     3000
+      SubPlan 2: idx_memory_claims_validity                           hit=    56000  <-- NO version_id
+      SubPlan 3: idx_memory_evidence_claim                            hit=  1013000  <-- NO version_id
+  
+  n=1000 trial=2 exec= 561.945ms total_hit=  1069306
+      SubPlan 1: memory_chunks_corpus_id_version_id_order_index_key   hit=     3000
+      SubPlan 2: idx_memory_claims_validity                           hit=    56000  <-- NO version_id
+      SubPlan 3: idx_memory_evidence_claim                            hit=  1009000  <-- NO version_id
+  
+  n=2000 trial=1 exec=  64.077ms total_hit=    24683
+      SubPlan 1: memory_chunks_corpus_id_version_id_order_index_key   hit=     6006
+      SubPlan 2: memory_claims_corpus_id_version_id_id_key            hit=     8008
+      SubPlan 3: idx_memory_evidence_chunk                            hit=     8008
+  
+  n=2000 trial=2 exec=  63.823ms total_hit=    24680
+      SubPlan 1: memory_chunks_corpus_id_version_id_order_index_key   hit=     6006
+      SubPlan 2: memory_claims_corpus_id_version_id_id_key            hit=     8008
+      SubPlan 3: idx_memory_evidence_chunk                            hit=     8008
+  
+  
+
+Buffer arithmetic, which is the isolation and not a guess:
+  n=1000, evidence subplan: 1000 outer versions x 1008 blocks = 1,008,000 observed.
+  n=1000, claims subplan:   1000 outer versions x   56 blocks =    56,000 observed.
+  n=2000, both subplans:     2002 outer versions x    4 blocks =     8,008 observed.
+  The scan walks the whole corpus once per outer row, so cost is O(versions x corpus).
+
+Why the planner prefers it at 1000: it estimates rows=1 for both subplans and a
+lower total cost (8.18 vs 8.43 for claims), so the corpus-wide index looks cheaper.
+The estimate is wrong by the size of the corpus.
+
+Per-subplan shared hits:
+   target     chunks     claims   evidence        total
+     1000       3000      56000    1008000      1067000
+     2000       8008       8008       8008        24024
+     3000      12004      12004      12004        36012
+     5000      20008      20008      20008        60024
+    10000      40000      39995      39995       119990
+
+----------------------------------------------------------------------------------------------------
+6. INTERPRETATION RULES
+----------------------------------------------------------------------------------------------------
+
+(a) EXPLAIN ANALYZE DOES NOT INCLUDE OUTPUT SERIALISATION OR TRANSFER TO THE CLIENT.
+    It times the server producing tuples, not asyncpg receiving or decoding them.
+    Therefore the wide-vs-narrow execution-time difference in section 1 is NOT the
+    real byte-transfer saving and must not be read as one. The narrow projection
+    only drops work the server was not doing anyway (it was not selecting those
+    columns into the tuple in the first place); its real benefit is the transfer in
+    section 4, which EXPLAIN cannot see. The projection, select and pack stages that
+    DO pay the byte cost are measured by m0122_instrumented.py, not here.
+
+(b) SORT METHOD AND SPILL AT EACH SIZE -- the key evidence:
+    n=1000  quicksort,  1694 kB in memory, no temp blocks
+    n=2000  quicksort,  3392 kB in memory, no temp blocks
+    n=3000  external merge Disk,  617 temp blocks written
+    n=5000  external merge Disk, 1030 temp blocks written
+    n=10000 external merge Disk, 2060 temp blocks written
+    The in-memory sort crosses work_mem=4MB between 2000 and 3000 versions.
+    Note the control query also spills at 10000 (523 blocks) with no aggregates at
+    all, so the ORDER BY itself is past work_mem before the aggregates are considered.
+
+(c) IS THE PLAN IDENTICAL AT 1000 AND 5000? NO. The aggregate body is identical from
+    2000 upward, including the join order, the version scan and all three subplan
+    indexes. At 1000 two of the three subplans use a different, corpus-only index.
+    1000 and 2000 are NOT the same shape, and neither is 1000 and 5000.
+    Separately, the memory_documents access does change once at 3000, from an index
+    scan to a bitmap heap scan on memory_documents_corpus_id_path_key. That is a small
+    effect (644 -> 4050 buffers) and is not the cause of anything measured here.
+
+(d) THE HYPOTHESIS 'the three jsonb_agg subqueries are the critical path' is
+    SUPPORTED, with a qualification. Stripping the three aggregates and changing
+    nothing else leaves 0.4% to 7.6% of the execution time at every size. But at
+    n=1000 the aggregates are slow for a second, larger reason: the plan there is
+    the pathological one in section 5. The aggregates are the critical path, and at
+    1000 they are critical partly because the planner under-costs them.
+
+(e) THE NON-MONOTONIC BEHAVIOUR IS ESTABLISHED, NOT GUESSED. Execution falls from
+    566 ms at 1000 versions to 64.6 ms at 2000 versions -- 8.8x faster at double the
+    data. The buffer count falls from 1,068,311 to 26,678 over the same step. The two
+    are the same event and it is reproducible on a fresh schema. Whether the planner
+    will make this choice for other corpora in production is NOT established here:
+    every corpus in this run was built by the same generator, and the estimate
+    error that drives the choice has not been traced to its source.
+
+(f) work_mem=256MB changes the answer at 5000 and not at 1000. At 5000 it removes
+    the spill entirely (external merge -> quicksort, 8554 kB) and cuts execution
+    249.2 ms -> 167.5 ms, a 1.49x improvement, at identical buffer counts. At 1000
+    it changes nothing (566.1 -> 570.9 ms, both quicksort, already no spill) -- the
+    1000 cost is the index, not the sort. So spill and the index cliff are two
+    separate effects and neither explains the other.
+
+(g) NOT ESTABLISHED: the cause of the row mis-estimate that selects the corpus-only
+    index at 1000. The whole query is estimated at rows=4 against 1000 actual; the
+    memory_versions scan is estimated at rows=1 per document against ~3 actual. The
+    corpus_id predicate is a bpchar equality on a 64-character hex value, and the
+    statistics for it were not examined in this run. Naming the selectivity formula
+    that produces rows=4 would be a guess and is not offered.
+
+----------------------------------------------------------------------------------------------------
+7. FULL PLAN TEXT: sha256 of the un-elided EXPLAIN output backing each evidence file
+----------------------------------------------------------------------------------------------------
+
+  docs/performance/evidence/50-explain-control-1000.txt      1640 B  bbfb5d9d81587524b3fecf86003455ad0f5506f92354d950b87b10f43c4783c7
+  docs/performance/evidence/50-explain-1000-workmem256mb.txt      3994 B  59507d18319d90fcd6ff95d5828a5920b256af722a5aa49f349b84b8660be1cf
+  docs/performance/evidence/50-explain-1000.txt             3995 B  0c34422254f27f386fe1d6d5258c9f91ed083cacd1186d540e572df4023d1be9
+  docs/performance/evidence/50-explain-wide-1000.txt        3939 B  13093f884e2debd11b30d97dc20cb66599a64ffd1f3548a0b94822030355af15
+  docs/performance/evidence/50-explain-control-2000.txt      1640 B  56fa7f6878692eea2c1e7d42e6b922480839e3bbd689b1529e5b0dc4503a7d21
+  docs/performance/evidence/50-explain-2000.txt             3846 B  86b41db2dc4577d4c5ef5a5bb4f357ee7362f37d096b1e3fd133245aa851d7ef
+  docs/performance/evidence/50-explain-wide-2000.txt        3820 B  6c11d5c8218b798703534fce2e5920f07b1625c73ffe68c173b6259e07e60bf4
+  docs/performance/evidence/50-explain-control-3000.txt      1981 B  dc0627ab31315423794cf6470ae50495dbdd0f35b6ce0336c887a369f783cbb1
+  docs/performance/evidence/50-explain-3000.txt             4225 B  89f9771273d4ab7e1c99c77fd4ae06994f9652c2a3abed452752a8ec3063bc1f
+  docs/performance/evidence/50-explain-wide-3000.txt        4172 B  97d978384a557066a14b692bba05ed1890ca95c1ce996311bd11ef545a3ddece
+  docs/performance/evidence/50-explain-control-5000.txt      1985 B  d0ea080568964dfb6b467b36909ecaa5814172ef40033f2804fa8ea48c759684
+  docs/performance/evidence/50-explain-5000-workmem256mb.txt      4195 B  3ce42fd376f3d48e8826ceb0e4070a5e4ba30bd973c05186e613709cbed68253
+  docs/performance/evidence/50-explain-5000.txt             4228 B  4c62820c99ea2b0ee8424550352133c941220a52df92e6d25a88f4dfd00fad0d
+  docs/performance/evidence/50-explain-wide-5000.txt        4173 B  1eee3c80dce7d85a59f85e9b5edf106c1b0db81db116613c6d357a39feaf055a
+  docs/performance/evidence/50-explain-control-10000.txt      2021 B  6b7326f0158583dee4b2f8f0797a7970523ac4cead3e973f5734de496a4936e9
+  docs/performance/evidence/50-explain-10000.txt            4302 B  9b064ca0c2f4f7d499dd853d7d98f6abce245cf03e9a59c015b496450da64bf2
+  docs/performance/evidence/50-explain-wide-10000.txt       4188 B  e92d3c261507cb5a8cdfbfdad9077f64392e1a7cd879f76361cd97dd12c4e038
+

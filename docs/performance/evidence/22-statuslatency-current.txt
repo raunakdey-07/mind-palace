@@ -1,0 +1,5 @@
+commit field: f52272db635cbd17171d3d3b02eaeb855efefe69
+100 load_p50 34.39 total_p50 99.57 n 12
+1000 load_p50 1848.21 total_p50 2308.49 n 12
+5000 load_p50 284.94 total_p50 1638.24 n 12
+10000 load_p50 577.16 total_p50 4096.06 n 12

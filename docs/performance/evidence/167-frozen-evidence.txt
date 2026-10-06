@@ -1,0 +1,12 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+git --no-pager diff --stat v0.7.0..HEAD -- eval/m00675/
+git rev-parse v0.7.0 HEAD
+git cat-file -t v0.7.0
+EXIT_CODE=0
+git rev-parse v0.7.0 HEAD
+a39b0dc3a25c33d067ef2184c1194471737ed794
+f52272db635cbd17171d3d3b02eaeb855efefe69
+EXIT_CODE=0
+git cat-file -t v0.7.0
+tag
+EXIT_CODE=0

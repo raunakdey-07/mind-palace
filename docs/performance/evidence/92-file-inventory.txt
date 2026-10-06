@@ -1,0 +1,464 @@
+================================================================================
+TASK 0.2 - FILE INVENTORY
+Repo: /mnt/Warehouse/projects/Mind Palace
+Branch: milestone/v0.8.0-dev (created in TASK 0.1, was detached at f52272d)
+HEAD:  f52272db635cbd17171d3d3b02eaeb855efefe69
+Generated: read-only inventory. No source file was modified.
+================================================================================
+
+--------------------------------------------------------------------------------
+1. BUCKET DEFINITIONS (as given in the task)
+--------------------------------------------------------------------------------
+(a) pre-existing doc fixes  - CHANGELOG.md, README.md, api/main.py
+                             (OpenAPI version), tests/test_api.py, .gitignore
+(b) harness work           - scripts/benchmark/m0122_instrumented.py,
+                             baseline_packs.py, m0130_*.py, m0131_*.py,
+                             docs/performance/evidence/
+(c) held-out set           - scripts/benchmark/m0130_heldout.py,
+                             scripts/benchmark/m0130_run_heldout.py,
+                             docs/performance/m0130-heldout.json
+(d) version_text change    - api/services/memory.py,
+                             api/services/memory_public.py
+(e) STATUS / artifacts     - docs/STATUS.md, docs/performance/*.json
+(f) UNINTENDED / unknown   - anything that cannot be placed above
+
+--------------------------------------------------------------------------------
+2. TOP-LEVEL TABLE (the 23 lines of `git status --short`)
+--------------------------------------------------------------------------------
+Note: `git status --short` collapses the untracked directory
+docs/performance/evidence/ to one line. Expanded with
+`--untracked-files=all`, that directory holds 66 files. Total 89 paths.
+
+#   path                                              tracked   bucket  bytes   lines  generated?
+--  ------------------------------------------------  -------  ------  ------  -----  -----------
+ 1  .gitignore                                        tracked    (a)     2205    141  no (hand-written)
+ 2  CHANGELOG.md                                      tracked    (a)    11145    239  no (hand-written)
+ 3  README.md                                         tracked    (a)    40635    827  no (hand-written)
+ 4  api/main.py                                       tracked    (a)     3790    111  no (hand-written)
+ 5  api/services/memory.py                            tracked    (d)    30455    706  no (hand-written)
+ 6  api/services/memory_public.py                     tracked    (d)    16391    401  no (hand-written)
+ 7  docs/performance/m011-rebuildability.json         tracked    (e)     3220    123  YES (benchmark output)
+ 8  docs/performance/m0115-degradation.json           tracked    (e)    62949    877  YES (benchmark output)
+ 9  docs/performance/m0115-experiments.json           tracked    (e)    72772   2539  YES (benchmark output)
+10  scripts/benchmark/m0122_instrumented.py           tracked    (b)    15063    386  no (hand-written)
+11  tests/test_api.py                                 tracked    (a)     7377    228  no (hand-written)
+12  docs/STATUS.md                                    UNTRACKED  (e)    17211    343  no (hand-written)
+13  docs/performance/baseline-packs.json              UNTRACKED  (e)   729550    822  YES (benchmark output)
+14  docs/performance/evidence/                        UNTRACKED  (b)     DIR     66f  YES (raw command output)
+15  docs/performance/m0130-heldout.json                UNTRACKED  (c)/(e) 90145  2989  YES (benchmark output)
+16  docs/performance/m0131-projection-extra.json      UNTRACKED  (e)     1353     72  YES (benchmark output)
+17  docs/performance/m0131-projection.json             UNTRACKED  (e)    16419    100  YES (benchmark output)
+18  docs/performance/status-latency-extended.json     UNTRACKED  (e)    10926    328  YES (benchmark output)
+19  docs/performance/status-latency.json              UNTRACKED  (e)    44298   1306  YES (benchmark output)
+20  scripts/benchmark/baseline_packs.py               UNTRACKED  (b)    10565    282  no (hand-written)
+21  scripts/benchmark/m0130_heldout.py                 UNTRACKED  (c)/(b) 17381   515  no (hand-written)
+22  scripts/benchmark/m0130_run_heldout.py             UNTRACKED  (c)/(b)  6514   182  no (hand-written)
+23  scripts/benchmark/m0131_profile_projection.py     UNTRACKED  (b)     8676    220  no (hand-written)
+
+Double-bucketed rows are intentional: the task lists m0130_heldout.py,
+m0130_run_heldout.py and m0130-heldout.json in bucket (c) *and* the
+m0130_*.py / m0131_*.py globs in bucket (b). Both readings are recorded;
+nothing is left unplaced.
+
+--------------------------------------------------------------------------------
+3. PER-FILE DETAIL
+--------------------------------------------------------------------------------
+
+--- BUCKET (a) pre-existing doc fixes ---
+
+ 1. .gitignore                            tracked, MODIFIED
+    +1 line only: `!docs/STATUS.md` (line 112), inserted in the negation block
+    that re-admits documentation. Without it docs/STATUS.md is ignored and
+    cannot be committed. This is the enabler for bucket (e).
+    Verified NOT ignored: `git check-ignore -v` resolves all three of
+    docs/STATUS.md, docs/performance/m0131-projection.json and
+    docs/performance/evidence/90-git-state-before.txt to `!` (negation) rules.
+
+ 2. CHANGELOG.md                          tracked, MODIFIED
+    +32 lines. Adds: corpus scoping on live retrieval (422/404 instead of
+    silent cross-namespace search), sync per-file errors (bounded, 50),
+    lazy semantic loading, OpenAPI version from package metadata,
+    corpus-delete 409, missing-model 503, feed-cursor validation,
+    memory_rehydrate document_id preservation, lifespan handler removal,
+    and a new "Compatibility" subsection.
+    Note: this text describes product behaviour changes (corpus scoping,
+    409/503, feed cursors, rehydrate). None of those code paths appear in
+    this working tree. Only the OpenAPI-version line maps to a change that
+    is actually present here (api/main.py). Flagged in section 6.
+
+ 3. README.md                             tracked, MODIFIED
+    +40/-... lines. Replaces the old "Measured latency envelope" limitation
+    with: latency envelope WITHDRAWN (cited figures did not appear in the
+    artifact they were attributed to; host ran at 2.4x-2.8x under load);
+    reports superlinear projection exponents (1.63 project(), 1.82 conflict
+    scan, 2k-25k claims); adds a held-out accuracy limitation (131/157 vs
+    194/202 dev set) linking docs/STATUS.md.
+    The exponents match m0131-projection-extra.json (1.379 model_layer_ms
+    there; see section 6 note).
+
+ 4. api/main.py                           tracked, MODIFIED
+    +3/-1. `version="0.6.0"` -> `version=importlib.metadata.version(
+    "mindpalace-os")`, plus the `import importlib.metadata` import.
+    Exactly the OpenAPI version change named in bucket (a).
+
+11. tests/test_api.py                      tracked, MODIFIED
+    +5/-1. Adds `import importlib.metadata`, extends the existing OpenAPI
+    description docstring, and asserts
+    `info["version"] == importlib.metadata.version("mindpalace-os")`.
+    Locks api/main.py's change with a test.
+
+--- BUCKET (d) version_text change ---
+
+ 5. api/services/memory.py                tracked, MODIFIED
+    +18/-... . Adds `version_text=True` keyword to `_load()`. When False,
+    SELECT drops `v.*` in favour of an explicit 9-column projection
+    (corpus_id, memory_document_id, id, predecessor_id, version_number,
+    document_id, event, observed_at, fingerprint), dropping `content` and
+    `metadata`. Docstring extended to justify it alongside the existing
+    `chunk_text` flag. The change is a one-source fix: `_load` is the single
+    chokepoint.
+
+ 6. api/services/memory_public.py          tracked, MODIFIED
+    +9/-... . `execute_in_session` now calls
+    `memory._load(db, corpus["id"], as_of=cutoff, chunk_text=False,
+    version_text=False)`. Comment extended. This is the only caller of the
+    new flag; the raw `history` surface deliberately keeps both.
+
+--- BUCKET (b) harness work ---
+
+10. scripts/benchmark/m0122_instrumented.py   tracked, MODIFIED
+    +173 lines. Substantive rewrite of the M012.2 instrumented harness:
+    explicit stage timers, a hard assertion that the claim-vector cache
+    served rows (so a run can never silently measure the embedding path),
+    raw sample retention, and `--isolate` to measure each size in a fresh
+    process. Writes docs/performance/m0122-instrumented.json (line 287).
+
+20. scripts/benchmark/baseline_packs.py        UNTRACKED, new
+    282 lines. Phase-0 baseline capture/compare. `capture` writes
+    docs/performance/baseline-packs.json (--out is required, no default);
+    `compare` diffs against a baseline and exits non-zero on any pack
+    change. Contains an internal note that two runs of unchanged code used
+    to disagree on all 202 packs, which is why observed_at is normalised.
+
+23. scripts/benchmark/m0131_profile_projection.py  UNTRACKED, new
+    220 lines. Read-only profiler for projection cost and superlinearity.
+    Times the real `project()` at several corpus sizes and times
+    `_query_result` separately from the Pydantic construction. Default
+    --out is docs/performance/m0131-projection.json (line 159).
+    `--sizes` default "5000,10000,25000" -> that is the file currently in
+    the tree. m0131-projection-extra.json was produced with the
+    2000,10000,20000,30000,50000-style extended size set.
+
+21. scripts/benchmark/m0130_heldout.py          UNTRACKED, new  [also bucket (c)]
+    515 lines. The 157 authored held-out questions. Docstring is explicit
+    that this is a control: the 202-question set is a development set with 8
+    known failures, and this file is authored from corpus ground truth
+    without observing answers. No output file - it is data, not a runner.
+
+22. scripts/benchmark/m0130_run_heldout.py      UNTRACKED, new  [also bucket (c)]
+    182 lines. Runs the held-out set through the same public path as M011.5.
+    Imports scoring/taxonomy/strategies from m0115_experiments rather than
+    copying them, so dev-vs-heldout differences can only come from the
+    questions. Default out: docs/performance/m0130-heldout.json.
+
+14. docs/performance/evidence/                UNTRACKED dir, 66 files, all bucket (b)
+    Raw captured command output, the evidence trail for this milestone.
+    Total ~370 KB. Full per-file listing with sizes is in section 4.
+    These three were written by this task and are new since the run:
+      90-git-state-before.txt, 90b-git-state-after.txt, 91-branch-created.txt,
+      92-file-inventory.txt (this file), 93-status-citations.txt
+
+--- BUCKET (c) held-out set ---
+
+21/22. the two scripts above (see bucket b; they are simultaneously bucket c).
+
+15. docs/performance/m0130-heldout.json        UNTRACKED, new
+    90145 bytes, 2989 lines. Top-level keys: failure_taxonomy, meta,
+    results, summary, timing. GENERATED by m0130_run_heldout.py.
+    The 12-code failure taxonomy (F1 source missing ... F12 performance)
+    is the scoring vocabulary shared with m0115.
+
+--- BUCKET (e) STATUS / artifacts ---
+
+12. docs/STATUS.md                         UNTRACKED, new
+    17211 bytes, 343 lines. Hand-written, NOT generated. Declares itself
+    "the authoritative summary", anchored at release commit f52272d, with
+    [v0.8.0] markers on corrections. Requires the .gitignore negation
+    (item 1) to be committable.
+
+ 7. docs/performance/m011-rebuildability.json  tracked, MODIFIED
+    +10/-10 lines, 3220 bytes. GENERATED by scripts/benchmark/m011_rebuildability.py.
+    Three semantic changes only, verified by full-diff read:
+      - meta.commit   76065f9... -> f52272db635cbd17171d3d3b02eaeb855efefe69
+      - corpus_id     66ac857d... -> de8d96c8...   (regenerated corpus)
+      - digests.l2_destroyed / l2_rebuilt / with_l2
+                       d193b34a... -> 92e51b52...   (all three identical,
+                                                    L2 invariance still holds)
+    Structure, counts (archived_paths 7, cached_claims 10, rebuilt_chunks 7,
+    rebuilt_documents 7) and the question set are UNCHANGED.
+
+ 8. docs/performance/m0115-degradation.json    tracked, MODIFIED
+    +820/-820 lines, 62949 bytes. GENERATED by scripts/benchmark/m0115_run_degradation.py.
+    IMPORTANT: all 820 changed lines are 64-hex SHA-256 digest strings.
+    Verified mechanically - `git diff -U0 | grep '^[-+]' | grep -v 64-hex`
+    returns ZERO lines. No count, no phase, no poisoning field changed.
+    Correctness is identical before and after:
+      full     answered 202 correct 177 abstained 24
+      nol2     answered 202 correct 177 abstained 24
+      nlexical answered 202 correct 163 abstained 27
+      nomodel  answered 202 correct 163 abstained 27
+      l2_invariance: digests_full 202, digests_without_l2 202, identical true
+    So this is pure digest churn (same 177 answers, different digest
+    ordering/content per pack), not a correctness regression.
+
+ 9. docs/performance/m0115-experiments.json    tracked, MODIFIED
+    +14/-14 lines, 72772 bytes. GENERATED by scripts/benchmark/m0115_experiments.py.
+    Only three hunks:
+      - meta.commit 76065f9... -> f52272d...
+      - timing.lexical_ms  mean 62.65 -> 25.96, p50 61.17 -> 26.08,
+                                    p95 84.53 -> 35.52
+      - timing.semantic_ms mean 1301.21 -> 571.63, p50 1288.29 -> 572.26,
+                                    p95 1422.09 -> 612.36
+    The result set (202 rows) and the summary are UNCHANGED - these are
+    host-timing deltas on an idle-vs-loaded host, roughly 2.2x-2.4x.
+
+13. docs/performance/baseline-packs.json     UNTRACKED, new
+    729550 bytes, 822 lines, the single largest artifact. GENERATED by
+    scripts/benchmark/baseline_packs.py capture.
+    Top-level: captured_at (2026-10-02T05:28:35Z), commit f52272d,
+    corpus mp-baseline, dataset_hash 9cdecda7..., normalized_fields
+    ["observed_at"], packs (per-question canonical_json + sha256),
+    questions, set_digest, valid_at.
+    NOTE: captured_at 2026-10-02 is YESTERDAY relative to today
+    (2026-10-03). Commit recorded matches current HEAD f52272d.
+
+16. docs/performance/m0131-projection-extra.json   UNTRACKED, new
+    1353 bytes, 72 lines. GENERATED by m0131_profile_projection.py with an
+    extended --sizes set. Keys: environment, fits, points.
+    fits.model_layer_ms.exponent = 1.379 (points start [2002, 107.5]).
+    environment.cores 8, loadavg_1m 1.73, repeats 3.
+
+17. docs/performance/m0131-projection.json      UNTRACKED, new
+    16419 bytes, 100 lines. GENERATED by m0131_profile_projection.py at its
+    default --sizes 5000,10000,25000. Keys: environment, fits, points.
+    fits.model_layer_ms.exponent = 0.925 (points start [5002, 832.0]) -
+    SUBLINEAR, i.e. a different fit from the -extra file on a different size
+    set. environment.cores 8, loadavg_1m 1.7, repeats 3.
+    See section 6: README quotes 1.63/1.82, neither file carries those.
+
+18. docs/performance/status-latency.json      UNTRACKED, new
+    44298 bytes, 1306 lines. GENERATED. Keys: environment, points.
+    environment.commit f52272d; environment.isolation = "one process per
+    size (regenerated after the combined-process run was found
+    contaminated)"; environment.cache asserts the claim-vector cache was
+    fully populated with zero misses allowed.
+
+19. docs/performance/status-latency-extended.json   UNTRACKED, new
+    10926 bytes, 328 lines. GENERATED. Keys: environment, points, unmeasured.
+    The `unmeasured` key is notable: it records sizes that were NOT measured.
+
+--------------------------------------------------------------------------------
+4. EVIDENCE DIRECTORY - FULL LISTING (66 files, all bucket (b), all generated)
+--------------------------------------------------------------------------------
+  path                                                     bytes  lines
+  docs/performance/evidence/00-probe.txt                      19      1
+  docs/performance/evidence/01-working-tree.txt              1762     42
+  docs/performance/evidence/02-production-diff.txt            3889     85
+  docs/performance/evidence/03-scratch-scan.txt                429     11
+  docs/performance/evidence/04-mutation-M1.txt                  192      7
+  docs/performance/evidence/04-mutation-M2.txt                  192      7
+  docs/performance/evidence/04-mutation-M3.txt                  192      7
+  docs/performance/evidence/04-mutation-M4.txt                  192      7
+  docs/performance/evidence/04-mutation-control.txt             175      6
+  docs/performance/evidence/04a-mutator-run.txt                 488     10
+  docs/performance/evidence/05-l0l1-diff-stat.txt               679     22
+  docs/performance/evidence/06-observed_at-probe.txt            891     18
+  docs/performance/evidence/07-evidence-index.txt              1443     28
+  docs/performance/evidence/10-postgres-up.txt                  124      4
+  docs/performance/evidence/11-rebuildability.txt               998     14
+  docs/performance/evidence/12-degradation.txt                 711     24
+  docs/performance/evidence/12b-poison-archive-check.txt        160      4
+  docs/performance/evidence/13-corpus-isolation.txt             119      3
+  docs/performance/evidence/14-clean-venv-reader.txt           4539    103
+  docs/performance/evidence/14b-baseline-observedat-types.txt  4549     23
+  docs/performance/evidence/14c-real-pack-generated.txt         494      7
+  docs/performance/evidence/15-full-suite.txt                  2013     20
+  docs/performance/evidence/20-statuslatency-provenance.txt      208      6
+  docs/performance/evidence/21-statuslatency-at-f52272d.txt      318      7
+  docs/performance/evidence/22-statuslatency-current.txt         229      5
+  docs/performance/evidence/23-statuslatency-diffs.txt           764     17
+  docs/performance/evidence/24-m0122-inventory.txt            23524    155
+  docs/performance/evidence/25-status-latency-table.txt         2730     49
+  docs/performance/evidence/26-file-age-and-status-history.txt    633     14
+  docs/performance/evidence/27-statuslatency-full-stage-table.txt 1033     19
+  docs/performance/evidence/28-search-for-isolated-run-numbers.txt 2337   40
+  docs/performance/evidence/29-m0122-commit-relation.txt          327      9
+  docs/performance/evidence/30-latency-100.txt                   541      9
+  docs/performance/evidence/31-latency-1000.txt                  540      9
+  docs/performance/evidence/32-latency-5000.txt                  544      9
+  docs/performance/evidence/33-latency-10000.txt                 546      9
+  docs/performance/evidence/34-latency-merge.txt                 173      3
+  docs/performance/evidence/35-latency-final-table.txt          1459     21
+  docs/performance/evidence/40-projection-profile.txt          15183    196
+  docs/performance/evidence/41-projection-extra-sizes.txt        470     11
+  docs/performance/evidence/42-projection-combined-fit.txt      1147     21
+  docs/performance/evidence/43-projection-fit-load-corrected.txt 1086    22
+  docs/performance/evidence/44-projection-superlinear-term.txt   4964     77
+  docs/performance/evidence/50-explain-1000-workmem256mb.txt     4525     54
+  docs/performance/evidence/50-explain-1000.txt                  4526     54
+  docs/performance/evidence/50-explain-10000.txt                 4839     54
+  docs/performance/evidence/50-explain-2000.txt                  4374     50
+  docs/performance/evidence/50-explain-3000.txt                  4756     54
+  docs/performance/evidence/50-explain-5000-workmem256mb.txt     4727     54
+  docs/performance/evidence/50-explain-5000.txt                  4759     54
+  docs/performance/evidence/50-explain-control-1000.txt          2209     24
+  docs/performance/evidence/50-explain-control-10000.txt         2601     28
+  docs/performance/evidence/50-explain-control-2000.txt          2211     24
+  docs/performance/evidence/50-explain-control-3000.txt          2553     28
+  docs/performance/evidence/50-explain-control-5000.txt          2559     28
+  docs/performance/evidence/50-explain-wide-1000.txt             4421     54
+  docs/performance/evidence/50-explain-wide-10000.txt            4676     54
+  docs/performance/evidence/50-explain-wide-2000.txt             4297     50
+  docs/performance/evidence/50-explain-wide-3000.txt             4655     54
+  docs/performance/evidence/50-explain-wide-5000.txt             4656     54
+  docs/performance/evidence/51-explain-summary.txt              16650    233
+  docs/performance/evidence/52-loadgate.txt                     5952    112
+  docs/performance/evidence/70-gate-regression.txt              12235    256
+  docs/performance/evidence/80-final-verification.txt           12833    284
+  docs/performance/evidence/90-git-state-before.txt             1797     51
+  docs/performance/evidence/90b-git-state-after.txt             1814     51
+  docs/performance/evidence/91-branch-created.txt                48      1
+  docs/performance/evidence/92-file-inventory.txt                -       -  (this file)
+  docs/performance/evidence/93-status-citations.txt              -       -  (this file)
+
+  Grouping inside the directory, for whoever writes the commit message:
+    00-07    probe, working tree, production diff, mutation tests, evidence index
+    10-15    infrastructure and correctness runs (postgres, rebuildability,
+             degradation, poison archive, corpus isolation, clean venv, suite)
+    20-29    status-latency provenance and m0122 inventory
+    30-35    per-size latency runs (100/1000/5000/10000) and the merged table
+    40-44    projection profiling and superlinearity fits
+    50-52    EXPLAIN ANALYZE runs (plain / control / wide x 1000..10000,
+             work_mem 256MB variants) and the load gate
+    70,80    gate regression, final verification
+    90-93    this git-preparation task
+
+--------------------------------------------------------------------------------
+5. STATUS.md CITATIONS - which artifacts must not remain untracked
+--------------------------------------------------------------------------------
+`grep -n 'docs/performance/' docs/STATUS.md` returned 9 hits (saved verbatim to
+93-status-citations.txt). Six of them are a citation table at lines 308-315:
+
+  line 157  docs/performance/status-latency.json   (prose, withdrawal context)
+  line 308  Latency envelope          -> docs/performance/status-latency.json
+  line 309  Latency above 10k         -> docs/performance/status-latency-extended.json
+  line 310  Correctness, 202 q        -> docs/performance/m0115-experiments.json
+  line 311  Held-out correctness,157q -> docs/performance/m0130-heldout.json
+  line 312  Authoritative pack baseline -> docs/performance/baseline-packs.json
+  line 313  Degradation and poisoning -> docs/performance/m0115-degradation.json
+  line 314  Rebuildability            -> docs/performance/m011-rebuildability.json
+  line 315  Load serialisation split  -> docs/performance/m0124-load-split.json
+  line 331  (command line reproducing status-latency.json, not a citation)
+
+CITED BY STATUS.md AND CURRENTLY UNTRACKED - MUST NOT REMAIN UNTRACKED:
+  - docs/performance/status-latency.json
+  - docs/performance/status-latency-extended.json
+  - docs/performance/m0130-heldout.json
+  - docs/performance/baseline-packs.json
+  ../../ these four are load-bearing. If STATUS.md is committed and they are
+  not, STATUS.md links to files that do not exist in the repository and every
+  number in its citation table becomes unverifiable from a clean checkout.
+
+CITED AND ALREADY TRACKED (fine as-is, 2 of 3 are modified):
+  - docs/performance/m0115-experiments.json    tracked, modified
+  - docs/performance/m0115-degradation.json    tracked, modified
+  - docs/performance/m011-rebuildability.json  tracked, modified
+  - docs/performance/m0124-load-split.json     tracked, CLEAN (not in status)
+
+NOT CITED ANYWHERE IN STATUS.md:
+  - docs/performance/m0131-projection.json
+  - docs/performance/m0131-projection-extra.json
+  `grep -n 'm0131' docs/STATUS.md` returns nothing. These two are the M013.1
+  projection-supersession artifacts. They are referenced only by
+  scripts/benchmark/m0131_profile_projection.py and by the README limitation
+  text (which quotes exponents - see section 6).
+
+Also untracked and uncited: docs/STATUS.md itself (it is the citing document,
+so it cannot cite itself) and docs/performance/evidence/.
+
+--------------------------------------------------------------------------------
+6. FLAGGED FOR YOUR DECISION (bucket (f) - could not be confidently placed)
+--------------------------------------------------------------------------------
+Nothing is unplaceable. Three things I could not verify as consistent, which
+you should resolve before writing commit instructions:
+
+F1. CHANGELOG.md describes product behaviour that is not in this working tree.
+    It adds entries for corpus scoping (422/404), corpus-delete 409,
+    missing-model 503, feed-cursor validation, memory_rehydrate document_id
+    preservation, sync per-file errors, and removal of the no-op ASGI
+    lifespan handler. NONE of those code paths appear in `git status`. The
+    only source change in this tree that the CHANGELOG documents is the
+    OpenAPI-version line. Either those changes are already committed
+    somewhere below f52272d (then the CHANGELOG is a lagging release-note
+    update and belongs in its own doc commit), or they are missing entirely.
+    Do not bundle CHANGELOG.md into a commit that claims to describe the
+    version_text change.
+
+F2. The README's superlinearity exponents do not match either artifact.
+    README states "fitted exponent is 1.63 for project() and 1.82 for the
+    conflict scan" over 2k-25k claims.
+      - m0131-projection-extra.json      fits.model_layer_ms.exponent = 1.379
+        (sizes 2002..; over the 2k-50k range)
+      - m0131-projection.json           fits.model_layer_ms.exponent = 0.925
+        (sizes 5002..; the 5k/10k/25k default set)
+    Neither file contains 1.63 or 1.82, and neither is cited by STATUS.md.
+    Two candidate readings: the exponents live under a different fit key in
+    those files (I only printed model_layer_ms), or the README quotes a
+    combined fit from evidence/42-projection-combined-fit.txt /
+    43-projection-fit-load-corrected.txt that was never promoted into a
+    committed artifact. Given the README is simultaneously WITHDRAWING
+    published numbers for exactly this class of reason ("the figures they
+    cited did not appear in the artifact they were attributed to"),
+    shipping 1.63/1.82 in the same document is worth checking first.
+
+F3. m0131-projection.json and m0131-projection-extra.json disagree with each
+    other by construction. Same script, same commit f52272d, same host
+    (cores 8, repeats 3), different --sizes sets, and the fitted exponent
+    flips from 0.925 (sublinear, 5k-25k) to 1.379 (superlinear, 2k-50k).
+    Both are untracked and both would land together. The 0.925 file is the
+    one the script's own default --sizes produces, so if only one is kept,
+    the -extra file is the one carrying the superlinearity claim that the
+    README and STATUS.md narrative depend on.
+
+F5. CONCURRENT WRITE. A path appeared in `git status --short` after this
+    inventory was first written and that was NOT created by TASK 0.1/0.2:
+      + ?? scripts/benchmark/host_calibration.py   10223 bytes
+    Born 2026-10-03 05:02:42 UTC, ~28s before detection, i.e. mid-session. It is
+    a hand-written host-load probe (pure-Python vs `SELECT 1` contention,
+    CALIBRATED_MAX=1.25, exit codes 0/1/2, --self-check, writes no artifact).
+    Nothing in the tree references it. Another agent/session/process is writing
+    to this tree. It is NOT staged, committed, deleted or touched. Full detail
+    in 94-concurrent-write-notice.txt.
+
+F4 (informational). docs/performance/baseline-packs.json carries
+    captured_at 2026-10-02T05:28:35Z, i.e. yesterday, with commit f52272d.
+    HEAD is unchanged at f52272d and the branch was only just created, so the
+    baseline is valid for this commit. It is, however, the capture that every
+    later `baseline_packs.py compare` will be diffed against, so it should be
+    committed as-is and not regenerated casually - regenerating changes every
+    pack digest and defeats the byte-identical gate the file exists to provide.
+
+--------------------------------------------------------------------------------
+7. TOTALS
+--------------------------------------------------------------------------------
+  23 paths in `git status --short`
+  89 paths with `--untracked-files=all` (evidence dir holds 66 of them)
+   11 tracked+modified   12 untracked (6 source/doc/scripts, 6 artifacts, 1 dir)
+  Largest file  docs/performance/baseline-packs.json   729550 bytes
+  Smallest file docs/performance/evidence/00-probe.txt       19 bytes
+  Generated artifacts: 9 (7 JSON in status + evidence dir)
+  Hand-written new:   4 (STATUS.md + 3 benchmark scripts) + 5 hand-written edits
+
+================================================================================
+END OF INVENTORY
+================================================================================

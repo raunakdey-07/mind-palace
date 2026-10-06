@@ -1,0 +1,126 @@
+[N=1500] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=1500]   ingested 200/1501 docs (4s)
+[N=1500]   ingested 400/1501 docs (8s)
+[N=1500]   ingested 600/1501 docs (12s)
+[N=1500]   ingested 800/1501 docs (16s)
+[N=1500]   ingested 1000/1501 docs (21s)
+[N=1500]   ingested 1200/1501 docs (27s)
+[N=1500]   ingested 1400/1501 docs (34s)
+[N=1500] migrate 0.2s  ingest 37.2s  rows={'claims': 1501, 'evidence': 1501, 'chunks': 1501, 'versions': 1501, 'documents': 503}
+[N=1500] pg_stat_user_tables BEFORE any EXPLAIN:
+      memory_chunks | -1.0 | 0 | 0 | NULL | NULL
+      memory_claims | -1.0 | 0 | 0 | NULL | NULL
+      memory_evidence | -1.0 | 0 | 0 | NULL | NULL
+      memory_versions | -1.0 | 0 | 0 | NULL | NULL
+[N=1500]   V0  plan=[0.401, 0.29, 0.319] exec=[62.7, 54.0, 52.5] hit=[16996, 16996, 16996] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=SELF
+[N=1500]   V1  plan=[0.29, 0.29, 0.323] exec=[51.8, 52.1, 52.7] hit=[16996, 16996, 16996] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=True
+[N=1500]   V2  plan=[0.569, 0.484, 0.879] exec=[1685.7, 1632.7, 1669.6] hit=[2304, 2304, 2304] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=1501 same=True
+[N=1500]   V3  plan=[0.35, 0.323, 0.271] exec=[55.4, 53.5, 54.9] hit=[16996, 16996, 16996] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=True
+[N=1500]   V4  plan=[0.509, 0.646, 0.636] exec=[45.0, 60.5, 52.9] hit=[2304, 2304, 2304] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=1501 same=True
+[N=1500]   V5  plan=[0.264, 0.383, 0.279] exec=[52.7, 52.5, 63.2] hit=[16996, 16996, 16996] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=True
+[N=1500]  V6a  plan=[0.396, 0.312, 0.306] exec=[55.1, 54.7, 58.0] hit=[16539, 16539, 16539] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=True
+[N=1500]  V6b  plan=[0.298, 0.356, 0.371] exec=[52.2, 73.5, 59.2] hit=[16996, 16996, 16996] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=True
+[N=1500]  V6c  plan=[0.264, 0.321, 0.255] exec=[52.0, 58.9, 51.9] hit=[16996, 16996, 16996] claims_idx=memory_claims_corpus_id_version_id_key_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=1501 same=True
+[N=1500] done in 46.4s (schema rolled back)
+[N=2000] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=2000]   ingested 200/2002 docs (4s)
+[N=2000]   ingested 400/2002 docs (9s)
+[N=2000]   ingested 600/2002 docs (14s)
+[N=2000]   ingested 800/2002 docs (20s)
+[N=2000]   ingested 1000/2002 docs (26s)
+[N=2000]   ingested 1200/2002 docs (32s)
+[N=2000]   ingested 1400/2002 docs (39s)
+[N=2000]   ingested 1600/2002 docs (46s)
+[N=2000]   ingested 1800/2002 docs (53s)
+[N=2000]   ingested 2000/2002 docs (60s)
+[N=2000] migrate 0.2s  ingest 60.2s  rows={'claims': 2002, 'evidence': 2002, 'chunks': 2002, 'versions': 2002, 'documents': 670}
+[N=2000] pg_stat_user_tables BEFORE any EXPLAIN:
+      memory_chunks | -1.0 | 0 | 0 | NULL | NULL
+      memory_claims | -1.0 | 0 | 0 | NULL | NULL
+      memory_evidence | -1.0 | 0 | 0 | NULL | NULL
+      memory_versions | -1.0 | 0 | 0 | NULL | NULL
+[N=2000]   V0  plan=[0.318, 0.264, 0.276] exec=[76.6, 78.1, 73.0] hit=[24680, 24680, 24680] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=SELF
+[N=2000]   V1  plan=[0.357, 0.362, 0.287] exec=[72.1, 70.2, 72.4] hit=[24680, 24680, 24680] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=True
+[N=2000]   V2  plan=[0.497, 0.614, 0.566] exec=[75.8, 70.7, 71.7] hit=[3085, 3085, 3085] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=2002 same=True
+[N=2000]   V3  plan=[0.607, 0.268, 0.263] exec=[72.5, 70.1, 72.8] hit=[24680, 24680, 24680] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=True
+[N=2000]   V4  plan=[0.557, 0.513, 0.511] exec=[58.0, 60.7, 63.2] hit=[3085, 3085, 3085] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=2002 same=True
+[N=2000]   V5  plan=[0.283, 0.318, 0.265] exec=[73.2, 71.5, 72.9] hit=[24680, 24680, 24680] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=True
+[N=2000]  V6a  plan=[0.28, 0.284, 0.328] exec=[75.3, 75.3, 78.4] hit=[24058, 24058, 24058] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=True
+[N=2000]  V6b  plan=[0.27, 0.314, 0.479] exec=[70.9, 71.7, 71.6] hit=[24680, 24680, 24680] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=True
+[N=2000]  V6c  plan=[0.373, 0.258, 0.276] exec=[72.0, 71.0, 72.2] hit=[24680, 24680, 24680] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=2002 same=True
+[N=2000] done in 64.1s (schema rolled back)
+[N=3000] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=3000]   ingested 200/3001 docs (4s)
+[N=3000]   ingested 400/3001 docs (9s)
+[N=3000]   ingested 600/3001 docs (15s)
+[N=3000]   ingested 800/3001 docs (20s)
+[N=3000]   ingested 1000/3001 docs (26s)
+[N=3000]   ingested 1200/3001 docs (32s)
+[N=3000]   ingested 1400/3001 docs (38s)
+[N=3000]   ingested 1600/3001 docs (45s)
+[N=3000]   ingested 1800/3001 docs (53s)
+[N=3000]   ingested 2000/3001 docs (61s)
+[N=3000]   ingested 2200/3001 docs (69s)
+[N=3000]   ingested 2400/3001 docs (77s)
+[N=3000]   ingested 2600/3001 docs (86s)
+[N=3000]   ingested 2800/3001 docs (95s)
+[N=3000]   ingested 3000/3001 docs (104s)
+[N=3000] migrate 0.2s  ingest 103.7s  rows={'claims': 3001, 'evidence': 3001, 'chunks': 3001, 'versions': 3001, 'documents': 1003}
+[N=3000] pg_stat_user_tables BEFORE any EXPLAIN:
+      memory_chunks | -1.0 | 0 | 0 | NULL | NULL
+      memory_claims | -1.0 | 0 | 0 | NULL | NULL
+      memory_evidence | -1.0 | 0 | 0 | NULL | NULL
+      memory_versions | -1.0 | 0 | 0 | NULL | NULL
+[N=3000]   V0  plan=[0.53, 0.283, 0.276] exec=[128.1, 121.8, 133.4] hit=[40062, 40062, 40062] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=SELF
+[N=3000]   V1  plan=[0.436, 0.299, 0.304] exec=[132.0, 123.4, 120.6] hit=[40062, 40062, 40062] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=True
+[N=3000]   V2  plan=[0.578, 0.522, 0.487] exec=[121.2, 124.5, 118.0] hit=[4699, 4699, 4699] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=3001 same=True
+[N=3000]   V3  plan=[0.28, 0.598, 0.32] exec=[126.9, 120.2, 126.3] hit=[40062, 40062, 40062] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=True
+[N=3000]   V4  plan=[0.583, 0.808, 0.608] exec=[104.2, 139.1, 112.8] hit=[4699, 4699, 4699] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=3001 same=True
+[N=3000]   V5  plan=[0.353, 0.377, 0.348] exec=[130.4, 125.0, 125.1] hit=[40062, 40062, 40062] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=True
+[N=3000]  V6a  plan=[0.287, 0.285, 0.434] exec=[139.1, 143.5, 131.8] hit=[40062, 40062, 40062] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=True
+[N=3000]  V6b  plan=[0.285, 0.317, 0.32] exec=[131.1, 128.9, 122.0] hit=[41006, 41006, 41006] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=True
+[N=3000]  V6c  plan=[0.307, 0.3, 0.352] exec=[125.6, 124.7, 133.9] hit=[41006, 41006, 41006] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=3001 same=True
+[N=3000] done in 110.2s (schema rolled back)
+[N=5000] V0 == production _load: True (prod 1171 chars, harness 1171 chars)
+[N=5000]   ingested 200/5002 docs (5s)
+[N=5000]   ingested 400/5002 docs (10s)
+[N=5000]   ingested 600/5002 docs (15s)
+[N=5000]   ingested 800/5002 docs (21s)
+[N=5000]   ingested 1000/5002 docs (27s)
+[N=5000]   ingested 1200/5002 docs (33s)
+[N=5000]   ingested 1400/5002 docs (39s)
+[N=5000]   ingested 1600/5002 docs (45s)
+[N=5000]   ingested 1800/5002 docs (52s)
+[N=5000]   ingested 2000/5002 docs (58s)
+[N=5000]   ingested 2200/5002 docs (65s)
+[N=5000]   ingested 2400/5002 docs (72s)
+[N=5000]   ingested 2600/5002 docs (79s)
+[N=5000]   ingested 2800/5002 docs (86s)
+[N=5000]   ingested 3000/5002 docs (94s)
+[N=5000]   ingested 3200/5002 docs (102s)
+[N=5000]   ingested 3400/5002 docs (111s)
+[N=5000]   ingested 3600/5002 docs (120s)
+[N=5000]   ingested 3800/5002 docs (130s)
+[N=5000]   ingested 4000/5002 docs (140s)
+[N=5000]   ingested 4200/5002 docs (150s)
+[N=5000]   ingested 4400/5002 docs (160s)
+[N=5000]   ingested 4600/5002 docs (170s)
+[N=5000]   ingested 4800/5002 docs (181s)
+[N=5000]   ingested 5000/5002 docs (192s)
+[N=5000] migrate 0.2s  ingest 191.8s  rows={'claims': 5002, 'evidence': 5002, 'chunks': 5002, 'versions': 5002, 'documents': 1670}
+[N=5000] pg_stat_user_tables BEFORE any EXPLAIN:
+      memory_chunks | -1.0 | 0 | 0 | NULL | NULL
+      memory_claims | -1.0 | 0 | 0 | NULL | NULL
+      memory_evidence | -1.0 | 0 | 0 | NULL | NULL
+      memory_versions | -1.0 | 0 | 0 | NULL | NULL
+[N=5000]   V0  plan=[0.303, 0.28, 0.315] exec=[202.0, 195.0, 195.5] hit=[66767, 66767, 66767] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=SELF
+[N=5000]   V1  plan=[0.324, 0.374, 0.313] exec=[206.8, 201.6, 193.1] hit=[66767, 66767, 66767] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=True
+[N=5000]   V2  plan=[0.952, 0.504, 0.492] exec=[210.7, 195.6, 208.5] hit=[7805, 7805, 7805] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=5002 same=True
+[N=5000]   V3  plan=[0.261, 0.279, 0.283] exec=[200.1, 195.4, 204.2] hit=[66767, 66767, 66767] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=True
+[N=5000]   V4  plan=[0.539, 0.643, 0.941] exec=[177.2, 175.7, 180.5] hit=[7805, 7805, 7805] claims_idx=idx_memory_claims_validity rf=None | ev_idx=idx_memory_evidence_claim rf=None | rows=5002 same=True
+[N=5000]   V5  plan=[0.279, 0.261, 0.34] exec=[201.4, 192.7, 195.1] hit=[66767, 66767, 66767] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=True
+[N=5000]  V6a  plan=[0.322, 0.298, 0.28] exec=[221.5, 213.2, 218.5] hit=[66767, 66767, 66767] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=True
+[N=5000]  V6b  plan=[0.318, 0.52, 0.268] exec=[203.6, 195.0, 207.8] hit=[68367, 68367, 68367] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=True
+[N=5000]  V6c  plan=[0.27, 0.322, 0.266] exec=[206.1, 211.6, 213.6] hit=[68367, 68367, 68367] claims_idx=memory_claims_corpus_id_version_id_id_key rf=None | ev_idx=idx_memory_evidence_chunk rf=None | rows=5002 same=True
+[N=5000] done in 201.8s (schema rolled back)
+written: /tmp/sweep-b.json

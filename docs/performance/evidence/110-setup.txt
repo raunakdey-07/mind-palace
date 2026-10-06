@@ -1,0 +1,30 @@
+==============================================================================
+STEP 0 -- HOST STATE
+==============================================================================
+Sat Oct  3 07:42:07 AM UTC 2026
+--- uname
+Linux hp-245-g8 7.2.8-200.fc44.x86_64 #1 SMP PREEMPT_DYNAMIC Fri Sep 25 21:05:44 UTC 2026 x86_64 GNU/Linux
+--- loadavg
+2.67 2.16 2.12 2/2394 189766
+--- nproc
+8
+--- meminfo
+MemTotal:       16114300 kB
+MemAvailable:    3865856 kB
+--- ensure_postgres.sh
+postgres: already up
+extensions: ready
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+migrations: at head
+--- loadavg after
+2.67 2.16 2.12 3/2391 189831
+--- postgres version / settings
+PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+  shared_buffers               128MB
+  work_mem                     4MB
+  effective_cache_size         4GB
+  random_page_cost             4
+  plan_cache_mode              auto
+  default_statistics_target    100
+  jit                          on
+  public tables                   14

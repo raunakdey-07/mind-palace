@@ -1,0 +1,69 @@
+=== SUB-AGENT-RUN (non-timing; script execution and inspection) ===
+
+COMMAND: venvmp/bin/python (inline inspector: dumps aggregate keys, then the exact cited key)
+
+========================================================================
+docs/performance/m0115-experiments.json
+  top-level keys: ['meta', 'results', 'summary', 'timing']
+  --- strategy / total / digest scalars actually found ---
+    meta.dataset_hash = '9cdecda73cbdc8ae055926320b85402d47dd7eed0cb28c96b9b191e5bed154a7'
+    summary.routing.cheap_sufficient = 148
+    summary.routing.dangerously_cheap = 26
+    summary.routing.unnecessarily_expensive = 16
+    summary.strategies.A_semantic = 178
+    summary.strategies.B_lexical = 164
+    summary.strategies.C_fallback = 194
+    summary.total = 202
+  --- resolve each cited key via the checker's own dig() ---
+    summary.strategies.C_fallback -> 194
+    summary.total -> 202
+========================================================================
+docs/performance/m0130-heldout.json
+  top-level keys: ['failure_taxonomy', 'meta', 'results', 'summary', 'timing']
+  --- strategy / total / digest scalars actually found ---
+    meta.dataset_hash = '13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0'
+    summary.routing.cheap_sufficient = 107
+    summary.routing.dangerously_cheap = 9
+    summary.routing.unnecessarily_expensive = 8
+    summary.strategies.A_semantic = 124
+    summary.strategies.B_lexical = 115
+    summary.strategies.C_fallback = 131
+    summary.total = 157
+  --- resolve each cited key via the checker's own dig() ---
+    summary.strategies.C_fallback -> 131
+    summary.total -> 157
+    meta.dataset_hash -> '13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0'
+========================================================================
+docs/performance/baseline-packs.json
+  top-level keys: ['captured_at', 'commit', 'corpus', 'dataset_hash', 'normalized_fields', 'packs', 'questions', 'set_digest', 'valid_at']
+  --- strategy / total / digest scalars actually found ---
+    set_digest = '5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4'
+  --- resolve each cited key via the checker's own dig() ---
+    set_digest -> '5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4'
+
+
+WHY EACH KEY WAS CHOSEN
+----------------------
+1. "Dev benchmark 194/202, lexical-then-semantic"
+   summary.strategies.C_fallback = 194, summary.total = 202.
+   The docs dev table is "semantic always | 178/202", "lexical always | 164/202",
+   "lexical, then semantic | 194/202". The JSON encodes the same three strategies as
+   A_semantic=178, B_lexical=164, C_fallback=194, so C_fallback IS "lexical, then
+   semantic". Cited key holds the numerator; the denominator is summary.total = 202.
+
+2. "Held-out v1 131/157"
+   summary.strategies.C_fallback = 131, summary.total = 157. Same mapping, held-out file.
+
+3. "Held-out v1 dataset hash 13030d89..."
+   The hash IS present in the artifact: meta.dataset_hash =
+   "13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0", which matches the
+   13030d89 prefix quoted in STATUS.md. No key had to be invented.
+
+4. "Authoritative pack set digest 5a3b8049..."
+   set_digest = "5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4".
+   Note baseline-packs.json holds a packs DICT of 202 entries, each with its own per-pack
+   digest; set_digest is the top-level digest over the whole pack set, which is what the
+   claim is about. The 20 digest lines that grep surfaced are a nested sample, not the set.
+   Cross-check on attribution: the invariants rows "12/12 packs identical" correspond to
+   m011-rebuildability.json (12 questions), NOT baseline-packs.json (202 packs). The
+   digest cited here is the 202-pack set, so the two claims are not conflated.

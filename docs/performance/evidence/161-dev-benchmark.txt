@@ -1,0 +1,36 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+PYTHONPATH=scripts/benchmark DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1 venvmp/bin/python scripts/benchmark/m0115_experiments.py
+M011.5 experiments: lexical vs semantic vs fallback
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8785.58it/s]
+
+dataset 9cdecda73cbdc8ae  questions 202
+A semantic always : 178/202
+B lexical always  : 164/202
+C lexical->sem    : 194/202
+
+by category (n / A / B / C):
+  abstention      25   23   22   23
+  adversarial     19   18   14   18
+  conflict         2    2    1    2
+  current         30   30   18   30
+  historical      30   30   30   30
+  multi-topic     23   17   10   22
+  provenance      26   22   26   26
+  relationship    34   28   31   31
+  temporal        13    8   12   12
+
+routing: {"cheap_sufficient": 148, "unnecessarily_expensive": 16, "dangerously_cheap": 26}
+failures: {"F7": 3, "F2": 2, "F9": 3}
+
+timing: {"semantic_ms": {"n": 202, "p50": 687.95, "p95": 903.36, "mean": 714.56}, "lexical_ms": {"n": 202, "p50": 27.16, "p95": 39.18, "mean": 28.12}}
+
+written: /mnt/Warehouse/projects/Mind Palace/docs/performance/m0115-experiments.json
+EXIT_CODE=0
+--- SIDE-EFFECT DISCLOSURE: this script is NOT read-only. Its final action was:
+    Path(args.out).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+with --out defaulting to docs/performance/m0115-experiments.json, a TRACKED file that was already modified before this run (git status showed " M docs/performance/m0115-experiments.json").
+That file has therefore been overwritten by this preflight run; git cannot distinguish my write from the pre-existing edit.
+mtime after this run:
+-rw-r--r--. 1 rdx rdx 72772 2026-10-03 15:15:11.099154846 +0530 docs/performance/m0115-experiments.json
+7	7	docs/performance/m0115-experiments.json
+EXIT_CODE=0

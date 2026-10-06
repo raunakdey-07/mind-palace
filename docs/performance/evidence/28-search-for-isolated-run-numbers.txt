@@ -1,0 +1,40 @@
+=== does 842 / 880 appear as a latency value in any tracked-or-untracked file? ===
+docs/research/retrieval-routing.md:125:that term is now 0.45 ms per claim and 43 ms absolute. The funnel would
+docs/m009/scale-benchmark.json:20:      "corpus_id_sha256": "43d0b44c4b9c1170d15ac722da86327f1bf998fb420a4ee771bdaa4388e87589",
+docs/STATUS.md:141:| 100 | 43 ms | 48 ms | 14 ms | 5 ms | 9 ms | 12 ms | 0.2 ms |
+docs/STATUS.md:142:| 1,000 | 842 ms | 1,292 ms | 667 ms | 68 ms | 65 ms | 39 ms | 0.2 ms |
+docs/performance/m0115-degradation.json:361:        "aae4b886ad9851db9e43b819b7361f92f51aa0f432f29fe03a21a58e9e6fd81a",
+docs/performance/m0115-degradation.json:386:        "d152d74eddf284ceabbbc4a54f3e69b9e9b43e1be2fb76e9e3f194a49edcc928",
+docs/performance/m0115-degradation.json:791:        "aae4b886ad9851db9e43b819b7361f92f51aa0f432f29fe03a21a58e9e6fd81a",
+docs/performance/m0115-degradation.json:816:        "d152d74eddf284ceabbbc4a54f3e69b9e9b43e1be2fb76e9e3f194a49edcc928",
+docs/performance/m0122-scorer-equivalence.json:520:      "digest": "df53e43d710a8574",
+docs/performance/baseline-packs.json:312:      "digest": "801a10a9dafdffcdb243b63795d41ccdec76c19de8aa1eab43b970ee13afec2f"
+docs/performance/baseline-packs.json:352:      "digest": "7cd7a2c5f5a6f5e79132f2eaadcc171b16459a04bec6fcbe355a4e39ac814b43"
+docs/performance/baseline-packs.json:804:      "digest": "08effad97bbacfd5aabca43fbcbcb432fa12ec04a2a2a8e05deac7df5280b676"
+
+=== git ls-files: are ANY docs/performance artifacts tracked? ===
+docs/performance/REPORT.md
+docs/performance/baseline/README.md
+docs/performance/comparison/report.md
+docs/performance/current/README.md
+docs/performance/feed-100k-attempt.json
+docs/performance/fixtures/README.md
+docs/performance/m011-pack-pipeline.json
+docs/performance/m011-rebuildability.json
+docs/performance/m0115-degradation.json
+docs/performance/m0115-experiments.json
+docs/performance/m0115-scaling.json
+docs/performance/m0116-claim-cache.json
+docs/performance/m0116-integration.json
+docs/performance/m0117-profile.txt
+docs/performance/m0117-scale.json
+docs/performance/m012-candidate.json
+docs/performance/m012-closure.json
+docs/performance/m012-dependencies.json
+docs/performance/m012-hot-path.json
+docs/performance/m012-load-plan.json
+(count:)
+37
+
+=== are any of the four statuses tracked? ===
+(none listed above = untracked)

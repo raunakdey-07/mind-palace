@@ -1,0 +1,75 @@
+=== M013 deterministic contextual L2 — IMPLEMENTED, GATED, REJECTED ===
+Commit under test: f87c88f7d276955bc49c0fe9195de367a1fe0454
+Method: implemented the representation, then ran the authoritative gate.
+
+--- WHAT WAS IMPLEMENTED ---
+
+representation = claim + key + path + the claim's own authoritative evidence
+
+  CONTEXTUAL_REPRESENTATION_VERSION = 2
+  representation_hash() now covers {version, text}, so a rule change cannot
+  silently reuse embeddings derived under the old one.
+
+Inputs were restricted to claim text, key, path and the claim's own evidence --
+the only values BOTH the SQL cache fill and the projected query path can obtain
+identically. An earlier draft included document front matter on the fill path only;
+a test caught that the two paths would then disagree permanently and every query
+would silently miss the cache. Document context was removed for that reason.
+
+Deterministic: evidence ordered by content-addressed evidence id; segmented
+serialisation (claim:/key:/path:/evidence:) so a retrieval failure is attributable.
+
+Tests: 19 new, in tests/test_contextual_representation.py (removed on revert).
+
+--- GATE RESULTS ---
+
+FULL SUITE        1225 passed (1206 + 19 new)     PASS
+flake8 / black    clean                            PASS
+AUTHORITATIVE     63 of 202 questions DIFFER      ***FAIL***
+  set digest      5a3b8049...  ->  ceae31b0...
+
+Example, abs-sso (an ABSTENTION question):
+  baseline current_memories: runbook.identity.escalation, service.identity.depends_on,
+                             service.identity.owner, service.identity.tier
+  current  current_memories: service.identity.tier, service.identity.depends_on,
+                             service.identity.owner
+
+Evidence text is now folded into the representation, so a claim mentioning the
+identity provider in its evidence now scores above the relevance floor for a
+question about SSO. The system answers a question it should have abstained from.
+
+--- THE TRAP ---
+
+  dev benchmark BEFORE   194/202
+  dev benchmark AFTER    197/202   (+3, failures F2:2 F9:2 F7:1)
+
+The aggregate score IMPROVED. The authoritative output changed 63 questions,
+including abstention behaviour. The shipping criterion is byte-identical packs,
+not a higher score, so this is a semantic regression and the change was REVERTED.
+
+This is precisely why the project measures packs rather than trusting a score:
+a representation change that quietly answers unanswerable questions would have
+looked like a 1.5% win.
+
+--- DECISION ---
+
+REJECTED and reverted. No production retrieval code changed. Tree is byte-clean
+against HEAD f87c88f:
+
+  1206 passed, flake8/black clean, 202/202 packs IDENTICAL at 5a3b8049.
+
+--- WHAT THIS ESTABLISHES ---
+
+The representation-gap study's 10/29 result is NOT reachable through this route
+without breaking authoritative abstention. Widening the searchable text widens
+what the gate accepts, and the gate's floor was tuned against the narrower
+representation.
+
+Any future version must either:
+  (a) keep evidence out of the lexical gate and use it for embedding only, so
+      abstention thresholds are untouched, or
+  (b) recalibrate abstention deliberately and re-prove it on the abstention
+      class, which is a semantic decision and not a performance one.
+
+Option (a) is the smaller change and preserves the invariant. It was not
+attempted here because this session's scope was one implementation attempt.

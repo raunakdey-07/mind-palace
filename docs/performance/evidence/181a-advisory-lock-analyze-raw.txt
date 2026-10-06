@@ -1,0 +1,263 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace):
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m b2_locks
+
+RAW OUTPUT
+==============================================================================
+advisory lock id for corpus = 3356224176658733208
+writer uncommitted rows: {'claims': 200, 'evidence': 200, 'chunks': 200, 'versions': 200, 'documents': 200}
+before other-session ANALYZE : reltuples=-1 pg_statistic_rows=0 last_analyze=None
+other-session ANALYZE while writer txn open: succeeded without blocking
+  -> what it wrote: reltuples=0 pg_statistic_rows=0 last_analyze=2026-10-03 10:34:21.228201+00:00   (writer still has 200 UNCOMMITTED claims)
+ANALYZE inside the lock-holding txn: succeeded
+after ANALYZE inside writer txn: reltuples=200 pg_statistic_rows=11 last_analyze=None
+after COMMIT + fresh-session ANALYZE: reltuples=200 pg_statistic_rows=11 last_analyze=2026-10-03 10:34:21.348015+00:00
+
+{
+  "advisory_lock_id": 3356224176658733208,
+  "analyze_inside_lock_txn": "succeeded",
+  "catalog_after_analyze_inside_writer_txn": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_claims": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 11,
+      "relpages": 12,
+      "reltuples": 200
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    }
+  },
+  "catalog_after_commit_analyze": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 200,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_claims": {
+      "analyze_count": 3,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:34:21.348015+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 200,
+      "pg_statistic_rows": 11,
+      "relpages": 12,
+      "reltuples": 200
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 200,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 200,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 200,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    }
+  },
+  "catalog_after_other_session_analyze": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_claims": {
+      "analyze_count": 1,
+      "autoanalyze_count": 0,
+      "last_analyze": "2026-10-03 10:34:21.228201+00:00",
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 12,
+      "reltuples": 0
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    }
+  },
+  "catalog_before_other_session_analyze": {
+    "memory_chunks": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_claims": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_documents": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_evidence": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    },
+    "memory_versions": {
+      "analyze_count": 0,
+      "autoanalyze_count": 0,
+      "last_analyze": null,
+      "last_autoanalyze": null,
+      "n_dead_tup": 0,
+      "n_live_tup": 0,
+      "pg_statistic_rows": 0,
+      "relpages": 0,
+      "reltuples": -1
+    }
+  },
+  "corpus": "4f882a9c54eb0330703cc8cbc91fe263b77b809a28129b78e900a219d3fc5498",
+  "other_session_analyze": "succeeded without blocking",
+  "other_session_analyze_blocked": false,
+  "schema": "anxL_a0d054f2d0",
+  "writer_holds_advisory_lock": true,
+  "writer_uncommitted_rows": {
+    "chunks": 200,
+    "claims": 200,
+    "documents": 200,
+    "evidence": 200,
+    "versions": 200
+  }
+}

@@ -1,0 +1,264 @@
+====================================================================================================
+VARIANT x SIZE SUMMARY -- query-only restructures vs the _load plan cliff, WITHOUT ANALYZE
+====================================================================================================
+  harness          : /tmp/mp_variants.py (copy saved as 118-harness-mp_variants.py)
+  throwaway schema : created + rolled back per size; migrations from migrations/versions
+  ingest           : scripts/benchmark/m0117_scale.py::build_documents + IngestionService
+                     with the deterministic Offline embedder
+  EXPLAIN          : EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON), 3 reps; numbers below are
+                     the median of 3 (shared hit is identical on every rep)
+  fidelity         : V0 asserted byte-identical to the SQL api/services/memory.py::_load
+                     emits for chunk_text=False, version_text=False, at every size
+  correctness      : every variant is executed WITHOUT EXPLAIN and its full result set
+                     (all 12 columns, every row, in order) is SHA-256'd and compared to
+                     V0's. 'rows ok' = byte-identical result set.
+  no DDL           : no ANALYZE, no CREATE INDEX, no migration, no autovacuum (the schema
+                     is never committed, so no other backend can ever see it)
+  server           : 15.19 (Debian 15.19-1.pgdg12+2)
+  plan_cache_mode  : force_custom_plan (established not to matter)
+  jit              : on (confirmed inert: no JIT section in any plan)
+
+  pg_class at every size, immediately before any EXPLAIN (proves no ANALYZE ran):
+      memory_claims / memory_evidence / memory_chunks / memory_versions
+        reltuples = -1.0   relpages = 0   n_live_tup = 0   last_analyze = NULL
+        (identical at all 13 sizes; see 111-sweep-a.log / 111-sweep-b.log / 116-low-n-band.log)
+
+  corpus rows actually loaded:
+      N=100    claims=100    evidence=100    chunks=100    versions=100    documents=36
+      N=150    claims=151    evidence=151    chunks=151    versions=151    documents=53
+      N=200    claims=202    evidence=202    chunks=202    versions=202    documents=70
+      N=250    claims=250    evidence=250    chunks=250    versions=250    documents=86
+      N=300    claims=301    evidence=301    chunks=301    versions=301    documents=103
+      N=500    claims=502    evidence=502    chunks=502    versions=502    documents=170
+      N=750    claims=751    evidence=751    chunks=751    versions=751    documents=253
+      N=1000   claims=1000   evidence=1000   chunks=1000   versions=1000   documents=336
+      N=1500   claims=1501   evidence=1501   chunks=1501   versions=1501   documents=503
+      N=2000   claims=2002   evidence=2002   chunks=2002   versions=2002   documents=670
+      N=3000   claims=3001   evidence=3001   chunks=3001   versions=3001   documents=1003
+      N=5000   claims=5002   evidence=5002   chunks=5002   versions=5002   documents=1670
+
+----------------------------------------------------------------------------------------------------------------
+A) EXACT NUMBERS
+----------------------------------------------------------------------------------------------------------------
+var       N  plan ms   exec ms   shared hit               claims idx            evidence idx  rf clm  rf evd  rows ok
+V0      100    0.473       8.8        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99     SELF
+V1      100    0.358       9.1        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+V2      100    0.432      10.6          396   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      100    0.505       8.4        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+V4      100    0.765      99.1        8,589   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      100    0.368      11.3        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+V6a     100    0.355      12.6        2,821   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+V6b     100    0.331       8.4        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+V6c     100    0.273       8.4        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+V7      100    0.288       8.6        9,621   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD      99      99      YES
+----------------------------------------------------------------------------------------------------------------
+V0      150    0.405      20.3       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150     SELF
+V1      150    0.309      19.3       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+V2      150    0.525      20.5        1,407   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      150    0.259      17.7       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+V4      150    0.453     233.3       22,534   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      150    0.291      18.0       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+V6a     150    0.297      19.2        5,641   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+V6b     150    0.346      18.9       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+V6c     150    0.292      17.6       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+V7      150    0.353      21.3       24,527   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     150     150      YES
+----------------------------------------------------------------------------------------------------------------
+V0      200    0.319      29.9       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201     SELF
+V1      200    0.382      32.5       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+V2      200    0.471      36.5          922   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      200    0.258      30.3       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+V4      200    0.791     412.1       41,020   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      200    0.261      31.3       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+V6a     200    0.288      33.0        9,609   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+V6b     200    0.362      29.5       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+V6c     200    0.262      31.9       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+V7      200    0.340      29.5       41,727   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     201     201      YES
+----------------------------------------------------------------------------------------------------------------
+V0      250    0.326      55.3       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249     SELF
+V1      250    0.275      46.9       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+V2      250    0.667      55.3        7,599   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      250    0.273      49.6       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+V4      250    0.502     611.4       68,807   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      250    0.268      49.2       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+V6a     250    0.461      51.1       15,422   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+V6b     250    0.279      47.8       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+V6c     250    0.367      49.7       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+V7      250    0.432      51.7       71,599   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     249     249      YES
+----------------------------------------------------------------------------------------------------------------
+V0      300    0.259      64.7      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300     SELF
+V1      300    0.300      64.3      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+V2      300    0.456      78.5       10,823   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      300    0.282      66.6      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+V4      300    0.567     857.2       99,762   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      300    0.337      65.4      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+V6a     300    0.306      71.5       21,642   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+V6b     300    0.399      67.6      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+V6c     300    0.288      71.0      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+V7      300    0.294      68.1      105,935   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     300     300      YES
+----------------------------------------------------------------------------------------------------------------
+V0      500    0.383     174.3      267,714   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501     SELF
+V1      500    0.398     216.4      267,714   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501      YES
+V2      500    0.544     216.9        1,674   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      500    0.323     169.2      267,714   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501      YES
+V4      500    0.475      55.1        1,674   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      500    0.279     171.3      267,714   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501      YES
+V6a     500    0.270     202.7       56,240   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501      YES
+V6b     500    0.283     163.8      267,714   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501      YES
+V6c     500    0.359     165.3      267,714   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     501     501      YES
+----------------------------------------------------------------------------------------------------------------
+V0      750    0.387     377.5      598,782   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750     SELF
+V1      750    0.352     380.4      598,782   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750      YES
+V2      750    0.437     491.2        1,851   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3      750    0.335     385.0      598,782   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750      YES
+V4      750    0.472      65.3        1,851   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5      750    0.259     378.2      598,782   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750      YES
+V6a     750    0.265     273.2       80,376   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750      YES
+V6b     750    0.403     377.4      598,782   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750      YES
+V6c     750    0.358     378.5      598,782   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     750     750      YES
+----------------------------------------------------------------------------------------------------------------
+V0     1000    0.313     755.2    1,073,302   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999     SELF
+V1     1000    0.298     854.4    1,073,302   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999      YES
+V2     1000    0.463    1058.3        2,457   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V3     1000    0.280     687.7    1,073,302   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999      YES
+V4     1000    0.511     104.3        2,457   CLAIMS_corpus_only_BAD       EVID_composite_OK       0       0      YES
+V5     1000    0.365     690.2    1,073,302   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999      YES
+V6a    1000    0.273     498.3      142,022   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999      YES
+V6b    1000    0.261     794.4    1,073,302   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999      YES
+V6c    1000    0.264     687.2    1,073,302   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD     999     999      YES
+----------------------------------------------------------------------------------------------------------------
+V0     1500    0.319      54.0       16,996     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0     SELF
+V1     1500    0.290      52.1       16,996     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0      YES
+V2     1500    0.569    1669.6        2,304   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V3     1500    0.323      54.9       16,996     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0      YES
+V4     1500    0.636      52.9        2,304   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V5     1500    0.279      52.7       16,996     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0      YES
+V6a    1500    0.312      55.1       16,539     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0      YES
+V6b    1500    0.356      59.2       16,996     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0      YES
+V6c    1500    0.264      52.0       16,996     CLAIMS_COMPOSITE_OK2       EVID_composite_OK       0       0      YES
+----------------------------------------------------------------------------------------------------------------
+V0     2000    0.276      76.6       24,680      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0     SELF
+V1     2000    0.357      72.1       24,680      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V2     2000    0.566      71.7        3,085   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V3     2000    0.268      72.5       24,680      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V4     2000    0.513      60.7        3,085   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V5     2000    0.283      72.9       24,680      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6a    2000    0.284      75.3       24,058      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6b    2000    0.314      71.6       24,680      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6c    2000    0.276      72.0       24,680      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+----------------------------------------------------------------------------------------------------------------
+V0     3000    0.283     128.1       40,062      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0     SELF
+V1     3000    0.304     123.4       40,062      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V2     3000    0.522     121.2        4,699   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V3     3000    0.320     126.3       40,062      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V4     3000    0.608     112.8        4,699   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V5     3000    0.353     125.1       40,062      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6a    3000    0.287     139.1       40,062      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6b    3000    0.317     128.9       41,006      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6c    3000    0.307     125.6       41,006      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+----------------------------------------------------------------------------------------------------------------
+V0     5000    0.303     195.5       66,767      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0     SELF
+V1     5000    0.324     201.6       66,767      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V2     5000    0.504     208.5        7,805   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V3     5000    0.279     200.1       66,767      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V4     5000    0.643     177.2        7,805   CLAIMS_corpus_only_BAD     EVID_claim_only_BAD       0       0      YES
+V5     5000    0.279     195.1       66,767      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6a    5000    0.298     218.5       66,767      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6b    5000    0.318     203.6       68,367      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+V6c    5000    0.270     211.6       68,367      CLAIMS_COMPOSITE_OK       EVID_composite_OK       0       0      YES
+----------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------------------
+B) exec ms relative to V0 at the same N   (<1.0 = faster than production)
+----------------------------------------------------------------------------------------------------------------
+var        100      150      200      250      300      500      750     1000     1500     2000     3000     5000
+V0        1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00
+V1        1.03     0.95     1.09     0.85     0.99     1.24     1.01     1.13     0.97     0.94     0.96     1.03
+V2        1.21     1.01     1.22     1.00     1.21     1.24     1.30     1.40    30.94     0.94     0.95     1.07
+V3        0.95     0.87     1.01     0.90     1.03     0.97     1.02     0.91     1.02     0.95     0.99     1.02
+V4       11.31    11.47    13.79    11.06    13.24     0.32     0.17     0.14     0.98     0.79     0.88     0.91
+V5        1.29     0.88     1.05     0.89     1.01     0.98     1.00     0.91     0.98     0.95     0.98     1.00
+V6a       1.44     0.95     1.10     0.92     1.10     1.16     0.72     0.66     1.02     0.98     1.09     1.12
+V6b       0.95     0.93     0.99     0.86     1.04     0.94     1.00     1.05     1.10     0.93     1.01     1.04
+V6c       0.96     0.87     1.07     0.90     1.10     0.95     1.00     0.91     0.96     0.94     0.98     1.08
+V7        0.99     1.05     0.99     0.94     1.05        -        -        -        -        -        -        -
+
+----------------------------------------------------------------------------------------------------------------
+C) shared hit relative to V0 at the same N
+----------------------------------------------------------------------------------------------------------------
+var        100      150      200      250      300      500      750     1000     1500     2000     3000     5000
+V0        1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00
+V1        1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00
+V2        0.04     0.06     0.02     0.11     0.10     0.01     0.00     0.00     0.14     0.12     0.12     0.12
+V3        1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00
+V4        0.89     0.92     0.98     0.96     0.94     0.01     0.00     0.00     0.14     0.12     0.12     0.12
+V5        1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00
+V6a       0.29     0.23     0.23     0.22     0.20     0.21     0.13     0.13     0.97     0.97     1.00     1.00
+V6b       1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.02     1.02
+V6c       1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.00     1.02     1.02
+V7        1.00     1.00     1.00     1.00     1.00        -        -        -        -        -        -        -
+
+----------------------------------------------------------------------------------------------------------------
+D) CORRECTNESS GATE -- row-for-row comparison against V0
+----------------------------------------------------------------------------------------------------------------
+  variant/size cells compared against V0 : 89
+  cells with a byte-identical result set : 89
+  cells that differ                      : 0
+  RESULT: every variant returns byte-identical rows at every size.
+          No variant is rejected on correctness grounds; every rejection below is
+          performance or neutrality.
+
+----------------------------------------------------------------------------------------------------------------
+E) VARIANT LEDGER
+----------------------------------------------------------------------------------------------------------------
+  V0    BASELINE: production _load narrow SQL, verbatim
+  V1    LEFT JOIN LATERAL for the three aggregates
+  V2    WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)
+  V3    correlated subqueries, version_id predicate written first
+  V4    inline pre-grouped derived tables instead of CTEs
+  V5    V0 + SET LOCAL default_statistics_target = 1000
+  V6a   V0 + SET LOCAL enable_indexscan = off            [diagnostic control]
+  V6b   V0 + enable_seqscan = off, enable_bitmapscan = off [diagnostic control]
+  V6c   V0 + SET LOCAL random_page_cost = 1.1            [diagnostic control]
+  V7    corpus_id bound to the :c parameter instead of v.corpus_id
+
+  Coverage: V0-V6 were run at all 12 sizes. V7 was added after the main sweep and
+  was run at N = 100, 150, 200, 250, 300 only (the band where it would have to win);
+  it is blank above that because it was not run there, not because it failed.
+  V7 is a no-op at every size it was run at -- identical plans to V0.
+
+  ----------------------------------------------------------------------------------
+  F) WHAT ACTUALLY MOVED
+  ----------------------------------------------------------------------------------
+  V4 is the only variant that changes a plan in the useful direction, and only
+  between N=500 and N=1000 -- the band where the cliff bites:
+
+      N=1000   V0  1,073,302 shared hit   755.2 ms   CLAIMS corpus-only, rf=999
+               V4      2,457 shared hit   104.3 ms   437x fewer buffers, 7.2x faster
+      N= 750   V0    598,782 shared hit   377.5 ms
+               V4      1,851 shared hit    65.3 ms   323x fewer buffers, 5.8x faster
+      N= 500   V0    267,714 shared hit   174.3 ms
+               V4      1,674 shared hit    55.1 ms   160x fewer buffers, 3.2x faster
+
+  ...and it is 11x-14x SLOWER than production everywhere below that:
+
+      N= 300   V0    105,935 shared hit    64.7 ms
+               V4     99,762 shared hit   857.2 ms   13.2x SLOWER
+      N= 250   V0     71,599 shared hit    55.3 ms
+               V4     68,807 shared hit   611.4 ms   11.1x SLOWER
+      N= 100   V0      9,621 shared hit     8.8 ms
+               V4      8,589 shared hit    99.1 ms   11.3x SLOWER
+
+  V4 at N=300 is 857.2 ms, i.e. as bad as V0 at N=1000 (755.2 ms). The cliff did
+  not disappear; it moved from N=500..1000 down to N=100..300. That is a
+  relocation, not a fix.
+
+  Cause, from 114-plans-n00250.json / 114-plans-n00500.json:
+    - at N=500+ the planner Hash Joins the pre-aggregated derived tables (good);
+    - at N<=300 it substitutes them as a correlated Nested Loop inner, re-running
+      the full GROUP BY once per outer row (Actual Loops = N). At N=250 the plan
+      shows three Nested Loops with the Sorted aggregates executed 250 times.
+  V2 has the mirror-image failure: the CTE is materialised exactly once, so it
+  has almost no buffer cost, but the planner joins it back with a Nested Loop +
+  CTE Scan with Actual Loops = N (see 114-plans-n01000.json), which is O(N^2)
+  tuple comparisons that never touch a shared buffer. That is why V2 posts the
+  lowest shared-hit numbers in the whole table and still loses on wall clock.

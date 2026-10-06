@@ -1,0 +1,28 @@
+# EXPLAIN (ANALYZE, BUFFERS, VERBOSE) -- control, narrow columns and no jsonb_agg subqueries
+# work_mem=4MB; corpus=xpl_e664d9d745 target=10000 counts={'versions': 10000, 'documents': 3336, 'claims': 10000, 'chunks': 10000, 'evidence_rows': 10000}
+# per-run execution ms: [29.495, 28.748, 29.703]
+# EXPLAIN ANALYZE does not serialize or transfer rows to the client.
+# Output: tuple payload elided: 0 lines, 0 bytes; the complete un-elided text and its sha256 are recorded in 51-explain-summary.txt.
+#------------------------------------------------------------------------------
+Sort  (cost=63.77..63.87 rows=40 width=1408) (actual time=27.040..28.474 rows=10000 loops=1)
+  Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path
+  Sort Key: v.observed_at, d.path, v.version_number
+  Sort Method: external merge  Disk: 4176kB
+  Buffers: shared hit=13467, temp read=522 written=523
+  ->  Nested Loop  (cost=4.73..62.71 rows=40 width=1408) (actual time=0.280..19.947 rows=10000 loops=1)
+        Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path
+        Buffers: shared hit=13467
+        ->  Bitmap Heap Scan on xpl_e664d9d745.memory_documents d  (cost=4.32..20.51 rows=5 width=552) (actual time=0.266..0.808 rows=3336 loops=1)
+              Output: d.corpus_id, d.id, d.path
+              Recheck Cond: (d.corpus_id = 'd8de072e662a4c0a5155ba26d33148d54a90679f69fc624fcf45270580dd2904'::bpchar)
+              Heap Blocks: exact=75
+              Buffers: shared hit=123
+              ->  Bitmap Index Scan on memory_documents_corpus_id_path_key  (cost=0.00..4.31 rows=5 width=0) (actual time=0.253..0.253 rows=3336 loops=1)
+                    Index Cond: (d.corpus_id = 'd8de072e662a4c0a5155ba26d33148d54a90679f69fc624fcf45270580dd2904'::bpchar)
+                    Buffers: shared hit=48
+        ->  Index Scan using memory_versions_corpus_id_memory_document_id_version_number_key on xpl_e664d9d745.memory_versions v  (cost=0.41..8.43 rows=1 width=1376) (actual time=0.004..0.005 rows=3 loops=3336)
+              Output: v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.content, v.metadata, v.fingerprint
+              Index Cond: ((v.corpus_id = 'd8de072e662a4c0a5155ba26d33148d54a90679f69fc624fcf45270580dd2904'::bpchar) AND (v.memory_document_id = d.id))
+              Buffers: shared hit=13344
+Planning Time: 0.306 ms
+Execution Time: 29.495 ms

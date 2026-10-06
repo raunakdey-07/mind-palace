@@ -67,7 +67,15 @@ def _validate(operation: str, request: MemoryRequest) -> None:
         "snapshot": {"as_of"},
         "replay": {"snapshot_id", "path"},
         "pack": {"path", "as_of", "valid_at", "snapshot_id", "budget"},
-        "query": {"path", "as_of", "valid_at", "snapshot_id", "budget", "intent"},
+        "query": {
+            "path",
+            "as_of",
+            "valid_at",
+            "snapshot_id",
+            "budget",
+            "intent",
+            "include_receipt",
+        },
     }[operation]
     # SDK sends default fields too; reject non-default unsupported selectors.
     for name in type(request).model_fields:
@@ -364,9 +372,12 @@ async def execute_in_session(db, operation: str, request: MemoryRequest, vectori
     # Fix the validity clock once for the entire response, including conflicts.
     valid_at = cutoff if saved else request.valid_at or cutoff or datetime.now(timezone.utc)
     # The public projection reads only each chunk's id and heading, never its
-    # text, and chunk text is the bulk of the payload. The raw history surface
-    # still returns it.
-    versions = await memory._load(db, corpus["id"], as_of=cutoff, chunk_text=False)
+    # text, and chunk text is the bulk of the payload. It also reads no version
+    # content or metadata: authority comes from claims, evidence and the version
+    # graph. The raw history surface still returns all of it.
+    versions = await memory._load(
+        db, corpus["id"], as_of=cutoff, chunk_text=False, version_text=False
+    )
     if saved:
         ids = set(saved["version_ids"])
         versions = [v for v in versions if v["id"] in ids]
@@ -380,9 +391,31 @@ async def execute_in_session(db, operation: str, request: MemoryRequest, vectori
         full = project(
             versions, request.model_copy(update={"query": "", "path": None}), "pack", state, saved
         )
-        return await query(full, request, db=db, corpus_id=corpus["id"], vectorized=vectorized)
+        return _with_receipt(
+            await query(full, request, db=db, corpus_id=corpus["id"], vectorized=vectorized),
+            request,
+        )
     result = project(versions, request, operation, state, saved)
-    return bounded_pack(result, request.budget) if operation == "pack" else result
+    result = bounded_pack(result, request.budget) if operation == "pack" else result
+    return _with_receipt(result, request)
+
+
+def _with_receipt(result, request):
+    """Attach the canonical receipt when the caller asked for one.
+
+    The single attachment point for every public surface, so REST, SDK and MCP
+    cannot drift into returning different receipts for the same answer. Returns
+    the response unchanged when no receipt was requested, or when there is no
+    current memory to attest to.
+    """
+    if not getattr(request, "include_receipt", False):
+        return result
+    from memory_receipt import receipt_for_response
+
+    receipt = receipt_for_response(result)
+    if receipt is not None:
+        result.receipt = receipt
+    return result
 
 
 async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:

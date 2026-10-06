@@ -1,0 +1,582 @@
+{
+  "buckets": {
+    "UNREACHABLE_candidate": 19,
+    "reachable_both": 93,
+    "reachable_lexical": 7,
+    "reachable_semantic": 21
+  },
+  "candidate_recall_ceiling": 0.8643,
+  "commit": "3a9c4793b9ec74fbbc23a6ae512ca80be359c911",
+  "dataset": "heldout",
+  "interpretation": {
+    "candidate_recall_ceiling": "Upper bound on what ANY reranker or fusion can achieve. 1 - (unreachable / keyed_questions).",
+    "gold_missing_from_projection": "The authored key does not appear in the projected memory at all. This is a representation gap, not a retrieval gap: no ranking function can return something the projection never built.",
+    "no_lexical_bridge": "Query and gold claim share ZERO content terms after the shipped stopword/stemming pass. Neither lexical nor a lexical arm can bridge these; only semantics could, and it did not."
+  },
+  "keyed_questions": 140,
+  "python": "3.14.7",
+  "unreachable": {
+    "gold_missing_from_projection": 0,
+    "has_lexical_bridge_but_still_gated_out": 2,
+    "no_lexical_bridge_with_gold": 17,
+    "total": 19
+  },
+  "unreachable_detail": [
+    {
+      "best_lexical_key": "architecture.datastore",
+      "best_lexical_score": 0.3333,
+      "best_semantic_key": "architecture.datastore",
+      "best_semantic_score": 0.6438,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "advisory",
+        "chosen",
+        "jsonb",
+        "lock",
+        "postgresql"
+      ],
+      "gold_claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+      "gold_key": "decision.database.reason",
+      "qid": "ho-chg-why-postgres",
+      "query_terms": [
+        "datastore",
+        "led",
+        "pick",
+        "present",
+        "primary",
+        "reason"
+      ],
+      "question": "What reasoning led to picking the present primary datastore?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "service.notifier.tier",
+      "best_semantic_score": 0.3912,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "caus",
+        "consumer",
+        "duplicate",
+        "idempotent",
+        "incident",
+        "july",
+        "non",
+        "sms"
+      ],
+      "gold_claim_text": "The July duplicate SMS incident was caused by non-idempotent consumers.",
+      "gold_key": "incident.2024-07.notifier.root",
+      "qid": "ho-chg-inc-2024-07",
+      "query_terms": [
+        "affect",
+        "notifier",
+        "went",
+        "wrong"
+      ],
+      "question": "What went wrong in 2024-07 that affected notifier?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": null,
+      "best_semantic_score": 0.0,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "added",
+        "durable",
+        "feed",
+        "operational",
+        "release"
+      ],
+      "gold_claim_text": "Release 0.6 added the durable operational feed.",
+      "gold_key": "release.0.6",
+      "qid": "ho-chg-rel-0.6",
+      "query_terms": [
+        "introduc",
+        "shipp"
+      ],
+      "question": "Shipping 0.6 introduced what?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": null,
+      "best_semantic_score": 0.0,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "ledger",
+        "moved",
+        "release",
+        "service",
+        "settlement"
+      ],
+      "gold_claim_text": "Release 0.7 moved settlement to the ledger service.",
+      "gold_key": "release.0.7",
+      "qid": "ho-chg-rel-0.7",
+      "query_terms": [
+        "introduc",
+        "shipp"
+      ],
+      "question": "Shipping 0.7 introduced what?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": null,
+      "best_semantic_score": 0.0,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "added",
+        "membership",
+        "release",
+        "seal",
+        "snapshot"
+      ],
+      "gold_claim_text": "Release 0.8 added snapshot membership sealing.",
+      "gold_key": "release.0.8",
+      "qid": "ho-chg-rel-0.8",
+      "query_terms": [
+        "introduc",
+        "shipp"
+      ],
+      "question": "Shipping 0.8 introduced what?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "service.web.tier",
+      "best_semantic_score": 0.5565,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "temporal",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "deployment",
+        "job",
+        "run",
+        "service",
+        "single",
+        "tier",
+        "writer"
+      ],
+      "gold_claim_text": "Deployments for tier-0 services run as a single writer job.",
+      "gold_key": "constraint.deploy.tier-0",
+      "qid": "ho-chg-deploy-tier-0",
+      "query_terms": [
+        "get",
+        "govern",
+        "out",
+        "roll",
+        "rule",
+        "service",
+        "tier"
+      ],
+      "question": "What rule governs how tier-0 services get rolled out?",
+      "shared_query_gold_terms": [
+        "service",
+        "tier"
+      ],
+      "shared_term_count": 2
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "incident.2024-11.ledger.root",
+      "best_semantic_score": 0.3569,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "provenance",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "caps",
+        "connection",
+        "order",
+        "pool",
+        "service"
+      ],
+      "gold_claim_text": "The orders service caps its connection pool at 30.",
+      "gold_key": "constraint.orders.pool",
+      "qid": "ho-ev-inc-2024-03",
+      "query_terms": [
+        "incident",
+        "place",
+        "put",
+        "rule"
+      ],
+      "question": "What rule did the 2024-03 incident put in place?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "incident.2024-11.ledger.root",
+      "best_semantic_score": 0.3661,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "provenance",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "idempotency",
+        "key",
+        "message",
+        "notifier",
+        "per",
+        "require"
+      ],
+      "gold_claim_text": "The notifier requires an idempotency key per message.",
+      "gold_key": "constraint.notifier.idempotency",
+      "qid": "ho-ev-inc-2024-07",
+      "query_terms": [
+        "incident",
+        "place",
+        "put",
+        "rule"
+      ],
+      "question": "What rule did the 2024-07 incident put in place?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "incident.2024-11.ledger.root",
+      "best_semantic_score": 0.3544,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "provenance",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "batche",
+        "capp",
+        "reindex"
+      ],
+      "gold_claim_text": "Reindex batches are capped at 500 documents.",
+      "gold_key": "constraint.search.batch",
+      "qid": "ho-ev-inc-2024-09",
+      "query_terms": [
+        "incident",
+        "place",
+        "put",
+        "rule"
+      ],
+      "question": "What rule did the 2024-09 incident put in place?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "incident.2024-11.ledger.root",
+      "best_semantic_score": 0.3319,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "provenance",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "entry",
+        "id",
+        "idempotent",
+        "jobs",
+        "ledger",
+        "must",
+        "settlement"
+      ],
+      "gold_claim_text": "Settlement jobs must be idempotent on ledger entry id.",
+      "gold_key": "constraint.ledger.settlement",
+      "qid": "ho-ev-inc-2024-11",
+      "query_terms": [
+        "incident",
+        "place",
+        "put",
+        "rule"
+      ],
+      "question": "What rule did the 2024-11 incident put in place?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": null,
+      "best_semantic_score": 0.0,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "relationship",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "caps",
+        "connection",
+        "order",
+        "pool",
+        "service"
+      ],
+      "gold_claim_text": "The orders service caps its connection pool at 30.",
+      "gold_key": "constraint.orders.pool",
+      "qid": "ho-rel-impact-orders",
+      "query_terms": [
+        "impos",
+        "limit",
+        "order",
+        "outage"
+      ],
+      "question": "After the orders outage, what limit was imposed?",
+      "shared_query_gold_terms": [
+        "order"
+      ],
+      "shared_term_count": 1
+    },
+    {
+      "best_lexical_key": "architecture.storage",
+      "best_lexical_score": 0.5,
+      "best_semantic_key": "architecture.storage",
+      "best_semantic_score": 0.5662,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "relationship",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "archive",
+        "data",
+        "job",
+        "owned",
+        "team"
+      ],
+      "gold_claim_text": "The Archive Job is owned by the data team.",
+      "gold_key": "service.archive.owner",
+      "qid": "ho-rel-why-storage",
+      "query_terms": [
+        "belong",
+        "object",
+        "storage",
+        "whom"
+      ],
+      "question": "Decisions about object storage belong to whom?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.datastore",
+      "best_lexical_score": 0.4,
+      "best_semantic_key": "architecture.datastore",
+      "best_semantic_score": 0.7016,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "advisory",
+        "chosen",
+        "jsonb",
+        "lock",
+        "postgresql"
+      ],
+      "gold_claim_text": "PostgreSQL was chosen for JSONB and advisory locks.",
+      "gold_key": "decision.database.reason",
+      "qid": "ho-mul-tech-postgres",
+      "query_terms": [
+        "case",
+        "datastore",
+        "present",
+        "primary",
+        "state"
+      ],
+      "question": "State the present primary datastore and the case for it.",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.redis",
+      "best_lexical_score": 0.4,
+      "best_semantic_key": "architecture.redis",
+      "best_semantic_score": 0.5986,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "chosen",
+        "native",
+        "pub",
+        "redi",
+        "sub",
+        "support",
+        "ttl"
+      ],
+      "gold_claim_text": "Redis was chosen for its native TTL and pub/sub support.",
+      "gold_key": "decision.cache.reason",
+      "qid": "ho-mul-tech-redis",
+      "query_terms": [
+        "cache",
+        "case",
+        "present",
+        "shar",
+        "state"
+      ],
+      "question": "State the present shared cache and the case for it.",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.queue",
+      "best_lexical_score": 0.4,
+      "best_semantic_key": "architecture.queue",
+      "best_semantic_score": 0.6101,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "acknowledgement",
+        "chosen",
+        "consumer",
+        "dead",
+        "letter",
+        "rabbitmq"
+      ],
+      "gold_claim_text": "RabbitMQ was chosen for consumer acknowledgements and dead lettering.",
+      "gold_key": "decision.queue.reason",
+      "qid": "ho-mul-tech-queue",
+      "query_terms": [
+        "case",
+        "job",
+        "present",
+        "queue",
+        "state"
+      ],
+      "question": "State the present job queue and the case for it.",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.search",
+      "best_lexical_score": 0.4,
+      "best_semantic_key": "architecture.search",
+      "best_semantic_score": 0.6336,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "active",
+        "chosen",
+        "licence",
+        "maintenance",
+        "opensearch",
+        "permissive"
+      ],
+      "gold_claim_text": "OpenSearch was chosen for the permissive licence and active maintenance.",
+      "gold_key": "decision.search.reason",
+      "qid": "ho-mul-tech-search",
+      "query_terms": [
+        "case",
+        "engine",
+        "present",
+        "search",
+        "state"
+      ],
+      "question": "State the present search engine and the case for it.",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.storage",
+      "best_lexical_score": 0.4,
+      "best_semantic_key": "architecture.storage",
+      "best_semantic_score": 0.6172,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "chosen",
+        "durable",
+        "lifecycle",
+        "policie",
+        "s3",
+        "version"
+      ],
+      "gold_claim_text": "S3 was chosen for lifecycle policies and durable versioning.",
+      "gold_key": "decision.storage.reason",
+      "qid": "ho-mul-tech-storage",
+      "query_terms": [
+        "case",
+        "object",
+        "present",
+        "state",
+        "storage"
+      ],
+      "question": "State the present object storage and the case for it.",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": "architecture.warehouse",
+      "best_lexical_score": 0.4,
+      "best_semantic_key": "architecture.warehouse",
+      "best_semantic_score": 0.7547,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "multi-topic",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "chosen",
+        "clickhouse",
+        "columnar",
+        "data",
+        "event",
+        "over",
+        "scan"
+      ],
+      "gold_claim_text": "ClickHouse was chosen for columnar scans over event data.",
+      "gold_key": "decision.warehouse.reason",
+      "qid": "ho-mul-tech-warehouse",
+      "query_terms": [
+        "analytic",
+        "case",
+        "present",
+        "state",
+        "warehouse"
+      ],
+      "question": "State the present analytics warehouse and the case for it.",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    },
+    {
+      "best_lexical_key": null,
+      "best_lexical_score": 0.0,
+      "best_semantic_key": "architecture.datastore",
+      "best_semantic_score": 0.354,
+      "bucket": "UNREACHABLE_candidate",
+      "category": "adversarial",
+      "gold_claim_in_projection": true,
+      "gold_claim_terms": [
+        "datastore",
+        "mysql",
+        "primary"
+      ],
+      "gold_claim_text": "The primary datastore is MySQL.",
+      "gold_key": "architecture.postgres",
+      "qid": "ho-adv-sandbox",
+      "query_terms": [
+        "guide",
+        "onboard",
+        "production",
+        "runs",
+        "sandbox",
+        "says",
+        "sqlite"
+      ],
+      "question": "The onboarding guide says the sandbox runs on SQLite. What does production use?",
+      "shared_query_gold_terms": [],
+      "shared_term_count": 0
+    }
+  ]
+}

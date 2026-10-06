@@ -1,0 +1,1050 @@
+[
+  {
+    "n": 1100,
+    "schema": "anx_0ab3ada5be",
+    "rows": {
+      "claims": 1102,
+      "evidence": 1102,
+      "chunks": 1102,
+      "versions": 1102,
+      "documents": 370
+    },
+    "plan_cache_mode": "force_custom_plan",
+    "stats_pre": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "fresh_install_asserted": true,
+    "stats_post": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": 1102.0,
+        "relpages": 60,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": 370.0,
+        "relpages": 9,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": 1102.0,
+        "relpages": 58,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": 1102.0,
+        "relpages": 184,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "before": {
+      "label": "pre-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 1238993,
+          "shared_read": 0,
+          "exec_ms": 486.461,
+          "plan_ms": 0.305,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_claim",
+          "evidence_rows_removed_by_filter": 1101,
+          "evidence_index_cond": "(corpus_id = v.corpus_id)",
+          "evidence_filter": "(version_id = v.id)",
+          "root_est_rows": 5,
+          "root_actual_rows": 1102,
+          "jit": {}
+        },
+        {
+          "shared_hit": 1238993,
+          "shared_read": 0,
+          "exec_ms": 499.764,
+          "plan_ms": 0.271,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_claim",
+          "evidence_rows_removed_by_filter": 1101,
+          "evidence_index_cond": "(corpus_id = v.corpus_id)",
+          "evidence_filter": "(version_id = v.id)",
+          "root_est_rows": 5,
+          "root_actual_rows": 1102,
+          "jit": {}
+        },
+        {
+          "shared_hit": 1238993,
+          "shared_read": 0,
+          "exec_ms": 545.48,
+          "plan_ms": 0.256,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_claim",
+          "evidence_rows_removed_by_filter": 1101,
+          "evidence_index_cond": "(corpus_id = v.corpus_id)",
+          "evidence_filter": "(version_id = v.id)",
+          "root_est_rows": 5,
+          "root_actual_rows": 1102,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 1238993,
+      "shared_hit_reps": [
+        1238993,
+        1238993,
+        1238993
+      ],
+      "exec_ms": 499.76,
+      "exec_ms_reps": [
+        486.5,
+        499.8,
+        545.5
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_claim",
+      "evidence_rows_removed_by_filter": 1101,
+      "root_est_rows": 5,
+      "root_actual_rows": 1102,
+      "jit": {}
+    },
+    "after": {
+      "label": "post-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 10111,
+          "shared_read": 0,
+          "exec_ms": 35.067,
+          "plan_ms": 0.734,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1102,
+          "root_actual_rows": 1102,
+          "jit": {}
+        },
+        {
+          "shared_hit": 10111,
+          "shared_read": 0,
+          "exec_ms": 35.124,
+          "plan_ms": 0.305,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1102,
+          "root_actual_rows": 1102,
+          "jit": {}
+        },
+        {
+          "shared_hit": 10111,
+          "shared_read": 0,
+          "exec_ms": 33.948,
+          "plan_ms": 0.316,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1102,
+          "root_actual_rows": 1102,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 10111,
+      "shared_hit_reps": [
+        10111,
+        10111,
+        10111
+      ],
+      "exec_ms": 35.07,
+      "exec_ms_reps": [
+        35.1,
+        35.1,
+        33.9
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 1102,
+      "root_actual_rows": 1102,
+      "jit": {}
+    },
+    "rows_sha256_before": "9113c71223d34950937ad703b31e29c809b0f259ad3ed65f2a0627de48fd6d69",
+    "rows_sha256_after": "9113c71223d34950937ad703b31e29c809b0f259ad3ed65f2a0627de48fd6d69",
+    "rows_identical_across_analyze": true,
+    "hit_ratio": 122.54,
+    "seconds": 29.7
+  },
+  {
+    "n": 1200,
+    "schema": "anx_f46a56b05f",
+    "rows": {
+      "claims": 1201,
+      "evidence": 1201,
+      "chunks": 1201,
+      "versions": 1201,
+      "documents": 403
+    },
+    "plan_cache_mode": "force_custom_plan",
+    "stats_pre": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "fresh_install_asserted": true,
+    "stats_post": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": 1201.0,
+        "relpages": 66,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": 403.0,
+        "relpages": 9,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": 1201.0,
+        "relpages": 64,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": 1201.0,
+        "relpages": 200,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "before": {
+      "label": "pre-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 12377,
+          "shared_read": 0,
+          "exec_ms": 41.108,
+          "plan_ms": 0.333,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 5,
+          "root_actual_rows": 1201,
+          "jit": {}
+        },
+        {
+          "shared_hit": 12377,
+          "shared_read": 0,
+          "exec_ms": 40.603,
+          "plan_ms": 0.297,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 5,
+          "root_actual_rows": 1201,
+          "jit": {}
+        },
+        {
+          "shared_hit": 12377,
+          "shared_read": 0,
+          "exec_ms": 39.608,
+          "plan_ms": 0.272,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 5,
+          "root_actual_rows": 1201,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 12377,
+      "shared_hit_reps": [
+        12377,
+        12377,
+        12377
+      ],
+      "exec_ms": 40.6,
+      "exec_ms_reps": [
+        41.1,
+        40.6,
+        39.6
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 5,
+      "root_actual_rows": 1201,
+      "jit": {}
+    },
+    "after": {
+      "label": "post-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 11018,
+          "shared_read": 0,
+          "exec_ms": 37.988,
+          "plan_ms": 0.808,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1201,
+          "root_actual_rows": 1201,
+          "jit": {}
+        },
+        {
+          "shared_hit": 11018,
+          "shared_read": 0,
+          "exec_ms": 37.26,
+          "plan_ms": 0.33,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1201,
+          "root_actual_rows": 1201,
+          "jit": {}
+        },
+        {
+          "shared_hit": 11018,
+          "shared_read": 0,
+          "exec_ms": 37.667,
+          "plan_ms": 0.587,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1201,
+          "root_actual_rows": 1201,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 11018,
+      "shared_hit_reps": [
+        11018,
+        11018,
+        11018
+      ],
+      "exec_ms": 37.67,
+      "exec_ms_reps": [
+        38.0,
+        37.3,
+        37.7
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 1201,
+      "root_actual_rows": 1201,
+      "jit": {}
+    },
+    "rows_sha256_before": "d3ef554adec4d37d856ef2e46268f5c9cf6f400822ed7c45fa204756ace681fd",
+    "rows_sha256_after": "d3ef554adec4d37d856ef2e46268f5c9cf6f400822ed7c45fa204756ace681fd",
+    "rows_identical_across_analyze": true,
+    "hit_ratio": 1.12,
+    "seconds": 30.4
+  },
+  {
+    "n": 1300,
+    "schema": "anx_1b99191cea",
+    "rows": {
+      "claims": 1300,
+      "evidence": 1300,
+      "chunks": 1300,
+      "versions": 1300,
+      "documents": 436
+    },
+    "plan_cache_mode": "force_custom_plan",
+    "stats_pre": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "fresh_install_asserted": true,
+    "stats_post": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": 1300.0,
+        "relpages": 71,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": 436.0,
+        "relpages": 10,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": 1300.0,
+        "relpages": 69,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": 1300.0,
+        "relpages": 217,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "before": {
+      "label": "pre-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 13420,
+          "shared_read": 0,
+          "exec_ms": 44.937,
+          "plan_ms": 0.425,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 5,
+          "root_actual_rows": 1300,
+          "jit": {}
+        },
+        {
+          "shared_hit": 13420,
+          "shared_read": 0,
+          "exec_ms": 43.586,
+          "plan_ms": 0.257,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 5,
+          "root_actual_rows": 1300,
+          "jit": {}
+        },
+        {
+          "shared_hit": 13420,
+          "shared_read": 0,
+          "exec_ms": 43.273,
+          "plan_ms": 0.489,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 5,
+          "root_actual_rows": 1300,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 13420,
+      "shared_hit_reps": [
+        13420,
+        13420,
+        13420
+      ],
+      "exec_ms": 43.59,
+      "exec_ms_reps": [
+        44.9,
+        43.6,
+        43.3
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 5,
+      "root_actual_rows": 1300,
+      "jit": {}
+    },
+    "after": {
+      "label": "post-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 11927,
+          "shared_read": 0,
+          "exec_ms": 40.392,
+          "plan_ms": 0.842,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1300,
+          "root_actual_rows": 1300,
+          "jit": {}
+        },
+        {
+          "shared_hit": 11927,
+          "shared_read": 0,
+          "exec_ms": 40.971,
+          "plan_ms": 0.375,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1300,
+          "root_actual_rows": 1300,
+          "jit": {}
+        },
+        {
+          "shared_hit": 11927,
+          "shared_read": 0,
+          "exec_ms": 42.042,
+          "plan_ms": 0.348,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1300,
+          "root_actual_rows": 1300,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 11927,
+      "shared_hit_reps": [
+        11927,
+        11927,
+        11927
+      ],
+      "exec_ms": 40.97,
+      "exec_ms_reps": [
+        40.4,
+        41.0,
+        42.0
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 1300,
+      "root_actual_rows": 1300,
+      "jit": {}
+    },
+    "rows_sha256_before": "8ad032a7c15aba4279db609c58319d65563f433daad63e85b74b79a4dd79f609",
+    "rows_sha256_after": "8ad032a7c15aba4279db609c58319d65563f433daad63e85b74b79a4dd79f609",
+    "rows_identical_across_analyze": true,
+    "hit_ratio": 1.13,
+    "seconds": 35.4
+  },
+  {
+    "n": 1400,
+    "schema": "anx_d66e728aed",
+    "rows": {
+      "claims": 1402,
+      "evidence": 1402,
+      "chunks": 1402,
+      "versions": 1402,
+      "documents": 470
+    },
+    "plan_cache_mode": "force_custom_plan",
+    "stats_pre": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "fresh_install_asserted": true,
+    "stats_post": {
+      "memory_chunks": {
+        "reltuples": -1.0,
+        "relpages": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_claims": {
+        "reltuples": 1402.0,
+        "relpages": 77,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_documents": {
+        "reltuples": 470.0,
+        "relpages": 11,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_evidence": {
+        "reltuples": 1402.0,
+        "relpages": 74,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      },
+      "memory_versions": {
+        "reltuples": 1402.0,
+        "relpages": 234,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_live_tup": 0,
+        "autoanalyze_count": 0,
+        "analyze_count": 0
+      }
+    },
+    "before": {
+      "label": "pre-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 14472,
+          "shared_read": 0,
+          "exec_ms": 47.619,
+          "plan_ms": 0.282,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 6,
+          "root_actual_rows": 1402,
+          "jit": {}
+        },
+        {
+          "shared_hit": 14472,
+          "shared_read": 0,
+          "exec_ms": 50.395,
+          "plan_ms": 0.26,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 6,
+          "root_actual_rows": 1402,
+          "jit": {}
+        },
+        {
+          "shared_hit": 14472,
+          "shared_read": 0,
+          "exec_ms": 48.535,
+          "plan_ms": 0.281,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 6,
+          "root_actual_rows": 1402,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 14472,
+      "shared_hit_reps": [
+        14472,
+        14472,
+        14472
+      ],
+      "exec_ms": 48.53,
+      "exec_ms_reps": [
+        47.6,
+        50.4,
+        48.5
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 6,
+      "root_actual_rows": 1402,
+      "jit": {}
+    },
+    "after": {
+      "label": "post-ANALYZE",
+      "reps": [
+        {
+          "shared_hit": 12863,
+          "shared_read": 0,
+          "exec_ms": 44.421,
+          "plan_ms": 0.702,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1402,
+          "root_actual_rows": 1402,
+          "jit": {}
+        },
+        {
+          "shared_hit": 12863,
+          "shared_read": 0,
+          "exec_ms": 44.319,
+          "plan_ms": 0.445,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1402,
+          "root_actual_rows": 1402,
+          "jit": {}
+        },
+        {
+          "shared_hit": 12863,
+          "shared_read": 0,
+          "exec_ms": 43.936,
+          "plan_ms": 0.308,
+          "claims_index": "memory_claims_corpus_id_version_id_id_key",
+          "claims_rows_removed_by_filter": null,
+          "claims_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "claims_filter": null,
+          "evidence_index": "idx_memory_evidence_chunk",
+          "evidence_rows_removed_by_filter": null,
+          "evidence_index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+          "evidence_filter": null,
+          "root_est_rows": 1402,
+          "root_actual_rows": 1402,
+          "jit": {}
+        }
+      ],
+      "shared_hit": 12863,
+      "shared_hit_reps": [
+        12863,
+        12863,
+        12863
+      ],
+      "exec_ms": 44.32,
+      "exec_ms_reps": [
+        44.4,
+        44.3,
+        43.9
+      ],
+      "claims_index": "memory_claims_corpus_id_version_id_id_key",
+      "claims_rows_removed_by_filter": null,
+      "evidence_index": "idx_memory_evidence_chunk",
+      "evidence_rows_removed_by_filter": null,
+      "root_est_rows": 1402,
+      "root_actual_rows": 1402,
+      "jit": {}
+    },
+    "rows_sha256_before": "b6aab7ecd4a6d8e121500fbf8df12a9d1d4f7a19aa97610cd94c29982cfbd8da",
+    "rows_sha256_after": "b6aab7ecd4a6d8e121500fbf8df12a9d1d4f7a19aa97610cd94c29982cfbd8da",
+    "rows_identical_across_analyze": true,
+    "hit_ratio": 1.13,
+    "seconds": 35.6
+  }
+]

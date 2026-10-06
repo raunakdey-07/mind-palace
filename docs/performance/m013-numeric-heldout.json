@@ -1,0 +1,125 @@
+{
+  "candidate": {
+    "gold_reachable_at_floor": 107,
+    "rate": 0.7643
+  },
+  "commit": "6fb1b2185e01307bf865c9eab21be012fcefb587",
+  "dataset": "heldout",
+  "identifier_rescue_count": 10,
+  "keyed_questions": 140,
+  "lexical_floor": 0.3,
+  "net_gain": 10,
+  "python": "3.14.7",
+  "regressed": [],
+  "regressed_count": 0,
+  "rescued": [
+    {
+      "candidate_score": 0.5,
+      "gold_key": "incident.2024-03.orders.root",
+      "qid": "ho-chg-inc-2024-03",
+      "question": "What went wrong in 2024-03 that affected orders?",
+      "rescued_identifiers": [
+        "03",
+        "2024"
+      ],
+      "shipped_score": 0.25
+    },
+    {
+      "candidate_score": 0.5,
+      "gold_key": "incident.2024-07.notifier.root",
+      "qid": "ho-chg-inc-2024-07",
+      "question": "What went wrong in 2024-07 that affected notifier?",
+      "rescued_identifiers": [
+        "07",
+        "2024"
+      ],
+      "shipped_score": 0.25
+    },
+    {
+      "candidate_score": 0.5,
+      "gold_key": "incident.2024-11.ledger.root",
+      "qid": "ho-chg-inc-2024-11",
+      "question": "What went wrong in 2024-11 that affected ledger?",
+      "rescued_identifiers": [
+        "11",
+        "2024"
+      ],
+      "shipped_score": 0.25
+    },
+    {
+      "candidate_score": 0.3333,
+      "gold_key": "release.0.6",
+      "qid": "ho-chg-rel-0.6",
+      "question": "Shipping 0.6 introduced what?",
+      "rescued_identifiers": [
+        "0.6"
+      ],
+      "shipped_score": 0.0
+    },
+    {
+      "candidate_score": 0.3333,
+      "gold_key": "release.0.7",
+      "qid": "ho-chg-rel-0.7",
+      "question": "Shipping 0.7 introduced what?",
+      "rescued_identifiers": [
+        "0.7"
+      ],
+      "shipped_score": 0.0
+    },
+    {
+      "candidate_score": 0.3333,
+      "gold_key": "release.0.8",
+      "qid": "ho-chg-rel-0.8",
+      "question": "Shipping 0.8 introduced what?",
+      "rescued_identifiers": [
+        "0.8"
+      ],
+      "shipped_score": 0.0
+    },
+    {
+      "candidate_score": 0.375,
+      "gold_key": "constraint.deploy.tier-0",
+      "qid": "ho-chg-deploy-tier-0",
+      "question": "What rule governs how tier-0 services get rolled out?",
+      "rescued_identifiers": [
+        "0"
+      ],
+      "shipped_score": 0.2857
+    },
+    {
+      "candidate_score": 0.375,
+      "gold_key": "constraint.deploy.tier-1",
+      "qid": "ho-chg-deploy-tier-1",
+      "question": "What rule governs how tier-1 services get rolled out?",
+      "rescued_identifiers": [
+        "1"
+      ],
+      "shipped_score": 0.2857
+    },
+    {
+      "candidate_score": 0.375,
+      "gold_key": "constraint.deploy.tier-2",
+      "qid": "ho-chg-deploy-tier-2",
+      "question": "What rule governs how tier-2 services get rolled out?",
+      "rescued_identifiers": [
+        "2"
+      ],
+      "shipped_score": 0.2857
+    },
+    {
+      "candidate_score": 0.375,
+      "gold_key": "constraint.deploy.tier-3",
+      "qid": "ho-chg-deploy-tier-3",
+      "question": "What rule governs how tier-3 services get rolled out?",
+      "rescued_identifiers": [
+        "3"
+      ],
+      "shipped_score": 0.2857
+    }
+  ],
+  "rescued_count": 10,
+  "shipped": {
+    "gold_reachable_at_floor": 97,
+    "rate": 0.6929
+  }
+}

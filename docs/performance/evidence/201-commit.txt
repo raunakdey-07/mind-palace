@@ -1,0 +1,43 @@
+$ git commit -m "Fix archive-load planner statistics after bulk ingest" -m "<body>"
+COMMIT_EXIT=0
+
+$ git --no-pager log -1 --format="%H%n%an <%ae>%n%ad%n%n%s%n%n%b"
+cda4d5874091615a658880b482e0287971b1958a
+Sun Oct 4 13:58:41 2026 +0530
+
+Fix archive-load planner statistics after bulk ingest
+
+archive-load picked a corpus-only index and discarded 999 of every 1000 rows when planner statistics were absent (1,079,038 vs 9,190 shared buffers at 1,000 versions); statistics are now collected once per bulk sync, bounded and non-fatal; authoritative output is byte-identical.
+
+
+$ git --no-pager show --stat --format= HEAD (non-evidence paths only)
+ api/services/ingestion.py          |  82 +++++-
+ tests/test_ingestion_statistics.py | 587 +++++++++++++++++++++++++++++++++++++
+ 2 files changed, 663 insertions(+), 6 deletions(-)
+
+$ git --no-optional-locks status --short
+ M .gitignore
+ M CHANGELOG.md
+ M README.md
+ M api/main.py
+ M api/services/memory.py
+ M api/services/memory_public.py
+ M docs/performance/m011-rebuildability.json
+ M docs/performance/m0115-degradation.json
+ M docs/performance/m0115-experiments.json
+ M scripts/benchmark/m0122_instrumented.py
+ M tests/test_api.py
+?? docs/STATUS.md
+?? docs/performance/baseline-packs.json
+?? docs/performance/evidence/201-commit.txt
+?? docs/performance/m0130-heldout.json
+?? docs/performance/m0131-projection-extra.json
+?? docs/performance/m0131-projection.json
+?? docs/performance/status-latency-extended.json
+?? docs/performance/status-latency.json
+?? scripts/benchmark/baseline_packs.py
+?? scripts/benchmark/host_calibration.py
+?? scripts/benchmark/m0130_heldout.py
+?? scripts/benchmark/m0130_run_heldout.py
+?? scripts/benchmark/m0131_profile_projection.py
+?? scripts/check_evidence.py

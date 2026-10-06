@@ -1,0 +1,7 @@
+$ venvmp/bin/python -c psycopg2 probe
+PostgreSQL 15.4 (Debian 15.4-2.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+
+$ venvmp/bin/python -m pytest tests/test_ingestion_statistics.py -q
+......                                                                   [100%]
+6 passed in 53.48s
+PYTEST=0

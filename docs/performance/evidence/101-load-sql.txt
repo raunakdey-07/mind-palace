@@ -1,0 +1,92 @@
+================================================================================
+STEP 1 — EXACT SQL EMITTED BY api/services/memory.py::_load
+Extracted by READING THE SOURCE, not transcribed from memory.
+Source: api/services/memory.py, function `_load`, lines 400-458.
+================================================================================
+
+The statement is built from two switches:
+
+    columns   = "v.*"                          if version_text=True
+             = "v.corpus_id, v.memory_document_id, v.id, v.predecessor_id,
+                v.version_number, v.document_id, v.event, v.observed_at,
+                v.fingerprint"                 if version_text=False
+
+    chunk_expr = "to_jsonb(c)"                                  if chunk_text=True
+               = "jsonb_build_object('id', c.id,
+                                     'heading_path', c.heading_path)" if chunk_text=False
+
+--------------------------------------------------------------------------------
+(1a) WIDE FORM  — version_text=True, chunk_text=True   [the default, "v.*"]
+--------------------------------------------------------------------------------
+        SELECT v.*, d.path,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.order_index)
+                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS chunks,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS claims,
+            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+                '[]'::jsonb) AS evidence
+        FROM memory_versions v JOIN memory_documents d
+          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+        ORDER BY v.observed_at, d.path, v.version_number
+
+--------------------------------------------------------------------------------
+(1b) NARROW FORM — version_text=False, chunk_text=True
+--------------------------------------------------------------------------------
+        SELECT v.corpus_id, v.memory_document_id, v.id, v.predecessor_id, v.version_number, v.document_id, v.event, v.observed_at, v.fingerprint, d.path,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.order_index)
+                FROM memory_chunks c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS chunks,
+            COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+                FROM memory_claims c WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id),
+                '[]'::jsonb) AS claims,
+            COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+                FROM memory_evidence e WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id),
+                '[]'::jsonb) AS evidence
+        FROM memory_versions v JOIN memory_documents d
+          ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+        WHERE v.corpus_id = :c AND (CAST(:path AS text) IS NULL OR d.path = :path)
+          AND (CAST(:at AS timestamptz) IS NULL OR v.observed_at <= :at)
+        ORDER BY v.observed_at, d.path, v.version_number
+
+--------------------------------------------------------------------------------
+BOUND PARAMETERS  (api/services/memory.py:456)
+--------------------------------------------------------------------------------
+        {"c": corpus_id, "path": path, "at": _timestamp(as_of)}
+
+_corpus_id_   -> :c
+_path_        -> :path      (None for a whole-corpus load)
+_as_of_       -> :at        (None for "latest")
+
+The `CAST(:x AS <type>) IS NULL OR ...` idiom exists so that a single SQL
+string with fixed bind names serves both the path-filtered and whole-corpus
+case. It also matters for this investigation: the params are always bound,
+never inlined, so asyncpg sees a parameterised statement and PostgreSQL may
+plan it generically. See 106-plan-cache-mode.txt.
+
+--------------------------------------------------------------------------------
+THE THREE CORRELATED SUBQUERIES UNDER TEST
+--------------------------------------------------------------------------------
+CLAIMS  (the subject of the reported cliff)
+    (SELECT jsonb_agg(to_jsonb(c) ORDER BY c.key, c.id)
+     FROM memory_claims c
+     WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id)
+
+EVIDENCE
+    (SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)
+     FROM memory_evidence e
+     WHERE e.corpus_id = v.corpus_id AND e.version_id = v.id)
+
+CHUNKS (recorded as a control)
+    (SELECT jsonb_agg(to_jsonb(c) ORDER BY c.order_index)
+     FROM memory_chunks c
+     WHERE c.corpus_id = v.corpus_id AND c.version_id = v.id)
+
+Each has TWO correlated predicates: corpus_id AND version_id. Whether the
+planner can serve `version_id` from an index that also carries corpus_id is
+exactly what changes across N. See 107-plan-cliff-table.txt.
+================================================================================

@@ -1,0 +1,19 @@
+$ venvmp/bin/python scripts/check_evidence.py
+documents scanned : 2
+artifacts referenced: 10
+machine-checkable citations: 4
+
+resolved citations:
+  ok  docs/STATUS.md -> docs/performance/baseline-packs.json set_digest = 5a3b80490af52c85c33a3ed823472a2fd0da250c5c981f01aa35162117bd3cd4
+  ok  docs/STATUS.md -> docs/performance/m0115-experiments.json summary.strategies.C_fallback = 194
+  ok  docs/STATUS.md -> docs/performance/m0130-heldout.json meta.dataset_hash = 13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0
+  ok  docs/STATUS.md -> docs/performance/m0130-heldout.json summary.strategies.C_fallback = 131
+
+PROBLEMS (6):
+  !!  referenced but UNTRACKED: docs/performance/baseline-packs.json
+  !!  referenced but UNTRACKED: docs/performance/evidence/140-loadavg.txt
+  !!  referenced but UNTRACKED: docs/performance/m0130-heldout.json
+  !!  referenced but UNTRACKED: docs/performance/m0131-projection.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency-extended.json
+  !!  referenced but UNTRACKED: docs/performance/status-latency.json
+EVIDENCE=0

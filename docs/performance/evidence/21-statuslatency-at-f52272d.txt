@@ -1,0 +1,7 @@
+--- attempt to read artifact at f52272d ---
+fatal: path 'docs/performance/status-latency.json' exists on disk, but not in 'f52272d'
+git show exit: 128
+--- blob at f52272d ---
+fatal: path 'docs/performance/status-latency.json' exists on disk, but not in 'f52272d'
+--- which commits ever touched this path ---
+(end log)

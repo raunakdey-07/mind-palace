@@ -1,0 +1,495 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND (run from /mnt/Warehouse/projects/Mind Palace):
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m a5_fixture
+
+RAW OUTPUT
+==============================================================================
+### A5 -- committed fixture, explicit ANALYZE, and autovacuum
+==============================================================================
+A5-1  COMMITTED fixture + explicit ANALYZE in a NEW transaction
+==============================================================================
+  BEFORE_explicit_analyze: memory_claims reltuples=-1 pg_statistic_rows=0 last_analyze=None last_autoanalyze=None analyze_count=0 autoanalyze_count=0
+  AFTER_explicit_analyze: memory_claims reltuples=1000 pg_statistic_rows=11 last_analyze=2026-10-03 10:26:39.115378+00:00 last_autoanalyze=None analyze_count=1 autoanalyze_count=0
+  committed, no ANALYZE: shared_hit_blocks=1078038 Plan Rows=5 Actual Rows=1000
+      memory_claims    index=idx_memory_claims_validity  Index Cond=(corpus_id = v.corpus_id)  RowsRemovedByFilter=999
+      memory_evidence  index=idx_memory_evidence_claim  Index Cond=(corpus_id = v.corpus_id)  RowsRemovedByFilter=999
+      memory_chunks    index=memory_chunks_corpus_id_version_id_order_index_key  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+  committed, after ANALYZE: shared_hit_blocks=9190 Plan Rows=1000 Actual Rows=1000
+      memory_claims    index=memory_claims_corpus_id_version_id_id_key  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+      memory_evidence  index=idx_memory_evidence_chunk  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+      memory_chunks    index=memory_chunks_corpus_id_version_id_order_index_key  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+  rows identical across the ANALYZE: True (sha=431fd2dd27f5e4a1, n=1000)
+
+==============================================================================
+A5-2  autovacuum left entirely alone (NO threshold override, NO ALTER)
+==============================================================================
+  BEFORE  memory_claims reltuples=-1 last_analyze=None last_autoanalyze=None analyze_count=0 autoanalyze_count=0
+    t+  0s  last_autoanalyze=None autoanalyze_count=0 reltuples=-1 pg_statistic_rows=0
+    t+ 30s  last_autoanalyze=None autoanalyze_count=0 reltuples=-1 pg_statistic_rows=0
+    t+ 55s  last_autoanalyze=2026-10-03 10:28:15.581420+00:00 autoanalyze_count=1 reltuples=1000 pg_statistic_rows=11
+  AFTER   memory_claims reltuples=1000 last_analyze=None last_autoanalyze=2026-10-03 10:28:15.581420+00:00 analyze_count=0 autoanalyze_count=1 pg_statistic_rows=11
+  committed, autoanalyzed: shared_hit_blocks=9190 Plan Rows=1000 Actual Rows=1000
+      memory_claims    index=memory_claims_corpus_id_version_id_id_key  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+      memory_evidence  index=idx_memory_evidence_chunk  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+      memory_chunks    index=memory_chunks_corpus_id_version_id_order_index_key  Index Cond=((corpus_id = v.corpus_id) AND (version_id = v.id))  RowsRemovedByFilter=None
+  rows sha=7f89d14c9eb5c367 n=1000
+
+==============================================================================
+RAW JSON
+==============================================================================
+{
+  "A5_1_explicit": {
+    "AFTER_explicit_analyze": {
+      "memory_chunks": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:26:39.095576+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 6,
+        "relpages": 50,
+        "reltuples": 1000
+      },
+      "memory_claims": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:26:39.115378+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 11,
+        "relpages": 56,
+        "reltuples": 1000
+      },
+      "memory_documents": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:26:39.119167+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 3,
+        "relpages": 23,
+        "reltuples": 1000
+      },
+      "memory_evidence": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:26:39.133523+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 8,
+        "relpages": 53,
+        "reltuples": 1000
+      },
+      "memory_versions": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "last_analyze": "2026-10-03 10:26:39.155014+00:00",
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 11,
+        "relpages": 167,
+        "reltuples": 1000
+      }
+    },
+    "BEFORE_explicit_analyze": {
+      "memory_chunks": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_claims": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_documents": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_evidence": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_versions": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      }
+    },
+    "corpus_committed": true,
+    "n": 1000,
+    "n_rows": 1000,
+    "plan_after_analyze": {
+      "label": "committed, after ANALYZE",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_claims_corpus_id_version_id_id_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "idx_memory_evidence_chunk",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 1000,
+      "root_plan_rows": 1000,
+      "shared_hit_blocks": 9190,
+      "shared_hit_blocks_all_reps": [
+        9190,
+        9190,
+        9190
+      ],
+      "shared_hit_blocks_first_rep": 9190,
+      "shared_hit_blocks_max_spread": 0
+    },
+    "plan_before_analyze": {
+      "label": "committed, no ANALYZE",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": "(version_id = v.id)",
+            "index_cond": "(corpus_id = v.corpus_id)",
+            "index_name": "idx_memory_claims_validity",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": 999,
+            "shared_hit_blocks": 57000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": "(version_id = v.id)",
+            "index_cond": "(corpus_id = v.corpus_id)",
+            "index_name": "idx_memory_evidence_claim",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": 999,
+            "shared_hit_blocks": 1015000,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 1000,
+      "root_plan_rows": 5,
+      "shared_hit_blocks": 1078038,
+      "shared_hit_blocks_all_reps": [
+        1078038,
+        1078038,
+        1078038
+      ],
+      "shared_hit_blocks_first_rep": 1078038,
+      "shared_hit_blocks_max_spread": 0
+    },
+    "rows_after_commit": {
+      "chunks": 0,
+      "claims": 0,
+      "documents": 0,
+      "evidence": 0,
+      "versions": 0
+    },
+    "rows_identical": true,
+    "schema": "anxF_82fc59e6de",
+    "sha256": "431fd2dd27f5e4a1ec6e1585ceca071e101b8fe8f88864dfe996937766719623"
+  },
+  "A5_2_autovacuum": {
+    "AFTER_poll": {
+      "memory_chunks": {
+        "analyze_count": 0,
+        "autoanalyze_count": 1,
+        "last_analyze": null,
+        "last_autoanalyze": "2026-10-03 10:28:15.550862+00:00",
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 6,
+        "relpages": 50,
+        "reltuples": 1000
+      },
+      "memory_claims": {
+        "analyze_count": 0,
+        "autoanalyze_count": 1,
+        "last_analyze": null,
+        "last_autoanalyze": "2026-10-03 10:28:15.581420+00:00",
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 11,
+        "relpages": 56,
+        "reltuples": 1000
+      },
+      "memory_documents": {
+        "analyze_count": 0,
+        "autoanalyze_count": 1,
+        "last_analyze": null,
+        "last_autoanalyze": "2026-10-03 10:28:15.687703+00:00",
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 3,
+        "relpages": 23,
+        "reltuples": 1000
+      },
+      "memory_evidence": {
+        "analyze_count": 0,
+        "autoanalyze_count": 1,
+        "last_analyze": null,
+        "last_autoanalyze": "2026-10-03 10:28:15.599845+00:00",
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 8,
+        "relpages": 53,
+        "reltuples": 1000
+      },
+      "memory_versions": {
+        "analyze_count": 0,
+        "autoanalyze_count": 1,
+        "last_analyze": null,
+        "last_autoanalyze": "2026-10-03 10:28:15.527781+00:00",
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 11,
+        "relpages": 167,
+        "reltuples": 1000
+      }
+    },
+    "BEFORE_poll": {
+      "memory_chunks": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_claims": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_documents": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_evidence": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      },
+      "memory_versions": {
+        "analyze_count": 0,
+        "autoanalyze_count": 0,
+        "last_analyze": null,
+        "last_autoanalyze": null,
+        "n_dead_tup": 0,
+        "n_live_tup": 1000,
+        "pg_statistic_rows": 0,
+        "relpages": 0,
+        "reltuples": -1
+      }
+    },
+    "autoanalyze_fired_after_seconds": 55,
+    "corpus_committed": true,
+    "method": "stock autovacuum; no ALTER TABLE, no threshold override",
+    "n": 1000,
+    "plan_after_autoanalyze": {
+      "label": "committed, autoanalyzed",
+      "nodes": {
+        "memory_chunks": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_chunks_corpus_id_version_id_order_index_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_claims": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "memory_claims_corpus_id_version_id_id_key",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ],
+        "memory_evidence": [
+          {
+            "actual_loops": 1000,
+            "actual_rows": 1,
+            "bitmap_indexes": [],
+            "filter": null,
+            "index_cond": "((corpus_id = v.corpus_id) AND (version_id = v.id))",
+            "index_name": "idx_memory_evidence_chunk",
+            "node_type": "Index Scan",
+            "plan_rows": 1,
+            "rows_removed_by_filter": null,
+            "shared_hit_blocks": 3000,
+            "shared_read_blocks": 0
+          }
+        ]
+      },
+      "root_actual_rows": 1000,
+      "root_plan_rows": 1000,
+      "shared_hit_blocks": 9190,
+      "shared_hit_blocks_all_reps": [
+        9202,
+        9190,
+        9190
+      ],
+      "shared_hit_blocks_first_rep": 9202,
+      "shared_hit_blocks_max_spread": 12
+    },
+    "poll_seconds": 180,
+    "rows": {
+      "cols": [
+        "corpus_id",
+        "memory_document_id",
+        "id",
+        "predecessor_id",
+        "version_number",
+        "document_id",
+        "event",
+        "observed_at",
+        "fingerprint",
+        "path",
+        "chunks",
+        "claims",
+        "evidence"
+      ],
+      "n_rows": 1000,
+      "sha256": "7f89d14c9eb5c367059435a6414fdccbd91399b6d775f486748d3559770daef7"
+    },
+    "schema": "anxV_5c17d73543"
+  }
+}

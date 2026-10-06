@@ -1,0 +1,2989 @@
+{
+  "failure_taxonomy": {
+    "F1": "source missing",
+    "F10": "budget or truncation",
+    "F11": "developer API",
+    "F12": "performance",
+    "F2": "authority missing",
+    "F3": "temporal semantics",
+    "F4": "conflict semantics",
+    "F5": "provenance",
+    "F6": "query interpretation",
+    "F7": "lexical retrieval",
+    "F8": "semantic retrieval",
+    "F9": "relationship representation"
+  },
+  "meta": {
+    "commit": "f52272db635cbd17171d3d3b02eaeb855efefe69",
+    "dataset_hash": "13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0",
+    "model": "all-MiniLM-L6-v2",
+    "note": "held-out set; authored independently of the development benchmark",
+    "python": "3.14.7",
+    "questions": 157,
+    "valid_at": "2026-01-15T12:00:00+00:00"
+  },
+  "results": [
+    {
+      "category": "current",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-cur-postgres",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "Which component serves primary datastore in production right now?"
+    },
+    {
+      "category": "current",
+      "expect_key": "architecture.redis",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.redis"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-redis",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which component serves shared cache in production right now?"
+    },
+    {
+      "category": "current",
+      "expect_key": "architecture.queue",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.queue"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-queue",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which component serves job queue in production right now?"
+    },
+    {
+      "category": "current",
+      "expect_key": "architecture.search",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.search"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-search",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which component serves search engine in production right now?"
+    },
+    {
+      "category": "current",
+      "expect_key": "architecture.storage",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.storage"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-storage",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which component serves object storage in production right now?"
+    },
+    {
+      "category": "current",
+      "expect_key": "architecture.warehouse",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.warehouse",
+        "service.analytics.depends_on"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-warehouse",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which component serves analytics warehouse in production right now?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.gateway.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "service.gateway.tier",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-gateway",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the API Gateway today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.identity.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.identity.escalation",
+        "service.identity.depends_on",
+        "service.identity.owner",
+        "service.identity.tier",
+        "service.orders.depends_on",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-identity",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Identity Service today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.orders.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.orders.pool",
+        "runbook.orders.escalation",
+        "service.orders.depends_on",
+        "service.orders.owner",
+        "service.orders.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-orders",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Orders Service today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.billing.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.billing.escalation",
+        "service.billing.depends_on",
+        "service.billing.owner",
+        "service.billing.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-billing",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Billing Worker today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.search-indexer.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.search.batch",
+        "incident.2024-09.search-indexer.root",
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.search-indexer.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-search-indexer",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Search Indexer today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.web.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.web.escalation",
+        "service.web.depends_on",
+        "service.web.owner",
+        "service.web.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-web",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Web Frontend today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.notifier.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.notifier.idempotency",
+        "incident.2024-07.notifier.root",
+        "runbook.notifier.escalation",
+        "service.notifier.depends_on",
+        "service.notifier.owner",
+        "service.notifier.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-notifier",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Notifier today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.analytics.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.analytics.escalation",
+        "service.analytics.depends_on",
+        "service.analytics.owner",
+        "service.analytics.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-analytics",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Analytics ETL today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.media.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.media.escalation",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.media.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-media",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Media Service today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.archive.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.archive.escalation",
+        "service.archive.depends_on",
+        "service.archive.owner",
+        "service.archive.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-archive",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Archive Job today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.ledger.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.ledger.escalation",
+        "service.ledger.depends_on",
+        "service.ledger.owner",
+        "service.ledger.tier",
+        "service.risk.depends_on",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-ledger",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Ledger Service today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.risk.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.risk.escalation",
+        "service.risk.depends_on",
+        "service.risk.owner",
+        "service.risk.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-own-risk",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Who is on point for the Risk Engine today?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.gateway.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.gateway.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-gateway",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the API Gateway sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.identity.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.identity.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-identity",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Identity Service sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.orders.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.orders.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-orders",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Orders Service sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.billing.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.billing.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-billing",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Billing Worker sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.search-indexer.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.search-indexer.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-search-indexer",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Search Indexer sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.web.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.web.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-web",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Web Frontend sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.notifier.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.notifier.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-notifier",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Notifier sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.analytics.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-analytics",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Analytics ETL sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.media.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.media.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-media",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Media Service sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.archive.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.archive.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-archive",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Archive Job sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.ledger.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.ledger.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-ledger",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Ledger Service sit in?"
+    },
+    {
+      "category": "current",
+      "expect_key": "service.risk.tier",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.risk.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-cur-tier-risk",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which availability tier does the Risk Engine sit in?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "architecture.postgres",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres",
+        "decision.database.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-hist-postgres",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "Before the consolidation, what handled primary datastore?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "architecture.redis",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.redis",
+        "decision.cache.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-redis",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Before the consolidation, what handled shared cache?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "architecture.queue",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.queue",
+        "decision.queue.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-queue",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Before the consolidation, what handled job queue?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "architecture.search",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.search",
+        "decision.search.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-search",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Before the consolidation, what handled search engine?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "architecture.storage",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.storage",
+        "decision.storage.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-storage",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Before the consolidation, what handled object storage?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "architecture.warehouse",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.warehouse",
+        "decision.warehouse.reason",
+        "service.analytics.depends_on",
+        "service.analytics.owner",
+        "service.analytics.tier"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-warehouse",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Before the consolidation, what handled analytics warehouse?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.gateway.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "service.gateway.tier",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-gateway",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the API Gateway breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.identity.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.identity.escalation",
+        "service.identity.depends_on",
+        "service.identity.owner",
+        "service.identity.tier",
+        "service.orders.depends_on",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-identity",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Identity Service breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.orders.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.orders.pool",
+        "runbook.orders.escalation",
+        "service.orders.depends_on",
+        "service.orders.owner",
+        "service.orders.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-orders",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Orders Service breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.billing.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.billing.escalation",
+        "service.billing.depends_on",
+        "service.billing.owner",
+        "service.billing.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-billing",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Billing Worker breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.search-indexer.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.search.batch",
+        "incident.2024-09.search-indexer.root",
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.search-indexer.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-search-indexer",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Search Indexer breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.web.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.web.escalation",
+        "service.web.depends_on",
+        "service.web.owner",
+        "service.web.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-web",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Web Frontend breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.notifier.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.notifier.idempotency",
+        "incident.2024-07.notifier.root",
+        "runbook.notifier.escalation",
+        "service.notifier.depends_on",
+        "service.notifier.owner",
+        "service.notifier.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-notifier",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Notifier breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.analytics.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.analytics.escalation",
+        "service.analytics.depends_on",
+        "service.analytics.owner",
+        "service.analytics.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-analytics",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Analytics ETL breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.media.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.media.escalation",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.media.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-media",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Media Service breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.archive.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.archive.escalation",
+        "service.archive.depends_on",
+        "service.archive.owner",
+        "service.archive.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-archive",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Archive Job breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.ledger.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.ledger.escalation",
+        "service.ledger.depends_on",
+        "service.ledger.owner",
+        "service.ledger.tier",
+        "service.risk.depends_on",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-ledger",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Ledger Service breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "runbook.risk.escalation",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.risk.escalation",
+        "service.risk.depends_on",
+        "service.risk.owner",
+        "service.risk.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-esc-risk",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "When the Risk Engine breaks, who gets woken up?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "config.database.url",
+      "expect_state": "HISTORICAL",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "config.database.url"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-url",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The database URL was changed at some point. What did it point at before?"
+    },
+    {
+      "category": "historical",
+      "expect_key": "team.platform.services",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.identity.escalation",
+        "service.gateway.owner",
+        "service.identity.owner",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-team-platform",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "List the services the platform team is responsible for."
+    },
+    {
+      "category": "historical",
+      "expect_key": "team.payments.services",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.ledger.escalation",
+        "runbook.orders.escalation",
+        "service.billing.owner",
+        "service.ledger.owner",
+        "service.notifier.owner",
+        "service.orders.owner",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-team-payments",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "List the services the payments team is responsible for."
+    },
+    {
+      "category": "historical",
+      "expect_key": "team.discovery.services",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.media.escalation",
+        "service.media.owner",
+        "service.search-indexer.owner",
+        "service.web.owner",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-team-discovery",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "List the services the discovery team is responsible for."
+    },
+    {
+      "category": "historical",
+      "expect_key": "team.data.services",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.owner",
+        "service.archive.owner",
+        "service.risk.owner",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-hist-team-data",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "List the services the data team is responsible for."
+    },
+    {
+      "category": "temporal",
+      "expect_key": "decision.database.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "conflicting",
+      "qid": "ho-chg-why-postgres",
+      "semantic_ok": false,
+      "semantic_status": "conflicting",
+      "text": "What reasoning led to picking the present primary datastore?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "decision.cache.reason",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.redis",
+        "decision.cache.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-chg-why-redis",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What reasoning led to picking the present shared cache?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "decision.queue.reason",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.queue",
+        "decision.queue.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-chg-why-queue",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What reasoning led to picking the present job queue?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "decision.search.reason",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.search",
+        "decision.search.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-chg-why-search",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What reasoning led to picking the present search engine?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "decision.storage.reason",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.storage",
+        "decision.storage.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-chg-why-storage",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What reasoning led to picking the present object storage?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "decision.warehouse.reason",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.warehouse",
+        "decision.warehouse.reason",
+        "service.analytics.depends_on"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-chg-why-warehouse",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What reasoning led to picking the present analytics warehouse?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "incident.2024-03.orders.root",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-inc-2024-03",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What went wrong in 2024-03 that affected orders?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "incident.2024-07.notifier.root",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-inc-2024-07",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What went wrong in 2024-07 that affected notifier?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "incident.2024-09.search-indexer.root",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.search.batch",
+        "incident.2024-09.search-indexer.root",
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.search-indexer.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-chg-inc-2024-09",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What went wrong in 2024-09 that affected search-indexer?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "incident.2024-11.ledger.root",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-inc-2024-11",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What went wrong in 2024-11 that affected ledger?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "release.0.6",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-rel-0.6",
+      "semantic_ok": false,
+      "semantic_status": "no_relevant_memory",
+      "text": "Shipping 0.6 introduced what?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "release.0.7",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-rel-0.7",
+      "semantic_ok": false,
+      "semantic_status": "no_relevant_memory",
+      "text": "Shipping 0.7 introduced what?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "release.0.8",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-rel-0.8",
+      "semantic_ok": false,
+      "semantic_status": "no_relevant_memory",
+      "text": "Shipping 0.8 introduced what?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "constraint.deploy.tier-0",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-deploy-tier-0",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What rule governs how tier-0 services get rolled out?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "constraint.deploy.tier-1",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-deploy-tier-1",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What rule governs how tier-1 services get rolled out?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "constraint.deploy.tier-2",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-deploy-tier-2",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What rule governs how tier-2 services get rolled out?"
+    },
+    {
+      "category": "temporal",
+      "expect_key": "constraint.deploy.tier-3",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-chg-deploy-tier-3",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "What rule governs how tier-3 services get rolled out?"
+    },
+    {
+      "category": "conflict",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CONFLICTING",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-cft-primary",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "Two documents appear to name different primary datastores. Name both."
+    },
+    {
+      "category": "conflict",
+      "expect_key": "architecture.datastore",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-cft-drift",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "An ADR asserts an edge store under a different key than the architecture. What does it say?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-ev-tech-postgres",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "Justify the present primary datastore with a direct quotation."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "architecture.redis",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.redis"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-tech-redis",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Justify the present shared cache with a direct quotation."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "architecture.queue",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.queue"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-tech-queue",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Justify the present job queue with a direct quotation."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "architecture.search",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.search"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-tech-search",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Justify the present search engine with a direct quotation."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "architecture.storage",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.storage"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-tech-storage",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Justify the present object storage with a direct quotation."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "architecture.warehouse",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.warehouse",
+        "service.analytics.depends_on"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-tech-warehouse",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Justify the present analytics warehouse with a direct quotation."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.orders.pool",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-ev-inc-2024-03",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What rule did the 2024-03 incident put in place?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.notifier.idempotency",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-ev-inc-2024-07",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What rule did the 2024-07 incident put in place?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.search.batch",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-ev-inc-2024-09",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What rule did the 2024-09 incident put in place?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.ledger.settlement",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-ev-inc-2024-11",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "What rule did the 2024-11 incident put in place?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.gateway.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.gateway.escalation",
+        "service.gateway.owner",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-gateway",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the API Gateway?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.identity.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.identity.escalation",
+        "service.identity.owner",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-identity",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Identity Service?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.orders.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.orders.escalation",
+        "service.orders.owner",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-orders",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Orders Service?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.billing.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.billing.escalation",
+        "service.billing.owner",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-billing",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Billing Worker?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.search-indexer.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.owner",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-search-indexer",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Search Indexer?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.web.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.web.escalation",
+        "service.web.owner",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-web",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Web Frontend?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.notifier.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.notifier.escalation",
+        "service.notifier.owner",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-notifier",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Notifier?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.analytics.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.analytics.escalation",
+        "service.analytics.owner",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-analytics",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Analytics ETL?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.media.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.media.escalation",
+        "service.media.owner",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-media",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Media Service?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.archive.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.archive.escalation",
+        "service.archive.owner",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-archive",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Archive Job?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.ledger.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.ledger.escalation",
+        "service.ledger.owner",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-ledger",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Ledger Service?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "service.risk.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.risk.escalation",
+        "service.risk.owner",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-own-risk",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Which document names the team responsible for the Risk Engine?"
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.deploy.tier-0",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-deploy-tier-0",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Cite the source of the tier-0 deployment rule."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.deploy.tier-1",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-deploy-tier-1",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Cite the source of the tier-1 deployment rule."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.deploy.tier-2",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-deploy-tier-2",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Cite the source of the tier-2 deployment rule."
+    },
+    {
+      "category": "provenance",
+      "expect_key": "constraint.deploy.tier-3",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-ev-deploy-tier-3",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Cite the source of the tier-3 deployment rule."
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.identity.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "runbook.identity.escalation",
+        "service.identity.depends_on",
+        "service.identity.owner",
+        "service.identity.tier",
+        "service.orders.depends_on",
+        "team.platform.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-identity",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "The Identity Service cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.orders.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "constraint.orders.pool",
+        "runbook.orders.escalation",
+        "service.orders.depends_on",
+        "service.orders.owner",
+        "service.orders.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-orders",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Orders Service cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.billing.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.billing.escalation",
+        "service.billing.depends_on",
+        "service.billing.owner",
+        "service.billing.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-billing",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Billing Worker cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.search-indexer.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.search.batch",
+        "incident.2024-09.search-indexer.root",
+        "runbook.search-indexer.escalation",
+        "service.search-indexer.depends_on",
+        "service.search-indexer.owner",
+        "service.search-indexer.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-search-indexer",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Search Indexer cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.web.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.web.escalation",
+        "service.web.depends_on",
+        "service.web.owner",
+        "service.web.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-web",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "The Web Frontend cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.notifier.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "constraint.notifier.idempotency",
+        "incident.2024-07.notifier.root",
+        "runbook.notifier.escalation",
+        "service.notifier.depends_on",
+        "service.notifier.owner",
+        "service.notifier.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-notifier",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "The Notifier cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.analytics.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.analytics.escalation",
+        "service.analytics.depends_on",
+        "service.analytics.owner",
+        "service.analytics.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-analytics",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Analytics ETL cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.media.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "runbook.media.escalation",
+        "service.media.depends_on",
+        "service.media.owner",
+        "service.media.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-media",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Media Service cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.archive.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "runbook.archive.escalation",
+        "service.archive.depends_on",
+        "service.archive.owner",
+        "service.archive.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-archive",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Archive Job cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.ledger.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3",
+        "runbook.ledger.escalation",
+        "service.ledger.depends_on",
+        "service.ledger.owner",
+        "service.ledger.tier",
+        "service.risk.depends_on",
+        "team.payments.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-ledger",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Ledger Service cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.risk.depends_on",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "runbook.risk.escalation",
+        "service.risk.depends_on",
+        "service.risk.owner",
+        "service.risk.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-dep-risk",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "The Risk Engine cannot run without what?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "constraint.orders.pool",
+      "expect_state": "CURRENT",
+      "failure": "F9",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-rel-impact-orders",
+      "semantic_ok": false,
+      "semantic_status": "no_relevant_memory",
+      "text": "After the orders outage, what limit was imposed?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "constraint.ledger.settlement",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.ledger.settlement",
+        "incident.2024-11.ledger.root"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-impact-ledger",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "The double posting forced a requirement on settlement. What is it?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": "service.archive.owner",
+      "expect_state": "CURRENT",
+      "failure": "F9",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.storage"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-rel-why-storage",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Decisions about object storage belong to whom?"
+    },
+    {
+      "category": "relationship",
+      "expect_key": null,
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-rel-cycle",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Name a pair of services that reference each other."
+    },
+    {
+      "category": "relationship",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-rel-after-db",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "What in the archive was authored after the datastore was decided?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-office-cat",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Which caterer supplies the Friday team lunch?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-desk-model",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Which desk model do new joiners get?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-payroll-vendor",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Which payroll system is in use company-wide?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-travel-policy",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "How many nights may staff book on a trip?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-insurance-cover",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Which insurer covers the hardware fleet?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-office-chairs",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "What furniture is in the third floor meeting room?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-legal-firm",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Which law firm reviewed the supplier contract?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "constraint.deploy.tier-0",
+        "constraint.deploy.tier-1",
+        "constraint.deploy.tier-2",
+        "constraint.deploy.tier-3"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-abs-expense-cap",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "What is the ceiling on a single expense claim?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-hiring-agency",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Which agency handles technical recruitment?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-training-budget",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "How much is set aside for staff development?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-audit-date",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "When was the last penetration test carried out?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-vpn-policy",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "What is the split tunnel configuration for the VPN?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-dns-ops",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Who administers the public DNS zone?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-cdn-provider",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "Which CDN fronts the static assets?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-backup-window",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "How far back do backups reach?"
+    },
+    {
+      "category": "abstention",
+      "expect_key": null,
+      "expect_state": "ABSENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": true,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-abs-oncall-length",
+      "semantic_ok": true,
+      "semantic_status": "no_relevant_memory",
+      "text": "How long is each on-call rotation?"
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.gateway.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.platform.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-gateway",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the API Gateway: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.identity.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.platform.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-identity",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the Identity Service: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.orders.owner",
+      "expect_state": "CURRENT",
+      "failure": "F2",
+      "fallback_ok": false,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-orders",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Summarise the Orders Service: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.billing.owner",
+      "expect_state": "CURRENT",
+      "failure": "F2",
+      "fallback_ok": false,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-billing",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Summarise the Billing Worker: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.search-indexer.owner",
+      "expect_state": "CURRENT",
+      "failure": "F2",
+      "fallback_ok": false,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-search-indexer",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Summarise the Search Indexer: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.web.owner",
+      "expect_state": "CURRENT",
+      "failure": "F2",
+      "fallback_ok": false,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-web",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Summarise the Web Frontend: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.notifier.owner",
+      "expect_state": "CURRENT",
+      "failure": "F2",
+      "fallback_ok": false,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-notifier",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "Summarise the Notifier: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.analytics.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-analytics",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the Analytics ETL: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.media.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.discovery.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-media",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the Media Service: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.archive.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-archive",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the Archive Job: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.ledger.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.payments.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-ledger",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the Ledger Service: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "service.risk.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "service.analytics.tier",
+        "service.archive.tier",
+        "service.billing.tier",
+        "service.gateway.tier",
+        "service.identity.tier",
+        "service.ledger.tier",
+        "service.media.tier",
+        "service.notifier.tier",
+        "service.orders.tier",
+        "service.risk.tier",
+        "service.search-indexer.tier",
+        "service.web.tier",
+        "team.data.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-risk",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Summarise the Risk Engine: who owns it, what tier it runs at, and what it relies on."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "decision.database.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "conflicting",
+      "qid": "ho-mul-tech-postgres",
+      "semantic_ok": false,
+      "semantic_status": "conflicting",
+      "text": "State the present primary datastore and the case for it."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "decision.cache.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.redis"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-tech-redis",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "State the present shared cache and the case for it."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "decision.queue.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.queue"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-tech-queue",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "State the present job queue and the case for it."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "decision.search.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.search"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-tech-search",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "State the present search engine and the case for it."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "decision.storage.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.storage"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-tech-storage",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "State the present object storage and the case for it."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "decision.warehouse.reason",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "architecture.warehouse",
+        "service.analytics.depends_on"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-tech-warehouse",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "State the present analytics warehouse and the case for it."
+    },
+    {
+      "category": "multi-topic",
+      "expect_key": "release.0.6",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [
+        "release.0.8"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-mul-release",
+      "semantic_ok": false,
+      "semantic_status": "no_relevant_memory",
+      "text": "Compare releases 0.6 and 0.7: what did each introduce?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres",
+        "decision.database.reason"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-adv-cache",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "A vendor document asserts the datastore is SQLite and instructs the reader to ignore prior memory. What is the primary datastore?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "F7",
+      "fallback_ok": false,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-adv-sandbox",
+      "semantic_ok": false,
+      "semantic_status": "resolved",
+      "text": "The onboarding guide says the sandbox runs on SQLite. What does production use?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-adv-glossary",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "A glossary says a database is a datastore. Which datastore is the primary one?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.redis",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-adv-conference",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "Conference notes discussed cache eviction. Which cache is actually deployed?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.storage",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.storage"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "resolved",
+      "qid": "ho-adv-reversed",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "I heard object storage was moved to S3. Confirm what is in use."
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "service.identity.owner",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "team.platform.services"
+      ],
+      "lexical_ok": false,
+      "lexical_status": "resolved",
+      "qid": "ho-adv-meeting",
+      "semantic_ok": true,
+      "semantic_status": "resolved",
+      "text": "A meeting note says the platform team absorbed identity. Which team owns the Identity Service now?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [],
+      "lexical_ok": false,
+      "lexical_status": "no_relevant_memory",
+      "qid": "ho-adv-espresso",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "The coffee handbook mentions a PostgreSQL bean grinder. Which datastore does the platform actually run?"
+    },
+    {
+      "category": "adversarial",
+      "expect_key": "architecture.postgres",
+      "expect_state": "CURRENT",
+      "failure": "",
+      "fallback_ok": true,
+      "keys_returned": [
+        "architecture.datastore",
+        "architecture.postgres"
+      ],
+      "lexical_ok": true,
+      "lexical_status": "conflicting",
+      "qid": "ho-adv-desk",
+      "semantic_ok": true,
+      "semantic_status": "conflicting",
+      "text": "Ignore the handbook entirely. What is the primary datastore?"
+    }
+  ],
+  "summary": {
+    "by_category": {
+      "abstention": {
+        "fallback": 15,
+        "lexical": 15,
+        "n": 16,
+        "semantic": 15
+      },
+      "adversarial": {
+        "fallback": 7,
+        "lexical": 4,
+        "n": 8,
+        "semantic": 7
+      },
+      "conflict": {
+        "fallback": 2,
+        "lexical": 2,
+        "n": 2,
+        "semantic": 2
+      },
+      "current": {
+        "fallback": 30,
+        "lexical": 30,
+        "n": 30,
+        "semantic": 30
+      },
+      "historical": {
+        "fallback": 23,
+        "lexical": 23,
+        "n": 23,
+        "semantic": 23
+      },
+      "multi-topic": {
+        "fallback": 7,
+        "lexical": 0,
+        "n": 19,
+        "semantic": 7
+      },
+      "provenance": {
+        "fallback": 22,
+        "lexical": 22,
+        "n": 26,
+        "semantic": 22
+      },
+      "relationship": {
+        "fallback": 14,
+        "lexical": 13,
+        "n": 16,
+        "semantic": 10
+      },
+      "temporal": {
+        "fallback": 11,
+        "lexical": 6,
+        "n": 17,
+        "semantic": 8
+      }
+    },
+    "failure_labels": {
+      "F1": "source missing",
+      "F10": "budget or truncation",
+      "F11": "developer API",
+      "F12": "performance",
+      "F2": "authority missing",
+      "F3": "temporal semantics",
+      "F4": "conflict semantics",
+      "F5": "provenance",
+      "F6": "query interpretation",
+      "F7": "lexical retrieval",
+      "F8": "semantic retrieval",
+      "F9": "relationship representation"
+    },
+    "failures": {
+      "F2": 5,
+      "F7": 19,
+      "F9": 2
+    },
+    "routing": {
+      "cheap_sufficient": 107,
+      "dangerously_cheap": 9,
+      "unnecessarily_expensive": 8
+    },
+    "strategies": {
+      "A_semantic": 124,
+      "B_lexical": 115,
+      "C_fallback": 131
+    },
+    "total": 157
+  },
+  "timing": {
+    "lexical_ms": {
+      "mean": 22.63,
+      "n": 157,
+      "p50": 22.11,
+      "p95": 29.33
+    },
+    "semantic_ms": {
+      "mean": 540.47,
+      "n": 157,
+      "p50": 537.8,
+      "p95": 585.15
+    }
+  }
+}

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mindpalace-os"
-version = "0.7.0"
+version = "0.8.0"
 description = "Mind Palace - AI-native Research Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,12 +39,25 @@ dev = [
 
 [project.scripts]
 mindpalace = "cli.main:app"
+# Standalone, dependency-free proof tooling. A separate entry point, not a
+# subcommand of the Typer CLI, because Typer is an optional extra: anyone who
+# installs the package must be able to verify a proof without it.
+mindpalace-proof = "memory_proof_cli:main"
 
 [tool.setuptools]
 # Top-level single-file modules alongside the api/cli packages.
 # memory_pack ships deliberately: it is the dependency-free reader a consumer
 # copies or imports to understand a pack without the server.
-py-modules = ["mindpalace_sdk", "mcp_server", "memory_pack"]
+# memory_proof and memory_proof_cli ship for the same reason: verifying a
+# recorded memory must not require the server, the database or a model.
+py-modules = [
+    "mindpalace_sdk",
+    "mcp_server",
+    "memory_pack",
+    "memory_proof",
+    "memory_proof_cli",
+    "memory_receipt",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

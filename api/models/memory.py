@@ -22,6 +22,9 @@ class MemoryRequest(Contract):
     intent: Literal[
         "auto", "current", "historical", "temporal", "change", "conflict", "provenance"
     ] = "auto"
+    # Opt-in. Absent by default so an existing client receives byte-identical
+    # output; a receipt is evidence about the answer, not part of the answer.
+    include_receipt: bool = False
 
     @field_validator("query")
     @classmethod
@@ -146,11 +149,22 @@ class MemoryResponse(Contract):
     snapshot: Snapshot | None = None
     truncated: bool = False
     budget_unit: Literal["unicode_characters"] = "unicode_characters"
+    # The canonical receipt bundle, present only when the request asked for it.
+    # EXCLUDED from canonical_json and from the budget: a receipt describes the
+    # answer, it is not part of it. Including it would change the authoritative
+    # digest and the pack identity the whole project is gated on.
+    receipt: dict[str, Any] | None = Field(default=None, exclude_if=lambda v: v is None)
 
     def canonical_json(self) -> str:
-        """The budget applies to this complete compact JSON, including escaped content."""
+        """The budget applies to this complete compact JSON, including escaped content.
+
+        Deliberately omits ``receipt``. The receipt is derived FROM this JSON and
+        verifies it, so folding it in would make the digest cover itself.
+        """
+        payload = self.model_dump(mode="json")
+        payload.pop("receipt", None)
         return json.dumps(
-            self.model_dump(mode="json"),
+            payload,
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),

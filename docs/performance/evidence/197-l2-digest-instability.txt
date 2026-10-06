@@ -1,0 +1,24 @@
+=== SUB-AGENT-RUN (read-only diagnostic; no timing measurement) ===
+Claim under test: the rebuildability harness produces a reproducible digest.
+Method: run the SAME unchanged code twice, compare absolute digests.
+Commit: cda4d5874091615a658880b482e0287971b1958a
+Cause candidate: m011_rebuildability.py:145 sets corpus_id from a random
+uuid4(), and digests raw canonical_json() with no observed_at normalisation.
+
+=== RUN 1 ===
+pack digest with L2       c0824db2663d8ac227b207847c34991bee6d51b0ff0accdb91044e21aeeddc0d
+pack digest L2 destroyed  c0824db2663d8ac227b207847c34991bee6d51b0ff0accdb91044e21aeeddc0d
+pack digest L2 rebuilt    c0824db2663d8ac227b207847c34991bee6d51b0ff0accdb91044e21aeeddc0d
+identical with L2 destroyed: 12/12
+identical after rebuild    : 12/12
+
+=== RUN 2 (identical code) ===
+pack digest with L2       458993f6d68aeba6ca74d5376c34c283afdfdf624cb00c1e4f1b934d2961cce3
+pack digest L2 destroyed  458993f6d68aeba6ca74d5376c34c283afdfdf624cb00c1e4f1b934d2961cce3
+pack digest L2 rebuilt    458993f6d68aeba6ca74d5376c34c283afdfdf624cb00c1e4f1b934d2961cce3
+identical with L2 destroyed: 12/12
+identical after rebuild    : 12/12
+
+=== VERDICT ===
+Absolute digests differ between runs; the WITHIN-RUN invariant holds both times.
+Conclusion: quote the invariant, never the absolute digest.

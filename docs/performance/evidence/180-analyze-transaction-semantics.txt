@@ -1,0 +1,172 @@
+=== SUB-AGENT-RUN (non-timing; EXPLAIN/shared-buffers/row-counts only) ===
+
+COMMAND SET (all run from /mnt/Warehouse/projects/Mind Palace)
+
+  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+  export HF_HUB_OFFLINE=1
+  export PYTHONPATH=scripts/benchmark:/tmp/mp_analyze
+  venvmp/bin/python -m a1_a2p          -> 180a-analyze-inside-txn-raw.txt
+  venvmp/bin/python -m a2_a3_confirm   -> 180b-analyze-rollback-fresh-backend-raw.txt
+  venvmp/bin/python -m a4_plan         -> 180c-plan-fresh-install-raw.txt
+  venvmp/bin/python -m a4c_plan        -> 180d-plan-stale-statistics-raw.txt
+  venvmp/bin/python -m a5_fixture      -> 180e-committed-fixture-autovacuum-raw.txt
+
+  Harness modules are scratch files at /tmp/mp_analyze/*.py (outside the repo).
+  They are NOT checked in; only this evidence is.
+
+SERVER
+  PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2), default_statistics_target=100
+  autovacuum=on, autovacuum_naptime=1min, autovacuum_analyze_threshold=50,
+  autovacuum_analyze_scale_factor=0.1
+  Baseline pg_statistic row count for the whole database: 470 (unchanged at end
+  of all runs below).
+
+MEASUREMENT RULE
+  EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) is used because BUFFERS requires
+  ANALYZE. Only shared buffers, plan shape, row counts and row hashes are
+  treated as evidence. Execution Time is present in the raw JSON and is NOT
+  used as a measurement. No wall-clock benchmark was run anywhere in this file.
+
+ISOLATION
+  Experiments run either inside a throwaway schema created in a transaction
+  that is ROLLED BACK, or on a COMMITTED throwaway schema (named anx*) that the
+  probe DROPS CASCADE before it exits. Every committed probe records
+  schema_dropped_at_end / schema_dropped = true. Nothing in `public` was read
+  for statistics or written. No index, migration, or DDL was created anywhere
+  except inside these throwaway schemas.
+
+  Where committed behaviour was the explicit subject (A2 split, A3, A4b, A4d,
+  A5) a COMMITTED THROWAWAY SCHEMA was used, not a throwaway database.
+
+
+==============================================================================
+THE TABLE
+==============================================================================
+
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+| question| method                    | observed result                   | catalog values that prove it                                   |
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+| A1      | Committed throwaway        | VERIFIED. ANALYZE inside an      | INSIDE the txn, memory_claims reltuples=-1 -> 1000;            |
+| Does    | schema. One txn inserts    | open txn DOES observe rows        | count(*) in the SAME txn = 1000 (uncommitted). Exact match.    |
+| ANALYZE | 1000 documents through     | inserted earlier in that same    | pg_statistic rows 0 -> 11 (memory_claims). All five tables:    |
+| inside  | the real IngestionService, | uncommitted transaction.          | reltuples=1000 == row count 1000 each.                        |
+| an open | then ANALYZE the 5 memory  |                                   |                                                              |
+| trans-  | tables inside that same    |                                   | inside-txn post-ANALYZE:                                       |
+| action  | txn, read pg_class /       |                                   |   memory_chunks    reltuples=1000 relpages=50  pg_stat=6       |
+| see     | pg_statistic / pg_stats    |                                   |   memory_claims    reltuples=1000 relpages=56  pg_stat=11      |
+| uncom-  | on the same connection.    |                                   |   memory_documents reltuples=1000 relpages=23  pg_stat=3       |
+| mitted  |                           |                                   |   memory_evidence  reltuples=1000 relpages=53  pg_stat=8       |
+| rows?   |                           |                                   |   memory_versions  reltuples=1000 relpages=167 pg_stat=11      |
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+| A2      | Two cases, because the     | PARTIALLY VERIFIED -- AND SPLIT. | SURVIVED rollback:                                           |
+| Do the  | question is unanswerable   | The premise "ANALYZE writes      |   pg_class.reltuples   = 1000 (stayed 1000)                   |
+| statis- | unless the relation itself | catalog rows that are NOT        |   pg_class.relpages    = 50  (stayed 50)                       |
+| tics    | survives. CASE P: schema,   | rolled back" is HALF WRONG.      |   pg_stat_all_tables.last_analyze    = 2026-10-03 10:14:13.477056+00:00 |
+| sur-    | DDL, corpus and ANALYZE all |                                        |   pg_stat_all_tables.analyze_count   = 1                       |
+| vive    | in one rolled-back txn.     | pg_class.reltuples/relpages AND   | DID NOT survive rollback:                                     |
+| the     | CASE C: DDL committed, only | pg_stat_all_tables counters DO    |   pg_statistic rows for memory_claims = 11 -> 0               |
+| ROLL-   | INSERT+ANALYZE rolled back. | survive. pg_statistic rows (the   |   pg_statistic rows for this schema      = 0                  |
+| BACK?   | Read back from a BRAND-NEW | column-level statistics) DO       |   orphan pg_statistic tuples db-wide     = 0                  |
+|         | backend, not the same       | NOT.                               | Row counts after rollback    = 0 everywhere                   |
+|         | connection, to rule out a   |                                    | n_dead_tup (memory_claims)   = 1000 (rows are gone,          |
+|         | per-backend relcache.       | Net effect on the planner:        |   but pg_class still says reltuples=1000)                    |
+|         |                           |                                    |                                                             |
+|         | CASE P (schema purged):    | Nothing survives at all.         | schema_exists_after_rollback = false                          |
+|         | statistics cannot leak into | Statistics are keyed by relation  | global pg_statistic before/inside/after = 470 / 509 / 470      |
+|         | a re-created schema.        | OID, and a purged relation's OID | stale pg_stat_all_tables entries for its OIDs = [] (empty)    |
+|         | CASE C (DDL committed):    | reltuples outlives the rows.     | pg_class row still reads reltuples=1000, relpages=50          |
+|         | reltuples=1000 on EMPTY     |                                    | Verified from a fresh backend, not just in-session.           |
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+| A3      | On the CASE C tables (now   | VERIFIED. ANALYZE of the empty    | memory_claims reltuples  1000 -> 0                           |
+| Insert, | empty tables sets          | table sets reltuples to 0.        | memory_chunks reltuples  1000 -> 0                           |
+| roll    | reltuples to 0. Read both  | A second ANALYZE therefore fully | memory_versions reltuples 1000 -> 0                           |
+| back,   | inside the txn and from a  | repairs the A2 corruption, so a   | memory_evidence reltuples 1000 -> 0                           |
+| then    | brand-new backend after the | harness that always ANALYZEs      | relpages stayed 50 -- CORRECT: the pages still hold 1000 dead |
+| ANALYZE | commit.                    | cannot be poisoned indefinitely.  |   tuples, so the physical size estimate is still right        |
+| again?  |                           |                                   | n_dead_tup = 1000                                             |
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+| A4      | All measurements are the   | VERIFIED. The cliff is caused by  | A4a (schema purged + re-created):                            |
+| Does   | literal SQL emitted by     | the ABSENCE of statistics         |   memory_claims reltuples = -1, last_analyze = NULL,          |
+| the    | api.services.memory._load  | (reltuples = -1), not by stale    |   pg_statistic_rows = 0, new OIDs (pass1 OIDs != pass2 OIDs)   |
+| plan   | for chunk_text=False,      | statistics. And stale reltuples   |   -> plan: Index Scan idx_memory_claims_validity,              |
+| improv | version_text=False (the    | alone does NOT degrade the plan:  |      Index Cond (corpus_id = v.corpus_id),                     |
+| after  | public projection,         | it is byte-identical in shape to  |      Filter (version_id = v.id), Rows Removed by Filter = 99    |
+| ANALYZE| api/services/memory_       | the post-ANALYZE plan in BOTH     |      12,194 shared blocks at N=100                             |
+| and    | public.py:370).            | the over- and under-estimating    |                                                             |
+| does   | stale/absent statistics    | directions.                       | A4b (stale says 1000, truth 100):                             |
+| statis- | outliving a rollback       |                                    |   stale 923 vs analyzed 941 shared blocks; same plan shape    |
+| tics   | produce a bad plan?        |                                    | A4d (stale says 50, truth 1000):                              |
+| outlive|                           |                                    |   stale 9,184 vs analyzed 9,176; same plan shape              |
+| a roll- |                           |                                    | In both, pg_statistic_rows = 0 (A2's rollback) and           |
+| back?   |                           |                                    | reltuples = the rolled-back count, so the planner had a        |
+|         |                           |                                    | row count but no column stats -- and did not care.            |
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+| A5      | COMMITTED throwaway schema. | VERIFIED. Statistics persist      | After COMMIT, before ANALYZE:                                 |
+| What   | Insert + COMMIT. Then      | across a clean commit, and        |   memory_claims reltuples=-1 last_analyze=NULL analyze_count=0|
+| does a | ANALYZE in a NEW txn,      | autovacuum reproduces explicit    |   pg_statistic_rows=0                                         |
+| COMMIT- | COMMIT. Then, on a second  | ANALYZE unaided, in ~55s.         |   plan: 1,078,038 shared blocks, Rows Removed by Filter = 999  |
+| ted    | throwaway schema, autovacuum|                                    | After explicit ANALYZE + COMMIT:                             |
+| fixture| was left ENTIRELY ALONE -- | NOTHING WAS ALTERED. No           |   memory_claims reltuples=1000 last_analyze=2026-10-03 10:26:39|
+| do?    | no ALTER TABLE, no          | autovacuum_analyze_threshold      |   pg_statistic_rows=11 analyze_count=1 autoanalyze_count=0    |
+|         | override -- and the script | override. Stock settings only.    |   plan: 9,190 shared blocks, Index Cond (corpus_id, version_id)|
+|         | polled for up to 180s.     |                                    |   rows byte-identical across the ANALYZE (sha 431fd2dd27f5e4a1)|
+|         |                           |                                    | After autovacuum, unaided (t+55s):                            |
+|         |                           |                                    |   last_autoanalyze  NULL -> 2026-10-03 10:28:15.581420+00:00  |
+|         |                           |                                    |   autoanalyze_count 0 -> 1, analyze_count stayed 0            |
+|         |                           |                                    |   reltuples -1 -> 1000, pg_statistic_rows 0 -> 11              |
+|         |                           |                                    |   plan: 9,190 shared blocks -- the good plan                 |
++---------+---------------------------+-----------------------------------+--------------------------------------------------------------+
+
+
+==============================================================================
+WHAT THIS MEANS FOR THE BENCHMARK ARCHITECTURE (A2 and A4 specifically)
+==============================================================================
+
+The benchmark architecture is SOUND on this axis, and the reason is stronger
+than "ANALYZE rolls back".
+
+1. Statistics are keyed by relation OID. Every harness run creates a NEW schema,
+   so it gets NEW table OIDs, so nothing a previous run wrote can be visible to
+   it. Measured in A4a: pass1 OIDs != pass2 OIDs, pass2 reltuples = -1,
+   last_analyze = NULL, pg_statistic_rows = 0. Each run therefore genuinely
+   starts from the fresh-install condition, and the "assert reltuples = -1"
+   check in the old harness was asserting a real invariant, not a formality.
+
+2. The prompt's stated danger -- "ANALYZE writes catalog rows that are NOT
+   rolled back with the transaction" -- is real but only half of it. pg_class
+   .reltuples and .relpages, plus the pg_stat_all_tables counters, DO survive a
+   rollback. Only that matters if the TABLE survives the rollback. In the
+   harness the table never survives, so it does not apply.
+
+3. The dangerous shape needs COMMITTED DDL plus a rolled-back corpus: the
+   relation lives on, reltuples describes rows that were never committed, and
+   the planner believes it. That is measured in A4b/A4d. It did NOT degrade the
+   plan at all -- because pg_statistic rolled back with the rows, the planner had
+   a row count but no column statistics, and the index choice for this query is
+   driven by index structure and the correlated-subquery shape, not by the row
+   estimate. So even the genuinely hazardous case measured here is benign for
+   this particular query.
+
+4. The cliff itself is 100% explained by the ABSENCE of statistics:
+   reltuples = -1 makes the planner choose idx_memory_claims_validity and
+   filter, because with no row estimate it cannot know that (corpus_id,
+   version_id) is the selective composite. A4a reproduces the bad plan at
+   N=100 (12,194 blocks, Rows Removed by Filter = 99); A5 and Part C reproduce
+   it at N=1000 (1,078,038 / 1,079,038 blocks, Rows Removed by Filter = 999).
+   ANALYZE moves it to a true Index Cond on (corpus_id, version_id) at
+   9,190 blocks.
+
+5. Consequence for any proposed production hook: an ANALYZE placed INSIDE the
+   write transaction would run once per document in the bulk path (sync_repo
+   commits one transaction per document, ingestion.py:59 + 321-322), and if
+   that transaction later rolls back it would leave reltuples describing
+   abandoned rows (A2). Both are reasons to run it once, after commit, and not
+   inside the write path. See 181-ingest-hook-analysis.txt.
+
+
+==============================================================================
+CLEANUP
+==============================================================================
+  After every run: schemas remaining = ['public']; pg_statistic rows = 470.
+  Five leftover anx* schemas from two crashed probe runs (autobegin errors, not
+  data events) were dropped CASCADE. No other database object was touched.

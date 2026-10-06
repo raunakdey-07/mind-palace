@@ -1,0 +1,148 @@
+=== SUB-AGENT-RUN (non-timing; shared buffers/row counts/plan shape only) ===
+
+COMMANDS (all run from /mnt/Warehouse/projects/Mind Palace)
+
+  venvmp/bin/python -m flake8 api cli tests --max-line-length=100; echo "FLAKE8=$?"
+  venvmp/bin/python -m black --check api cli tests --line-length 100; echo "BLACK=$?"
+  venvmp/bin/python -c "import ast;ast.parse(open('api/services/ingestion.py').read());print('parse ok')"
+  git --no-pager diff -- api/services/ingestion.py > /tmp/mp-preserve-ing.diff; wc -l /tmp/mp-preserve-ing.diff; head -5 /tmp/mp-preserve-ing.diff
+
+  # HEAD-vs-working-tree provenance for the four reported diagnostics
+  mkdir -p /tmp/mp-head-check && git show HEAD:api/services/ingestion.py > /tmp/mp-head-check/ingestion.py
+  venvmp/bin/python -m flake8 /tmp/mp-head-check/ingestion.py --max-line-length=100; echo "FLAKE8_HEAD=$?"
+  venvmp/bin/python -m black --check /tmp/mp-head-check/ingestion.py --line-length 100; echo "BLACK_HEAD=$?"
+  venvmp/bin/python -m pycodestyle api/services/ingestion.py --max-line-length=100; echo "PYCODESTYLE=$?"
+  venvmp/bin/python -m pycodestyle /tmp/mp-head-check/ingestion.py --max-line-length=100; echo "PYCODESTYLE_HEAD=$?"
+  venvmp/bin/python -m pyflakes api/services/ingestion.py; echo "PYFLAKES=$?"
+  venvmp/bin/python -m pyflakes /tmp/mp-head-check/ingestion.py; echo "PYFLAKES_HEAD=$?"
+  venvmp/bin/python -m flake8 --version
+  grep -n "noqa\|Optional\|except Exception" /tmp/mp-head-check/ingestion.py api/services/ingestion.py
+
+  No wall-clock benchmark was run in this file. No timing claim is made here.
+
+==============================================================================
+RAW OUTPUT -- the four commands from the brief, verbatim
+==============================================================================
+
+$ venvmp/bin/python -m flake8 api cli tests --max-line-length=100; echo "FLAKE8=$?"
+FLAKE8=0
+
+$ venvmp/bin/python -m black --check api cli tests --line-length 100; echo "BLACK=$?"
+All done! ✨ 🍰 ✨
+109 files would be left unchanged.
+BLACK=0
+
+$ venvmp/bin/python -c "import ast;ast.parse(open('api/services/ingestion.py').read());print('parse ok')"
+parse ok
+
+$ git --no-pager diff -- api/services/ingestion.py > /tmp/mp-preserve-ing.diff; wc -l /tmp/mp-preserve-ing.diff; head -5 /tmp/mp-preserve-ing.diff
+  108 /tmp/mp-preserve-ing.diff
+diff --git a/api/services/ingestion.py b/api/services/ingestion.py
+index ade221f..7bc573b 100644
+--- a/api/services/ingestion.py
++++ b/api/services/ingestion.py
+@@ -10,6 +10,7 @@ import time
+
+==============================================================================
+HEAD-vs-WORKING-TREE PROVENANCE
+==============================================================================
+
+$ venvmp/bin/python -m flake8 /tmp/mp-head-check/ingestion.py --max-line-length=100; echo "FLAKE8_HEAD=$?"
+FLAKE8_HEAD=0
+
+$ venvmp/bin/python -m black --check /tmp/mp-head-check/ingestion.py --line-length 100; echo "BLACK_HEAD=$?"
+All done! ✨ 🍰 ✨
+1 file would be left unchanged.
+BLACK_HEAD=0
+
+$ venvmp/bin/python -m pycodestyle api/services/ingestion.py --max-line-length=100; echo "PYCODESTYLE=$?"
+PYCODESTYLE=0
+
+$ venvmp/bin/python -m pycodestyle /tmp/mp-head-check/ingestion.py --max-line-length=100; echo "PYCODESTYLE_HEAD=$?"
+PYCODESTYLE_HEAD=0
+
+$ venvmp/bin/python -m pyflakes api/services/ingestion.py; echo "PYFLAKES=$?"
+PYFLAKES=0
+
+$ venvmp/bin/python -m pyflakes /tmp/mp-head-check/ingestion.py; echo "PYFLAKES_HEAD=$?"
+PYFLAKES_HEAD=0
+
+$ venvmp/bin/python -m flake8 --version
+7.3.0 (mccabe: 0.7.0, pycodestyle: 2.14.0,
+pyflakes: 3.4.0) CPython 3.14.7 on Linux
+
+$ grep -n "noqa\|Optional\|except Exception" /tmp/mp-head-check/ingestion.py api/services/ingestion.py
+=== /tmp/mp-head-check/ingestion.py ===
+11:from typing import Optional
+260:        except Exception:  # noqa: BLE001 - the cache is L2, never a contract
+267:        path: Optional[str] = None,
+342:            except Exception as e:
+=== api/services/ingestion.py ===
+11:from typing import Optional
+265:        except Exception:  # noqa: BLE001 - the cache is L2, never a contract
+272:        path: Optional[str] = None,
+347:            except Exception as e:
+460:        except Exception as exc:
+
+File sizes: HEAD 438 lines, working tree 514 lines (the change adds 76).
+
+==============================================================================
+FINDINGS: ARE THE REPORTED DIAGNOSTICS PRE-EXISTING?
+==============================================================================
+
+ANSWER: the change is CLEAN under the linters CI actually runs. flake8 exits 0
+and black exits 0 over `api cli tests`, identical to HEAD. There is no flake8
+diagnostic at 265, 272, 347 or 460 to attribute to anyone, in either version.
+
+Per-diagnostic provenance, working-tree line -> HEAD line:
+
+  265  "unused noqa at 265"
+        PRE-EXISTING. HEAD line 260 is the same statement:
+            except Exception:  # noqa: BLE001 - the cache is L2, never a contract
+        The noqa names BLE001, a *ruff* rule. flake8 7.3.0 has no BLE001 and
+        therefore cannot tell it is "unused"; it never reported it. Ruff is not
+        installed (`No module named ruff`), is not in pyproject's dev extra, and
+        CI (.github/workflows) runs only flake8 + black + pytest. So this is
+        inherited code, unchanged by the diff, and not a CI signal in this repo.
+
+  272  "Optional annotation at 272"
+        PRE-EXISTING. HEAD line 267 is the same signature:
+            path: Optional[str] = None,
+        `from typing import Optional` is HEAD line 11 as well. Modernising this
+        is a pyupgrade/UP007 concern, again ruff-only, again not in CI.
+
+  347  "blind Exception at 347"
+        PRE-EXISTING. HEAD line 342 is the same statement:
+            except Exception as e:
+        This is sync_repo's per-document guard, untouched by the diff.
+
+  460  "blind Exception at 460"
+        NEW -- introduced by this change, and it is the catch inside
+        _refresh_planner_statistics (ingestion.py:460). This is the one item in
+        the list that is genuinely the change's own, and it must be said
+        plainly rather than folded in with the other three.
+
+        It is nonetheless NOT a CI failure and not a flake8 diagnostic:
+        pycodestyle's E722 covers a *bare* `except:`, not `except Exception:`,
+        so PYCODESTYLE=0 and FLAKE8=0 above. Widening the catch is also the
+        required behaviour here, not a defect: statistics are an optimisation,
+        so any failure to ANALYZE must be swallowed rather than fail an
+        otherwise successful ingest. Narrowing it would re-introduce the bug the
+        change exists to prevent. The bare `except Exception` at HEAD:260 carries
+        the identical noqa comment for the identical reason.
+
+==============================================================================
+WHAT WOULD HAVE TO CHANGE FOR ANY OF THESE TO MATTER
+==============================================================================
+  Adopt ruff with RUF100 / BLE001 / UP007 enabled, and flake8 stops being the
+  only gate. Until then the working tree and HEAD are indistinguishable to CI:
+  both flake8=0, both black=0, both pycodestyle=0, both pyflakes=0.
+
+  The only pre-existing item a stricter linter would newly flag is the HEAD:260
+  noqa (now 265) plus the HEAD:267 Optional (now 272). Both would be flagged
+  identically with and without this change, so neither is a regression.
+
+CLEANUP
+  /tmp/mp-head-check/ is scratch, outside the repository. /tmp/mp-preserve-ing.diff
+  holds the working-tree diff of ingestion.py as requested. No repository file was
+  edited by this step. No database object was created, read or written by this step.

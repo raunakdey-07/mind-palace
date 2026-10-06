@@ -1,0 +1,8 @@
+$ venvmp/bin/python -c db probe
+FAIL postgresql://mpadmin:secret@localhost:5432/mindpalace OperationalError (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server a
+FAIL postgresql+psycopg2://mpadmin:secret@localhost:5432/mindpalace OperationalError (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server a
+FAIL postgresql+asyncpg://mpadmin:secret@localhost:5432/mindpalace MissingGreenlet greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place? (Background on this error at: https://sqlalche.me/e/20/xd2s)

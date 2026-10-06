@@ -1,0 +1,23 @@
+=== loadavg sample 2 ===
+1.44 1.22 1.10 4/2241 308655
+=== loadavg sample 3 (after 20s) ===
+1.88 1.33 1.14 5/2235 308946
+
+=== user cron ===
+no crontab for rdx
+
+=== systemd timers ===
+NEXT                            LEFT LAST                              PASSED UNIT                         ACTIVATES
+Sat 2026-10-03 15:00:00 IST 1min 24s Sat 2026-10-03 14:00:03 IST    58min ago snapper-timeline.timer       snapper-timeline.service
+Sat 2026-10-03 15:26:03 IST    27min Sat 2026-10-03 14:26:03 IST    32min ago snapper-cleanup.timer        snapper-cleanup.service
+Sun 2026-10-04 00:00:00 IST       9h Sat 2026-10-03 00:00:11 IST            - unbound-anchor.timer         unbound-anchor.service
+Sun 2026-10-04 00:40:29 IST       9h Sat 2026-10-03 00:42:49 IST            - logrotate.timer              logrotate.service
+Sun 2026-10-04 01:00:00 IST      10h Sun 2026-09-27 01:00:00 IST            - raid-check.timer             raid-check.service
+Sun 2026-10-04 10:30:56 IST      19h Sat 2026-10-03 10:30:56 IST 4h 27min ago systemd-tmpfiles-clean.timer systemd-tmpfiles-clean.service
+Mon 2026-10-05 00:55:15 IST 1 day 9h Mon 2026-09-28 00:02:41 IST            - fstrim.timer                 fstrim.service
+
+7 timers listed.
+Pass --all to see loaded but inactive timers, too.
+
+=== any timer/cron unit referencing project or benchmark ===
+(end unit scan)

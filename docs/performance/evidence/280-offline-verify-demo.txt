@@ -1,0 +1,71 @@
+=== M014 offline verification demo (clean venv, stdlib only) ===
+python: 3.14.7
+site-packages: ['/tmp/m014-clean/clean-venv/lib64/python3.14/site-packages', '/tmp/m014-clean/clean-venv/lib/python3.14/site-packages']
+
+--- 1. unmodified artifact ---
+VERIFIED
+    proof_intact         pass
+    artifact_digest      pass
+    identity             pass
+    evidence_ownership   pass
+    temporal             pass
+    status_consistency   pass
+
+--- 2. tampered CLAIM text ---
+REJECTED
+Reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+Reason: claim 'c-new' content does not match its proof entry
+    proof_intact         pass
+    artifact_digest      FAIL
+    identity             FAIL
+    evidence_ownership   pass
+    temporal             pass
+    status_consistency   pass
+
+--- 3. tampered EVIDENCE text ---
+REJECTED
+Reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+Reason: evidence record 'e-new' text has been altered
+    proof_intact         pass
+    artifact_digest      FAIL
+    identity             pass
+    evidence_ownership   FAIL
+    temporal             pass
+    status_consistency   pass
+
+--- 4. tampered TIMESTAMP ---
+REJECTED
+Reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+    proof_intact         pass
+    artifact_digest      FAIL
+    identity             pass
+    evidence_ownership   pass
+    temporal             pass
+    status_consistency   pass
+
+--- 5. tampered DOCUMENT identity ---
+REJECTED
+Reason: authoritative digest mismatch: the artifact is not the one this proof was created from
+Reason: proof names document 'docs/tech/postgres.md' for claim 'c-new' but the artifact records 'somewhere/else.md'
+    proof_intact         pass
+    artifact_digest      FAIL
+    identity             FAIL
+    evidence_ownership   pass
+    temporal             pass
+    status_consistency   pass
+
+--- 6. tampered PROOF itself ---
+REJECTED
+Reason: proof digest mismatch: the proof itself was modified
+Reason: claim 'c-new' content does not match its proof entry
+
+--- 7. restored artifact (must verify again) ---
+VERIFIED
+    proof_intact         pass
+    artifact_digest      pass
+    identity             pass
+    evidence_ownership   pass
+    temporal             pass
+    status_consistency   pass
+
+=== no server, no database, no model, no network was used above ===

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.metadata
 import os
 
 from fastapi import FastAPI, Request
@@ -21,7 +22,7 @@ from api.routers import context, corpora, ingest, memory, query, search
 app = FastAPI(
     title="Mind Palace API",
     description="The Durable AI Memory Substrate",
-    version="0.6.0",
+    version=importlib.metadata.version("mindpalace-os"),
 )
 
 

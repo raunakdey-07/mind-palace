@@ -1,0 +1,38 @@
+=== M013 retrieval matrix + fusion diagnostic ===
+Commit: d825f0659d853a8d2c322deaf48fa41d8b0257fb
+
+COMMANDS (both datasets, verbatim):
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_retrieval_matrix.py --dataset dev     --repeats 1 --out /tmp/m013-matrix-dev.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_retrieval_matrix.py --dataset heldout --repeats 1 --out /tmp/m013-matrix-heldout.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_fusion_diagnostic.py --dataset dev     --out /tmp/m013-fusion-dev.json
+  PYTHONPATH=scripts/benchmark venvmp/bin/python scripts/benchmark/m013_fusion_diagnostic.py --dataset heldout --out /tmp/m013-fusion-heldout.json
+env: DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace HF_HUB_OFFLINE=1
+model: all-MiniLM-L6-v2 | repeats=1 | bootstrap=2000 iters seed 12345
+
+=== DEV ===
+  current                R@1=0.722 R@5=0.869 R@10=0.869 MRR=0.791 nDCG5=0.811 abst=0.9231 cand=1.81
+  semantic               R@1=0.722 R@5=0.869 R@10=0.869 MRR=0.791 nDCG5=0.811 abst=0.9231 cand=1.81
+  lexical                R@1=0.500 R@5=0.790 R@10=0.795 MRR=0.621 nDCG5=0.663 abst=0.8846 cand=2.57
+  hybrid                 R@1=0.722 R@5=0.869 R@10=0.869 MRR=0.791 nDCG5=0.811 abst=0.9231 cand=1.81
+  rrf                    R@1=0.722 R@5=0.869 R@10=0.869 MRR=0.791 nDCG5=0.811 abst=0.9231 cand=1.81
+  semantic_then_lexical  R@1=0.722 R@5=0.869 R@10=0.869 MRR=0.791 nDCG5=0.811 abst=0.9231 cand=1.81
+
+  semantic_misses = 22
+  recoverable_by_fusion = 16
+  mean_semantic_candidates = 1.81
+  mean_lexical_candidates = 2.52
+  mean_union_candidates = 3.03
+
+=== HELD-OUT ===
+  current                R@1=0.582 R@5=0.808 R@10=0.808 MRR=0.682 nDCG5=0.714 abst=0.9375 cand=2.36
+  semantic               R@1=0.582 R@5=0.808 R@10=0.808 MRR=0.682 nDCG5=0.714 abst=0.9375 cand=2.36
+  lexical                R@1=0.291 R@5=0.660 R@10=0.709 MRR=0.454 nDCG5=0.500 abst=0.9375 cand=3.77
+  hybrid                 R@1=0.582 R@5=0.808 R@10=0.808 MRR=0.682 nDCG5=0.714 abst=0.9375 cand=2.36
+  rrf                    R@1=0.582 R@5=0.808 R@10=0.808 MRR=0.682 nDCG5=0.714 abst=0.9375 cand=2.36
+  semantic_then_lexical  R@1=0.582 R@5=0.808 R@10=0.808 MRR=0.682 nDCG5=0.714 abst=0.9375 cand=2.36
+
+  semantic_misses = 26
+  recoverable_by_fusion = 7
+  mean_semantic_candidates = 2.35
+  mean_lexical_candidates = 3.8
+  mean_union_candidates = 4.28

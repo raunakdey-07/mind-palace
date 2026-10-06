@@ -1,0 +1,5 @@
+=== SUB-AGENT-RUN (read-only preflight; no timing measurement) ===
+ls -la scripts/check_evidence.py scripts/benchmark/host_calibration.py 2>&1
+ls: cannot access 'scripts/check_evidence.py': No such file or directory
+-rw-r--r--. 1 rdx rdx 10279 Oct  3 14:54 scripts/benchmark/host_calibration.py
+EXIT_CODE=2

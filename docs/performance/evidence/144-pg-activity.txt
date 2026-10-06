@@ -1,0 +1,6 @@
+server: PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64
+pid | datname | state | wait_event_type | wait_event | age | xact_age | backend_start | query
+1888 | mindpalace | active |  |  | 0:00:00 | 0:00:00 | 2026-10-03 09:26:47.159117+00:00 | SELECT pid, datname, state, wait_event_type, wait_event,
+       now()-query_start AS age, now()-xact_start AS xact_age,
+
+row count: 1

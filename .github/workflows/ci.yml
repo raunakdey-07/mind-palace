@@ -57,6 +57,10 @@ jobs:
         run: |
           python scripts/release/check_versioning.py
 
+      - name: Verify documented claims point at real evidence
+        run: |
+          python scripts/check_evidence.py --strict
+
       - name: Apply database migrations
         run: |
           python -m pip install pgvector
@@ -64,8 +68,8 @@ jobs:
 
       - name: Run linting
         run: |
-          flake8 api cli tests --max-line-length=100
-          black --check api cli tests --line-length 100
+          flake8 api cli tests scripts --max-line-length=100
+          black --check api cli tests scripts --line-length 100
 
       - name: Evaluate deterministic memory lifecycle (offline)
         env:
@@ -75,8 +79,292 @@ jobs:
           python -m cli.main eval memory --embeddings fixture --repetitions 1
 
       - name: Run tests
+        env:
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
         run: |
           pytest -q --maxfail=1
+
+  five-minute-path:
+    name: The five-minute path, from a clean checkout
+    runs-on: ubuntu-latest
+    needs: tests
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Apply the schema, exactly as the README says
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+          python -m alembic -c migrations/alembic.ini upgrade head
+
+      # The whole point of this milestone: the documented command sequence, run as
+      # written, in a fresh environment, produces a useful memory result. It fails
+      # if a first memory needs a model download, needs a corpus flag, or needs a
+      # server that nobody started. The console script is used, not
+      # `python -m`, so this is the command the README actually tells people to run.
+      #
+      # `MIND_PALACE_RUNTIME=0` here on purpose: the journey must work with no
+      # background process at all. The runtime is an optimisation, and this is the
+      # test that says so.
+      - name: Run the documented command sequence
+        env:
+          MIND_PALACE_RUNTIME: "0"
+        run: |
+          mindpalace init
+          mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+          mindpalace recall "What datastore does production use?"
+          mindpalace explain "What datastore does production use?"
+          mindpalace remember "The production datastore is now distributed CockroachDB." --key datastore
+          mindpalace history datastore
+          mindpalace receipt "What datastore does production use?" -o receipt.json
+          mindpalace verify receipt.json
+          python examples/decision-memory/decision_memory.py
+          python examples/project-log/project_log.py
+
+      - name: Verify offline, with no database reachable
+        env:
+          DATABASE_URL: postgresql://nobody@127.0.0.1:1/nothing
+          MIND_PALACE_RUNTIME: "0"
+        run: |
+          mindpalace verify receipt.json
+
+      # `MIND_PALACE_LEXICAL=1` is a documented mode, so it gets the same treatment as
+      # the default path: run from a clean checkout, on the documented corpus, and
+      # check it actually avoids the model rather than taking a slower route to the
+      # same place. The import assertion is the real check -- a timing difference on
+      # a shared runner would be noise.
+      - name: The documented model-free mode reads without the model
+        env:
+          MIND_PALACE_RUNTIME: "0"
+          MIND_PALACE_LEXICAL: "1"
+        run: |
+          mindpalace recall "What datastore does production use?"
+          mindpalace explain "What datastore does production use?"
+          mindpalace history datastore
+          mindpalace receipt "What datastore does production use?" -o lexical-receipt.json
+          # It must announce itself, so nobody is mistaken about which mode answered.
+          test "$(mindpalace recall 'What datastore does production use?' 2>&1 1>/dev/null)" = \
+            "retrieval: lexical (model-free, MIND_PALACE_LEXICAL=1)"
+          python - <<'PY'
+          import subprocess, sys
+
+          program = (
+              "import sys\n"
+              "from typer.testing import CliRunner\n"
+              "from cli.main import app\n"
+              "result = CliRunner().invoke(app, ['recall', 'What datastore does "
+              "production use?'])\n"
+              "heavy = [m for m in ('torch', 'transformers', 'sentence_transformers') "
+              "if m in sys.modules]\n"
+              "sys.exit(1 if heavy else result.exit_code)\n"
+          )
+          done = subprocess.run([sys.executable, "-c", program], capture_output=True, text=True)
+          assert done.returncode == 0, done.stdout + done.stderr
+          print("lexical mode imported no part of the model stack")
+          PY
+
+      # And a receipt written by the model-free path verifies on the same terms as
+      # one written by the default path.
+      - name: Verify a receipt written in lexical mode
+        env:
+          DATABASE_URL: postgresql://nobody@127.0.0.1:1/nothing
+          MIND_PALACE_RUNTIME: "0"
+        run: |
+          mindpalace verify lexical-receipt.json
+
+      # The runtime is the other half of this release. It must come up, be
+      # inspectable, produce the same answers as the in-process path, and stop
+      # cleanly. Not timed here: a shared CI runner's numbers are not measurements.
+      - name: The local runtime comes up, and the same answers come back through it
+        run: |
+          mindpalace runtime start --wait
+          mindpalace runtime status
+          mindpalace runtime status --json
+          mindpalace recall "What datastore does production use?"
+          mindpalace recall "What datastore does production use?" --json
+          mindpalace runtime stop
+          # With no runtime, the commands still work and still answer.
+          mindpalace runtime status
+          mindpalace recall "What datastore does production use?"
+
+  wheel:
+    name: Clean install from the built wheel
+    runs-on: ubuntu-latest
+    needs: tests
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Build the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          ls dist/*.whl
+
+      # A fresh venv with no source tree on the path. If the wheel does not ship
+      # the verifier, the runtime entry point, or the CLI extras, this is where it
+      # shows up -- not in a developer's hands after they pip install it.
+      #
+      # Run from a directory that is not the repository, so a missing module cannot
+      # be rescued by the source tree still being on the path.
+      - name: Install the wheel into a clean environment, outside the source tree
+        working-directory: /tmp
+        run: |
+          python -m venv /tmp/wheelenv
+          /tmp/wheelenv/bin/pip install $GITHUB_WORKSPACE/dist/*.whl
+          /tmp/wheelenv/bin/mindpalace --help > /dev/null
+          /tmp/wheelenv/bin/mindpalace-proof --help > /dev/null
+          /tmp/wheelenv/bin/mindpalace-mcp --help > /dev/null 2>&1 || \
+            /tmp/wheelenv/bin/python -c "import mcp_server"
+          # The CLI starts the runtime as `python -m mindpalace_runtime`. If that
+          # module is not packaged, the runtime silently never starts and every
+          # command stays 6 seconds with nothing to say why.
+          /tmp/wheelenv/bin/python -c "
+          import mindpalace_runtime, api.runtime, cli.runtime
+          print('the runtime entry point and both halves ship in the wheel')
+          "
+
+      # The portability claim, tested as a claim: a bare `pip install
+      # mindpalace-os`, no CLI extra, no database URL and no network, verifying a
+      # receipt file. The CLI extras are optional, so this path is the only one a
+      # recipient of a receipt can rely on.
+      #
+      # A real one-claim receipt, not an empty bundle. An empty `receipts: []` would
+      # verify the digest and nothing else, so the step would pass while testing none
+      # of the claim it exists to prove.
+      - name: Verify a receipt offline, from a bare install
+        env:
+          DATABASE_URL: postgresql://nobody@127.0.0.1:1/nothing
+        run: |
+          /tmp/wheelenv/bin/python - <<'PY'
+          import json, pathlib, subprocess, sys
+
+          from api.models.memory import Claim, Evidence, MemoryResponse, Source, State
+          from memory_receipt import receipt_for_response, verify_response_receipt
+
+          OBSERVED = "2026-10-08T00:00:00+00:00"
+          claim = Claim(
+              id="c1", key="datastore", value="PostgreSQL",
+              claim="The production datastore is PostgreSQL.", status="CURRENT",
+              version_id="v1", path="memory/datastore-abc.md", observed_at=OBSERVED,
+              evidence_ids=["e1"],
+          )
+          evidence = Evidence(
+              id="e1", claim_id="c1", version_id="v1", document_id="d1",
+              path="memory/datastore-abc.md", source_hash="h1", chunk_id="k1",
+              heading=None, text="The production datastore is PostgreSQL.",
+              start_offset=0, end_offset=36, observed_at=OBSERVED,
+          )
+          source = Source(
+              document_id="d1", version_id="v1", path="memory/datastore-abc.md",
+              source_hash="h1", observed_at=OBSERVED,
+          )
+          response = MemoryResponse(
+              query="What datastore does production use?", corpus="default",
+              state=State(as_of=None, valid_at=OBSERVED),
+              current_memories=[claim], evidence=[evidence], sources=[source],
+          )
+
+          # A receipt bundle written by `mindpalace receipt`: the response it
+          # describes travels with it, so verification needs nothing else.
+          bundle = receipt_for_response(response)
+          assert bundle["receipt_count"] == 1, bundle["receipt_count"]
+
+          document = json.loads(response.model_dump_json())
+          checked = verify_response_receipt(bundle, document)
+          assert checked["verified"] is True, checked
+          assert checked["receipts_checked"] >= 1, checked
+
+          path = pathlib.Path("bundle.json")
+
+          def verify(payload):
+              path.write_text(json.dumps(payload))
+              return subprocess.run(
+                  [sys.executable, "-m", "memory_proof_cli", "verify", str(path)],
+                  capture_output=True, text=True,
+              )
+
+          done = verify({"response": document, "receipt": bundle})
+          assert done.returncode == 0, done.stdout + done.stderr
+          assert "VERIFIED" in done.stdout, done.stdout
+          print("a bare install verifies a receipt with no database and no network")
+
+          # And tampering is caught by the same dependency-free path -- both a
+          # rewritten claim and a rewritten digest.
+          forged = dict(document)
+          forged["current_memories"] = [
+              dict(document["current_memories"][0], claim="The datastore is SQLite.")
+          ]
+          done = verify({"response": forged, "receipt": bundle})
+          assert done.returncode == 1, done.stdout
+          assert "REJECTED" in done.stdout, done.stdout
+
+          bundle["memory_pack_digest"] = "0" * 64
+          done = verify({"response": document, "receipt": bundle})
+          assert done.returncode == 1, done.stdout
+          assert "REJECTED" in done.stdout, done.stdout
+          print("and rejects a tampered claim and a tampered digest")
+          PY
+
+      - name: Confirm the wheel ships the verifier
+        run: |
+          /tmp/wheelenv/bin/python -c "
+          import memory_pack, memory_proof, memory_proof_cli, memory_receipt
+          print('dependency-free verifier ships in the wheel')
+          "
 
   build:
     name: Docker Build

@@ -159,9 +159,20 @@ regression test:
   **41** tests failed on `OSError: We couldn't connect to ...` — everything that
   indexes or ranks anything, including 11 fixture errors in `test_search_semantics.py`.
   `--maxfail=1` reported only the first, which is how a green local run and a red CI
-  run coexisted through a release. The `tests` job now provisions both models
-  explicitly, confirms the embedder loads with the network disabled, and runs pytest
-  without `--maxfail=1`. `--maxfail=1` was hiding failures, not preventing them.
+  run coexisted through a release; a developer machine already had the cache, which is
+  what hid it.
+- **Both models are now provisioned at pinned revisions**, through
+  `scripts/ci/provision_models.py`, and verified to load through the application's
+  own `Embedder` and `Reranker` with the network disabled *before* any test runs — so a
+  missing model costs one clear line instead of 41 failures forty minutes later.
+  The embedder's pin is the revision recorded in the frozen M006.75 artifact, so CI
+  verifies the suite against the weights that result was measured with. The script
+  also declares `refs/main`, which is what `model_fingerprint` reads to identify the
+  model; without that, pinning would have broken the benchmark's own model check.
+  `actions/cache` makes a repeat run ~1 s instead of ~60 s, keyed on OS, Python
+  version and both revisions, and is an accelerator only — a miss re-downloads and a
+  wrong or partial cache is refused. `--maxfail=1` is gone; it was hiding failures,
+  not preventing them.
 - **A database-outage test was passing for the wrong reason.**
   `test_search_backend_unavailable_is_503_not_empty` asserted only that the word
   "unavailable" appeared in the error detail — and `"Semantic model unavailable"`
@@ -169,6 +180,11 @@ regression test:
   (`RetrievalService.search` was never called) and the 503 came from the model
   instead, so the DB-outage contract was not actually tested anywhere. It now asserts
   the exact detail and that the search was reached.
+- **Nothing stopped the provisioning step from being deleted again.**
+  `tests/test_ci_model_provisioning.py` now reads the workflow and fails if the
+  provisioning is missing, weakened, unpinned, ordered after verification, given the
+  wrong offline flags, cached without its revisions in the key, or duplicated into one
+  job but not the other.
 - **A zero-result search test depended on a developer's model cache.** It patched
   `RetrievalService.search` but not the embedder that `/api/search` calls first, so it
   passed locally and failed on CI. Both tests now state their precondition explicitly.

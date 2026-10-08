@@ -54,20 +54,41 @@ connect to ...` — every test that indexes or ranks anything, plus 11 fixture e
 in `test_search_semantics.py`. `--maxfail=1` reported only the first, which is how a
 green local run and a red CI run coexisted through a release.
 
-The `tests` job now provisions both models explicitly — `all-MiniLM-L6-v2` for the
-default read path, and `cross-encoder/ms-marco-MiniLM-L-6-v2` for `rerank=true`,
-which `test_search_semantics.py` exercises with no guard — then confirms the
-embedder loads with the network **disabled**, and runs pytest without `--maxfail=1`.
+The `tests` job now provisions both models explicitly, at **pinned revisions**, through
+`scripts/ci/provision_models.py`:
 
-Those are two different requirements, and conflating them is what made the gap
-invisible: the tests need the model, and they must not need the network. A local run
-on a machine with both cached therefore proves less than it looks like — the cache
-hides a missing-provisioning problem. The five-minute-path job now asserts that the
-default read did **not** print the degradation note, so a silent fall back to lexical
-cannot pass as a semantic run.
+| model | pin | why it is needed |
+|---|---|---|
+| `sentence-transformers/all-MiniLM-L6-v2` | `1110a243…` | the default read path |
+| `cross-encoder/ms-marco-MiniLM-L-6-v2` | `233902d2…` | `rerank=true`, which `test_search_semantics.py` covers with no guard |
 
-`MIND_PALACE_LEXICAL=1` is the opposite case and needs neither: it asserts that no
-part of the model stack is imported, and it passes on a runner with no models at all.
+The embedder's pin is not invented — it is the revision recorded in the frozen
+`eval/m00675/result.json`, so CI verifies the suite against the weights the released
+benchmark result was measured with. The script also writes `refs/main` to the pinned
+revision, because `model_fingerprint` reads that file to identify the model; without
+it a pinned download would break the frozen benchmark's own model check.
+
+Then, before any test runs, `--verify` loads both models **through the application**
+(`Embedder`, `Reranker`) with `HF_HUB_OFFLINE=1`, and refuses to continue otherwise.
+A missing model should cost one clear line rather than 41 failures forty minutes
+later. After that, pytest runs offline and without `--maxfail=1`.
+
+Those are two different requirements — the model must exist, and the tests must not
+need the network — and conflating them is what hid the original gap. A local run on
+a machine with the cache therefore proves less than it looks like.
+
+`actions/cache` on `~/.cache/huggingface` makes a repeat run cheaper, keyed on OS,
+Python version and both revisions. Measured: a hit provisions in ~1 s, a miss ~60 s,
+and the snapshots total **1.7 GB** because they carry every format variant, not just
+the safetensors. It is an accelerator only: a miss re-downloads from the Hub, and
+`--verify` refuses a wrong or partial cache. No credentials are stored — both models
+are public.
+
+`tests/test_ci_model_provisioning.py` reads the workflow itself and fails if the
+provisioning step is deleted, weakened, made unpinned, or duplicated into a second
+copy in one job but not the other. `MIND_PALACE_LEXICAL=1` needs none of this: it
+asserts that no part of the model stack is imported, and passes on a runner with no
+models at all.
 
 `v0.9.0` is a minor release and it is additive. No migration: the schema head does
 not move. No public response field changed, existing receipts remain verifiable, and

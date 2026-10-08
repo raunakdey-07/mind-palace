@@ -4,7 +4,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/mind-palace/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Current release: v0.9.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.9.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**

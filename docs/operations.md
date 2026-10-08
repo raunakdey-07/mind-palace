@@ -523,7 +523,7 @@ What the dependency actually costs, measured on this machine:
 
 | | installed size |
 |---|---:|
-| the Mind Palace wheel | 435 KB |
+| the Mind Palace wheel | **227 KB** (was 425 KB until `v0.9.1`, which stopped shipping `scripts/`) |
 | `mindpalace-os` installed | 2.1 MB |
 | `sentence-transformers` + `torch` + `transformers` + numpy/scipy/scikit-learn | **1,347 MB** |
 | cached `all-MiniLM-L6-v2` weights | 88 MB |

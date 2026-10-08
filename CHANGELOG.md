@@ -4,6 +4,66 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.9.1] - 2026-10-08
+
+A patch on `v0.9.0`. No memory semantics, retrieval behaviour, public response field
+or benchmark input changed; `M006.75`/`M006.5`/`M013` results are untouched and the
+disputed 47/60 artifact was not regenerated.
+
+The point of this release is that the previous release's claims are now checkable from
+a clean machine.
+
+### Fixed
+
+- **The test suite could not pass on a clean runner.** CI installed
+  `sentence-transformers` but never the weights and ran pytest with
+  `HF_HUB_OFFLINE=1`, so a clean runner had the package and not the model. 41 tests
+  failed on `OSError: We couldn't connect to ...` -- everything that indexes or ranks
+  anything -- and `--maxfail=1` reported only the first. A developer machine already
+  had the cache, which is what hid it.
+- **The CI badge rendered as `404: badge not found`.** The URL was a release-badge
+  path with a workflow path appended; shields.io answers that with HTTP 200 and an
+  error SVG, so it looked like a mangled image rather than a dead link. Verified by
+  rendering every badge URL and reading the aria-label back.
+- **The wheel shipped the research tooling.** `scripts/` had been in the distribution
+  since `v0.6.0`: 54 files, 590 KB of 1,328 KB unpacked, 44% of the distribution, none
+  of it imported at runtime. The wheel is now **227 KB / 74 files, down from 425 KB /
+  129**. The repository still ships those scripts; they are where `check_versioning.py`,
+  `check_evidence.py` and the benchmark harnesses run from.
+
+### Evaluated, not adopted
+
+- **Python 3.15 lazy imports.** Measured on CPython 3.15.0rc1. The semantic cold path
+  cannot improve: the model stack costs 5.61 s to import against a 0.11 s CLI import
+  graph, and `sentence_transformers` is *already* imported lazily inside
+  `Embedder._get_model()`, so there is nothing to defer on the path that matters.
+  A narrow `__lazy_modules__` prototype changed nothing measurable, and
+  `-X lazy_imports=all` breaks real commands with a partial SQLAlchemy initialisation
+  (`AttributeError: type object 'array' has no attribute 'ARRAY'`). Full table and
+  reasoning in [the release map](docs/release-map.md#python-315-lazy-imports-were-evaluated-and-not-adopted).
+- **The model stack as an optional install extra.** Not done, deliberately: making
+  `sentence-transformers` optional would mean a plain `pip install mindpalace-os`
+  stopped ranking semantically, which is a silent behaviour change for the majority
+  case. What *is* guaranteed, and tested, is that nothing needs the model merely to
+  import or run a command -- `tests/test_m016_model_free_package.py` blocks the stack
+  at the import hook and checks `--help`, `init`, `recall` and `explain` still work.
+
+### Measured, not changed
+
+A read whose claim vectors are all cached still costs ~6.6 s, because
+`memory_query.py:267` asks the embedder for its dimension and that loads the model.
+`memory_claim_embeddings.embedding_dimension` already records it. Recorded rather than
+changed: the read path is authoritative, and a wrong dimension would silently corrupt
+ranking. It is a future-milestone candidate, not a patch.
+
+### Compatibility
+
+- No migration; the schema head does not move. No public response field changed.
+- Python `>=3.11` remains the floor. 3.15.0rc1 runs the model-free path correctly,
+  including the announced degradation to lexical, but torch publishes cp310-cp314
+  wheels only, so the semantic path cannot run on 3.15 yet and was not measured there.
+- Memory Pack stays at version 1. The receipt schema stays at version 1.
+
 ## [v0.9.0] - 2026-10-08
 
 Milestones `M015.2` (five-minute memory path) and `M016` (instant recall, explicit

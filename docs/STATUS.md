@@ -36,8 +36,8 @@ memory. That is verified, not asserted; see the invariants below.
 
 | | |
 |---|---|
-| package version | `0.9.0` |
-| tag | `v0.9.0` |
+| package version | `0.9.1` |
+| tag | `v0.9.1` (pending) |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `007_claim_embedding_cache`, unchanged |
 | tests | **1362 passed**, plus the CI job provisions the embedding model first |
@@ -527,12 +527,45 @@ tombstones retain their evidence.
 Authentication is not built. Corpus namespaces are separation, not authorization,
 and an owner is not a tamper-proof boundary.
 
-### 6. The wheel ships research tooling
+### 6. The wheel no longer ships research tooling **[v0.9.1] — resolved**
 
-The distribution includes 32 files under `scripts/benchmark/`. The packaging
-configuration has included `scripts*` since `v0.6.0`, so this is pre-existing, but
-the release grew that directory substantially. It affects artifact size, not
-correctness, and changing it is a packaging decision rather than a documentation one.
+`scripts/` was in the distribution's `include` list from `v0.6.0`. Measured: **54
+files, 590 KB of 1,328 KB unpacked — 44% of the distribution** — of which 48 were
+`scripts/benchmark/`. Nothing in `api/`, `cli/` or any top-level module imports it;
+the three test modules that do (`test_m009_feed_integration`,
+`test_verifiable_memory_release`, `test_m00675_reproducibility`) run from a checkout,
+where `scripts/` is present.
+
+The wheel is now **227 KB / 74 files, down from 425 KB / 129**. The repository still
+ships those scripts, which is where `check_versioning.py`, `check_evidence.py` and the
+benchmark harnesses run from, so reproducing the published numbers still means cloning
+— which is what the instructions already said.
+`tests/test_release_packaging.py` keeps the boundary shut.
+
+### 7. A cached read still pays the model import **[v0.9.1] — measured, not changed**
+
+A semantic read whose claim vectors are *all* already cached still costs ~6.6 s on
+mains, against ~0.67 s for the same read with `MIND_PALACE_LEXICAL=1`. The cause is a
+single argument: `memory_query.py:267` passes `embedder.dimension` to `load_cached`,
+and `Embedder.dimension` calls `_get_model()` — so the read imports
+`sentence_transformers` purely to learn a number.
+
+`memory_claim_embeddings.embedding_dimension` already stores it, so the information is
+available without the model. **Not changed in this release.** The read path is the
+authoritative one, and a dimension that disagreed with the configured model would
+silently corrupt ranking rather than fail. A patch release is the wrong place to take
+that risk on evidence this thin. It is a real saving for anyone not using the runtime,
+and it is recorded here as a candidate rather than quietly taken.
+
+### Python 3.15 lazy imports **[v0.9.1] — evaluated, not adopted**
+
+Measured on CPython 3.15.0rc1; the full table is in
+[the release map](release-map.md#python-315-lazy-imports-were-evaluated-and-not-adopted).
+The short version: the model stack costs 5.61 s to import against a 0.11 s CLI import
+graph, and `sentence_transformers` is *already* deferred inside
+`Embedder._get_model()`, so lazy imports have nothing to remove on the path that
+dominates. `-X lazy_imports=all` additionally breaks real commands with a partial
+SQLAlchemy initialisation. Nothing shipped; the supported floor stays `>=3.11`.
 
 ## Rejected work, with the measurement that rejected it
 
@@ -540,6 +573,7 @@ Recorded so the same ground is not covered twice.
 
 | Candidate | Result |
 |---|---|
+| Python 3.15 lazy imports (narrow and global) | Model stack is 5.61 s of a ~5.7 s non-interpreter cost and is already deferred inside `Embedder._get_model()`; the addressable surface is ~2%. `-X lazy_imports=all` breaks SQLAlchemy dialect init |
 | Set-based archive load rewrite | Removed the quadratic scan, but a generic-plan cliff made it 12x worse in production |
 | Candidate narrowing before projection | 170/202 equivalent answers |
 | Per-document current-version pointer | 3.6 ms of a 20,894 ms query |

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mindpalace-os"
-version = "0.9.0"
+version = "0.9.1"
 description = "Mind Palace - AI-native Research Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -72,7 +72,15 @@ py-modules = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "cli*", "scripts*"]
+# Only the runtime surface ships. `scripts/` is release, benchmark and
+# research tooling that nothing imports at runtime -- 48 of the 54 files there
+# are `scripts/benchmark/`. It stayed in the distribution because `scripts*` has
+# been in this list since v0.6.0. Removing it takes the wheel from 425 KB / 129
+# files to 227 KB / 74, measured, and no installed consumer loses anything:
+# the console scripts, `py-modules` and every `api`/`cli` import are unaffected.
+# The repository still ships them, which is where `check_versioning.py`,
+# `check_evidence.py` and the benchmark harnesses run from.
+include = ["api*", "cli*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

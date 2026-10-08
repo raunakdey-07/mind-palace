@@ -452,6 +452,34 @@ answer that differs only in what it declines to say is still a wrong answer.
 change makes the modes agree here, that test should be changed with a reason rather
 than left to fail or quietly deleted.
 
+#### The sharpest version of the same limitation
+
+Ranking scores the terms that **discriminate between candidates** — a term every
+candidate carries cannot tell them apart, so it is removed before scoring. That is
+correct for ranking, and it has a consequence worth knowing before you rely on this
+mode:
+
+```console
+$ MIND_PALACE_LEXICAL=1 mindpalace recall "What datastore does production use?"
+No memory matched that question.
+  NO_RELEVANT_MEMORY
+```
+
+Two `datastore` memories exist — one superseded, one current — so `datastore` is a term
+*every* candidate carries, it is removed, and lexical ranking has nothing left to score.
+Ask with a term that actually distinguishes them and it answers:
+
+```console
+$ MIND_PALACE_LEXICAL=1 mindpalace recall "When did we switch to CockroachDB?"
+The production datastore is now distributed CockroachDB.
+```
+
+This is a property of lexical ranking that predates v0.9.0 and is unchanged by it;
+`api/services/memory_relevance.py` scores on the reduced term set in both. It is also
+why the CI step for this mode asserts that a *discriminating* question is answered,
+rather than only that the command exits successfully — a mode that abstained on
+everything would otherwise pass.
+
 ### Interacting with the runtime
 
 A lexical read **bypasses the runtime**. A runtime exists to hold the model, and a

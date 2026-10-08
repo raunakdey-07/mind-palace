@@ -37,15 +37,37 @@ memory. That is verified, not asserted; see the invariants below.
 | | |
 |---|---|
 | package version | `0.9.0` |
-| tag | `v0.9.0` (pending) |
+| tag | `v0.9.0` |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `007_claim_embedding_cache`, unchanged |
-| tests | **1362 passed** on the exact CI path |
+| tests | **1362 passed**, plus the CI job provisions the embedding model first |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
 | receipt schema | version 1, unchanged since `v0.8.0` |
 | environment | Python 3.14.8, PostgreSQL 15.19, pgvector 0.8.6, all-MiniLM-L6-v2 cached |
+
+**The runner needs the models, and did not have them.** `sentence-transformers` is a
+declared dependency, so a clean runner installs the *package* but not the *weights*.
+With `HF_HUB_OFFLINE=1` and no cache, **41** tests fail on `OSError: We couldn't
+connect to ...` — every test that indexes or ranks anything, plus 11 fixture errors
+in `test_search_semantics.py`. `--maxfail=1` reported only the first, which is how a
+green local run and a red CI run coexisted through a release.
+
+The `tests` job now provisions both models explicitly — `all-MiniLM-L6-v2` for the
+default read path, and `cross-encoder/ms-marco-MiniLM-L-6-v2` for `rerank=true`,
+which `test_search_semantics.py` exercises with no guard — then confirms the
+embedder loads with the network **disabled**, and runs pytest without `--maxfail=1`.
+
+Those are two different requirements, and conflating them is what made the gap
+invisible: the tests need the model, and they must not need the network. A local run
+on a machine with both cached therefore proves less than it looks like — the cache
+hides a missing-provisioning problem. The five-minute-path job now asserts that the
+default read did **not** print the degradation note, so a silent fall back to lexical
+cannot pass as a semantic run.
+
+`MIND_PALACE_LEXICAL=1` is the opposite case and needs neither: it asserts that no
+part of the model stack is imported, and it passes on a runner with no models at all.
 
 `v0.9.0` is a minor release and it is additive. No migration: the schema head does
 not move. No public response field changed, existing receipts remain verifiable, and

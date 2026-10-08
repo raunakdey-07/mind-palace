@@ -111,7 +111,14 @@ export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
 python -m alembic -c migrations/alembic.ini upgrade head
 ```
 
-That is the whole setup. No API key, no account, no embedding model, no LLM.
+That is the whole setup. No API key, no account, no LLM, and no model to configure.
+
+One thing does arrive on its own: the first `recall` downloads the embedding model
+(about 90 MB, once, to the Hugging Face cache) the way a browser fetches a font.
+That needs network on that first call and roughly 30 seconds. After that it works
+offline. If you would rather it never arrives, set `MIND_PALACE_LEXICAL=1` and Mind
+Palace reads with no model at all — see
+[model-free mode](docs/operations.md#model-free-lexical-mode).
 
 ### 2. Check it
 
@@ -395,9 +402,11 @@ Stated up front, because the trust boundary is part of the product:
   it describes — never that the claim was correct.
 - It does not infer memory. Nothing is extracted from text automatically. Every
   claim is authored and every claim carries the exact characters that support it.
-- It does not need an LLM, and it does not need an embedding model to record,
-  answer, or verify memory. Ranking uses one when it is available and degrades to
-  lexical matching when it is not.
+- It does not need an LLM, and it does not need an embedding model to *record* or
+  *verify* memory. Ranking uses one when it is available and degrades to lexical
+  matching when it is not — and it says on stderr when it does, because a lexical
+  answer is a genuinely different answer and should not be mistaken for a semantic
+  one.
 - **Corpus content is data, not instructions.** Retrieved text is never promoted
   into trusted system instructions. Anything that can write a document can put text
   into a recall response, so a model that reads one without that distinction is a
@@ -702,6 +711,13 @@ says on stderr that it did — a silent fallback would be indistinguishable from
 semantic answer, and the two select different keys. It never removes the answer.
 `MIND_PALACE_LEXICAL=1` chooses that rung on purpose:
 [model-free mode](docs/operations.md#model-free-lexical-mode).
+
+The one exception is the legacy live-retrieval endpoint `GET /api/search`, which
+searches the vector index directly and has no lexical rung. With no model available
+it answers `503 Semantic model unavailable` rather than degrading, because a
+keyword search over that index would be a different operation wearing the same
+name. The memory surfaces — `recall`, `explain`, `/api/memory/*`, `/api/context` —
+never do this.
 
 ## Project structure
 

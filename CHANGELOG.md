@@ -154,6 +154,36 @@ An explicit mode is honest about the trade-off; an automatic one hides it. Detai
 Defects found by review and dogfooding in this release, each now covered by a
 regression test:
 
+- **The test suite could not pass on a clean runner.** CI installed
+  `sentence-transformers` but never the weights, and ran with `HF_HUB_OFFLINE=1`, so
+  **41** tests failed on `OSError: We couldn't connect to ...` — everything that
+  indexes or ranks anything, including 11 fixture errors in `test_search_semantics.py`.
+  `--maxfail=1` reported only the first, which is how a green local run and a red CI
+  run coexisted through a release. The `tests` job now provisions both models
+  explicitly, confirms the embedder loads with the network disabled, and runs pytest
+  without `--maxfail=1`. `--maxfail=1` was hiding failures, not preventing them.
+- **A database-outage test was passing for the wrong reason.**
+  `test_search_backend_unavailable_is_503_not_empty` asserted only that the word
+  "unavailable" appeared in the error detail — and `"Semantic model unavailable"`
+  contains it. On a runner with no model the mocked outage was never reached
+  (`RetrievalService.search` was never called) and the 503 came from the model
+  instead, so the DB-outage contract was not actually tested anywhere. It now asserts
+  the exact detail and that the search was reached.
+- **A zero-result search test depended on a developer's model cache.** It patched
+  `RetrievalService.search` but not the embedder that `/api/search` calls first, so it
+  passed locally and failed on CI. Both tests now state their precondition explicitly.
+  No production behaviour changed: `/api/search` embeds the query before searching,
+  `RetrievalService.search` needs that vector in its SQL, and `503` for an unavailable
+  model remains correct — it is a vector endpoint with no lexical rung.
+- **The CI step for the model-free mode could not tell a working mode from a silent
+  one.** It asserted the exit code, which an abstention also satisfies. It now asserts
+  that a discriminating question is actually answered, still imports no part of the
+  model stack, and still announces itself exactly. Finding this surfaced a real
+  limitation, now documented: lexical ranking scores the terms that discriminate
+  between candidates, so a question whose only shared term is one *every* candidate
+  carries — `What datastore does production use?`, with two datastore memories — is
+  correctly abstained on. Predates v0.9.0 and unchanged by it.
+
 - **A multi-line statement, and `remember --file` on any Markdown file, could not be
   recorded at all.** The frontmatter quote collapsed line breaks while the document body
   kept them, so the evidence the archive was told to cite was never an exact substring
@@ -182,6 +212,17 @@ regression test:
   embeddings was re-encoded on every read; it is now encoded once.
 - A runtime that loaded slowly was reported as `loading` by `start --wait`, which read
   that as failure.
+- **The CLI's `explain --json` bundle shape was claimed and unasserted.** Nothing held
+  that `explain --json` emits the same `{response, receipt}` document
+  `mindpalace receipt` writes, while `recall --json` and `history --json` return the
+  bare response. Now pinned, including that the receipt is verifiable against the
+  response it ships with and that a rewritten answer is rejected.
+- `eval/m00675/README.md` described the stored artifact's 47/60 as the *current*-source
+  result. It is not: the current source measures 45/60, and had already drifted before
+  v0.9.0. The README now separates the recorded artifact from the reproducible result.
+- The README claimed a missing model "never removes the answer", which is true of
+  every memory surface and false of the legacy `/api/search`, which has no lexical
+  rung and answers 503. The exception is now stated.
 
 ### Changed
 

@@ -136,6 +136,10 @@ monitoring/
 !examples/WHY_MEMORY.md
 !examples/evaluation/**/*.md
 !examples/evaluation/**/data/
+# The decision log is the example's input, not prose about the example. Without this
+# negation the blanket `*.md` rule above silently drops it, and a fresh clone gets an
+# example that raises SystemExit on its first line.
+!examples/project-log/**/*.md
 !docs/evaluation/m006.md
 !docs/evaluation/m0065.md
 /eval/results/

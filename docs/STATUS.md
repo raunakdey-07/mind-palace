@@ -36,21 +36,153 @@ memory. That is verified, not asserted; see the invariants below.
 
 | | |
 |---|---|
-| package version | `0.7.0` |
-| tag | `v0.7.0`, annotated, on `f52272d` |
-| previous release | `v0.6.0` at `033c1484`, unmodified |
-| migration head | `007_claim_embedding_cache` |
-| tests | **1200 passed** on the exact CI path |
+| package version | `0.9.0` |
+| tag | `v0.9.0` (pending) |
+| previous release | `v0.8.0`, unmodified |
+| migration head | `007_claim_embedding_cache`, unchanged |
+| tests | **1362 passed** on the exact CI path |
 | lint | `flake8`, `black --check --line-length 100` clean |
-| release metadata | `check_versioning.py` PASS |
+| release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
-| environment | Python 3.14.7, PostgreSQL 15.19, pgvector 0.8.6, all-MiniLM-L6-v2 cached |
+| receipt schema | version 1, unchanged since `v0.8.0` |
+| environment | Python 3.14.8, PostgreSQL 15.19, pgvector 0.8.6, all-MiniLM-L6-v2 cached |
 
-`v0.7.0` is a minor release. Upgrade from `v0.6.0` applies two additive
-migrations, `006_snapshot_membership_seal` and `007_claim_embedding_cache`.
-Neither rewrites existing rows. No public response field changed. One behaviour
-changed: with more than one corpus, live retrieval requires `corpus` and returns
-422 without it, rather than searching every namespace.
+`v0.9.0` is a minor release and it is additive. No migration: the schema head does
+not move. No public response field changed, existing receipts remain verifiable, and
+no MCP tool was added.
+
+**The runtime changed no memory semantics.** `mindpalace recall`, `explain` and
+`receipt` went from about 6.2 s to about 0.63 s, and everything they return is
+byte-identical to the in-process path — same claim identities, evidence, temporal
+state, conflicts, abstention, receipt digest and Memory Pack digest, across ordinary,
+weakly related, absent, temporal, conflict and multi-topic queries. That is
+`tests/test_m016_runtime_equivalence.py`, asserted rather than claimed.
+
+Five behaviour changes, all deliberate and measured:
+
+- **A first memory no longer requires an embedding model.** `remember` passes
+  `require_embeddings=False`, so the embedder is never loaded rather than attempted and
+  caught. `import sentence_transformers` costs 5.3 s on mains power, so reaching for a
+  model that is already cached is not free either; the write does not reach. Bulk
+  ingestion keeps `require_embeddings=True`, so a directory it cannot index is still a
+  visible failure.
+- **A read now persists the vectors it computed.** Since a corpus authored through
+  `remember` starts with a cold read cache, `memory_query` writes back what it had to
+  embed: 2,106 ms for the first read against 151 ms for the second. Contained by a
+  `SAVEPOINT`, skipped on a read-only session, and best-effort, so it cannot fail a
+  query that has already been answered. The cache holds no authority, so every one of
+  those boundaries costs latency and nothing else.
+- **Model-free reading is available on purpose.** `MIND_PALACE_LEXICAL=1` takes the
+  lexical rung that already existed as the no-model degradation: 0.63 s instead of
+  6.17 s, with the model stack never imported. It selects different keys on
+  vocabulary-poor questions, by design, and is documented as a trade-off rather than a
+  substitute. See [operations](operations.md#model-free-lexical-mode).
+- **One failure, one exception class.** The in-process SDK path raised the service's
+  own `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`. All
+  three now raise `MemoryClientError`, with the same code, message and status. A genuine
+  defect is still not disguised as an API failure.
+- **The relevance acceptance gate tests overlap against full claim terms.** Shared
+  terms still cannot discriminate between candidates, so ranking is unchanged; but
+  they are not evidence that a question is off-topic. The frozen memory benchmark
+  holds at 1.000 on every metric with zero safety failures, before and after.
+
+All of them are held by tests rather than by inspection, as is every property in
+[product/first-use-audit.md](product/first-use-audit.md).
+
+## Measured at v0.9.0
+
+**The user journey.** One command per process, same corpus, mains power, median of
+three, re-measured for this release under the same conditions as the `v0.8.0`
+baseline. The left column is what every command costs with no background process at
+all; nothing else differs between the columns.
+
+| command | in-process | with runtime |
+|---|---|---|
+| `mindpalace init` | 0.65 s | — |
+| `mindpalace remember` | 0.88 s | — |
+| `mindpalace recall` | 6.17 s | **0.63 s** |
+| `mindpalace explain` | 6.23 s | **0.67 s** |
+| `mindpalace history` | 0.81 s | 0.61 s |
+| `mindpalace receipt` | 6.21 s | 0.62 s |
+| `mindpalace verify` | 0.56 s | 0.56 s |
+| `recall`, `MIND_PALACE_LEXICAL=1` | **0.63 s** | — (bypasses it) |
+| `explain`, `MIND_PALACE_LEXICAL=1` | **0.67 s** | — |
+| SDK `recall`, fresh process, default | 5.11 s | — (`runtime` is opt-in) |
+| SDK `recall`, `MindPalace(runtime=True)` | — | **0.51 s** |
+
+The runtime itself: **5.39 s** cold start to `ready` with the model loaded, **0.05 s**
+for a status round trip, **0.10 s** for a query over the socket with no CLI in the
+path. Idle exit is 15 minutes.
+
+Two things are worth reading out of that table rather than just the totals. First, a
+warm `recall` costs about what lexical mode costs from a cold process, and neither is
+0.1 s: the ~0.5 s that remains is interpreter startup and imports, which is the floor
+for a one-shot command. Second, `explain` was the slowest semantic command in the
+previous measurement and is now indistinguishable from `recall` — the difference was
+measurement noise, not a second code path.
+
+MCP is unchanged and correctly so: an MCP server is a long-lived process and pays the
+import once. No MCP tool was added for the model-free mode, and none should be.
+
+**Equivalence, measured rather than argued.** Reading through a warm runtime and
+reading in-process produce byte-identical `current_memories`,
+`historical_memories`, `uncertain_memories`, `changes`, `conflicts`, `constraints`,
+`evidence`, `sources` and `truncated`. The one field that differs is
+`state.valid_at`, and it must: it is "now", so two calls milliseconds apart record
+different instants. That is correct behaviour, and it is why the equivalence tests pin
+`valid_at`.
+
+**Where the time actually went.** Profiling with `-X importtime` rather than
+assuming: `import torch` 1.68 s, `import transformers` 1.20 s (2.66 s together),
+`import sentence_transformers` 5.32 s, model construct and first embed 0.49 s.
+Everything else in a one-shot recall — interpreter, CLI imports, database connection,
+the query itself — is 0.74 s, and the memory work is 61 ms of that.
+
+**Model-free reading.** `MIND_PALACE_LEXICAL=1` imports none of `torch`,
+`transformers` or `sentence_transformers`, verified by inspecting `sys.modules` in the
+process that ran the recall rather than inferred from a timing. The 0.63 s is
+consequently the same figure the runtime reaches, from a cold process, with no
+background process at all.
+
+**A lexical *fast path* was measured and rejected.** On a ten-fact corpus across
+sixteen question shapes it agreed with semantic ranking on fifteen, and the one
+difference was an abstention: a question semantic ranking answered, lexical ranking
+abstained on. Shipping it would have made `NO_RELEVANT_MEMORY` depend on whether the
+model happened to be cached on that machine. Not built. An *explicit* lexical mode
+ships instead, which is the same rung taken on purpose. See
+[operations](operations.md#why-not-a-lexical-fast-path).
+
+## Measured at the five-minute path
+
+**First-use path.** `mindpalace init → remember → recall → explain → history →
+receipt → verify`, run as documented in a fresh environment against a fresh
+database, offline. Asserted by `tests/test_m015_golden_path.py` and by a
+dedicated CI job.
+
+**Latency.** 200 remembered statements, on mains power: remember p50 10.8 ms /
+p95 11.5 ms, recall p50 92.6 ms / p95 107.8 ms, explain p50 93.8 ms / p95 105.2 ms,
+verify p50 0.82 ms / p95 0.93 ms in a separate interpreter with no database URL and
+no network. At 1000 statements `remember` and `verify` stay flat and `recall`
+reaches p50 988 ms, because the authoritative projection loads the version graph
+before relevance narrows anything.
+
+`remember` is 4× faster than at v0.8.0 because it no longer imports the embedding
+model. The cost of importing it is the number that matters most at the process
+level: `import sentence_transformers` is 5.3 s on mains (10.8 s on battery), so
+`mindpalace remember` runs in
+1.5 s while `mindpalace recall` runs in 14.4 s. Method and limits:
+[performance/five-minute-path.md](performance/five-minute-path.md).
+
+**Environment note.** Every latency number in this repository's history before
+v0.9.0 was taken on battery. The two are not comparable: the same probe on mains
+power is 3 to 4× faster. Compare within a condition, not across them.
+
+**Idempotency.** An identical `remember` returns the same `version_id` and
+`changed=false`. Four concurrent identical writes produce exactly one version and
+one claim.
+
+**Portability.** A bare `pip install mindpalace-os`, with no CLI extra and no
+database URL, verifies a file written by `mindpalace receipt`.
 
 ## Verified invariants
 

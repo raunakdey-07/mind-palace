@@ -10,11 +10,15 @@ purpose: anyone who can install the package must be able to check a proof withou
 server, a database, a model or a network. Nothing here imports typer, or anything
 from `api` or `cli`.
 
+    mindpalace-proof verify receipt.json          # written by `mindpalace receipt`
     mindpalace-proof verify proof.json --pack memory-pack.json
     mindpalace-proof prove  --pack memory-pack.json --claim-key architecture.postgres -o proof.json
     mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
 -o receipt.json
     mindpalace-proof explain receipt.json --pack memory-pack.json
+
+A file written by `mindpalace receipt` is self-contained: it carries the response
+it describes, so verifying it needs no --pack and nothing but this package.
 
 Exit codes are stable and are part of the contract:
 
@@ -42,6 +46,7 @@ from memory_receipt import (
     ReceiptError,
     build_receipt,
     verify_receipt,
+    verify_response_receipt,
     verify_trust,
 )
 
@@ -86,19 +91,138 @@ def _summarise(proof: dict) -> list[str]:
 
 
 def _load_target(path: str) -> tuple[dict, str]:
-    """Accept either a receipt or a bare proof, so `verify` works on either artifact."""
+    """Accept a response bundle, a receipt, or a bare proof.
+
+    The response bundle is what `mindpalace receipt` writes: the authoritative
+    response next to the receipt describing it. Reading it here means someone who
+    has only `pip install mindpalace-os` -- no CLI extra, no server, no database --
+    can still check a receipt they were handed.
+    """
     data = _read_json(path, "artifact")
+    if isinstance(data, dict) and "response" in data and "receipt" in data:
+        return data, "response"
     if isinstance(data, dict) and "receipt_version" in data:
         return data, "receipt"
     if isinstance(data, dict) and "proof_version" in data:
         return data, "proof"
     raise ProofError(
-        f"{path!r} is neither a receipt nor a proof (no receipt_version/proof_version)"
+        f"{path!r} is not a Mind Palace receipt. It is neither a response bundle "
+        "(written by `mindpalace receipt`), a receipt, nor a proof."
     )
+
+
+def _verify_response_bundle(target: dict, trusted_digest: str | None) -> dict:
+    """Check a `mindpalace receipt` file: the receipt against the response it covers."""
+    bundle = target.get("receipt")
+    artifact = target.get("response")
+    if not isinstance(bundle, dict) or not isinstance(artifact, dict):
+        raise ProofError("response bundle must hold a 'response' and a 'receipt' object")
+    result = verify_response_receipt(bundle, artifact)
+    trust = verify_trust({}, trusted_digest or "", bundle.get("memory_pack_digest", ""))
+    verified = result["verified"]
+    reasons: list[str] = []
+    if not result["memory_pack_digest"]:
+        reasons.append("the artifact no longer matches the digest the receipt recorded")
+    if not result["query_binding"]:
+        reasons.append("the receipt answers a different question than the artifact")
+    for failure in result["failures"]:
+        reasons.append(f"receipt {str(failure.get('receipt_id', ''))[:12]} does not verify")
+    return {
+        "verified": verified,
+        "reasons": reasons,
+        # One boolean per property, matching the other artifact kinds: the digest
+        # is a fingerprint of the user's memory and does not belong in a verdict.
+        "integrity": result["memory_pack_digest"],
+        "provenance": not result["failures"],
+        "temporal": not result["failures"],
+        "supersession": not result["failures"],
+        "receipts_checked": result["receipts_checked"],
+        "authenticity": trust,
+    }
+
+
+def _render_verdict(
+    verified: bool, reasons, integrity, provenance, temporal, supersession, authenticity, summary
+) -> None:
+    """One shape of output for every artifact kind, so the verdict reads the same."""
+    if not verified:
+        print("REJECTED")
+        for reason in reasons:
+            print(f"reason: {reason}")
+        print()
+        print("The artifact still represents a different state than the receipt describes.")
+        return
+
+    print("VERIFIED")
+    print()
+    print("Integrity:")
+    print(f"  authoritative artifact: {'MATCH' if integrity else 'MISMATCH'}")
+    print(f"  receipt: {'MATCH' if integrity else 'MISMATCH'}")
+    print()
+    print("Provenance:")
+    print(f"  claim: {'MATCH' if provenance else 'MISMATCH'}")
+    print(f"  evidence: {'MATCH' if provenance else 'MISMATCH'}")
+    print(f"  document: {'MATCH' if provenance else 'MISMATCH'}")
+    print()
+    print("Temporal state:")
+    print(f"  valid_at: {'MATCH' if temporal else 'MISMATCH'}")
+    print(f"  supersession: {'MATCH' if supersession else 'MISMATCH'}")
+    print()
+    print("Trust:")
+    if authenticity["authenticated"]:
+        print("  authenticity: VERIFIED (trust anchor matched)")
+    else:
+        print("  authenticity: NOT ESTABLISHED (no trust anchor supplied)")
+    print()
+    for line in summary:
+        print(line)
+    print()
+    print("This means the artifact still represents the state the receipt describes.")
+    print("It does not establish that the original source was factually correct.")
 
 
 def cmd_verify(args) -> int:
     target, kind = _load_target(args.target)
+
+    if kind == "response":
+        # No --pack: the response bundle carries its own authoritative artifact,
+        # which is what makes one file enough to hand to someone else.
+        result = _verify_response_bundle(target, args.trusted_digest)
+        if args.trusted_digest and not result["authenticity"]["authenticated"]:
+            result["verified"] = False
+            result["reasons"].append("the recorded digest does not match the trust anchor")
+        if args.json:
+            print(
+                json.dumps(
+                    {"verified": result["verified"], "kind": kind, **result},
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return EXIT_OK if result["verified"] else EXIT_REJECTED
+        bundle = target["receipt"]
+        summary = [
+            f"query: {bundle.get('query') or '-'}",
+            f"receipts checked: {result['receipts_checked']}",
+            f"memory pack digest: {bundle.get('memory_pack_digest')}",
+        ]
+        _render_verdict(
+            result["verified"],
+            result["reasons"],
+            result["integrity"],
+            result["provenance"],
+            result["temporal"],
+            result["supersession"],
+            result["authenticity"],
+            summary,
+        )
+        return EXIT_OK if result["verified"] else EXIT_REJECTED
+
+    if not args.pack:
+        raise ProofError(
+            f"--pack is required for a {kind}. A file written by `mindpalace receipt` "
+            "carries its own artifact and needs no --pack."
+        )
     pack = _load_pack(args.pack)
     actual_digest = pack.digest()
 
@@ -351,13 +475,21 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     verify_parser = sub.add_parser(
-        "verify", help="check a receipt or proof against the authoritative Memory Pack"
+        "verify", help="check a receipt or proof against the memory it describes"
     )
     verify_parser.add_argument(
-        "target", help="path to a proof.json or a receipt.json; either is accepted"
+        "target",
+        help=(
+            "a receipt written by `mindpalace receipt`, a receipt.json, or a "
+            "proof.json; any of the three is accepted"
+        ),
     )
     verify_parser.add_argument(
-        "--pack", required=True, help="path to the authoritative memory pack"
+        "--pack",
+        help=(
+            "the authoritative Memory Pack. Not needed for a file written by "
+            "`mindpalace receipt`, which carries its own artifact."
+        ),
     )
     verify_parser.add_argument(
         "--json", action="store_true", help="emit a machine-readable verdict"

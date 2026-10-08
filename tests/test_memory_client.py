@@ -366,11 +366,37 @@ def test_local_dispatch(contract, method, kwargs, operation, fields):
 
 
 def test_local_error_propagates(contract):
+    """A service failure reaches the caller as the SDK's own exception, everywhere.
+
+    This used to assert the opposite -- that the local path leaked the service's
+    `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`. That
+    was an accident of which layer happened to catch it, not a design: it meant a
+    caller had to write `except (MemoryClientError, MemoryError)` and, worse, which
+    one they needed depended on whether a runtime happened to be running.
+
+    What is preserved is the information: same code, same message, same status.
+    """
     error = contract.service.MemoryError("corpus_not_found", "No corpus", 404)
     contract.service.execute.side_effect = error
-    with pytest.raises(contract.service.MemoryError) as caught:
+    with pytest.raises(MemoryClientError) as caught:
         MindPalace().memory.current(corpus="missing")
-    assert caught.value is error
+    assert caught.value.code == "corpus_not_found"
+    assert caught.value.message == "No corpus"
+    assert caught.value.status_code == 404
+    assert caught.value.__cause__ is error
+
+
+def test_a_defect_is_not_disguised_as_an_api_failure(contract):
+    """Only a service error is translated. A bug keeps its own type.
+
+    Dressing an `AttributeError` up as `MemoryClientError` would send a user hunting
+    their request instead of reading the traceback.
+    """
+    defect = TypeError("a real defect, not a service failure")
+    contract.service.execute.side_effect = defect
+    with pytest.raises(TypeError) as caught:
+        MindPalace().memory.current(corpus="test")
+    assert caught.value is defect
 
 
 def test_local_rejects_running_loop_without_creating_coroutine(contract):

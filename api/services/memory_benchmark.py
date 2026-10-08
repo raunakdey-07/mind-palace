@@ -275,9 +275,17 @@ class CachedEmbedder(Embedder):
 
 
 class EvaluationIngestion(IngestionService):
+    """Ingestion with an injected deterministic embedder.
+
+    Goes through `super().__init__` so every attribute the service relies on is
+    set in one place, then swaps only the embedder. `require_embeddings` stays
+    True: the benchmark measures semantics, and its fixture vectors are part of
+    that, so it must never silently skip them.
+    """
+
     def __init__(self, embedder):
+        super().__init__(memory_enabled=True)
         self.embedder = embedder
-        self.memory_enabled = True
 
 
 class MemoryBenchmarkWorkload:

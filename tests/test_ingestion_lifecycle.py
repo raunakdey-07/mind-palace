@@ -267,6 +267,12 @@ async def test_metadata_only_change_is_detected():
     Documents the current behavior: metadata-only edits do NOT retrigger
     ingestion because change detection hashes only the body. This is a
     known limitation captured deliberately as a test.
+
+    Depends on the shared corpus having no archived versions yet. `memory.enabled`
+    reports "this corpus has memory history", and ingestion routes to the memory
+    path once it does -- where the fingerprint covers content *and* metadata, so a
+    frontmatter-only edit is correctly detected. Run this against a corpus another
+    test has already written to and it fails on its premise, not on a defect.
     """
     from api.services.db import session_scope
 

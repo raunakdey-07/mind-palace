@@ -6,12 +6,15 @@ on deletion). Vectors are transient: no persistence contract or ingestion change
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Protocol
 
 from api.models.memory import MemoryRequest, MemoryResponse
+
+logger = logging.getLogger("mindpalace.ops")
 
 
 class ClaimEmbedder(Protocol):
@@ -134,6 +137,7 @@ def select(
     lexical: bool = False,
     claim_vectors: dict[str, list[float]] | None = None,
     vectorized: bool = False,
+    fresh: dict[str, list[float]] | None = None,
 ) -> MemoryResponse:
     """Resolve first, then select relevant authored keys and complete conflict groups.
 
@@ -155,6 +159,7 @@ def select(
         lexical=lexical,
         claim_vectors=claim_vectors,
         vectorized=vectorized,
+        fresh=fresh,
     )
     keys = set(key_scores)
     selected = {
@@ -211,22 +216,42 @@ async def query(
 
     When a session and corpus are supplied, claim representations are read from the
     L2 cache so a warm corpus embeds only the question. The read is done here, on
-    the async side, so the scoring thread does no I/O. This path never writes.
+    the async side, so the scoring thread does no I/O.
 
-    The cache is filled by ingestion and by `mindpalace reindex`, never by a
-    query. That is deliberate: a read that writes can poison the caller's
-    transaction, and it would make a read-only connection fail a query it could
-    have answered. A corpus with no cache still answers, just more slowly.
+    Vectors this query has to embed are written back to that cache. The encoder
+    already computed them, so persisting them costs one insert per claim and saves
+    the next query the whole batch. The alternative -- filling the cache only on
+    write -- leaves any corpus authored without embeddings re-encoded on every
+    single read: measured at 3.2 s per recall at 200 statements, against 94 ms once
+    the cache is warm. `mindpalace remember` deliberately does not embed, because
+    importing the model costs 5.3 s and a first memory must not pay that.
+
+    The write-back is bounded three ways, because a read that writes is a real
+    hazard and has to be contained rather than merely intended. It runs in its own
+    SAVEPOINT, so a failure cannot poison the caller's transaction. It is skipped on
+    a read-only session, so a read-only connection still answers. And it is
+    best-effort, so nothing here can fail a query that has already been answered.
+    The cache holds no authority -- deleting the table costs latency and nothing else
+    -- and `mindpalace reindex` still rebuilds every row from immutable claim text.
     """
     from asyncio import to_thread
 
     from api.services.memory_public import MemoryError, bounded_pack
+    from api.services.retrieval_mode import lexical_requested
 
     intent = interpret(request)
 
+    # The one place the two relevance modes diverge. Both go through `select` and
+    # through the same acceptance gates; this only chooses the scorer.
+    lexical_only = lexical_requested()
+
     embedder = None
     cached: dict[str, list[float]] = {}
-    if db is not None and corpus_id is not None:
+    wanted: dict[str, str] = {}
+    # In lexical mode the cache is not even read. Answering that read needs the
+    # model's dimension, and reaching for the model is the thing being avoided --
+    # which is the whole point of asking for this mode.
+    if db is not None and corpus_id is not None and not lexical_only:
         try:
             from api.services.claim_embeddings import (
                 load_cached,
@@ -244,15 +269,33 @@ async def query(
         except Exception:  # noqa: BLE001 - a cache miss or a dead model is not a failure
             embedder, cached = None, {}
 
+    fresh: dict[str, list[float]] = {}
+
     def retrieve():
+        if lexical_only:
+            # The model-free rung, reached on purpose rather than by failure. This is
+            # the same call the no-model degradation makes.
+            return select(full, request, intent, None, lexical=True)
         if embedder is None:
             from api.services.embedder import Embedder as Lazy
 
             return select(
-                full, request, intent, Lazy(), claim_vectors=cached or None, vectorized=vectorized
+                full,
+                request,
+                intent,
+                Lazy(),
+                claim_vectors=cached or None,
+                vectorized=vectorized,
+                fresh=fresh,
             )
         return select(
-            full, request, intent, embedder, claim_vectors=cached or None, vectorized=vectorized
+            full,
+            request,
+            intent,
+            embedder,
+            claim_vectors=cached or None,
+            vectorized=vectorized,
+            fresh=fresh,
         )
 
     def retrieve_lexically():
@@ -261,9 +304,81 @@ async def query(
     try:
         result = await to_thread(retrieve)
     except (OSError, RuntimeError, ValueError, ImportError):
+        # A partial batch must not be cached: the fallback scored a different way.
+        fresh.clear()
+        _note_degraded()
         try:
             result = await to_thread(retrieve_lexically)
         except (OSError, RuntimeError, ValueError, ImportError) as exc:
             raise MemoryError("memory_unavailable", "Memory retrieval unavailable", 503) from exc
 
+    # `wanted` is empty when the cache lookup above failed, and `store` matches on
+    # it, so warming then would encode the corpus and persist nothing.
+    if fresh and wanted and embedder is not None and db is not None and corpus_id is not None:
+        await _warm_claim_cache(db, corpus_id, wanted, fresh, embedder)
+
     return bounded_pack(result, request.budget)
+
+
+def _note_degraded() -> None:
+    """Say, once, that a semantic read answered lexically because no model loaded.
+
+    The degradation is correct and long-standing: ranking degrades, authority does
+    not. What was missing was that it was silent, so a user could not tell a lexical
+    answer from a semantic one -- and the two select differently. On stderr, once
+    per process, because a query loop would otherwise repeat it forever.
+    """
+    import sys
+
+    global _DEGRADED_NOTED
+    if _DEGRADED_NOTED:
+        return
+    _DEGRADED_NOTED = True
+    print(
+        "retrieval: lexical (the embedding model could not be loaded, so relevance "
+        "fell back to token overlap; set MIND_PALACE_LEXICAL=1 to choose this on "
+        "purpose, or install the model for semantic ranking)",
+        file=sys.stderr,
+    )
+
+
+_DEGRADED_NOTED = False
+
+
+async def _warm_claim_cache(db, corpus_id: str, wanted: dict, fresh: dict, embedder) -> None:
+    """Persist the vectors this query just encoded. Best-effort, and never raises.
+
+    A cache that cannot be written costs the next query some latency. Failing the
+    query that has already been answered would cost a great deal more.
+    """
+    from api.services.claim_embeddings import store
+
+    try:
+        if _read_only(db):
+            return
+        async with db.begin_nested():
+            await store(
+                db,
+                corpus_id,
+                wanted,
+                fresh,
+                embedder.model_name,
+                embedder.dimension,
+                getattr(embedder, "version", "query"),
+                commit=False,
+            )
+    except Exception:  # noqa: BLE001 - a cache write must never fail a read
+        logger.debug("claim_embedding_cache_warm_failed", exc_info=True)
+
+
+def _read_only(db) -> bool:
+    """True when this session was opened for reading, so it must not write.
+
+    Asked of the engine rather than carried on a flag, because the session may have
+    been created by a caller this code never sees.
+    """
+    try:
+        engine = db.get_bind()
+        return bool(engine.sync_engine.get_execution_options().get("postgresql_readonly"))
+    except Exception:  # noqa: BLE001 - a probe about the session never raises
+        return False

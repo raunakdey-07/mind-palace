@@ -49,9 +49,37 @@ def _sync_error(path: str, exc: Exception) -> str:
 class IngestionService:
     """Service for ingesting Markdown documents."""
 
-    def __init__(self, *, memory_enabled: bool = False):
+    def __init__(self, *, memory_enabled: bool = False, require_embeddings: bool = True):
         self.embedder = Embedder()
         self.memory_enabled = memory_enabled
+        # `remember` records authoritative memory and sets this False, so a first
+        # memory does not depend on a model download. Bulk ingestion leaves it True:
+        # silently accepting a directory of documents and producing a corpus that
+        # cannot be searched would be worse than failing.
+        self.require_embeddings = require_embeddings
+
+    def _embed_records(self, records: list[dict]) -> tuple[str | None, int | None]:
+        """Embed chunk records, or skip the model entirely when the caller allows it.
+
+        Embeddings are L2: `rehydrate` rebuilds them from the archive, and the read
+        path already treats them as an optimization. So when the caller has said it
+        does not need them, the model is never loaded -- not attempted-and-caught,
+        which would still block on a first-run download -- and a missing model
+        costs retrieval quality and nothing else. The authoritative claim and its
+        evidence are still recorded.
+
+        Returns the (model_name, dimension) to persist. Both are None when no
+        vector was produced, which the schema already permits.
+        """
+        if not self.require_embeddings:
+            logger.info("embedding_skipped", extra={"chunks": len(records)})
+            return None, None
+        embeddings = self.embedder.embed([r["text"] for r in records])
+        if len(embeddings) != len(records):
+            raise ValueError("embedding count does not match chunk count")
+        for record, embedding in zip(records, embeddings):
+            record["embedding"] = embedding
+        return self.embedder.model_name, self.embedder.dimension
 
     async def _ingest_content(self, db, content: str, path: str, corpus_id: str) -> dict:
         """Shared ingestion pipeline for one parsed document.
@@ -121,19 +149,16 @@ class IngestionService:
 
         sections = extract_sections_with_paths(body)
         chunks = chunk_with_heading_paths(sections)
-        chunk_texts = [c["text"] for c in chunks]
-        embeddings = self.embedder.embed(chunk_texts)
-
         chunk_records = [
             {
                 "text": c["text"],
                 "order_index": i,
                 "heading_path": c["heading_path"],
                 "token_count": c["token_count"],
-                "embedding": emb,
             }
-            for i, (c, emb) in enumerate(zip(chunks, embeddings))
+            for i, c in enumerate(chunks)
         ]
+        embedding_model, embedding_dimension = self._embed_records(chunk_records)
 
         doc_type = metadata.get("type") or metadata.get("document_type") or DEFAULT_DOC_TYPE
         tags = metadata.get("tags", [])
@@ -144,8 +169,8 @@ class IngestionService:
             doc_type,
             tags,
             chunk_records,
-            self.embedder.model_name,
-            self.embedder.dimension,
+            embedding_model,
+            embedding_dimension,
             "1.0",
             commit=False,
         )
@@ -192,11 +217,7 @@ class IngestionService:
                 "message": "Document unchanged, skipped",
             }
 
-        embeddings = self.embedder.embed([c["text"] for c in records])
-        if len(embeddings) != len(records):
-            raise ValueError("embedding count does not match chunk count")
-        for record, embedding in zip(records, embeddings):
-            record["embedding"] = embedding
+        embedding_model, embedding_dimension = self._embed_records(records)
         doc_id = await upsert_document(
             db, extract_title(metadata), path, body, metadata, corpus_id=corpus_id, force=True
         )
@@ -213,8 +234,8 @@ class IngestionService:
             doc_type,
             tags,
             records,
-            self.embedder.model_name,
-            self.embedder.dimension,
+            embedding_model,
+            embedding_dimension,
             "1.0",
             commit=False,
         )
@@ -242,7 +263,16 @@ class IngestionService:
 
         A failure here is not an ingestion failure: the claim is already
         authoritative, and the cache can always be rebuilt.
+
+        Skipped when the caller did not require embeddings. A first memory must not
+        import the model: `import sentence_transformers` measures 5.3 s on mains
+        machine, and paying that on the first command a newcomer runs is worse than
+        a slower ranking. `memory_query` warms this cache from the read side instead,
+        from vectors it has already computed, so a corpus authored without
+        embeddings is encoded once rather than on every query.
         """
+        if not self.require_embeddings:
+            return 0
         try:
             from api.services.claim_embeddings import pending, store
 

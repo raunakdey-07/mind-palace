@@ -89,7 +89,7 @@ async def test_rest_and_mcp_forward_intent(client, service, intent_contract, int
     assert response.status_code == 200
     service.execute.assert_awaited_once_with("query", MemoryRequest(**body))
     service.execute.reset_mock()
-    result = await mcp_server.mcp.call_tool("memory_query", {"request": body})
+    result = await mcp_server.mcp.call_tool("memory_recall", {"request": body})
     assert not result.is_error
     service.execute.assert_awaited_once_with("query", MemoryRequest(**body))
 
@@ -103,7 +103,7 @@ async def test_query_schemas_are_shared():
         "$ref": "#/components/schemas/MemoryResponse"
     }
     tools = {tool.name: tool for tool in await mcp_server.mcp.list_tools()}
-    tool = tools["memory_query"]
+    tool = tools["memory_recall"]
     assert tool.input_schema["required"] == ["request"]
     assert tool.input_schema["$defs"]["MemoryRequest"] == MemoryRequest.model_json_schema()
     assert tool.output_schema == MemoryResponse.model_json_schema()
@@ -116,7 +116,7 @@ async def test_query_schemas_are_shared():
 async def test_mcp_query_dispatch(service, monkeypatch):
     monkeypatch.setattr(mcp_server, "_client", Mock(side_effect=AssertionError("legacy SDK")))
     body = {"query": QUESTION, "corpus": "docs", **SELECTORS}
-    result = await mcp_server.mcp.call_tool("memory_query", {"request": body})
+    result = await mcp_server.mcp.call_tool("memory_recall", {"request": body})
     service.execute.assert_awaited_once_with("query", MemoryRequest(**body))
     assert not result.is_error
     assert result.structured_content == service.execute.return_value.model_dump(mode="json")
@@ -130,7 +130,7 @@ async def test_invalid_query_never_executes(client, service, body):
     response = await client.post("/api/memory/query", json=body)
     assert response.status_code == 422
     with pytest.raises(ToolError):
-        await mcp_server.mcp.call_tool("memory_query", {"request": body})
+        await mcp_server.mcp.call_tool("memory_recall", {"request": body})
     service.execute.assert_not_called()
 
 
@@ -141,7 +141,7 @@ async def test_query_errors_preserved(client, service):
     response = await client.post("/api/memory/query", json=body)
     assert response.status_code == 404
     assert response.json() == expected
-    result = await mcp_server.mcp.call_tool("memory_query", {"request": body})
+    result = await mcp_server.mcp.call_tool("memory_recall", {"request": body})
     assert result.is_error
     assert result.structured_content == expected
 

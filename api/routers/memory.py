@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Public memory HTTP adapter. Authentication is not currently provided."""
+"""Public memory HTTP adapter.
+
+`POST /remember` is the product write path; every other route is a read of the
+same archive. Authentication is not currently provided.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.models.memory import FeedResponse, MemoryRequest, MemoryResponse
+from api.models.remember import RememberRequest, RememberResult
 
 logger = logging.getLogger("mindpalace.ops")
 
@@ -28,6 +33,67 @@ async def execute_memory(operation: str, request: MemoryRequest) -> MemoryRespon
             status_code=exc.status_code,
             detail={"code": exc.code, "message": exc.message},
         ) from exc
+
+
+@router.post("/remember", response_model=RememberResult)
+async def remember(request: RememberRequest) -> RememberResult:
+    """Record a fact as authoritative memory.
+
+    The product write path. A statement becomes one claim with exact-substring
+    evidence, through the same ingestion and archive path a synced document uses,
+    so a simple write cannot bypass any of the archive's guarantees.
+
+    Submitting the same statement twice is not duplication: the second write
+    returns ``changed=false`` with the same ``version_id``, because identity is
+    derived from content. Remembering the same ``key`` with new text supersedes
+    the previous value instead.
+    """
+    from api.services.memory import ClaimValidationError
+    from api.services.remember import RememberError, remember as write
+
+    if request.statement is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "invalid_request",
+                "message": (
+                    "nothing to remember; supply a statement, for example: "
+                    '{"statement": "Production uses PostgreSQL."}'
+                ),
+            },
+        )
+    try:
+        written = await write(request.statement, corpus=request.corpus, key=request.key)
+    except (RememberError, ClaimValidationError) as exc:
+        # The two places a statement is rejected: the service's own validation, and
+        # the archive's authored-evidence rule. Both are input problems, so both are
+        # 422 with a message a developer can act on -- a 500 would mean the archive
+        # rejected something the caller could have been told about. Named rather
+        # than caught as `ValueError`, so a genuine defect still surfaces as a 500
+        # instead of being reported to the caller as bad input.
+        raise HTTPException(
+            status_code=422, detail={"code": "invalid_request", "message": str(exc)}
+        ) from exc
+    except (SQLAlchemyError, OSError, TimeoutError) as exc:
+        from api.services.memory_public import translate_database_error
+
+        translated = translate_database_error(exc)
+        raise HTTPException(
+            status_code=translated.status_code,
+            detail={"code": translated.code, "message": translated.message},
+        ) from exc
+
+    # The identity comes from the write itself. Recomputing it here would let the
+    # response name a key the archive does not hold, and a client retrying with
+    # that key would write a second memory instead of recognising the first.
+    return RememberResult(
+        corpus=request.corpus,
+        version_id=written.get("version_id"),
+        event=written.get("event", "NEW"),
+        path=written.get("path", ""),
+        key=written.get("key"),
+        changed=written.get("event") != "UNCHANGED",
+    )
 
 
 @router.post("/query", response_model=MemoryResponse)

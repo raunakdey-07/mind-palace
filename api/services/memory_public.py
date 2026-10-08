@@ -6,6 +6,7 @@ projection and bounded selection; adapters must not implement those policies.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
@@ -410,22 +411,53 @@ def _with_receipt(result, request):
     """
     if not getattr(request, "include_receipt", False):
         return result
+    from api.services import telemetry
     from memory_receipt import receipt_for_response
 
-    receipt = receipt_for_response(result)
-    if receipt is not None:
-        result.receipt = receipt
+    started = time.perf_counter()
+    with telemetry.span(
+        "memory.receipt", claims=len(getattr(result, "current_memories", []) or [])
+    ) as active:
+        receipt = receipt_for_response(result)
+        if receipt is not None:
+            result.receipt = receipt
+        # No digest attribute: it is a stable fingerprint of the user's entire
+        # memory state, and a trace backend is not where that belongs.
+        if active is not None:
+            active.set_attribute("issued", receipt is not None)
+            active.set_attribute("duration_ms", (time.perf_counter() - started) * 1000)
     return result
 
 
 async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:
     """Canonical public entry point, with transaction ownership and sanitized errors."""
     _validate(operation, request)
-    try:
-        async with session_scope() as db:
-            async with db.begin():
-                return await execute_in_session(db, operation, request)
-    except MemoryError:
-        raise
-    except (DBAPIError, SQLAlchemyError, OSError, TimeoutError) as exc:
-        raise translate_database_error(exc) from exc
+    from api.services import telemetry
+
+    started = time.perf_counter()
+    with telemetry.span(
+        f"memory.{operation}",
+        corpus=request.corpus,
+        query_chars=len(request.query),
+        as_of=bool(request.as_of),
+        intent=request.intent,
+    ) as active:
+        try:
+            async with session_scope() as db:
+                async with db.begin():
+                    result = await execute_in_session(db, operation, request)
+        except MemoryError:
+            raise
+        except (DBAPIError, SQLAlchemyError, OSError, TimeoutError) as exc:
+            raise translate_database_error(exc) from exc
+        # Attributes are set inside the block on purpose: OpenTelemetry drops
+        # attributes set on a span that has already ended.
+        if active is not None:
+            # Sizes and counts only. The answer itself is memory content, and it
+            # must not be copied into a trace.
+            active.set_attribute("result.claims", len(result.current_memories))
+            active.set_attribute("result.changes", len(result.changes))
+            active.set_attribute("result.chars", len(result.canonical_json()))
+            active.set_attribute("result.receipt", result.receipt is not None)
+            active.set_attribute("duration_ms", (time.perf_counter() - started) * 1000)
+    return result

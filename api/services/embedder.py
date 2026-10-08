@@ -58,6 +58,17 @@ class Embedder:
         """Identity string persisted with every chunk's embedding metadata."""
         return f"{self.model_name}:{self.dimension}"
 
+    @property
+    def loaded(self) -> bool:
+        """Whether the model is resident in this process right now.
+
+        Read-only, and asked for exactly one purpose: telling a long-lived process
+        that it does not have to pay the load again. Importing it costs about five
+        seconds, so "has it already happened here?" is a question worth asking
+        before doing it and nothing else is worth asking.
+        """
+        return self._model is not None
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a list of texts (batched, normalized)."""
         if not texts:

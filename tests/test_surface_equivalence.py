@@ -95,7 +95,7 @@ async def test_rest_sdk_and_mcp_agree_without_a_receipt(store, interfaces):
     sdk_result = await interfaces.sdk("query", request)
 
     tool = await interfaces.mcp.call_tool(
-        "memory_query", {"request": request.model_dump(mode="json")}
+        "memory_recall", {"request": request.model_dump(mode="json")}
     )
     assert not tool.is_error, tool
     mcp_response = MemoryResponse.model_validate(tool.structured_content)
@@ -125,7 +125,7 @@ async def test_rest_sdk_and_mcp_agree_on_a_receipt(store, interfaces):
     sdk_result = await interfaces.sdk("query", request)
 
     tool = await interfaces.mcp.call_tool(
-        "memory_query", {"request": request.model_dump(mode="json")}
+        "memory_recall", {"request": request.model_dump(mode="json")}
     )
     assert not tool.is_error, tool
     mcp_response = MemoryResponse.model_validate(tool.structured_content)

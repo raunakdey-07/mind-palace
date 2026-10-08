@@ -200,6 +200,7 @@ def relevance(
     lexical: bool = False,
     claim_vectors: dict[str, list[float]] | None = None,
     vectorized: bool = False,
+    fresh: dict[str, list[float]] | None = None,
 ) -> tuple[dict[str, float], QueryPlan, dict]:
     """Score authored keys against the question, then apply the acceptance gates.
 
@@ -212,6 +213,11 @@ def relevance(
     Only a claim present in the mapping is served from it; anything missing is
     embedded here, so a partial or empty cache costs latency and never changes the
     answer. Vectors are consumed read-only.
+
+    ``fresh`` is an optional out-parameter: the vectors this call had to embed are
+    added to it, keyed by claim id, so a caller that owns a session can persist them
+    rather than making the next query pay for the same encoding again. Nothing is
+    read back from it.
 
     ``vectorized=True`` computes the same inner product with NumPy. It is off by
     default because it was measured at 1.00x to 1.07x end to end and bought
@@ -229,12 +235,17 @@ def relevance(
         return {}, interpreted, {"candidates": 0, "embedding_calls": 0, "embedding_texts": 0}
     representations = [representation(claims[c]) for c in ids]
     documents = [claim_terms(text) for text in representations]
-    # Terms occurring in every candidate (e.g. project name) cannot support relevance.
+    # Terms occurring in every candidate (e.g. project name) cannot DISCRIMINATE
+    # between candidates, so ranking is computed on documents with them removed.
+    # They are not evidence that the question is off-topic, so the acceptance gate
+    # still sees the full documents -- see `overlap` below.
     common = frozenset.intersection(*documents) if len(documents) > 1 else frozenset()
     # Depends on neither the topic nor the gate, so it is computed once. Rebuilding
     # this per candidate and per topic was the dominant cost at scale.
     reduced = [document - common for document in documents]
     topic_terms = [terms(topic) - common for topic in interpreted.topics]
+    # The question's own terms, un-reduced, for the same reason.
+    question_terms = [terms(topic) for topic in interpreted.topics]
 
     embedding_calls, embedding_texts = 0, 0
     topic_vectors = None
@@ -256,6 +267,12 @@ def relevance(
         dimension = len(vectors[0])
         if any(len(v) != dimension or not all(math.isfinite(x) for x in v) for v in vectors):
             raise ValueError("Invalid embedding vectors")
+        if fresh is not None and missing:
+            # Hand back only what the caller did not already have, so the expensive
+            # work this query just did can be persisted instead of repeated.
+            fresh.update(
+                {ids[position]: vector for position, vector in zip(missing, vectors[len(topics) :])}
+            )
 
     # Relevance is the dominant cost at scale, and the inner product is an
     # interpreted multiply-accumulate per dimension. When asked for, the same
@@ -283,14 +300,18 @@ def relevance(
 
     chosen = {}
     for i in range(len(interpreted.topics)):
-        query_terms = topic_terms[i]
         by_key = {}
         for position, cid in enumerate(ids):
             claim = claims[cid]
             if request.path and claim.path != request.path:
                 continue
             value = score(i, position)
-            overlap = bool(query_terms & reduced[position])
+            # Overlap asks "is the question about this claim?", so it is tested
+            # against the full claim terms. Reducing them first would delete the
+            # subject the question is asking about whenever a second claim shares
+            # it, and every such question would then need the strong-score bar
+            # instead of the normal minimum.
+            overlap = bool(question_terms[i] & documents[position])
             if policy.approach == "A":
                 accepted = value >= 0.30
             elif policy.approach == "B":

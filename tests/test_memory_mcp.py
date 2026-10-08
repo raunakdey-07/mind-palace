@@ -44,11 +44,12 @@ def tool_name(operation):
 async def test_tools_are_async_typed_and_preserve_legacy_tools():
     tools = {tool.name: tool for tool in await mcp_server.mcp.list_tools()}
     assert {"context", "search", "sync", "list_corpora"} <= tools.keys()
-    # `memory_explain` is `memory_query` with the receipt forced on: the same
+    # `memory_explain` is `memory_recall` with the receipt forced on: the same
     # request model, the same output schema, the same service. It is listed
     # separately so an agent can ask "why should I trust this?" and discover the
-    # answer without knowing the opt-in flag.
-    explained = (*OPERATIONS, "query", "explain")
+    # answer without knowing the opt-in flag. `memory_query` is the v0.8.0 name
+    # for `memory_recall` and is kept so existing agents keep working.
+    explained = (*OPERATIONS, "recall", "query", "explain")
     assert {name for name in tools if name.startswith("memory_")} == {
         tool_name(operation) for operation in explained
     }
@@ -67,6 +68,25 @@ async def test_tools_are_async_typed_and_preserve_legacy_tools():
         assert tool.annotations.destructive_hint is False
         assert tool.annotations.open_world_hint is False
     assert "immutable" in tools["memory_snapshot"].description
+
+
+async def test_memory_query_and_memory_recall_are_the_same_tool(service):
+    """The v0.8.0 alias must not become a second implementation.
+
+    A name that says "query" and a name that says "recall" answering differently
+    would be worse than either name, so both are asserted to reach the same
+    service with the same request and produce the same result.
+    """
+    body = {"corpus": "docs", "query": "datastore"}
+    recalled = await mcp_server.mcp.call_tool("memory_recall", {"request": body})
+    queried = await mcp_server.mcp.call_tool("memory_query", {"request": body})
+
+    assert not recalled.is_error and not queried.is_error
+    assert recalled.structured_content == queried.structured_content
+    assert service.execute.await_count == 2
+    first, second = service.execute.await_args_list
+    assert first.args[0] == second.args[0] == "query"
+    assert first.args[1] == second.args[1]
 
 
 @pytest.mark.parametrize("operation", OPERATIONS)
@@ -129,7 +149,8 @@ async def test_explain_is_query_with_the_receipt_forced_on(service):
     await mcp_server.mcp.call_tool("memory_explain", {"request": dict(body, include_receipt=True)})
     assert service.execute.await_args.args[1].include_receipt is True
 
-    # And the receipt is opt-in, never implied: a plain query does not get one.
+    # And the receipt is opt-in, never implied: a plain recall does not get one.
+    await mcp_server.mcp.call_tool("memory_recall", {"request": body})
     await mcp_server.mcp.call_tool("memory_query", {"request": body})
     assert service.execute.await_args.args[1].include_receipt is False
 

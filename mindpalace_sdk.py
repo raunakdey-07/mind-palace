@@ -1,30 +1,43 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Mind Palace Python SDK: corpus memory for AI applications.
+"""Mind Palace Python SDK: memory that remembers what changed, and why.
 
-Minimal, typed client over the Mind Palace core. The intended experience:
+The intended experience is five operations:
 
     from mindpalace_sdk import MindPalace
 
-    mp = MindPalace("my-corpus")
-    mp.sync("./docs")
-    pack = mp.context("How does authentication work?", budget_tokens=4000)
-    print(pack.context)       # model-ready text
-    print(pack.sources)       # attribution
+    client = MindPalace()                      # no configuration required
 
-Named local clients retain the original sync/search/context behavior. Memory
-operations use the central memory service locally, or HTTP when ``base_url`` is
-provided (without loading local embedding or database services)::
+    client.remember("Production uses PostgreSQL.")
+    result = client.recall("What database does production use?")
+    print(result.current_memories[0].claim)    # the answer
 
-    mp = MindPalace("my-corpus", base_url="http://127.0.0.1:8000")
-    print(mp.memory.current().canonical_json())
+    result = client.explain("What database does production use?")
+    print(result.receipt["memory_pack_digest"]) # why it was returned, provably
 
-An unnamed local client can use ``mp.memory.current(corpus="my-corpus")`` without
-initializing legacy retrieval. The synchronous local SDK cannot be called from
-an active event loop; async applications should await memory_public.execute.
-Remote failures raise MemoryClientError with code, message, and status_code;
-local service failures propagate the central MemoryError unchanged.
+    print(client.history("datastore").changes) # what it said before
+
+A statement becomes one claim with exact-substring evidence, through the same
+archive that synced documents use. `recall` never invents an answer: a question
+the archive does not cover abstains with a `constraint` rather than guessing. No
+embedding model is needed to write, recall or verify.
+
+The corpus defaults to ``default``. Pass one to scope memory explicitly.
+
+Everything above runs against a local PostgreSQL. Supply `base_url` to go over
+HTTP instead, which is how an agent reaches memory held by someone else:
+
+    client = MindPalace(base_url="http://127.0.0.1:8000")
+
+The lower-level `client.memory.*` operations -- `current`, `changes`, `evidence`,
+`as_of`, `snapshot`, `replay`, `pack`, `feed`, and `query` with its intent and
+selector options -- remain available and unchanged.
+
+The synchronous local SDK cannot be called from an active event loop; async
+applications should await `api.services.memory_public.execute`. Remote failures
+raise MemoryClientError with code, message and status_code; local service failures
+propagate the central MemoryError unchanged.
 """
 
 from __future__ import annotations
@@ -38,6 +51,10 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from api.models.memory import FeedResponse, MemoryResponse
     from api.services.context_packer import ContextPack
+
+#: The corpus a first memory lands in, matching the CLI. Passing a name scopes
+#: memory explicitly and is never required.
+DEFAULT_CORPUS = "default"
 
 
 @dataclass
@@ -57,6 +74,51 @@ class SyncSummary:
 
 class CorpusNotFoundError(Exception):
     """Raised when an operation references a corpus that does not exist."""
+
+
+@dataclass(frozen=True)
+class MemoryResult:
+    """What one ``remember`` wrote.
+
+    ``unchanged=True`` is the idempotency result, not a failure: the same
+    statement submitted twice resolves to the same identity and the same
+    authoritative memory, so there is nothing to write and nothing duplicated.
+    """
+
+    corpus: str
+    version_id: str | None
+    event: str
+    path: str
+    statement: str | None = None
+    key: str | None = None
+
+    @property
+    def unchanged(self) -> bool:
+        """True when this write was already recorded, so nothing was added."""
+        return self.event == "UNCHANGED"
+
+    @property
+    def created(self) -> bool:
+        """True when this write recorded a new version."""
+        return not self.unchanged
+
+    @classmethod
+    def from_write(cls, written: dict, corpus: str, statement) -> "MemoryResult":
+        """Build the result from the ingestion service's write result.
+
+        The identity comes from the write itself. Recomputing it here would let the
+        SDK name a key or a path the archive does not hold -- which it did, for a
+        whitespace-padded statement -- and a caller retrying with that key would
+        write a second memory instead of recognising the first.
+        """
+        return cls(
+            corpus=corpus,
+            version_id=written.get("version_id"),
+            event=written.get("event", "NEW"),
+            path=written.get("path", ""),
+            statement=statement,
+            key=written.get("key"),
+        )
 
 
 class MemoryClientError(Exception):
@@ -82,6 +144,28 @@ def _require_sync() -> None:
         "The synchronous local SDK cannot run inside an active event loop; "
         "await api.services.memory_public.execute instead."
     )
+
+
+def _as_client_error(exc: Exception) -> Exception:
+    """Present a service failure as the SDK's own exception type.
+
+    A caller should not have to care whether a request was answered in this process,
+    through a local runtime, or over HTTP -- all three are the same product, and one
+    condition must not arrive as three exception classes. The code, message and
+    status are carried across unchanged; only the class changes, so `except
+    MemoryClientError` is the one thing a caller needs to write.
+
+    Anything that is not a service error is returned untouched. A genuine defect must
+    not be dressed up as an API failure, which would send a user looking at their
+    request instead of at the bug.
+    """
+    from api.services.memory_public import MemoryError as ServiceMemoryError
+
+    if isinstance(exc, MemoryClientError):
+        return exc
+    if isinstance(exc, ServiceMemoryError):
+        return MemoryClientError(exc.code, exc.message, exc.status_code)
+    return exc
 
 
 def _remote_error(response, default_message: str) -> MemoryClientError:
@@ -113,7 +197,54 @@ class MemoryClient:
         self._client = client
 
     def _corpus_name(self, corpus: str | None) -> str | None:
+        # `corpus=None` stays invalid: a caller who passes no corpus explicitly
+        # should be told so, not silently routed somewhere. The convenience default
+        # lives on MindPalace's short methods, which name it for you.
         return self._client.name if corpus is None else corpus
+
+    def _through_runtime(self, operation: str, request) -> "MemoryResponse | None":
+        """Ask a running local runtime, if the caller opted in and one is up.
+
+        Returns None when there is no runtime, so the caller falls back to its own
+        process. Deliberately never raises: the runtime is an optimisation, and an
+        optimisation that can fail a query is not one.
+
+        Only useful for a caller that would otherwise pay a fresh model import per
+        call. A long-lived application has already paid it, which is why the SDK
+        defaults this off -- see `MindPalace(runtime=...)`.
+
+        Lexical mode never uses the runtime. A runtime exists to hold the model, and
+        a developer who asked for model-free reads does not want that process in the
+        path. Bypassing it needs no protocol change and no second implementation: the
+        same `execute` runs here, in this process, and answers identically.
+        """
+        if not getattr(self._client, "use_runtime", False):
+            return None
+        from api.services.retrieval_mode import lexical_requested
+
+        if lexical_requested():
+            return None
+        from api import runtime as runtime_module
+
+        try:
+            reply = runtime_module.call(
+                {"op": operation, "request": request.model_dump(mode="json")},
+                timeout=self._client.timeout,
+            )
+        except Exception:  # noqa: BLE001 - unreachable runtime means "do it myself"
+            return None
+        if not reply.get("ok"):
+            # A runtime that answered is authoritative about failure: re-raise its
+            # error rather than silently producing a different answer in-process.
+            error = reply.get("error") or {}
+            raise MemoryClientError(
+                error.get("code", "error"),
+                error.get("message", "memory runtime failed"),
+                int(error.get("status", 1) or 1),
+            )
+        from api.models.memory import MemoryResponse
+
+        return MemoryResponse.model_validate(reply["result"])
 
     def _execute(self, operation: str, corpus: str | None, query: str, **fields) -> MemoryResponse:
         from api.models.memory import MemoryRequest, MemoryResponse
@@ -122,9 +253,17 @@ class MemoryClient:
         request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
             _require_sync()
+            remote = self._through_runtime(operation, request)
+            if remote is not None:
+                return remote
             from api.services.memory_public import execute
 
-            return asyncio.run(execute(operation, request))
+            try:
+                return asyncio.run(execute(operation, request))
+            except MemoryClientError:
+                raise
+            except Exception as exc:  # noqa: BLE001 - re-raised, or translated to ours
+                raise _as_client_error(exc) from exc
 
         import httpx
 
@@ -151,6 +290,175 @@ class MemoryClient:
                 "invalid_response", "Memory service returned an invalid response", 502
             ) from exc
 
+    def remember(
+        self,
+        statement: str | None = None,
+        *,
+        corpus: str | None = None,
+        key: str | None = None,
+        file: str | None = None,
+    ) -> MemoryResult:
+        """Record a fact as authoritative memory, and return what was written.
+
+        A statement becomes one claim with exact-substring evidence, through the
+        same archive a synced document uses::
+
+            client.memory.remember("Production uses PostgreSQL.", key="datastore")
+
+        Remembering the same statement twice returns ``unchanged=True`` and the
+        same ``version_id``: submitting identical memory is not duplication.
+        Remembering the same ``key`` with new text supersedes the previous value.
+
+        Works locally against PostgreSQL, or over HTTP when the client has a
+        ``base_url``. Requires no embedding model either way. The same operation is
+        available as :meth:`MindPalace.remember`.
+        """
+        name = self._corpus_name(corpus)
+        if self._client.base_url is None:
+            _require_sync()
+            if file is None:
+                # A file is a local read, so it stays in this process. A statement is
+                # not, and going through a runtime keeps the corpus's connection pool
+                # warm for the recall that usually follows.
+                remote = self._remember_via_runtime(name, statement, key)
+                if remote is not None:
+                    return remote
+            from api.services.remember import remember as write
+
+            async def run() -> MemoryResult:
+                written = await write(statement, corpus=name, key=key, file=file)
+                return MemoryResult.from_write(written, name, statement)
+
+            try:
+                return MindPalace._run(run())
+            except MemoryClientError:
+                raise
+            except Exception as exc:  # noqa: BLE001 - one exception type, whichever path ran
+                raise _as_client_error(exc) from exc
+
+        import httpx
+
+        if file is not None:
+            # The HTTP contract is statement-only, on purpose: an unauthenticated
+            # endpoint must not read a path on the server. Say so here rather than
+            # sending a request that can only 422.
+            raise MemoryClientError(
+                "invalid_request",
+                "file= reads a path on this machine, which a remote service cannot do. "
+                "Read the file and send its content as the statement.",
+                422,
+            )
+        payload = {
+            k: v
+            for k, v in {"corpus": name, "statement": statement, "key": key}.items()
+            if v is not None
+        }
+        try:
+            response = httpx.post(
+                f"{self._client.base_url}/api/memory/remember",
+                json=payload,
+                headers=self._client.headers,
+                timeout=self._client.timeout,
+            )
+        except httpx.TimeoutException as exc:
+            raise MemoryClientError("timeout", "Memory write timed out", 504) from exc
+        except httpx.RequestError as exc:
+            raise MemoryClientError(
+                "transport_error", "Memory service is unavailable", 503
+            ) from exc
+        if not response.is_success:
+            raise _remote_error(response, f"Memory write failed (HTTP {response.status_code})")
+
+        from api.models.remember import RememberResult as WireResult
+
+        try:
+            written = WireResult.model_validate(response.json())
+        except ValueError as exc:
+            raise MemoryClientError(
+                "invalid_response", "Memory service returned an invalid response", 502
+            ) from exc
+        return MemoryResult(
+            corpus=written.corpus,
+            version_id=written.version_id,
+            event=written.event,
+            path=written.path,
+            statement=statement,
+            key=written.key,
+        )
+
+    def _remember_via_runtime(
+        self, name: str, statement: str | None, key: str | None
+    ) -> "MemoryResult | None":
+        """One write through a running runtime, or None if there is not one."""
+        if not getattr(self._client, "use_runtime", False):
+            return None
+        from api.services.retrieval_mode import lexical_requested
+
+        if lexical_requested():
+            return None
+        from api import runtime as runtime_module
+
+        try:
+            reply = runtime_module.call(
+                {"op": "remember", "corpus": name, "statement": statement, "key": key},
+                timeout=self._client.timeout,
+            )
+        except Exception:  # noqa: BLE001 - unreachable runtime means "do it myself"
+            return None
+        if not reply.get("ok"):
+            error = reply.get("error") or {}
+            raise MemoryClientError(
+                error.get("code", "error"),
+                error.get("message", "memory write failed"),
+                int(error.get("status", 1) or 1),
+            )
+        result = reply["result"]
+        return MemoryResult(
+            corpus=result.get("corpus", name),
+            version_id=result.get("version_id"),
+            event=result.get("event", "NEW"),
+            path=result.get("path", ""),
+            statement=statement,
+            key=result.get("key"),
+        )
+
+    def recall(
+        self,
+        question: str,
+        corpus: str | None = None,
+        *,
+        as_of: datetime | str | None = None,
+    ) -> MemoryResponse:
+        """Answer a question from memory, with its source and the time it was true.
+
+        The shortest path to a useful result. It never invents an answer, so a
+        question whose vocabulary the archive does not contain abstains with a
+        ``constraint`` rather than guessing::
+
+            result = client.recall("What datastore does production use?")
+            for memory in result.current_memories:
+                print(memory.claim, memory.path, memory.status)
+
+        The corpus defaults to ``default``. Pass one to scope memory explicitly.
+        """
+        return self._execute("query", corpus, question, as_of=as_of)
+
+    def explain(
+        self, question: str, corpus: str | None = None, *, as_of: datetime | str | None = None
+    ) -> MemoryResponse:
+        """Answer a question and attach why it was returned.
+
+        The same answer as :meth:`recall`, with the Memory Receipt attached, so
+        ``result.receipt`` names the claim identity, its source version and path,
+        its evidence with offsets, its validity window and its supersession
+        lineage.
+
+        This explains recorded provenance and temporal state. It is not a reasoning
+        trace, and it does not establish that the original source was factually
+        correct.
+        """
+        return self._execute("query", corpus, question, as_of=as_of, include_receipt=True)
+
     def query(
         self,
         query: str,
@@ -168,6 +476,11 @@ class MemoryClient:
         include_receipt: bool = False,
     ) -> MemoryResponse:
         """Query memory with intent-aware evidence bounded in Unicode characters.
+
+        This is the full operation behind :meth:`recall` and :meth:`explain`: it
+        adds intent selection, an explicit budget, and selectors such as
+        ``claim_id`` and ``snapshot_id``. Reach for it when you need those;
+        otherwise prefer the two shorter methods.
 
         ``include_receipt=True`` attaches the canonical Memory Receipt to
         ``result.receipt``: what was returned, from which version, with what
@@ -350,11 +663,17 @@ class MindPalace:
         base_url: str | None = None,
         headers: Mapping[str, str] | None = None,
         timeout: float = 30,
+        runtime: bool = False,
     ):
         self.name = name
         self.base_url = base_url.rstrip("/") if base_url is not None else None
         self.headers = dict(headers or {})
         self.timeout = timeout
+        # Off by default, on purpose. A long-lived application pays the model import
+        # once and then has it resident, so a runtime would only add a socket hop and
+        # a second copy of the model. It exists for the caller who pays per call --
+        # a script, or the CLI -- so it is opt-in here rather than assumed.
+        self.use_runtime = bool(runtime)
         self.memory = MemoryClient(self)
         self._create_if_missing = create_if_missing
         if base_url is None and name is not None:
@@ -423,6 +742,75 @@ class MindPalace:
             chunk_count=result["chunk_count"],
             duration_ms=result["duration_ms"],
             errors=result.get("errors", []),
+        )
+
+    def remember(
+        self,
+        statement: str | None = None,
+        *,
+        corpus: str | None = None,
+        key: str | None = None,
+        file: str | None = None,
+    ) -> MemoryResult:
+        """Record a fact as authoritative memory, and return what was written.
+
+        A statement becomes one claim with exact-substring evidence, through the
+        same ingestion and archive path a synced document uses::
+
+            client.remember("Production uses PostgreSQL.", key="datastore")
+
+        Remembering the same statement twice returns ``unchanged=True`` and the
+        same ``version_id``: submitting identical memory is not duplication.
+        Remembering the same ``key`` with new text supersedes the previous value,
+        which is what :meth:`history` then shows.
+
+        ``key`` is how you tell Mind Palace that two statements are about the same
+        fact. Omit it and each distinct statement is its own memory.
+
+        Requires no embedding model. Semantic ranking fills in later; the
+        authoritative claim and its evidence are recorded either way.
+        """
+        return self.memory.remember(
+            statement, corpus=corpus or self.name or DEFAULT_CORPUS, key=key, file=file
+        )
+
+    def recall(
+        self, question: str, *, corpus: str | None = None, as_of: datetime | str | None = None
+    ) -> MemoryResponse:
+        """Answer a question from memory, with its source and the time it was true.
+
+        The shortest path to a useful result. It never invents an answer, so a
+        question the archive does not cover abstains with a ``constraint`` rather
+        than guessing.
+
+        ``as_of`` reconstructs the answer from an earlier instant, so "what did we
+        decide back then?" is answerable after the decision changes.
+        """
+        return self.memory.recall(question, corpus or self.name or DEFAULT_CORPUS, as_of=as_of)
+
+    def explain(self, question: str, *, corpus: str | None = None) -> MemoryResponse:
+        """Answer a question and attach why it was returned.
+
+        The same answer as :meth:`recall`, with the Memory Receipt attached: the
+        claim identity, its source version and path, its evidence with offsets,
+        its validity window and its supersession lineage.
+
+        This explains recorded provenance and temporal state. It is not a reasoning
+        trace, and it does not establish that the original source was factually
+        correct.
+        """
+        return self.memory.explain(question, corpus or self.name or DEFAULT_CORPUS)
+
+    def history(self, question: str = "", *, corpus: str | None = None) -> MemoryResponse:
+        """Read what a memory said before, and what replaced it.
+
+        Reads the real supersession chain from the archive. Nothing here is
+        reconstructed: these are the versions and claims the archive actually
+        holds. Pass a key or a question to narrow it; pass nothing for the whole
+        corpus.
+        """
+        return self.memory.history(
+            corpus=corpus or self.name or DEFAULT_CORPUS, query=question or ""
         )
 
     def context(
@@ -532,9 +920,11 @@ from memory_receipt import (  # noqa: E402
 )
 
 __all__ = [
+    "DEFAULT_CORPUS",
     "CorpusNotFoundError",
     "MemoryClient",
     "MemoryClientError",
+    "MemoryResult",
     "MindPalace",
     "ReceiptError",
     "SyncSummary",

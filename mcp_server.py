@@ -123,11 +123,28 @@ async def _execute_memory(operation: str, request: MemoryRequest) -> CallToolRes
 
 
 @mcp.tool(annotations=_READ_MEMORY, structured_output=True)
-async def memory_query(request: MemoryRequest) -> MemoryToolResult:
-    """Query corpus memory with intent-aware evidence bounded in Unicode characters.
+async def memory_recall(request: MemoryRequest) -> MemoryToolResult:
+    """Answer a question from memory.
 
-    Pass ``include_receipt=true`` to also receive a Memory Receipt: what was
-    returned, from which version, with what evidence, and how to verify it later.
+    Returns the current authoritative memory for the question, each with its
+    claim text, source document and version, and status. This is the tool to reach
+    for first.
+
+    It never invents an answer. If the corpus does not cover the question, the
+    result is empty and `constraints` says so.
+
+    For "why should I believe that?", use `memory_explain`.
+    """
+    return await _execute_memory("query", request)
+
+
+@mcp.tool(annotations=_READ_MEMORY, structured_output=True)
+async def memory_query(request: MemoryRequest) -> MemoryToolResult:
+    """Answer a question from memory. The v0.8.0 name for `memory_recall`.
+
+    Kept so an agent configured against v0.8.0 keeps working. It calls the same
+    service with the same schema and returns the same object, so the two names
+    cannot drift; new configurations should prefer `memory_recall`.
     """
     return await _execute_memory("query", request)
 
@@ -136,11 +153,12 @@ async def memory_query(request: MemoryRequest) -> MemoryToolResult:
 async def memory_explain(request: MemoryRequest) -> MemoryToolResult:
     """Answer "why should I trust this memory?" with authoritative provenance.
 
-    Returns the same query result as `memory_query` -- same authoritative memory,
-    same evidence, same temporal state, same conflicts -- plus the Memory Receipt,
+    Returns the same result as `memory_recall` -- same authoritative memory, same
+    evidence, same temporal state, same conflicts -- plus the Memory Receipt,
     which names the claim identity, its source version and path, its evidence with
     offsets, its validity window, its supersession lineage and the authoritative
-    digest.
+    digest. The receipt can be exported and verified offline with no server,
+    database or model.
 
     This explains the recorded provenance and temporal basis for a memory. It does
     not expose model reasoning, and it does not establish that the original source

@@ -65,6 +65,55 @@ Run the command three times in the same environment and twice after restarting
 the PostgreSQL service. Compare `result_sha256` in `eval/m00675/result.json`.
 Timing fields are intentionally excluded from the canonical hash.
 
+## Artifact drift measured at `v0.9.0` **[v0.9.0]**
+
+The 47/60 figure above is what `eval/m00675/result.json` records. Re-measuring at
+`v0.9.0` shows it no longer reproduces, and the drift **predates this release**.
+
+Measured on a dedicated PostgreSQL database, frozen policy, the artifact's own
+canonicalisation (so the comparison uses exactly the fields the release gate
+hashes, not a set chosen after the fact):
+
+| source tree | exact | abstention | execution failures | all 7 safety invariants |
+|---|---:|---:|---:|---|
+| `eval/m00675/result.json` (recorded) | 47/60 | 55/60 | 0 | pass |
+| `v0.8.0` (`34b3d2c`) | **45/60** | 55/60 | 0 | pass |
+| `v0.9.0` (working tree) | **45/60** | 55/60 | 0 | pass |
+
+Two separate facts, and the difference between them is the point:
+
+1. **`v0.9.0` changed nothing.** All 60 canonical per-question decisions are
+   identical between `v0.8.0` and `v0.9.0`. No benchmark question, policy,
+   evaluator semantic, tokenizer or retrieval threshold was touched by this
+   release, and that is now measured rather than asserted.
+2. **The recorded artifact drifted 4 questions before this release.** The four are
+   `heldout-history-paired-cutovers`, `heldout-history-ledger-continuity`,
+   `heldout-current-cache-pressure-isolation` and `heldout-current-artifact-authority`.
+   In each the expected subject is still recalled (`missing: []`, recall 1.0) and the
+   failure is *extra* keys admitted alongside it — `security.auth`, and
+   `architecture.delivery` + `data.primary`. The safety invariants still pass at
+   60/60; what moved is relevance precision.
+
+The artifact's recorded `source_fingerprint` (`b8e2bc82…`) matches **no commit** in
+the last 40, so `m00675.sh --verify` has been failing its source check before this
+release too. The frozen *inputs* are intact: the dataset hash
+(`77e05bab…`) and the policy hash both verify unchanged, which is the check that
+actually protects benchmark semantics.
+
+**Deliberately not done here.** The artifact was not regenerated and the 47/60 was
+not overwritten: a re-run is a new research result, and publishing one as if it were
+the frozen `M006.75` number would misreport a research result as a product gate. The
+drift is recorded here instead, with the reproduction above.
+
+**What it most likely is.** The acceptance gate changed in this release line to test
+overlap against full claim terms rather than terms reduced by the set shared with
+every candidate, which admits more candidates. `docs/STATUS.md` records the same
+change as holding the frozen *memory* benchmark at 1.000; that is a different
+benchmark, and it does not contradict this one. The extras here are the F2 symptom
+("answered from an unrelated key") reappearing in a different shape — more keys
+rather than one wrong key. Whether that trade is worth 2 questions on the held-out
+set is a research question, and it is **not** settled here.
+
 ## Quality result
 
 The currently supported current-source frozen-policy held-out result is:

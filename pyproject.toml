@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mindpalace-os"
-version = "0.8.0"
+version = "0.9.0"
 description = "Mind Palace - AI-native Research Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -43,6 +43,9 @@ mindpalace = "cli.main:app"
 # subcommand of the Typer CLI, because Typer is an optional extra: anyone who
 # installs the package must be able to verify a proof without it.
 mindpalace-proof = "memory_proof_cli:main"
+# The MCP server, as a command an agent can actually launch. Same reason: an
+# agent configuration should not have to know a module path or a virtualenv.
+mindpalace-mcp = "mcp_server:main"
 
 [tool.setuptools]
 # Top-level single-file modules alongside the api/cli packages.
@@ -57,6 +60,14 @@ py-modules = [
     "memory_proof",
     "memory_proof_cli",
     "memory_receipt",
+    # The local runtime's entry point. The CLI starts it as
+    # `sys.executable -m mindpalace_runtime`, which guarantees it runs the same
+    # interpreter and the same installed Mind Palace as the command that started it.
+    # A console script would depend on PATH, and `pip install --user` beside a
+    # virtualenv is a good way to end up with a socket served by the wrong build.
+    # Without this module in the wheel, the runtime silently never starts on an
+    # installed package and every command is 6 seconds.
+    "mindpalace_runtime",
 ]
 
 [tool.setuptools.packages.find]

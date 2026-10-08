@@ -2,685 +2,275 @@
 
 [![Release](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 
-[Current release: v0.8.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.9.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-**Mind Palace is a persistent memory substrate for AI applications. It preserves
-versioned, evidence-backed authoritative state, and can issue portable Memory
-Receipts that let an application inspect and independently verify the memory
-state it received.**
-It turns authored Markdown into versioned source assertions: current knowledge,
-history, changes, conflicts, provenance, and reproducible context. It remembers
-what sources asserted—not perfect truth.
+**Memory for AI applications that remembers what changed, what was true when, and
+why to believe the recorded state.**
 
-```text
-  persistent memory  →  versioned authoritative state  →  evidence + provenance
-                     →  Memory Receipt  →  portable Memory Pack  →  offline verification
-```
+> Add Mind Palace to an AI application, give it persistent memory, ask what it knows
+> now or what it knew earlier, inspect the evidence behind a memory, and export a
+> receipt that can be verified independently later.
 
-Memory belongs to the corpus, not a particular model or chat session. PostgreSQL
-persists it across application restarts; REST, the Python SDK, MCP and the CLI
-expose the same memory contract and the same receipt. This is **corpus memory for
-AI**, not human memory, conversation/preferences storage, a chatbot, or an agent
-framework. Portability means model-independent interfaces *and* an artifact you
-can hand to another process, which can verify it with no Mind Palace runtime,
-database, embedding model or network present.
-
-## Project status
-
-### Current product
-
-`v0.8.0` is the current public release. It packages **Verifiable Memory**: the
-portable Memory Pack reader, the standard-library-only proof and receipt
-verifiers, the `mindpalace-proof` CLI, and opt-in Memory Receipts on the REST,
-Python SDK and MCP memory-query surfaces. Alongside that it carries the released
-M009 operational memory feed, the unified authoritative `context()` surface, the
-claim-representation cache, and dependency-aware liveness and readiness checks.
-
-A developer retrieves authoritative memory, receives a receipt describing what
-came back and why, exports the Memory Pack, and verifies the artifact later from a
-clean environment. Verification establishes integrity and recorded provenance; it
-does not establish that the original source was factually correct, and it does
-not establish authenticity without a trust anchor the caller pinned.
-
-The durable feed is a corpus-scoped read interface over immutable
-`memory_versions` rows. It uses an opaque, integrity-protected cursor for bounded
-keyset continuation. It is not a message broker, CDC stream, or exactly-once
-delivery system. See [operational memory](docs/operations.md).
-
-### Released M009 capabilities
-
-M009 is released in `v0.6.0`. The feed is available through REST, the Python SDK,
-and the CLI. It orders rows by `(observed_at, version_id)`, bounds page size from
-1 through 500, and exposes the measured keyset and cursor contract. The released
-validation evidence is under [`docs/m009/`](docs/m009/). Liveness and readiness
-are separate from feed traversal: liveness checks the process, while readiness
-checks PostgreSQL connectivity and required archive relations.
-
-### Research and evaluation status
-
-M006.75 remains a released evaluation result at **47/60** on its frozen corpus.
-That result is separate from the product release and does not establish that M007
-has been scientifically validated. M007.1 remains adjudication-ready. M007 is
-blocked pending independent adjudication, and M008 has not been released.
-
-Implemented research infrastructure includes blind review generation,
-authoritative traceability, ambiguity preservation, reviewer schema/validation,
-DecisionReceipt fingerprints and explanation, replay and structured drift
-detection, temporal/snapshot/conflict primitives, synthetic semantic/property
-suites, and the executable M007–M008 runner. These are not substitutes for
-independent human adjudication or empirical benchmarks.
-
-### Future work
-
-The next engineering work is deliberately bounded. The largest measured cost is
-the full-archive load used by ordinary memory projections. Other deferred items
-include snapshot-version replay joins, incremental Memory Pack accounting,
-bounded RRF candidates, a reproducible 100,000-version feed benchmark, and a
-dependency lock/base-image digest policy. None of these items changes the M009
-release contract or turns research results into product guarantees.
-
-## Why memory beyond RAG?
-
-Live retrieval asks **“What text is relevant?”** An evolving application also
-needs **“What changed, what was current then, and which sources disagree?”**
-Replacing live chunks does not itself preserve those relationships. Similarity
-scores are not version history or a record of supersession.
-
-Mind Palace keeps live retrieval and explicit assertion memory separate:
-
-- `/search` and default `/api/query/ask` retrieve from the live index.
-- `context()` resolves the question against the archive first, then adds ranked live
-  chunks as raw source material. See [Context: the product surface](#context-the-product-surface).
-- Memory operations read an append-only archive of authored claims and evidence.
-- An old claim can remain historical after its source is updated or deleted.
-- Different active sources can disagree without the latest writer silently winning.
-- Snapshots capture version references so later updates do not rewrite the past.
-
-See [Why persistent corpus memory?](examples/WHY_MEMORY.md). No LLM is used to
-extract or adjudicate claims; exact source containment establishes provenance,
-not truth or semantic entailment.
-
-## Core memory model
+Record a fact. Ask a question. Get an answer with its source and the time it was
+true. Ask why, and get the exact characters that support it. Export a receipt and
+verify it on a machine that has never heard of Mind Palace.
 
 ```text
-corpus → stable source path → observed versions → authored claims → exact evidence
-                                  ↓                   ↓
-                         lifecycle / snapshots    supersession / conflicts
+remember   a statement becomes memory, with evidence
+recall     an answer, its source, and the time it was true
+explain    the characters that support it, and what replaced it
+history    the supersession chain, oldest first
+receipt    what was returned, plus the digest of the whole response
+verify     offline: no database, no model, no network
 ```
 
-| Concept | Meaning |
+Every command is fast from the second one onwards. A background runtime keeps the
+embedding model warm, and the commands use it without you having to know:
+
+| command | first ever | afterwards |
+|---|---|---|
+| `mindpalace recall "..."` | 6.2 s | **0.63 s** |
+| `mindpalace explain "..."` | 6.2 s | **0.67 s** |
+| `mindpalace receipt "..."` | 6.2 s | **0.62 s** |
+
+If a command feels slow, `mindpalace runtime status` says whether a runtime is
+running and whether its model is loaded. It exits by itself after 15 minutes of
+inactivity, and `MIND_PALACE_RUNTIME=0` turns it off everywhere.
+
+Prefer no model at all? `MIND_PALACE_LEXICAL=1` reads through the model-free lexical
+relevance path — 0.63 s instead of 6.17 s, and `torch`, `transformers` and
+`sentence_transformers` are never imported. It is a deliberate trade-off, not an
+equivalent substitute: it needs shared vocabulary, and it will decline a question
+that semantic ranking would answer from meaning alone.
+[How it works and when to use it](docs/operations.md#model-free-lexical-mode).
+
+---
+
+## What is different, and why it matters
+
+Two distinctions do the work. They are the reason this is not a vector store with a
+chat interface bolted on.
+
+```text
+semantic similarity   ≠   memory authority
+retrieval             ≠   historical truth
+```
+
+**Similarity is not authority.** A search index answers "what text looks like your
+question". Mind Palace answers "what is true, what replaced it, and on what
+evidence" — and it will decline rather than guess when nothing it knows is relevant.
+A claim is authoritative because a human wrote it and the archive recorded its
+provenance, not because it scored well.
+
+**Retrieval is not history.** A vector index returns the nearest documents and has no
+opinion about last month. Every memory here carries validity, supersession and
+conflicts, so `--as-of` returns what was true then — and the old answer stays
+readable after the fact.
+
+Concretely, that means:
+
+| | |
 |---|---|
-| Corpus | Persistent namespace; the same relative path may exist independently in different corpora |
-| Document | Stable `(corpus, path)` identity across deletion/restoration; renames are new identities |
-| Version | Immutable observed source, metadata, chunks, predecessor, and lifecycle event |
-| Claim | Explicit key/value/assertion with optional authored validity bounds |
-| Evidence | Exact quote, archived chunk offsets, source hash, and corpus/version/claim links |
-| Snapshot | Whole-corpus immutable version references, including history and tombstones |
+| **evidence** | the exact character span of the archived text that supports a claim |
+| **provenance** | which document and version a claim came from |
+| **time** | validity intervals, and `--as-of` to ask what was true at an instant |
+| **supersession** | what replaced what, oldest first, never overwritten |
+| **conflicts** | two live claims are reported as a conflict, not silently merged |
+| **verification** | a receipt anyone can check later, offline, with no database |
 
-Lifecycle events are `NEW`, `MODIFIED`, `DELETED`, and `RESTORED`. Identical
-re-ingestion is `UNCHANGED` and adds no version. A prose-only edit may create a
-version with `memory_changed=false`; it is not necessarily a changed assertion.
-Same-document replacements can supersede prior claims. Different-document claims
-with the same key and different values form conflicts, not supersession.
+Evaluation is real and reported honestly, and the numbers are not the flattering
+ones. The frozen M006.75 held-out benchmark scores **45/60 (75.0%)** exact on the
+current source, with every safety invariant at **60/60** and zero execution failures.
+The broader generalisation figure, from an independently authored 157-question
+held-out set, is **131/157 (83.4%)** — a generalisation number and a known
+limitation. Neither is superseded by the other. This release changed no benchmark
+input, policy, evaluator semantic, tokenizer or threshold, and that is measured:
+all 60 canonical per-question decisions are identical to `v0.8.0`. See
+[the reproducibility report](docs/evaluation/m00675-reproducibility.md), which also
+records one discrepancy this release found and deliberately did not paper over.
 
-The archive foundation is migration `004_memory`; `005_multiple_evidence` adds
-multiple distinct evidence references per claim while preserving existing string
-behavior and corpus/version foreign keys. [Schema and authoring](examples/MEMORY.md).
+---
 
-## Current, historical, and conflicting assertions
+## The five-minute path
 
-```python
-from mindpalace_sdk import MindPalace
+### 1. Install
 
-mp = MindPalace("my-corpus")
-mp.sync("./docs")  # Markdown with explicitly authored claims; uses local embeddings
-
-current = mp.memory.current(query="streaming")
-history = mp.memory.history(query="streaming")
-print(current.current_memories)
-print(current.conflicts)  # alternatives are retained, not silently resolved
-print(history.historical_memories)
-```
-
-`CURRENT` means latest active source assertion inside its authored validity
-window—not independently verified present-day truth. Explicit replacements are
-`SUPERSEDED`; inactive/unreplaced or out-of-window claims are `UNCERTAIN`.
-`CONFLICTING` alternatives are excluded from the unopposed current list.
-History and uncertainty may overlap.
-
-`as_of` is an inclusive **observation** cutoff; `valid_at` evaluates authored
-`[valid_from, valid_until)` bounds. Missing bounds remain unknown. Replay fixes
-both clocks to the saved snapshot cutoff. Capture returned timestamps rather than
-inventing ingestion dates. Existing `current`, `history`, `changes`, and `pack`
-lookups retain lexical **AND** matching: `streaming` can match
-`architecture.streaming`, while extra question words may eliminate every result.
-
-For natural-language retrieval, use the separate M006.5 query service:
-
-```python
-answer_context = mp.memory.query(
-    "What carries Dispatch events now?", intent="current", budget=8000
-)
-print(answer_context.canonical_json())  # evidence-backed context, not generated prose
-```
-
-The question goes in `query`; it must be nonempty. `intent` defaults to `auto`
-and accepts `auto`, `current`, `historical`, `temporal`, `change`, `conflict`, or
-`provenance`. Explicit time selectors take precedence over question dates; a
-question's date-only `YYYY-MM-DD` means midnight UTC observation time. Stage names
-need a caller-supplied `as_of` or `snapshot_id`. “Before Kafka” selects history,
-not a precise inferred event boundary. See [query semantics](examples/MEMORY_API.md#question-retrieval-m0065).
-
-Query reuses the configured sentence-transformer (default `all-MiniLM-L6-v2`),
-loaded on demand by this service and reused in-process. Question and archived
-claim/text-key-path vectors are recomputed per query, transient, and have no
-persistent vector cache or index. A **0.30 cosine floor / 0.90 top-score band**
-selects authored keys; relevance propagates within the same authored key, never
-establishes authority, and can miss or over-select claims. Persistence still
-resolves status, time, provenance, and complete conflict groups before packing.
-No M006.5 schema migration is needed.
-
-## M006.75 Memory Evaluation
-
-M006.75 is the current frozen evaluation of persistent/versioned memory query
-behavior over an authored, evolving corpus. Its 60 held-out questions cover
-current memory, historical memory, temporal queries, multi-topic questions,
-conflicts/provenance, and explicit abstention.
-
-| Category | Exact/full |
-|---|---:|
-| Overall | **47/60** |
-| Current | 6/10 |
-| Historical | 5/10 |
-| Temporal | 10/10 |
-| Multi-topic | 9/10 |
-| Conflict / provenance | 7/10 |
-| Abstention | 10/10 |
-
-Safety is reported separately from exact/full retrieval correctness:
-
-- false-positive retrievals: **0**
-- false-current promotions: **0**
-- provenance failures: **0**
-- conflict failures: **0**
-- temporal failures: **0**
-- budget failures: **0**
-- execution failures: **0**
-
-The result demonstrates that semantic retrieval is not the same as memory
-authority: the benchmark preserves temporal state, provenance, conflict
-closure, bounded output, and explicit abstention independently of similarity.
-It does not claim that Mind Palace is generally better than RAG, other memory
-systems, Jev, or Jev-Mem, and it is not a production-readiness certification.
-
-On this frozen 60-question corpus, the result is **47/60 exact/full**.
-The corrected release source tree has canonical result hash
-`881530c7c6e7ba29fb38eb5b27609071463f733c6a8cd173aeff04173a5d8dc8`.
-The bounded Memory Pack correction changed the source fingerprint and hash,
-but repeated runs produced the same per-question decisions, category results,
-and safety invariants. See the [benchmark README](eval/m00675/README.md), the
-[reproducibility protocol](docs/evaluation/m00675-reproducibility.md), the
-[manifest](eval/m00675/manifest.json), the
-[canonical result](eval/m00675/result.json), and the
-[runner](scripts/benchmark/m00675.sh).
-
-## Documentation and interfaces
-
-- [Architecture and memory model](examples/MEMORY.md)
-- [API and developer interfaces](examples/MEMORY_API.md)
-- [Evaluation reports](docs/evaluation/)
-- [M006.75 reproducibility](docs/evaluation/m00675-reproducibility.md)
-- [M006.75 benchmark artifact](eval/m00675/README.md)
-
-## Evidence that survives updates
-
-Every returned claim has exact archived evidence and source attribution. Quotes
-are not inferred summaries; offsets must match archived chunk slices. Deleting a
-source removes its live index entry but retains a tombstone, history, and proof.
-
-The A–G fixture's `data/storage.md` authors **one claim with two supporting
-quotes in two chunks**. Migration 004's one-reference constraint could not
-represent this; migration 005 accepts a nonempty list of distinct exact quotes
-as well as the original string. Both supporting chunks must contain the claim
-text. Evidence is ingested atomically with the version. Snapshotted versions
-reject later evidence INSERTs, and downgrade refuses claims with more than one
-reference rather than discarding provenance.
-
-Corpus content—including hostile-looking text—is **data, not instructions**.
-Attribution does not prove source truthfulness or make downstream LLMs immune to
-prompt injection.
-
-## Reproducible, bounded memory packs
-
-```python
-saved = mp.memory.snapshot()
-pack = mp.memory.pack(query="streaming", snapshot_id=saved.snapshot.id, budget=8000)
-assert len(pack.canonical_json()) <= 8000
-print(pack.canonical_json())
-```
-
-The budget counts **Unicode characters of the complete canonical JSON envelope**,
-not tokens or UTF-8 bytes. It includes state, claims, evidence, sources, conflicts,
-and truncation metadata. Valid budgets are 512–128000 (default 8000), but even an
-in-range budget can fail if the empty envelope does not fit.
-
-Claims retain all their evidence; conflict alternatives stay together or are
-omitted together. Quotes are not sliced. `truncated=true` warns that omissions
-are not evidence of absence. Sources derive only from retained evidence.
-
-Given the **same frozen state, validity cutoff, selectors, and budget**, canonical
-lexical packs are identical. Query packs also require the same question, intent,
-embedding model, and runtime for deterministic selection; no cross-model/runtime
-byte-identity is promised. Independent wall-clock calls are not promised byte-identical:
-the default validity clock and live state can change. A small pack budget does
-not bound archive-read cost; history loading is currently unbounded.
-
-## Interfaces
-
-The ordinary memory operations share one typed public boundary across SDK,
-REST, CLI, and MCP. The M009 operational feed is a separate read contract
-implemented over the same PostgreSQL archive and exposed through REST, SDK, and
-CLI; it is deliberately excluded from MCP. See [MEMORY_API.md](examples/MEMORY_API.md)
-for selectors, transaction ownership, errors, budgets, and adapter limitations.
-Memory reads do not create missing corpora.
-
-### Python SDK (`mindpalace_sdk.py`)
-
-```python
-from mindpalace_sdk import MindPalace
-
-mp = MindPalace("corpus-name")       # named local client; initializes embeddings
-summary = mp.sync("./docs")
-results = mp.search("query", k=5)
-context = mp.context("question", budget_tokens=4000)
-
-reader = MindPalace()               # no embeddings at construction; query loads on demand
-print(reader.memory.current(corpus="corpus-name", query="streaming").canonical_json())
-
-feed_client = MindPalace(base_url="http://127.0.0.1:8000")
-page = feed_client.memory.feed(corpus="corpus-name", page_size=50)
-print(page.canonical_json())
-```
-
-Remote SDK memory calls use HTTP. Remote `sync`, `search`, and `context` are not
-supported. Async local applications should use the async public service rather
-than call the synchronous local SDK inside an active event loop.
-
-### Reading a pack elsewhere (`memory_pack.py`)
-
-A Memory Pack is the interchange boundary. `memory_pack.py` reads one using only the
-standard library, with no database, model, network, or import from `api`. Copy that one
-file into a consuming project.
-
-```python
-from memory_pack import MemoryPack
-
-pack = MemoryPack.from_json(open("pack.json").read())
-
-pack.status                    # resolved | conflicting | uncertain | no_relevant_memory | empty
-pack.digest()                  # sha256 over the canonical bytes
-pack.verify()                  # [] when evidence, offsets and sources are consistent
-pack.conflicts                 # keys whose sources disagree, every side kept
-pack.evidence_for(claim.id)    # exact quote, path, chunk-relative offsets, observed time
-```
-
-`status` is derived from the pack's contents, so an empty list is never ambiguous: a
-question with no answer reports `no_relevant_memory` rather than returning nothing. The
-reader refuses a `schema_version` it does not implement instead of half-reading it.
-See the [API contract](examples/MEMORY_API.md#reading-a-pack-without-mind-palace).
-
-### REST API
-
-```text
-POST   /api/corpora                  create a corpus
-GET    /api/corpora                  list corpora
-GET    /api/corpora/{name}           inspect one corpus
-DELETE /api/corpora/{name}           blocked when archive rows exist
-POST   /api/corpora/{name}/sync      sync with a directory
-GET    /api/search?q=&corpus=&k=&hybrid&rrf&rerank   raw search
-GET    /api/context?q=&corpus=&budget_tokens=&as_of=&intent=  authoritative context pack
-POST   /api/query/ask                default live RAG; explicit memory mode available
-POST   /api/memory/query             question retrieval with intent and bounded evidence
-POST   /api/memory/current           current assertions and conflicts
-POST   /api/memory/history           assertion history
-POST   /api/memory/changes           before/after events
-POST   /api/memory/evidence          evidence for a claim
-POST   /api/memory/as-of             assertions at an aware observation cutoff
-POST   /api/memory/snapshot          commit whole-corpus immutable references
-POST   /api/memory/replay            replay a saved snapshot
-POST   /api/memory/pack              complete JSON bounded in Unicode characters
-GET    /api/memory/feed              durable corpus-scoped keyset feed
-GET    /health/live                  process liveness
-GET    /health/ready                 database/schema readiness
-```
-
-The ordinary memory operations are POST requests with a JSON `corpus` and
-selectors. The feed is a GET with `corpus`, `page_size`, and optional `cursor`.
-Backend
-unavailability is an error, not an empty success. Default `/api/query/ask` is
-live RAG; explicit `mode="memory"` sends its `question` through memory `query`
-with automatic intent, then invokes memory-aware generation with the configured LLM. Neither mode's generated-answer quality is established by the
-memory semantics gate.
-
-### MCP server
-
-```json
-{
-  "mcpServers": {
-    "mind-palace": {
-      "command": "python",
-      "args": ["-m", "mcp_server"],
-      "env": {"DATABASE_URL": "postgresql://..."}
-    }
-  }
-}
-```
-
-Tools: `context`, `search`, `sync`, `list_corpora`, plus `memory_current`,
-`memory_history`, `memory_changes`, `memory_evidence`, `memory_as_of`,
-`memory_snapshot`, `memory_replay`, `memory_pack`, and `memory_query`.
-M009 deliberately does not add `memory_feed` to MCP; the feed is an operational
-REST/SDK/CLI synchronization contract with cursor and polling semantics.
-
-### CLI
-
-```bash
-python -m cli.main memory current --corpus my-corpus --query streaming
-python -m cli.main memory query --corpus my-corpus \
-  --query "What carries Dispatch events now?" --intent current --budget 8000
-mindpalace memory feed --corpus my-corpus --page-size 50
-```
-
-The `memory` group is remote-only at `http://127.0.0.1:8000` (override with
-`--base-url`). All ten public memory operations, including `feed`, have
-commands. The separate `eval memory`
-command below runs locally against PostgreSQL without a REST server.
-
-## Quick Start
-
-### 1. Install and start infrastructure
+Mind Palace needs persistent storage. PostgreSQL with pgvector is the only
+dependency.
 
 ```bash
 git clone https://github.com/raunakdey-07/mind-palace.git
 cd mind-palace
-python -m venv .venv
-. .venv/bin/activate
+python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
-docker compose up -d postgresql          # or podman-compose up -d postgresql
+docker compose up -d postgresql          # or: podman-compose up -d postgresql
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
-export MIND_PALACE_CURSOR_SECRET='replace-with-a-random-32-byte-or-longer-secret'
-```
-
-The feed has no predictable fallback signing key; use the same secret for all
-instances that must validate one another's cursors. Local defaults target
-disposable containers only. PostgreSQL and the required
-extensions are necessary even for the network-free fixture demo. Port 5433 in
-the demo commands below is the separately available local validation database;
-use your actual database port.
-
-### 2. Migrate your persistent database
-
-```bash
 python -m alembic -c migrations/alembic.ini upgrade head
 ```
 
-Migrations provision pgvector/pgcrypto/pg_trgm. The rolled-back evaluation harness
-instead applies migrations inside its own temporary schema; it does not migrate
-your live schema.
+That is the whole setup. No API key, no account, no embedding model, no LLM.
 
-### 3. Sync documents and retrieve live context
+### 2. Check it
 
-```bash
-python - <<'EOF'
-from mindpalace_sdk import MindPalace
+```console
+$ mindpalace init
+Mind Palace is ready.
+  corpus: default
 
-mp = MindPalace("my-first-corpus")
-summary = mp.sync("examples/docs")
-print(summary)                # added/changed/unchanged/deleted counts
-pack = mp.context("How does authentication work?", budget_tokens=2000)
-print(pack.context)
-for source in pack.sources:
-    print(f"  source: {source.title} ({source.path})")
-EOF
+Record your first memory:
+
+  mindpalace remember "Production uses PostgreSQL."
+
+Then ask about it:
+
+  mindpalace recall "What database does production use?"
 ```
 
-Normal sync uses sentence-transformer embeddings (`all-MiniLM-L6-v2` by default).
-Weights may need an initial Hugging Face download; cached weights can run with
-`HF_HUB_OFFLINE=1`. No paid LLM is needed for ingestion or memory reads. `context()` resolves against the
-archive and then adds ranked live chunks, so it needs no model at all: with no embedding
-model available it still returns claims, evidence, conflicts and changes, and simply
-returns no chunks. `search()` is the raw live-index surface and does need one.
+### 3. Remember
 
-## Run the real evolving-corpus demo
+A statement becomes authoritative memory with exact-substring evidence, through
+the same archive a synced document uses.
 
-```bash
-DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace \
-  HF_HUB_OFFLINE=1 python examples/memory_evaluation_demo.py
+```console
+$ mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+Remembered.
+  version: 5aae989d3134 (new)
+  corpus:  default
+  path:    memory/datastore-aa7e5b234e1d.md
 ```
 
-The standalone A–G demo loads the checked-in
-[Dispatch corpus](examples/evaluation/corpus/) through the shared benchmark
-workload context and checks all [39 authored cases](eval/memory_benchmarks.yaml).
-It prints current/history, changes, conflicts, evidence, snapshots, and budgets:
+`--key` is how you tell Mind Palace that two statements are about the same fact.
+Remembering the same key with new text supersedes the old value — that is what
+`history` shows you.
 
-- Redis Streams → Kafka; JWT → OIDC; Kafka partitions 6 → 12.
-- A prose-only edit changes a document but not its claim mapping.
-- A stale runbook introduces a conflict, deletion removes it from current, and
-  identical restoration reintroduces the same semantic pair.
-- One storage claim keeps two exact references; hostile source text stays data.
-- A–G snapshot replay bytes remain identical after later updates and deletions.
-- Frozen-state packs at 1000/2000/4000/8000/16000 characters check safety and
-  honest truncation, not guessed capacity-dependent recall.
+Remembering the same statement twice changes nothing:
 
-**Network-free by default means no model/provider calls or downloads.** Embeddings
-are artificial deterministic fixtures, explicitly **not retrieval-quality evidence**.
-A PostgreSQL connection is still required. No API server or LLM is used. The random
-schema, migrations, corpus, and snapshots live in one rolled-back transaction;
-no persistent corpus or output artifact remains. Default workload timeout is
-120 seconds (`--timeout-seconds` accepts 1–600; rollback cleanup is additional).
-
-The demo was run successfully on port 5433 with `HF_HUB_OFFLINE=1`: **39 cases
-passed**, with final **17 versions, 16 claims, 17 evidence references, 7 stage
-snapshots, 11 live documents, and 1 conflict group**. This is a fixture semantics
-run, not performance or generated-answer validation. [Run record](examples/MEMORY.md).
-
-The older **persistent SDK demo** remains available:
-
-```bash
-python examples/memory_demo.py
+```console
+$ mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+Already remembered. Nothing changed, so no new version was recorded.
+  version: 5aae989d3134
+  corpus:  default
 ```
 
-It creates a unique dedicated `m005-demo-<uuid>` corpus and records SDK JSON under
-`examples/evolving-project/runs/<corpus>/`. It exercises Redis Streams → Kafka →
-Kafka managed → deletion → restoration and a separate two-source auth conflict.
-Use `--corpus m005-dispatch-my-first-run` only for a new name; all existing names
-are refused. It uses real embeddings and deliberately leaves committed data and
-artifacts, even on partial failure. See [setup and walkthrough](examples/MEMORY.md)
-and [the older authored fixtures](examples/evolving-project/README.md).
+Identity is derived from content, so a retry after a lost response converges
+instead of duplicating. The filename is the key plus a digest of the key, so two
+different facts can never reduce to one document and silently supersede each
+other.
 
-## Memory evaluation and results
+### 4. Recall
 
-From the repository root, with the database URL set:
+```console
+$ mindpalace recall "What datastore does production use?"
+The production datastore changed from SQLite to PostgreSQL.
+   source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
+   time:   true as of 2026-10-08 03:40 UTC
 
-```bash
-mkdir -p eval/results
-HF_HUB_OFFLINE=1 python -m cli.main eval memory --repetitions 1 \
-  --save eval/results/memory-fixture-smoke.json
+Ask for the basis with: mindpalace explain "<question>"
 ```
 
-The report path must be new; `--save` refuses overwrite and does not create its
-parent. Omit it for text output only. This command uses artificial fixture
-embeddings and no LLM. One repetition is a functional check, not percentiles.
+Answer, source, and when it was true — that is the default. `--json` gives the
+canonical response if a program wants it instead of a person.
 
-Manual measurement with **real, already cached** embeddings:
+Mind Palace never invents an answer. A question the archive does not cover
+abstains rather than guessing:
 
-```bash
-HF_HUB_OFFLINE=1 python -m cli.main eval memory --embeddings cached \
-  --repetitions 20 --sizes 100,500,1000 \
-  --save eval/results/memory-cached-manual.json
+```console
+$ mindpalace recall "What is our incident response SLA?"
+No memory matched that question.
+  NO_RELEVANT_MEMORY
+
+Nothing was invented: Mind Palace records only what was remembered.
 ```
 
-Cached mode loads the existing model offline, requires 384 dimensions, and fails
-if the weights are absent—no download or fixture fallback. Scaling sizes are
-separate synthetic one-claim/document workloads, bounded by a supplied sum of
-5000. There is no default scaling sweep. **5000 is a safety cap, not a measured
-result.** p50/p95 require at least 20 samples after an untimed warm-up; timings
-include savepoints, exclude setup/query embedding, and retain samples. Snapshot
-timings measure fresh INSERTs rolled back per call, not deduplication.
+### 5. Explain
 
-### Read the results without conflating the metrics
+```console
+$ mindpalace explain "What datastore does production use?"
+ANSWER
+  The production datastore changed from SQLite to PostgreSQL.
 
-| Recorded cached-run observation | What it actually says |
-|---|---|
-| **39/39 tailored lexical cases passed** | Authored memory semantics and safety, not general question understanding |
-| **0/24 nonempty current-claim sets correct using the natural-language questions** | Material lexical lookup weakness; outside the labeled gate, not hidden by empty-set wins |
-| **79.17% live-baseline text coverage** | Literal expected-text recoverability, **not semantic accuracy** or temporal framing |
-| **Generation A/B: NOT RUN** | No LLM service available; no generated-answer quality result |
+TIME
+  answer true at:       2026-10-08 03:41 UTC
 
-These cached results are distinct from the fixture demo validated above. Current
-labels are exact sets; other nonempty list labels generally assert presence;
-missing labels are unscored and explicit empty lists assert emptiness. The gate
-checks labeled cases, replay, all pack safety, and operation/scaling execution.
-Low-budget recall losses are diagnostic, not automatic failure. The live hybrid+RRF
-baseline has no claim/status model. [Precise evaluator semantics](examples/MEMORY_API.md#reusable-evaluation-workload-and-cli-semantics).
+EVIDENCE
+  memory/datastore-aa7e5b234e1d.md > The production datastore changed from SQLite to PostgreSQL.
+    "The production datastore changed from SQLite to PostgreSQL."
+    characters 0-59 of version 5aae989d3134
 
-An opt-in `--generation` adapter exists for A: a memory-pack prompt through
-`LLMService`, and B: the **actual default `/api/query/ask` route** at each live
-stage (cached embeddings required). Both need explicit `LLM_PROVIDER`; provider
-credentials, data sharing, and costs apply. Run standalone, never in a process
-serving traffic: B temporarily binds route globals. Literal answer checks are
-not semantic judges or proof of injection resistance.
+HISTORY
+  2026-10-08 03:40 UTC  recorded  The production datastore changed from SQLite to PostgreSQL.
 
-The maintainer-authored [M006 measured report](docs/evaluation/m006.md) is the
-place for actual environment, timings, and further results; this docs/demo update
-does not create it or invent unknown scores. **Unrun generation means M006 is
-not declared complete. No deployment certification is implied.**
+VERIFICATION
+  receipt available: yes (1 receipt(s))
+  authoritative digest: 2c3077bd8d76627348c569dc5bd2227a08696b0aa54bf3f733f71f5abd3b1aa8
+  export and verify offline with:
+    mindpalace receipt "What datastore does production use?" -o receipt.json
+    mindpalace verify receipt.json
+  Authenticity is not established without a trust anchor you pinned yourself.
 
-### M006.5 question retrieval: implemented and evaluated
-
-The new service improves the unchanged original natural-language diagnostic from
-**0/24 lexical to 17/24 exact current sets**. On **40 added questions**, **30/40**
-match all labeled sets exactly: historical **4/4**, temporal **3/6**, conflict
-**4/4**, provenance **3/3** (current **13/19**, change **3/4**). There are still
-**17 exact-set failures** across the 64 questions; labels were not changed.
-
-There were **0 safety failures across 264 output cases** (64 full-budget outputs
-plus 200 budget-sweep outputs), and no execution failures. Budget correctness is
-not retrieval completeness: even a correctly bounded, fully attributed pack can
-omit relevant claims or include irrelevant ones. `passed` gates safety/execution,
-not exact relevance. Generation remains **NOT RUN**.
-
-One warmed fixed query over 20 repetitions measured **124.2/131.3 ms p50/p95**;
-preembedded live search measured **4.0/5.1 ms**. Query includes per-call embedding
-and archive projection; live search excludes query embedding. This is **not a
-fair end-to-end latency comparison**, nor a general latency guarantee.
-[Full M006.5 report, all failures, and reproduction](docs/evaluation/m0065.md).
-The historical [M006 report](docs/evaluation/m006.md) is preserved, not superseded
-by a claim that generation or production validation is complete.
-
-## Verifiable Memory
-
-Mind Palace stores persistent, versioned, evidence-backed memory. It can export
-that memory as a portable artifact and hand your application a **Memory Receipt**
-that another process can verify without the Mind Palace server.
-
-Ask for a receipt on any memory query and you get the answer plus a record of
-what it is: the claim, the document version that carried it, the evidence with
-offsets, its validity window, its supersession lineage and the authoritative
-digest.
-
-```python
-result = client.query(corpus="docs", query="What is the current database?",
-                      include_receipt=True)
-result.receipt["receipts"][0]["answer"]["claim"]
+This explains the recorded provenance and temporal basis for the memory. It does not establish that the original source was factually correct.
 ```
 
-```bash
-# REST is the same contract
-curl -X POST localhost:8000/api/memory/query -H 'content-type: application/json' \
-  -d '{"corpus":"docs","query":"What is the current database?","include_receipt":true}'
+`characters 0-59` is the whole claim, and it is an exact span of the archived
+text — not a paraphrase, and not a summary of one.
 
-# MCP is the same contract, with the receipt always on
-memory_explain {"request": {"corpus": "docs", "query": "What is the current database?"}}
+### 6. History
+
+Memory is not only what is true now. It is what was true when.
+
+```console
+$ mindpalace remember "The production datastore is now distributed CockroachDB." --key datastore
+Remembered.
+  version: 062167c43040 (modified)
+  corpus:  default
+  path:    memory/datastore-aa7e5b234e1d.md
+
+$ mindpalace history datastore
+2026-10-08 03:40 UTC  recorded  The production datastore changed from SQLite to PostgreSQL.
+2026-10-08 03:41 UTC  The production datastore changed from SQLite to PostgreSQL.
+            superseded by  The production datastore is now distributed CockroachDB.
+
+current now: The production datastore is now distributed CockroachDB.
 ```
 
-`include_receipt` is opt-in and purely additive: a client that does not ask for
-it sees no new field at all. All three surfaces call the same service and return
-the same receipt, and a contract test asserts they agree byte for byte.
+And the answer before the change is still reachable:
 
-Export the artifact and verify it anywhere — no server, database, embedding
-model, network or credentials:
-
-```bash
-# mint a proof from an exported Memory Pack
-mindpalace-proof prove --pack memory-pack.json --claim-key architecture.postgres -o proof.json
-
-# verify it anywhere: no server, database, embedding model, network or credentials
-mindpalace-proof verify proof.json --pack memory-pack.json
+```console
+$ mindpalace recall "What datastore does production use?" \
+    --as-of 2026-10-08T03:40:59Z
+The production datastore changed from SQLite to PostgreSQL.
+   source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
+   time:   true as of 2026-10-08 03:40 UTC
 ```
 
-```text
+### 7. Receipt and verify
+
+```console
+$ mindpalace receipt "What datastore does production use?" -o receipt.json
+Receipt written to receipt.json
+Verify it anywhere with: mindpalace verify receipt.json
+
+$ mindpalace verify receipt.json
 VERIFIED
-claim: architecture.postgres
-versions: v-new, v-old
-valid_at: 2025-06-01T00:00:00+00:00
-authoritative digest: b2a1c8de...
-proof digest: acea4a2d...
+
+Integrity:      verified
+Provenance:     verified
+Temporal state: verified
+Supersession:   verified (1 receipt(s))
+Authenticity:   not established (supply --trusted-digest to check it)
+
+This means the receipt still matches the memory it describes. It does not mean the original claim was factually true.
 ```
 
-Change one byte of the authoritative artifact and verification rejects it, naming
-the invariant that failed:
+Verification needs no server, no database, no embedding model and no network.
+Hand the file to someone who has never heard of Mind Palace:
 
-```text
-REJECTED
-reason: authoritative digest mismatch: the artifact is not the one this proof was created from
-reason: claim 'c-new' content does not match its proof entry
-```
-
-`mindpalace-proof explain` shows the recorded provenance, evidence, temporal state
-and supersession lineage for a memory.
-
-**What this does and does not establish.** It establishes integrity and recorded
-provenance: the artifact still represents the state the proof describes, and no
-covered record has been altered since. It does **not** establish that the original
-source was factually correct, and it is not a third-party signature.
-
-Both modules are standard-library-only and ship in the distribution, so this works
-from a clean install with no Mind Palace runtime present.
-
-### The workflow, end to end
-
-This is the path the release test walks, on a real supersession chain from the
-repository's own corpus:
-
-```text
-1. query the archive          → an authoritative answer, with a Memory Receipt
-2. export the Memory Pack     → files, not a database connection
-3. leave the runtime          → a clean environment, nothing of Mind Palace installed
-4. verify                     → VERIFIED
-5. change one authoritative byte
-6. verify                     → REJECTED, naming the invariant that failed
-7. restore                    → VERIFIED again
-8. ask what it used to know    → the earlier authoritative state, and a receipt for it
-9. verify that too            → VERIFIED
-```
-
-The historical step is the one that earns the rest. MySQL becoming PostgreSQL is
-a real supersession, and asking the same question with `as_of` set to before the
-second write returns the answer the archive gave *then*, with a receipt that says
-which instant it describes. Each receipt is valid only against the artifact it
-was cut from, so verification catches a receipt paired with the wrong pack.
-
-### The Memory Receipt
-
-A receipt records what Mind Palace actually returned to one application, for one
-query, at one historical state. `mindpalace-proof verify` reports the trust model
-explicitly rather than letting a digest imply everything:
-
-```text
+```console
+$ pip install mindpalace-os
+$ mindpalace-proof verify receipt.json
 VERIFIED
 
 Integrity:
@@ -698,322 +288,452 @@ Temporal state:
 
 Trust:
   authenticity: NOT ESTABLISHED (no trust anchor supplied)
+
+query: What datastore does production use?
+receipts checked: 1
+memory pack digest: 2c3077bd8d76627348c569dc5bd2227a08696b0aa54bf3f733f71f5abd3b1aa8
+
+This means the artifact still represents the state the receipt describes.
+It does not establish that the original source was factually correct.
 ```
 
-That last line is deliberate. Verification establishes **integrity and recorded
-provenance**. It does **not** establish that the original source was factually
-correct, and a digest alone cannot establish **authenticity** — anyone able to
-replace both the artifact and the receipt can recompute the digests. Supply
-`--trusted-digest` with a digest you pinned out of band, and authenticity becomes
-checkable:
+The receipt file carries the response it describes, so no `--pack` and no second
+artifact are needed. `mindpalace-proof` is `argparse` over the standard library,
+which is why it works on a bare install.
 
-```bash
-mindpalace-proof verify receipt.json --pack memory-pack.json --trusted-digest "$PINNED"
+Tampering is caught and named:
+
+```console
+$ mindpalace verify tampered-receipt.json
+REJECTED
+
+Reason:
+  the artifact no longer matches the digest the receipt recorded
+
+The receipt describes memory that has since changed, or the artifact has been altered.
+Re-issue it with: mindpalace receipt "<question>" -o receipt.json
 ```
 
-### Time travel, with the corpus that genuinely supports it
+### 8. Connect an agent
 
-The same authored key, two instants, two authoritative answers:
+MCP is nearly invisible. Point an agent at `mindpalace-mcp` and it can recall and
+explain the same memory:
 
-```bash
-mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
-  --query "What datastore did production use?" -o current.json
-
-mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
-  --query "What datastore was production using?" \
-  --valid-at 2025-02-01T00:00:00+00:00 -o historical.json
+```console
+$ mindpalace-mcp
 ```
-
-```text
-current     The primary datastore is PostgreSQL.   [CURRENT   ] valid_at=2025-06-01
-historical  The primary datastore is SQLite.       [SUPERSEDED] valid_at=2025-02-01
-```
-
-`mindpalace-proof explain` prints the claim, its source version, the evidence
-with offsets, the temporal window and the supersession lineage — provenance and
-state, never model reasoning.
-
-### Retrieval status
-
-Retrieval is unchanged by this release. M013's measured arms — a tokenizer
-rewrite, PostgreSQL FTS candidate generation, naive RRF, a contextual
-claim+evidence representation and an evidence-aware embedding — were all
-rejected on measurement, and nothing here reopens them. The acceptance boundary
-remains a separate research question, and cosine similarity is treated as a
-ranking signal rather than a defensible acceptance policy.
-
-## Known limitations
-
-- **Query cost grows with the archive, and the latency envelope is not currently
-  established.** Projection does work that grows faster than the corpus. The
-  strongest evidence is a call count rather than a stopwatch, because call counts do
-  not move when the host is busy: between 5,002 and 25,000 claims the number of
-  conflict comparisons computed in `api/services/memory.py` grows **26.2x for a 5x
-  larger corpus** (fitted exponent 2.03), and the regex matching behind it grows
-  18.1x. Much of that is an artefact of the synthetic benchmark corpus, which packs
-  every size into only 295 distinct claim keys, so claims per key grow with the
-  corpus and pairwise comparison grows quadratically. A real corpus with a wide key
-  distribution should be measured before this is treated as a product figure.
-
-  Wall-clock exponents are deliberately not quoted here. Two runs of the same
-  profile produced 1.11 and 1.60 for the same function on this host, because the host
-  runs at varying background load. Those numbers are not comparable and are not
-  published as a product claim.
-
-  Previously published latency numbers are withdrawn: the figures they cited did not
-  appear in the artifact they were attributed to. Repeated measurements of the same
-  work on the development host have also landed roughly 2.5x apart, and the cause is
-  **not established**; a diagnostic taken while investigating it recorded the host at
-  21% utilisation with 87-94% idle CPU, which rules out sustained load but does not
-  identify the real cause. The measurement harness now refuses to publish a latency
-  point when the host is loaded, so a busy window cannot silently become a baseline.
-  No current latency envelope is claimed until one is re-measured on a host that
-  passes that gate.
-
-  Separately and more consequentially, a **query plan cliff** was found and its cause
-  identified. Between roughly 250 and 1,000 versions the archive-load query picks
-  corpus-only indexes and filters on `version_id` afterwards, discarding 999 of every
-  1,000 rows: 1,075,310 shared buffer hits at 1,000 versions against 26,674 at 2,000.
-  The cause is that these tables have never been analysed (`reltuples = -1`,
-  `last_analyze` null), so the planner underestimates the row count by ~250x and
-  picks the wrong index. Running `ANALYZE` removes the cliff entirely. This is a
-  real defect and is being addressed; see `docs/STATUS.md`.
-  [Measurement and rejected candidates](docs/research/m0123-projection-release-gate.md).
-- **Accuracy is lower on unseen questions than the headline benchmark suggests.** The
-  202-question benchmark reports 194/202, but it is a development set whose failures
-  are known. On a separately authored 157-question held-out set, frozen before any
-  retrieval code was touched, the same system answers 131/157. Questions phrased
-  indirectly, especially asking *why* a decision was made, are answered noticeably
-  less often. See [docs/STATUS.md](docs/STATUS.md).
-- Existing lexical operations remain lexical AND. M006.5 adds heuristic semantic
-  question retrieval, not universally reliable question answering or automatic
-  claim extraction. Related concepts, multi-part questions, and abstention remain
-  relevance limits.
-- Ordinary public memory reads load full corpus history before projection/packing,
-  without pagination. Output budgets do not bound memory/SQL cost. The M009
-  operational feed is separately keyset-paginated; its concurrency and archive
-  late-arrival limitations are documented in `docs/operations.md`.
-- Conflicts require same-key differing values across active documents. A
-  contradicting claim authored under a *different* key is not detected, and the
-  pack does not label it as drift. This is a known gap, measured on the authored
-  benchmark, and it is why no general contradiction detection is claimed.
-- `/ask` grounding and citation instructions are prompt-based, not formally verified;
-  memory semantics results do not establish generated-answer quality.
-- Markdown-only source support today; plain text/code are planned.
-- Sync is per-document atomic, not an atomic whole-directory snapshot. Deletions
-  require an explicit sync; renames are new identities.
-- **No built-in authentication. Namespaces are not authorization.** Archive
-  retention/erasure is unresolved; tombstones retain evidence, and append-only
-  guards block archived-corpus deletion. Owners are not a tamper-proof boundary.
-- Retrieval strategy differences remain within statistical noise; reranking's
-  roughly 1.7-second latency remains opt-in (separate findings below).
-
-## Existing live retrieval pipeline
-
-The retrieval pipeline and benchmark remain useful independently of memory.
-
-```text
-create corpus → sync/ingest → inspect → search → pack context → AI application
-```
-
-Search ranks relevance; context packing decides what fits a token-estimated
-prompt budget. Corpus-scoped retrieval/ingestion keeps documents independent
-across namespaces, but does not authenticate callers. Default legacy RAG `/ask`
-is not a corpus-scoped memory operation.
-
-### Synchronization
-
-| State | Action |
-|---|---|
-| added | New files are chunked, embedded, indexed |
-| changed | Files are reprocessed; stale live chunks replaced |
-| unchanged | Skipped via content-hash manifest |
-| deleted | Removed from live index; archived sources receive tombstones |
-
-A failed document does not leave a false successfully-indexed state.
-
-### Context: the product surface
-
-`context()` answers “what should this application know for this question?” and returns
-the smallest useful, evidence-backed representation. The archive decides what is true,
-what changed, what conflicts, and what is absent. Retrieval only adds raw source
-material, and is skipped when no model is available.
-
-```text
-corpus
-  ↓  does this corpus have an archive?
-  ↓  yes → resolve the question: current, history, changes, conflicts, evidence
-  ↓        no relevant memory → return empty and say so, never pad with chunks
-  ↓        relevant memory    → add ranked chunks as raw material, then bound
-  ↓  no  → retrieval is the only source, and status says so
-```
-
-Illustrative envelope, not a measured result:
 
 ```json
 {
-  "query": "...",
-  "context": "CURRENT\n- The primary database is PostgreSQL. [CURRENT]\n  evidence: ...",
-  "status": "conflicting",
-  "memories": [
-    {
-      "status": "CURRENT",
-      "key": "architecture.database",
-      "claim": "The primary database is PostgreSQL.",
-      "value": "The primary database is PostgreSQL.",
-      "valid_from": null,
-      "supersedes_id": null,
-      "evidence": [
-        {
-          "quote": "The primary database is PostgreSQL.",
-          "path": "docs/storage.md",
-          "version_id": "...",
-          "observed_at": "2024-06-01T00:00:00+00:00",
-          "start_offset": 0,
-          "end_offset": 35
-        }
-      ]
+  "mcpServers": {
+    "mind-palace": {
+      "command": "mindpalace-mcp",
+      "env": { "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace" }
     }
-  ],
-  "conflicts": [{"key": "architecture.database", "options": []}],
-  "changes": [{"event": "MODIFIED", "path": "docs/storage.md", "relationship": "SUPERSEDES"}],
-  "chunks": [],
-  "sources": [],
-  "token_estimate": 412,
-  "budget_unit": "token_estimate",
-  "as_of": null,
-  "truncated": false
+  }
 }
 ```
 
-`status` is the contract a caller branches on:
+An agent asks `memory_recall` for an answer and `memory_explain` when it wants to
+know why the answer is trustworthy. Both return the same authoritative memory the
+CLI and the SDK do, with the same receipt.
 
-| Status | Meaning |
-|---|---|
-| `resolved` | Relevant memory found, no conflict among the selected keys |
-| `conflicting` | Relevant memory found and its sources disagree; both sides are returned |
-| `no_relevant_memory` | The archive holds material but none of it is relevant. The pack is empty |
-| `empty_corpus` | No archive and no retrieval results |
+---
 
-A conflicted key is never silently flattened to the latest writer. Retrieval results are
-raw material only: they appear in `chunks`, attributed, and never become a `memories`
-entry. `truncated` reports that something was dropped to fit `budget_tokens`.
+## From Python
 
-`memory.pack()` remains available for the exact character-bounded canonical envelope.
-The two budget units are different: `context()` bounds delivered text by
-`budget_tokens`, `pack()` bounds the complete canonical JSON by characters.
+```python
+from mindpalace_sdk import MindPalace
 
-### Retrieval architecture and prior findings
+client = MindPalace()                              # no configuration required
+
+client.remember("We will use PostgreSQL as the primary datastore.", key="decision.datastore")
+result = client.recall("Which datastore did we choose?")
+
+for memory in result.current_memories:
+    print(memory.claim, memory.path, memory.status)
+
+explained = client.explain("Which datastore did we choose?")
+print(explained.receipt["memory_pack_digest"])     # why it was returned, provably
+```
+
+Two complete runnable versions:
+
+- [`examples/decision-memory/`](examples/decision-memory/) — the whole product in one
+  file, from `remember` to `verify`.
+- [`examples/project-log/`](examples/project-log/) — this project's own decision log
+  as memory. The questions a contributor actually asks, answered with the evidence
+  attached, and honestly abstained on where nothing was decided.
+
+### Against a service someone else runs
+
+```python
+client = MindPalace(base_url="http://127.0.0.1:8000")
+```
+
+Everything above works unchanged over HTTP.
+
+### Sharing the warm runtime with a script
+
+```python
+client = MindPalace(runtime=True)     # opt in; off by default
+```
+
+Optional, and rarely needed: a long-running application has the model resident
+already, so this would only add a socket hop. It is for short-lived scripts that
+would otherwise pay the model import per process. Every result is identical either
+way, which is asserted rather than assumed.
+
+---
+
+## What it does not do
+
+Stated up front, because the trust boundary is part of the product:
+
+- It does not decide what is **true**. It records what was asserted, with the
+  source that asserted it. `VERIFIED` means the receipt still matches the memory
+  it describes — never that the claim was correct.
+- It does not infer memory. Nothing is extracted from text automatically. Every
+  claim is authored and every claim carries the exact characters that support it.
+- It does not need an LLM, and it does not need an embedding model to record,
+  answer, or verify memory. Ranking uses one when it is available and degrades to
+  lexical matching when it is not.
+- **Corpus content is data, not instructions.** Retrieved text is never promoted
+  into trusted system instructions. Anything that can write a document can put text
+  into a recall response, so a model that reads one without that distinction is a
+  prompt-injection surface. Enforcing that boundary is the consuming application's
+  job, not this one's. The rest of the security posture —
+  [what is *not* tamper-proof, authenticated, or an access-control system](docs/operations.md#security-posture)
+  — is written down rather than assumed.
+
+---
+
+## Progressive disclosure
+
+The product is three layers, and you stop at the one you need.
+
+| Level | You need | Commands |
+|---|---|---|
+| **Simple** | to use memory | `remember`, `recall` |
+| **Explainable** | to trust it | `explain`, `history`, `recall --explain` |
+| **Verifiable** | to hand it to someone else | `receipt`, `verify` |
+| **Agent-native** | to let an agent use it | MCP |
+| **Production** | to run it | idempotent writes, auth, telemetry |
+
+Nothing below the line you are standing on is required to use the layer above it.
+Claim IDs, evidence IDs, validity intervals, Memory Pack internals, pgvector,
+retrieval policies and receipt digests are all real and all progressive: they
+appear when you ask for them, and never in the first five minutes.
+
+---
+
+## How it works
+
+Everything above is a thin surface over one model. Read this section when you
+want the guarantees rather than the commands.
 
 ```text
-Markdown → parse (frontmatter + heading paths) → chunk (structure-aware)
-        → embed (all-MiniLM-L6-v2, 384-dim, normalized)
-        → PostgreSQL + pgvector (HNSW)
-        → hybrid retrieval (vector + pg_trgm keyword)
-        → Reciprocal Rank Fusion
-        → optional cross-encoder reranking (opt-in)
-        → context packing (budgeted, attributed)
+L0  source and verbatim versions      immutable
+L1  authoritative knowledge            claims, evidence, validity,
+                                        supersession, conflicts, snapshots
+L2  derived retrieval                 embeddings, chunks, caches, indexes
 ```
 
-**Default strategy: hybrid + RRF.** Measured on a 202-document benchmark,
-all non-reranked strategies are statistically indistinguishable on Recall@3
-(paired bootstrap, 95% CI). RRF is preferred because rank fusion needs no
-score calibration as the corpus evolves. Vector-only (~6 ms) is an equivalent-
-quality fast path. Reranking shows point-estimate gains but costs ~1.7 s per
-query—opt-in only.
+L2 may be deleted and rebuilt without changing a single byte of authoritative
+memory. `mindpalace reindex` rebuilds it from the archive. That separation is why
+a first memory works with no model and why a receipt verifies with no model.
 
-The separate retrieval evaluation has **202 documents and 98 queries across 14
-categories**, including lexical, semantic, terminology mismatch, negative,
-metadata-filtered, similar-title, section-level, and multi-document cases. Ground
-truth is hand-labeled and mechanically validated against corpus metadata;
-strategy comparisons use paired bootstrap confidence intervals.
+A remembered statement becomes one document under `memory/` carrying one authored
+claim. The claim text is the statement; the evidence quote is the same characters,
+so the archive's exact-substring rule can always re-verify them against the stored
+bytes. Version identity derives from content, which is what makes an identical
+write idempotent.
+
+### The guarantees
+
+- **Authority.** Every claim has at least one evidence span, enforced by the
+  database, and each span must be an exact substring of an archived chunk.
+- **Append-only.** Version, claim, evidence and snapshot tables reject `UPDATE`,
+  `DELETE` and `TRUNCATE` at the trigger level. History is not editable.
+- **Idempotency.** One corpus-scoped advisory lock plus a content fingerprint.
+  The same write twice, concurrently, or after a lost response resolves to one
+  version. No queue, no distributed lock.
+- **Supersession.** Remembering the same key again supersedes the previous claim;
+  the old one stays readable with its own identity.
+- **Temporal.** `as_of` reconstructs the archive as it was, so a question asked
+  before a change is answered with the value that was true then.
+- **Abstention.** A question the archive does not cover returns nothing with a
+  stated constraint. Nothing is generated.
+
+---
+
+## Surfaces
+
+One service, four doors. They cannot disagree, and there is a permanent test that
+proves it.
+
+| Surface | Entry point |
+|---|---|
+| CLI | `mindpalace remember \| recall \| explain \| history \| receipt \| verify` |
+| Python SDK | `MindPalace().remember() / .recall() / .explain() / .history()` |
+| REST | `POST /api/memory/remember`, `POST /api/memory/query`, … |
+| MCP | `memory_recall`, `memory_explain`, and the archive operations |
+
+Every one returns the same authoritative memory, the same evidence, the same
+temporal state and the same receipt.
+
+`POST /api/memory/remember` takes a statement and nothing else. Reading a file is
+a decision for a trusted operator at their own machine — `mindpalace remember
+--file` and the SDK's `file=` do it, and the HTTP endpoint deliberately does not,
+because it has no authentication and a path would let any caller read a file
+relative to the server and recall its contents.
+
+### The full memory API
+
+The five commands above are the product. The rest exists when you need it:
 
 ```bash
-python -m cli.main eval strategies --candidates 10,20,50 --details
+mindpalace memory current     --corpus C --query "..."   # what is true now
+mindpalace memory changes     --corpus C                 # what changed
+mindpalace memory evidence    --corpus C --claim-id ID   # why one claim holds
+mindpalace memory as-of       --corpus C --as-of T       # what was true at T
+mindpalace memory snapshot    --corpus C                 # freeze a state
+mindpalace memory replay      --corpus C --snapshot-id ID # read a frozen state
+mindpalace memory pack        --corpus C                 # bounded context for a model
+mindpalace memory feed        --corpus C                 # durable change feed
 ```
 
-See [eval/EVALUATION.md](eval/EVALUATION.md) for methodology, intervals, failure
-analysis, and superseded-results history. These findings validate regression
-safety and expose failure classes; they do not prove superiority over other
-retrieval systems or memory quality.
+`mindpalace memory query` exposes the full operation: intent selection, an
+explicit budget, and selectors such as `--claim-id` and `--snapshot-id`.
 
-## How Mind Palace compares
+---
 
-| Category | What it gives you | What you still have to build | Mind Palace's difference |
-|---|---|---|---|
-| Vector databases (pgvector, Pinecone, Qdrant) | Storage + similarity search | Parsing, chunking, sync, context assembly, attribution | Owns the corpus-to-context pipeline on pgvector |
-| RAG frameworks (LangChain, LlamaIndex) | Composable retrieval abstractions | Your evaluation, gates, provenance policy | Ingestion-to-context plus explicit assertion history |
-| Agent memory (mem0, Zep) | Conversation/episodic memory | Corpus ingestion | Evolving corpus assertions, not conversation experience |
-| MCP memory servers | Protocol transport | Storage and memory policy | Retrieval and memory tools with budgets and provenance |
-| Document search | Keyword/lexical matching | Embeddings, context assembly, budgets | Hybrid live retrieval alongside archived memory |
+## Errors
 
-Mind Palace is not a database or an agent framework. It is a focused corpus-memory
-layer between authored knowledge and AI consumers. The retrieval benchmark,
-`tests/test_api_contract.py`, and evolving-corpus assertions validate different
-contracts; none establishes perfect truth or production readiness.
+Failures answer what happened, why, and what to run.
 
-## Security posture
+```console
+$ mindpalace recall "..."   # with the database stopped
+Mind Palace needs persistent storage, and it could not reach it.
 
-> **Corpus content is data, not instructions.**
+Why: it could not connect to PostgreSQL at localhost:5432.
 
-Do not promote retrieved text into trusted system instructions. Mind Palace
-attributes evidence; consuming applications must enforce their own trust boundary.
-Authentication is not implemented: restrict REST and MCP to trusted callers and
-add authentication/authorization before exposing sensitive data. Namespace SQL
-scoping is not an access-control system.
+What to do:
+  docker compose up -d postgresql
 
-Database credentials come from `DATABASE_URL`; example defaults are for disposable
-local containers. Archive tables are append-only under ordinary DML, not tamper-proof
-against the database owner. Deleting source files or calling corpus deletion is
-not an archive-retention/erasure solution.
+Then check it works:
+  python -m alembic -c migrations/alembic.ini upgrade head
+  mindpalace init
+```
+
+`--verbose` appends the underlying exception. It is never the only thing you see,
+and never the first thing.
+
+---
+
+## Production
+
+- **Idempotent writes.** Same write twice, concurrently, or after a lost response:
+  one version, one claim, one identity. Proven by test.
+- **Authentication.** Local development needs none, and the quickstart never asks
+  for one. For a shared deployment see
+  [Production authentication](docs/operations.md#authentication).
+- **Observability.** Optional OpenTelemetry instrumentation on `memory.remember`,
+  `memory.recall`, `memory.explain`, `memory.receipt`, `memory.verify`,
+  `runtime.start` and `runtime.model_load`. It is off unless you install and
+  configure it, and it never carries memory content.
+- **Performance.** Measured, not claimed. See
+  [performance](docs/performance/REPORT.md) and
+  [the five-minute path](docs/performance/five-minute-path.md).
+
+---
+
+## Documentation
+
+| | |
+|---|---|
+| [First-use audit](docs/product/first-use-audit.md) | the problems earlier releases fixed, and how they were reproduced |
+| [Developer experience](docs/product/developer-experience.md) | every documented path, verified |
+| [Decision memory example](examples/decision-memory/) | the whole product in one file |
+| [Project decision log example](examples/project-log/) | a real project's decisions, as memory |
+| [Operations](docs/operations.md) | deployment, the local runtime, model-free mode, security posture, authentication, observability |
+| [Status](docs/STATUS.md) | what is measured, what is outstanding |
+| [Release map](docs/release-map.md) | milestone to version |
+| [Architecture](docs/architecture/) | how the layers fit |
+| [Evaluation](docs/evaluation/) | the frozen benchmarks and their results |
+
+## Contributing
+
+```bash
+make setup        # virtualenv, dependencies, editable install
+make dev          # start PostgreSQL
+make migrate      # apply the schema
+make test         # the full suite, against real PostgreSQL
+```
+
+The suite needs a PostgreSQL URL: set `DATABASE_URL` or `MEMORY_TEST_DATABASE_URL`.
+It creates a random schema per test and rolls it back; no test writes to your
+production schema.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+<!--
+Everything below this line is reference material. The five-minute path above is
+complete on its own; start there.
+-->
+
+---
+
+# Reference
+
+## Why memory beyond RAG?
+
+Retrieval returns the passage that best matches a query. It does not know that the
+passage was wrong last month, that a newer document supersedes it, or that two
+sources disagree. Mind Palace answers a different question: *what was recorded,
+when, and on what basis?*
+
+The corpus owns the memory. An application asks a question and receives claims
+with status, validity, evidence and conflicts, not chunks to re-rank. That is why
+an answer can be exported, checked, and defended without the retrieval stack.
+
+## Core memory model
+
+A **claim** is one authored statement with a key, a validity window and a status.
+Each claim carries **evidence**: exact character spans of one immutable document
+version, verified by the database. When a claim is replaced, the archive records
+**supersession** rather than overwriting, so both the old and new values remain
+addressable and the transition is dated.
+
+Two claims that are current at the same time, on the same key, with different
+values, form a **conflict**. Mind Palace reports both with their sources instead of
+picking one.
+
+```text
+              ┌──────────────┐
+   NEW ──────▶│   CURRENT    │──── superseded by ──┐
+              └──────┬───────┘                    │
+                     │ evidence                   │
+                     ▼                            ▼
+            document version ──────────────►  new version
+              (immutable)                       (immutable)
+```
+
+## Verifiable Memory
+
+A **Memory Receipt** records what Mind Palace actually returned to one application,
+for one query, at one historical state: the claim identity and version, the
+document version and path that carried it, its evidence with offsets, its validity
+window, its supersession lineage, the authoritative digest, and an embedded proof.
+
+A **Memory Pack** is the bounded, portable slice of authoritative memory the
+receipt covers. It is a plain JSON artifact: model-independent, and readable with
+`memory_pack.py`, which is standard-library-only.
+
+Verification establishes **integrity and recorded provenance** — that the artifact
+still represents the state the receipt describes, and that no covered record has
+been altered since. It does **not** establish that the original source was
+factually correct. A digest alone does not establish **authenticity**: a party able
+to replace both the artifact and the receipt can recompute the digests. Supply
+`--trusted-digest` with a value pinned out of band and authenticity becomes
+checkable. `verify` states the unestablished case explicitly rather than letting a
+digest imply more than it shows.
+
+```bash
+# The dependency-free verifier, for environments without the CLI extras.
+mindpalace-proof verify receipt.json --pack memory-pack.json
+mindpalace-proof explain receipt.json --pack memory-pack.json
+```
+
+Existing v0.8.0 receipts remain verifiable. The receipt schema is version 1 and
+Memory Pack is version 1; neither changed.
+
+## Corpora
+
+A corpus is a namespace of memory. The default is `default`, which exists from the
+first migration, so the first command never has to mention one. Pass `--corpus`
+(or `corpus=`) to scope memory explicitly; that is the multi-tenant boundary, and
+it is the only reason to know the word.
+
+```console
+$ mindpalace corpora
+default
+decision-memory-1f4a9c02
+```
+
+## Ingesting documents
+
+`remember` is for facts. `sync` is for a directory of Markdown you already have,
+which is where authored claims live:
+
+```markdown
+---
+title: Deployment architecture
+date: 2026-02-01
+claims:
+  - key: architecture.datastore
+    value: PostgreSQL
+    claim: The primary datastore is PostgreSQL.
+    evidence: The primary datastore is PostgreSQL.
+---
+
+# Deployment architecture
+
+The primary datastore is PostgreSQL. It runs in three availability zones.
+```
+
+```bash
+mindpalace ingest-repo ./docs
+```
+
+The `claims:` block is the authoring interface: it says what to remember, and the
+evidence quote must appear verbatim in the document. Nothing is inferred, because
+inference is where memory systems quietly start lying about their evidence.
+
+## Retrieval
+
+Retrieval is an optimization on top of the archive, not the product. The archive
+decides what is true, what changed, what conflicts and what is absent; ranking only
+adds raw source material, and is skipped when no embedding model is available. A
+missing model downgrades recall from semantic to lexical to authoritative-only, and
+says on stderr that it did — a silent fallback would be indistinguishable from a
+semantic answer, and the two select different keys. It never removes the answer.
+`MIND_PALACE_LEXICAL=1` chooses that rung on purpose:
+[model-free mode](docs/operations.md#model-free-lexical-mode).
 
 ## Project structure
 
 ```text
-api/
-├── routers/               # REST corpora, ingest, search, query, context, memory
-├── models/                # Pydantic retrieval and memory contracts
-└── services/
-    ├── corpora.py         # corpus namespaces
-    ├── ingestion.py       # sync/reconciliation pipeline
-    ├── parser.py          # frontmatter + heading-path extraction
-    ├── embedder.py        # sentence-transformers wrapper
-    ├── retrieval.py       # vector/hybrid/RRF/reranked search
-    ├── reranker.py        # cross-encoder (opt-in)
-    ├── context_packer.py  # live context packs
-    ├── memory.py          # versioned assertion archive
-    ├── memory_public.py   # shared public projection and packing
-    ├── memory_benchmark.py # rolled-back semantics evaluation
-    ├── evaluation.py     # Recall/Precision/MRR/nDCG
-    ├── benchmark.py      # retrieval strategy comparison
-    └── confidence.py     # bootstrap CIs, paired differences
-
-mindpalace_sdk.py          # Python SDK
-mcp_server.py              # MCP integration
-cli/                       # Typer CLI
-content_eval/              # 202-doc retrieval corpus
-eval/                      # retrieval and memory benchmark manifests
-migrations/                # Alembic migrations and extensions
-tests/                     # unit, contract, integration, migration tests
-examples/                  # docs, persistent demo, rolled-back A–G demo
+api/            FastAPI app, services, and the authoritative memory model
+  models/       the public v1 contract; no persistence models exposed
+  routers/      REST adapters
+  services/     memory archive, ingestion, retrieval, relevance
+cli/            Typer CLI, rendering, error text
+migrations/     Alembic migrations
+memory_pack.py  dependency-free portable memory reader
+memory_receipt.py  the receipt contract, standard library only
+memory_proof.py    proof construction and verification
+memory_proof_cli.py standalone verifier, no optional dependencies
+mindpalace_sdk.py  the SDK
+mcp_server.py   MCP server
+tests/          the suite, against real PostgreSQL
+examples/       runnable examples
+docs/           status, operations, research, release notes
+scripts/        benchmarks, probes, release checks
 ```
 
-## Development
+## Evaluation
+
+The retrieval and memory benchmarks are frozen artifacts with published results,
+run offline against deterministic fixtures. They test semantics, not
+question-answering quality, and the reports say so on their face.
 
 ```bash
-pytest -q                       # DB-backed tests require configured PostgreSQL
-DATABASE_URL=... pytest -q      # full suite incl. integration tests
-make migrate
-black --check api cli tests migrations --line-length 100
-flake8 api cli tests migrations --max-line-length=100
-python -m cli.main eval strategies
+mkdir -p eval/results
+python -m cli.main eval memory --repetitions 20 --save eval/results/memory.json
 ```
 
-## Contributing
-
-Contributions welcome. Please open an issue before large architectural changes.
-Retrieval changes must include benchmark evidence.
-
-## License
-
-Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+See [docs/evaluation/](docs/evaluation/) for what each benchmark measures and what
+its numbers do not claim.

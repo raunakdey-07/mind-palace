@@ -4,6 +4,278 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.9.0] - 2026-10-08
+
+Milestones `M015.2` (five-minute memory path) and `M016` (instant recall, explicit
+model-free mode, real-project dogfooding), consolidated into one public release. They
+are one milestone for a product: `v0.9.0` is the release in which Mind Palace becomes
+something a developer can install, use in five minutes, and keep.
+
+Verification still establishes integrity and recorded provenance. It does **not**
+establish that the original source was factually correct, and it does not establish
+authenticity unless a digest pinned out of band is supplied.
+
+### Five-minute memory workflow
+
+```console
+$ mindpalace init
+$ mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+Remembered.
+  version: 5aae989d3134 (new)
+  corpus:  default
+  path:    memory/datastore-aa7e5b234e1d.md
+
+$ mindpalace recall "What datastore does production use?"
+The production datastore changed from SQLite to PostgreSQL.
+   source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
+   time:   true as of 2026-10-08 03:40 UTC
+```
+
+Seven commands — `init`, `remember`, `recall`, `explain`, `history`, `receipt`,
+`verify` — that take a statement and a question.
+
+- **The default corpus.** No `--corpus` on the first command. Scoping stays available
+  for anyone who needs it.
+- **Idempotent writes.** The same statement twice returns the same `version_id` and
+  `changed=false`. Four concurrent identical writes produce exactly one version and
+  one claim, so a retry after a lost response converges instead of duplicating.
+- **A statement becomes authoritative memory**, with exact-substring evidence, through
+  the same archive a synced document uses. Not a search index entry.
+- **Concise recall.** Answer, source, and the time it was true. Depth is on request.
+- **Explicit abstention.** `NO_RELEVANT_MEMORY`, never a guess, and never evidence
+  cited for an abstention.
+- **Evidence-aware `explain`**: the exact characters that support the answer, its
+  supersession history, and whether a receipt is available to export.
+- **Writes need no embedding model.** `remember` never imports the model stack.
+
+### Instant repeated reads
+
+A local runtime keeps the embedding model and the database pool warm, and the CLI uses
+it without the user choosing to.
+
+| command | before | after |
+|---|---|---|
+| `mindpalace recall` | 6.17 s | **0.63 s** |
+| `mindpalace explain` | 6.23 s | **0.67 s** |
+| `mindpalace receipt` | 6.21 s | 0.62 s |
+| `mindpalace history` | 0.81 s | 0.61 s |
+| `mindpalace verify` | 0.56 s | 0.56 s |
+| SDK `recall`, fresh process | 5.11 s | **0.51 s** (opt-in `runtime=True`) |
+
+MCP is unchanged, and correctly so: an MCP server is a long-lived process and pays the
+import once.
+
+The cause was measured with `-X importtime` rather than assumed. A one-shot recall was
+6.53 s, of which 5.32 s was `import sentence_transformers` (1.68 s `torch`, 1.20 s
+`transformers`, 2.66 s the rest), 0.49 s was model construction, and **61 ms was the
+memory work**.
+
+- `mindpalace runtime start | stop | status`, including `--json`. Optional: every
+  command works with no runtime at all, and `MIND_PALACE_RUNTIME=0` turns it off
+  everywhere.
+- **Crash and stale-socket recovery.** A killed runtime leaves a socket file; the next
+  command removes it and starts a fresh one. SIGTERM finishes any in-flight request,
+  unlinks the socket and exits 0. Idle 15 minutes, it exits on its own.
+- **Unix socket only.** A 0700 directory, a 0600 socket, and a token read from a 0600
+  file — never from a command line, where any local user could read it out of `ps`.
+  No code path binds a TCP port, and there is a test that asserts it.
+- **Protocol versioning.** A runtime refuses a request that asks for a different
+  protocol, with an instruction to restart it, rather than answering with the
+  semantics of the build it was started from.
+- **No model, no silent different answer.** If the model cannot load, the runtime
+  records the reason and the read takes the same path it would have taken without a
+  runtime.
+
+### Verifiable memory
+
+Carried forward unchanged from v0.8.0 and now reachable from every surface.
+
+- Receipts on REST, SDK, MCP and the CLI; `mindpalace receipt` writes a self-contained
+  file.
+- **Offline verification.** `mindpalace verify` needs no server, no database, no model
+  and no network. So does `mindpalace-proof`, on a bare `pip install mindpalace-os`
+  with no CLI extra, because the receipt carries the response it describes.
+- **Cross-surface parity.** CLI, SDK, REST and MCP return the same authoritative
+  memory, evidence, temporal state and receipt. The runtime path does too, asserted in
+  `tests/test_m016_runtime_equivalence.py`.
+- **Memory Pack v1** unchanged, and byte-identical whether produced in-process or
+  through the runtime.
+
+### Explicit model-free mode
+
+`MIND_PALACE_LEXICAL=1` reads through the lexical relevance rung that already existed
+as the no-model degradation, taken on purpose.
+
+| | semantic | `MIND_PALACE_LEXICAL=1` |
+|---|---|---|
+| `recall`, cold process | 6.17 s | **0.63 s** |
+| `explain`, cold process | 6.23 s | **0.67 s** |
+| model stack imported | yes | **none** |
+
+It is documented as a deliberate trade-off, not a substitute. On a ten-fact corpus
+across sixteen question shapes the two modes agreed on fifteen; the difference was an
+abstention that semantic ranking did not make. Nothing was weakened to make them
+agree.
+
+**A lexical fast path.** A more attractive design was measured and *not* shipped:
+find candidates lexically, then load the semantic model only when that looks
+insufficient. It would have removed the 5.3 s import from every command rather than
+from all but the first, and on 15 of 16 questions it was indistinguishable from the
+semantic path. The sixteenth is the abstention above, and shipping it
+would have made `NO_RELEVANT_MEMORY` depend on whether the model happened to be
+cached on the machine — the exact acceptance coupling that would make an abstention
+unreproducible across two developers' laptops.
+
+An explicit mode is honest about the trade-off; an automatic one hides it. Details in
+[docs/operations.md](docs/operations.md#model-free-lexical-mode).
+
+### Developer experience
+
+- **A public-only example.** `examples/project-log/` uses this repository's own
+  decision history as memory. It imports `mindpalace_sdk` and nothing else: no
+  `api.services`, no `api.db`, no internal retrieval module, no SQL. If it needed a
+  change to work, the SDK would not be usable yet.
+- **Errors answer what happened, why, and what to do.** Two were leaking internals and
+  are fixed: a bad `--as-of` produced a raw pydantic message, and an unreadable receipt
+  file did not say what a receipt is or how to write one.
+- **Deterministic JSON.** `recall`, `explain` and `history` return the public
+  response contract, verified key-for-key against the SDK. `explain --json` now emits
+  the same `{response, receipt}` bundle `mindpalace receipt` writes, instead of
+  silently dropping the receipt the human-readable form shows.
+- **One failure, one exception class.** The in-process SDK path raised the service's
+  own `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`, so
+  which one a caller needed depended on whether a runtime happened to be running. All
+  three now raise `MemoryClientError` with the same code, message and status. A genuine
+  defect is still not disguised as an API failure.
+- **`mindpalace runtime status`** when a command feels slow, without dumping internals.
+
+### Fixed
+
+Defects found by review and dogfooding in this release, each now covered by a
+regression test:
+
+- **A multi-line statement, and `remember --file` on any Markdown file, could not be
+  recorded at all.** The frontmatter quote collapsed line breaks while the document body
+  kept them, so the evidence the archive was told to cite was never an exact substring
+  of the archived chunk.
+- A statement beginning with `#` was chunked as a heading and rejected for the same
+  reason.
+- `POST /api/memory/remember` accepted a `file` path. On an endpoint with no
+  authentication, that let any caller read a file relative to the server's working
+  directory and recall its contents. The field is gone from the HTTP contract;
+  `mindpalace remember --file` and the SDK's `file=` still read local files, which is a
+  decision for a trusted operator.
+- The REST response computed the claim key and document path independently of the write,
+  so a whitespace-padded statement was reported under a key the archive did not hold —
+  and a client retrying with that key would have written a second memory instead of
+  recognising the first.
+- An imported file's absolute path became part of its memory identity.
+- `explain` attached the change set to the response *after* its receipt digest was
+  computed, so the digest it printed no longer described what it printed.
+- Two different keys that reduced to the same filename shared one document, so an
+  unrelated fact could supersede another.
+- `mindpalace verify` rejected a bare receipt or proof that `mindpalace-proof verify`
+  accepts. One verification contract now.
+- `mindpalace_runtime` was not packaged, so on an installed wheel the runtime silently
+  never started and every command stayed 6 seconds.
+- A read discarded the claim vectors it had just computed. A corpus authored without
+  embeddings was re-encoded on every read; it is now encoded once.
+- A runtime that loaded slowly was reported as `loading` by `start --wait`, which read
+  that as failure.
+
+### Changed
+
+- `memory_query` now writes back the claim vectors it had to embed. This overturns a
+  documented "a query never writes" decision, so it is bounded rather than assumed safe:
+  its own `SAVEPOINT`, skipped on a read-only session, best-effort, and a partial batch
+  is discarded when the lexical fallback runs. The cache holds no authority, so every one
+  of those boundaries costs latency and nothing else.
+- **The relevance acceptance gate tests overlap against full claim terms** rather than
+  terms reduced by the set shared with every candidate. Shared terms cannot discriminate
+  between candidates, so ranking still uses the reduced set; but they are not evidence
+  that a question is off-topic, and using them for acceptance made any question about a
+  subject unanswerable once a second claim shared that subject. This is the only
+  retrieval change since M013.
+- A read that fell back to lexical because no model loaded now says so on stderr, once.
+  The degradation is correct and long-standing; what was missing was that it was silent.
+
+### Measured
+
+`scripts/five_minute_probe.py`, 200 remembered statements, on mains power, around the
+service call: `remember` p50 10.8 ms, `recall` p50 92.6 ms, `explain` p50 93.8 ms,
+`verify` p50 0.82 ms in a separate interpreter with no database URL and no network.
+At 1000 statements `remember` and `verify` stay flat and `recall` reaches p50 988 ms,
+because the authoritative projection loads the version graph before relevance narrows
+anything.
+
+Full numbers, method and limits:
+[docs/performance/five-minute-path.md](docs/performance/five-minute-path.md). Every
+latency figure in this repository's history before v0.9.0 was taken on battery, where
+the same probe is 3 to 4× slower; compare within a condition, not across them.
+
+### Compatibility
+
+- **Memory semantics are unchanged.** Claim identities, evidence, provenance, temporal
+  validity, supersession, conflicts and abstention are byte-identical between the
+  runtime and the in-process path across ordinary, weakly related, absent, temporal,
+  conflict and multi-topic queries.
+- Memory Pack stays at version 1. The receipt schema stays at version 1. No migration,
+  so existing v0.8.0 receipts remain verifiable and the frozen benchmark is untouched.
+- `MemoryResponse` and every existing route, SDK method and MCP tool are unchanged.
+  `memory_query` is kept alongside `memory_recall`; both reach the same service.
+- The local runtime is never required: `MIND_PALACE_RUNTIME=0`, `MindPalace(runtime=…)`
+  defaults to off, and a platform without `AF_UNIX` runs in-process.
+- `sentence-transformers` remains a declared dependency, so a plain install keeps
+  ranking semantically by default. Nothing in the package needs it merely to import or
+  to run a command, which is asserted by blocking the model stack at the import hook.
+
+### Frozen benchmark, unchanged
+
+No benchmark question, policy, evaluator semantic, tokenizer or retrieval threshold
+was touched by this release. That is now **measured, not asserted**: re-running the
+frozen held-out suite under both source trees produces **60 of 60 identical canonical
+per-question decisions** between `v0.8.0` and `v0.9.0`, with 0 execution failures and
+all seven safety invariants passing in both.
+
+- **M006.75 frozen held-out benchmark** — 60 scenarios, **45/60 (75.0%)** exact and
+  55/60 abstention-exact on the current source, 0 execution failures, and **all seven
+  safety invariants at 60/60** (provenance, temporal scope, status, conflict closure,
+  current-authority preservation, truncation, budget containment).
+- **M006.5 added-question set** — 40 questions, **30/40 (75%)** exact, 0 safety
+  failures across 264 output cases.
+- **M013 held-out v1** — 157 independently authored questions, **131/157 (83.4%)**.
+
+The safety invariants are at 1.000; retrieval accuracy is not, and this release does
+not conflate the two.
+
+**One discrepancy is reported rather than fixed.** The frozen artifact
+`eval/m00675/result.json` records 47/60, which the current source no longer
+reproduces — and did not already at `v0.8.0`. The drift is four questions, all of the
+same shape: the expected subject is still recalled and extra keys are admitted beside
+it. The artifact's own `--verify` source check fails on `v0.8.0` too, and its recorded
+source fingerprint matches no commit. Its **frozen inputs verify unchanged** (dataset
+and policy hashes), which is the check that protects benchmark semantics. The artifact
+was deliberately **not** regenerated: a re-run is a new research result, and
+publishing one under the frozen `M006.75` name would misreport research as a product
+gate. Full measurement and the likely cause are in
+[the reproducibility report](docs/evaluation/m00675-reproducibility.md).
+
+The 131/157 figure remains a generalisation result and a research limitation, and is
+not superseded by the frozen benchmark: they were authored for different purposes and
+answer different questions.
+
+### Known limitations
+
+- Recall grows linearly past a few hundred statements; the authoritative projection loads
+  the version graph. That work is the guarantee, not overhead to be trimmed.
+- The first command in a fresh process pays a ~5.3 s model import unless a runtime is
+  already warm, or `MIND_PALACE_LEXICAL=1` is set.
+- Authentication is a documented contract, not implemented code.
+- Receipts are not signed; `--trusted-digest` covers authenticity against a value the
+  user pinned themselves.
+- Lexical mode selects different keys from semantic mode on vocabulary-poor questions,
+  by design.
+
 ## [v0.8.0] - 2026-10-05
 
 ### Verifiable Memory

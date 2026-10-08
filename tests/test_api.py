@@ -47,8 +47,33 @@ async def test_health_endpoint():
     assert response.status_code == 200
 
 
+def _working_embedder():
+    """A vector producer that works, so a test can reach the search call.
+
+    `/api/search` embeds the query *before* it searches, and that embed needs the
+    embedding model. Two tests below patch `RetrievalService.search` and expect to
+    observe its behaviour -- so they must also satisfy the step in front of it.
+
+    They used to depend on the developer machine happening to have the model
+    cached. On a runner with no model cache and `HF_HUB_OFFLINE=1`, the embed
+    raised, the endpoint answered 503, and one test failed while the other passed
+    *for the wrong reason*: its 503 came from the model, not from the database
+    outage it was written to check. Both failures were the same missing
+    precondition, so both now state it explicitly.
+
+    A model that genuinely cannot be loaded is a separate, already-tested contract:
+    see `test_semantic_dependency_failure_is_sanitized_503`.
+    """
+    return Mock(embed_single=Mock(return_value=[0.0] * 8))
+
+
 @pytest.mark.asyncio
 async def test_search_endpoint_no_results():
+    """A search that ran and matched nothing is 200 with zero results.
+
+    Not a 503. 'No results' and 'backend down' are different answers and a client
+    must be able to tell them apart.
+    """
     transport = ASGITransport(app=app)
 
     with (
@@ -57,6 +82,7 @@ async def test_search_endpoint_no_results():
             new_callable=AsyncMock,
             return_value=("c1", "docs"),
         ),
+        patch.object(search_router, "embedder", _working_embedder()),
         patch(
             "api.routers.search.RetrievalService.search",
             new_callable=AsyncMock,
@@ -74,13 +100,18 @@ async def test_search_endpoint_no_results():
             )
 
     assert response.status_code == 200
+    # Asserted, not assumed: if the embed had failed the handler would have raised
+    # before searching, and this count is what proves the search actually ran.
     mock_search.assert_awaited_once()
     assert mock_search.await_args.kwargs["corpus_id"] == "c1"
+    assert mock_search.await_args.kwargs["query_vector"] == [0.0] * 8
+    assert mock_search.await_args.kwargs["query_text"] == "unlikely-query"
 
     data = response.json()
 
     assert data["results"] == []
     assert data["total"] == 0
+    assert data["query"] == "unlikely-query"
 
 
 @pytest.mark.asyncio
@@ -97,6 +128,7 @@ async def test_search_backend_unavailable_is_503_not_empty():
             new_callable=AsyncMock,
             return_value=("c1", "docs"),
         ),
+        patch.object(search_router, "embedder", _working_embedder()),
         patch(
             "api.routers.search.RetrievalService.search",
             new_callable=AsyncMock,
@@ -111,7 +143,12 @@ async def test_search_backend_unavailable_is_503_not_empty():
             response = await client.get("/api/search", params={"q": "anything"})
 
     assert response.status_code == 503
-    assert "unavailable" in response.json()["detail"].lower()
+    # The exact detail, not merely a word. 'unavailable' also appears in
+    # 'Semantic model unavailable', so a loose assertion here passes even when the
+    # database outage never happened -- which is exactly what it did.
+    assert response.json()["detail"] == "Search backend unavailable"
+    # And the search really was reached, so the 503 came from where it claims.
+    mock_search.assert_awaited_once()
 
 
 @pytest.mark.asyncio

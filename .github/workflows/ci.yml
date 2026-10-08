@@ -38,6 +38,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -78,52 +79,53 @@ jobs:
         run: |
           python -m cli.main eval memory --embeddings fixture --repetitions 1
 
-      # The embedding model is a declared dependency, so the runner needs the
-      # weights before it can test the *default* semantic path. Without this step the
-      # runner has the package but not the model, and every test that indexes or
-      # ranks anything fails on `OSError: We couldn't connect to ...` — 41 of them,
-      # hidden behind `--maxfail=1`, which reported only the first.
+      # The model weights are declared dependencies, so the runner has to have them
+      # before it can test the *default* read path. Without this, the runner has the
+      # package but not the model, and 41 tests fail on `OSError: We couldn't connect
+      # to ...` -- every test that indexes or ranks anything. `--maxfail=1` reported
+      # only the first, so a green local run and a red CI run coexisted through a
+      # release. A developer machine already had the cache, which is what hid it.
       #
-      # Downloaded once here rather than per test, and offline mode is still set on
-      # the test step below: the tests must not need the network, but they do need
-      # the model. The two are different requirements and conflating them is what
-      # made this gap invisible.
-      - name: Provision the models
+      # Both models, because both are exercised: the embedder is the default read
+      # path, and `test_search_semantics.py` covers `rerank=true` with no guard. The
+      # cross-encoder is documented as optional for a deployment, which is true, and
+      # irrelevant for a suite that claims to cover the feature.
+      #
+      # Revisions are pinned, not branches: `snapshot_download(repo)` resolves
+      # whatever `main` is today, so a green run says nothing about next week. The
+      # embedder's pin is the revision recorded in the frozen M006.75 artifact.
+      #
+      # Cache first, then download: a hit takes ~1s, a miss ~60s, because the
+      # snapshots are ~1.7 GB (they include every format variant, not just the
+      # safetensors). Both jobs share one key, so it is stored once. Correctness
+      # never depends on the cache, because `--verify` below refuses to proceed
+      # unless the pinned revisions are present and loadable. Cached under the
+      # default HF cache path only -- no secrets, both models are public.
+      - name: Cache the model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: models-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-1110a243fdf4706b3f48f1d95db1a4f5529b4d41-233902d25c440f23af6f7d6e94d2946bac0bee0a
+
+      - name: Provision the pinned model weights
         env:
           HF_HUB_OFFLINE: "0"
           TRANSFORMERS_OFFLINE: "0"
-        run: |
-          python - <<'PY'
-          import os
-          from huggingface_hub import snapshot_download
+        run: python scripts/ci/provision_models.py
 
-          # Two models, and the second is the reason this step exists at all. The
-          # embedder is the default read path; the cross-encoder powers
-          # `rerank=true` on /api/search, and `test_search_semantics.py` exercises
-          # it with no guard. It is documented as an optional model that an operator
-          # provisions separately -- which is true for a deployment, and not for a
-          # test suite that claims to cover the feature.
-          models = [
-              f"sentence-transformers/{os.getenv('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')}",
-              os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
-          ]
-          for repo in models:
-              print(f"provisioned {repo} -> {snapshot_download(repo)}")
-          PY
-
-      - name: Confirm the model loads with the network disabled
+      # Load each model through the application's own classes, offline, BEFORE any
+      # test runs. A missing model should cost one clear line here rather than 41
+      # failures forty minutes later. Checking that a directory exists would prove
+      # nothing; this loads the model the way the routers do.
+      - name: Verify the pinned models load offline
         env:
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
-        run: |
-          python -c "
-          from api.services.embedder import Embedder
-          e = Embedder()
-          vectors = e.embed(['provisioning check'])
-          assert len(vectors) == 1 and vectors[0], vectors
-          print('embedding model loads offline:', e.version)
-          "
+        run: python scripts/ci/provision_models.py --verify
 
+      # Everything from here needs no network. Two different requirements -- "the
+      # model must exist" and "the tests must not need the network" -- and conflating
+      # them is what made the original gap invisible.
       - name: Run tests
         env:
           MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
@@ -162,6 +164,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -174,22 +177,32 @@ jobs:
           python -m pip install -e .
           python -m alembic -c migrations/alembic.ini upgrade head
 
-      # This job exists to run the documented commands as a first-time user would,
-      # and the documented default is semantic. Without the weights, every read here
-      # would silently degrade to lexical and still pass — the job would stop testing
-      # what the README tells people to do. The job-level HF_HUB_OFFLINE stays set, so
-      # the download happens here and the commands themselves still run offline.
-      - name: Provision the embedding model
+      # This job runs the documented commands as a first-time user would, and the
+      # documented default is semantic. Without the weights, every read here would
+      # silently degrade to lexical and still pass — the job would stop testing what
+      # the README tells people to do.
+      #
+      # Same script and same pins as the `tests` job, deliberately: a second copy of
+      # this provisioning logic is how the two jobs drift apart and only one of them
+      # keeps working. Job-level HF_HUB_OFFLINE stays set, so the download happens
+      # here and the documented commands themselves still run offline.
+      - name: Cache the model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: models-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-1110a243fdf4706b3f48f1d95db1a4f5529b4d41-233902d25c440f23af6f7d6e94d2946bac0bee0a
+
+      - name: Provision the pinned model weights
         env:
           HF_HUB_OFFLINE: "0"
           TRANSFORMERS_OFFLINE: "0"
-        run: |
-          python -c "
-          import os
-          from huggingface_hub import snapshot_download
-          model = os.getenv('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
-          print('provisioned', model, '->', snapshot_download(f'sentence-transformers/{model}'))
-          "
+        run: python scripts/ci/provision_models.py
+
+      - name: Verify the pinned models load offline
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: python scripts/ci/provision_models.py --verify
 
       # The whole point of this milestone: the documented command sequence, run as
       # written, in a fresh environment, produces a useful memory result. It fails

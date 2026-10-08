@@ -78,13 +78,59 @@ jobs:
         run: |
           python -m cli.main eval memory --embeddings fixture --repetitions 1
 
+      # The embedding model is a declared dependency, so the runner needs the
+      # weights before it can test the *default* semantic path. Without this step the
+      # runner has the package but not the model, and every test that indexes or
+      # ranks anything fails on `OSError: We couldn't connect to ...` — 41 of them,
+      # hidden behind `--maxfail=1`, which reported only the first.
+      #
+      # Downloaded once here rather than per test, and offline mode is still set on
+      # the test step below: the tests must not need the network, but they do need
+      # the model. The two are different requirements and conflating them is what
+      # made this gap invisible.
+      - name: Provision the models
+        env:
+          HF_HUB_OFFLINE: "0"
+          TRANSFORMERS_OFFLINE: "0"
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+
+          # Two models, and the second is the reason this step exists at all. The
+          # embedder is the default read path; the cross-encoder powers
+          # `rerank=true` on /api/search, and `test_search_semantics.py` exercises
+          # it with no guard. It is documented as an optional model that an operator
+          # provisions separately -- which is true for a deployment, and not for a
+          # test suite that claims to cover the feature.
+          models = [
+              f"sentence-transformers/{os.getenv('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')}",
+              os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
+          ]
+          for repo in models:
+              print(f"provisioned {repo} -> {snapshot_download(repo)}")
+          PY
+
+      - name: Confirm the model loads with the network disabled
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          python -c "
+          from api.services.embedder import Embedder
+          e = Embedder()
+          vectors = e.embed(['provisioning check'])
+          assert len(vectors) == 1 and vectors[0], vectors
+          print('embedding model loads offline:', e.version)
+          "
+
       - name: Run tests
         env:
           MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
-          pytest -q --maxfail=1
+          pytest -q
 
   five-minute-path:
     name: The five-minute path, from a clean checkout
@@ -128,6 +174,23 @@ jobs:
           python -m pip install -e .
           python -m alembic -c migrations/alembic.ini upgrade head
 
+      # This job exists to run the documented commands as a first-time user would,
+      # and the documented default is semantic. Without the weights, every read here
+      # would silently degrade to lexical and still pass — the job would stop testing
+      # what the README tells people to do. The job-level HF_HUB_OFFLINE stays set, so
+      # the download happens here and the commands themselves still run offline.
+      - name: Provision the embedding model
+        env:
+          HF_HUB_OFFLINE: "0"
+          TRANSFORMERS_OFFLINE: "0"
+        run: |
+          python -c "
+          import os
+          from huggingface_hub import snapshot_download
+          model = os.getenv('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
+          print('provisioned', model, '->', snapshot_download(f'sentence-transformers/{model}'))
+          "
+
       # The whole point of this milestone: the documented command sequence, run as
       # written, in a fresh environment, produces a useful memory result. It fails
       # if a first memory needs a model download, needs a corpus flag, or needs a
@@ -143,6 +206,19 @@ jobs:
         run: |
           mindpalace init
           mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+          # Assert the default read really ran semantically. A missing model makes
+          # this command degrade to lexical and still print a correct answer, so
+          # checking only stdout cannot tell the two apart -- and a job that silently
+          # stops testing the documented default is how this gap survived.
+          #
+          # Matches the degradation marker rather than asserting stderr is empty:
+          # `sentence-transformers` writes a weight-loading progress bar to stderr,
+          # so an emptiness check fails on a perfectly healthy run.
+          if mindpalace recall 'What datastore does production use?' 2>&1 1>/dev/null \
+             | grep -q 'could not be loaded'; then
+            echo "::error::the default read degraded to lexical; it should have used the embedding model"
+            exit 1
+          fi
           mindpalace recall "What datastore does production use?"
           mindpalace explain "What datastore does production use?"
           mindpalace remember "The production datastore is now distributed CockroachDB." --key datastore
@@ -172,10 +248,17 @@ jobs:
           mindpalace recall "What datastore does production use?"
           mindpalace explain "What datastore does production use?"
           mindpalace history datastore
-          mindpalace receipt "What datastore does production use?" -o lexical-receipt.json
+          # Assert it actually answers, not merely that it exits 0. A mode that
+          # abstained on everything would satisfy every other line here, and that is
+          # the failure mode this step exists to catch. The question names a
+          # distinctive term on purpose: ranking scores the terms that discriminate
+          # between candidates, so a question whose only shared term is one every
+          # candidate carries is legitimately abstained on.
+          mindpalace recall "When did we switch to CockroachDB?" | tee /dev/stderr | grep -q CockroachDB
           # It must announce itself, so nobody is mistaken about which mode answered.
-          test "$(mindpalace recall 'What datastore does production use?' 2>&1 1>/dev/null)" = \
+          test "$(mindpalace recall 'When did we switch to CockroachDB?' 2>&1 1>/dev/null)" = \
             "retrieval: lexical (model-free, MIND_PALACE_LEXICAL=1)"
+          mindpalace receipt "When did we switch to CockroachDB?" -o lexical-receipt.json
           python - <<'PY'
           import subprocess, sys
 

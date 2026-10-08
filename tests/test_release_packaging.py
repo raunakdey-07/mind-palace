@@ -110,3 +110,66 @@ def test_nothing_outside_scripts_imports_the_scripts_package():
         "shipped code imports the scripts package, which the wheel no longer "
         f"contains: {offenders}"
     )
+
+
+def test_each_console_script_declares_the_extra_it_needs():
+    """A console script that cannot run from its declared install is a packaging bug.
+
+    This is not hypothetical. The wheel CI job asserted `mindpalace-mcp --help`
+    against a **bare** install, which cannot supply `mcp` -- it is a declared extra.
+    The job failed with `ModuleNotFoundError: No module named 'mcp'`, and its
+    `|| import mcp_server` fallback could not have saved it, for the same reason.
+
+    `typer` is the interesting counter-case, and the reason this test is worth having.
+    It is also an extra, so `mindpalace` ought to be uninstallable without it -- but a
+    bare install *does* get typer, because `transformers` requires it. So the CLI's
+    availability depends on an unrelated package's dependency graph, and this test
+    pins the declaration rather than the accident.
+
+    Every dependency a console script's module needs must therefore be a base
+    dependency or reachable through an extra. The mapping is stated here rather than
+    remembered, so adding a console script, or moving an import, has to be deliberate.
+    """
+    config = _config()
+    base = {_requirement_name(d) for d in config["project"]["dependencies"]}
+    extras = {
+        name: {_requirement_name(d) for d in reqs}
+        for name, reqs in config["project"].get("optional-dependencies", {}).items()
+    }
+
+    expectations = {
+        # console script -> (what it needs, the extra that provides it)
+        "mindpalace": ({"typer"}, "cli"),
+        "mindpalace-proof": (set(), None),
+        "mindpalace-mcp": ({"mcp"}, "mcp"),
+    }
+
+    scripts = config["project"]["scripts"]
+    assert set(scripts) == set(
+        expectations
+    ), f"console scripts changed to {sorted(scripts)}; update this mapping deliberately"
+
+    for script, (needed, extra) in expectations.items():
+        available = set(base) | (extras.get(extra, set()) if extra else set())
+        missing = needed - available
+        assert not missing, (
+            f"`{script}` needs {sorted(missing)}, which a "
+            f"'mindpalace-os{'[' + extra + ']' if extra else ''}' install does not "
+            f"provide. Base: {sorted(base)}; {extra!r} extra: "
+            f"{sorted(extras.get(extra, [])) if extra else 'nothing extra'}."
+        )
+
+    # The portability claim rests on this one staying dependency-free: someone handed
+    # a receipt may install the wheel and nothing else.
+    assert not expectations["mindpalace-proof"][0] & base, (
+        "mindpalace-proof gained a base dependency; verifying a receipt must need no "
+        "database, model, server or network"
+    )
+
+
+def _requirement_name(requirement: str) -> str:
+    """`sqlalchemy[asyncio]>=2.0.0` -> `sqlalchemy`."""
+    name = requirement.split(";")[0].strip()
+    for separator in (">=", "==", "~=", "<", ">", "[", "(", " "):
+        name = name.split(separator)[0]
+    return name.strip().lower()

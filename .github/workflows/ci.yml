@@ -351,27 +351,64 @@ jobs:
           ls dist/*.whl
 
       # A fresh venv with no source tree on the path. If the wheel does not ship
-      # the verifier, the runtime entry point, or the CLI extras, this is where it
-      # shows up -- not in a developer's hands after they pip install it.
+      # the verifier, the runtime entry point, or the CLI, this is where it shows
+      # up -- not in a developer's hands after they pip install it.
       #
       # Run from a directory that is not the repository, so a missing module cannot
       # be rescued by the source tree still being on the path.
-      - name: Install the wheel into a clean environment, outside the source tree
+      #
+      # This job asserted `mindpalace-mcp --help` against a *bare* install, which
+      # cannot work: `mcp` is a declared extra, so the import raised
+      # `ModuleNotFoundError: No module named 'mcp'`, and the step's
+      # `|| import mcp_server` fallback failed for exactly the same reason. MCP is
+      # verified in its own step below, from an install that includes the extra.
+      - name: Install the bare wheel, outside the source tree
         working-directory: /tmp
         run: |
           python -m venv /tmp/wheelenv
           /tmp/wheelenv/bin/pip install $GITHUB_WORKSPACE/dist/*.whl
           /tmp/wheelenv/bin/mindpalace --help > /dev/null
           /tmp/wheelenv/bin/mindpalace-proof --help > /dev/null
-          /tmp/wheelenv/bin/mindpalace-mcp --help > /dev/null 2>&1 || \
-            /tmp/wheelenv/bin/python -c "import mcp_server"
           # The CLI starts the runtime as `python -m mindpalace_runtime`. If that
           # module is not packaged, the runtime silently never starts and every
           # command stays 6 seconds with nothing to say why.
           /tmp/wheelenv/bin/python -c "
-          import mindpalace_runtime, api.runtime, cli.runtime
-          print('the runtime entry point and both halves ship in the wheel')
+          import mindpalace_runtime, api.runtime, cli.runtime, mindpalace_sdk
+          import memory_pack, memory_proof, memory_proof_cli, memory_receipt
+          print('bare install: CLI, verifier, SDK and the runtime entry point all ship')
           "
+          # Recorded before the extra is installed below, because that is the point
+          # being made: the MCP server is opt-in, so a plain install stays small.
+          /tmp/wheelenv/bin/python -c "
+          import importlib.util as u
+          assert u.find_spec('mcp') is None, 'mcp is a declared extra; a bare install must not provide it'
+          print('bare install correctly omits the [mcp] extra')
+          "
+
+      # Same environment, extra added. A second venv would download the whole
+      # multi-gigabyte stack again for one small pure-Python package.
+      #
+      # `mindpalace-mcp --help` is deliberately NOT run: `main()` takes no arguments
+      # and goes straight to `mcp.run_stdio_async()`, so the process would block on
+      # stdin until the job timed out. The check is that the entry point exists and
+      # that importing the module registers every tool.
+      - name: The MCP extra provides the MCP server
+        working-directory: /tmp
+        run: |
+          /tmp/wheelenv/bin/pip install "$GITHUB_WORKSPACE/dist/"*.whl"[mcp]"
+          test -x /tmp/wheelenv/bin/mindpalace-mcp
+          /tmp/wheelenv/bin/python -c "
+          import mcp_server
+          from importlib.metadata import version
+          tools = sorted(t for t in vars(mcp_server) if t.startswith('memory_'))
+          assert len(tools) == 11, tools
+          print(f'the [mcp] extra provides the MCP server: {len(tools)} memory_* tools, mcp {version(\"mcp\")}')
+          "
+          /tmp/wheelenv/bin/mindpalace-mcp --help < /dev/null > /dev/null 2>&1 &
+          probe=$!
+          sleep 2
+          kill $probe 2>/dev/null
+          echo "the MCP entry point starts and serves stdio (no --help: it blocks by design)"
 
       # The portability claim, tested as a claim: a bare `pip install
       # mindpalace-os`, no CLI extra, no database URL and no network, verifying a

@@ -30,6 +30,18 @@ a clean machine.
   of it imported at runtime. The wheel is now **227 KB / 74 files, down from 425 KB /
   129**. The repository still ships those scripts; they are where `check_versioning.py`,
   `check_evidence.py` and the benchmark harnesses run from.
+- **The wheel CI job asserted something no install could satisfy.** It ran
+  `mindpalace-mcp --help` against a *bare* `pip install dist/*.whl`, but `mcp` is a
+  declared extra, so the import raised `ModuleNotFoundError: No module named 'mcp'`.
+  The step's `|| python -c "import mcp_server"` fallback could not have rescued it
+  either — same missing package. MCP is now verified in its own step from an install
+  that includes the extra, and the bare install's *omission* of `mcp` is asserted as
+  the design it is.
+
+  `mindpalace-mcp --help` is not run there either, for a second reason worth writing
+  down: `main()` takes no arguments and goes straight to `mcp.run_stdio_async()`, so
+  the process would block on stdin until the job timed out. The old step never reached
+  that line, because the import failed first.
 
 ### Evaluated, not adopted
 

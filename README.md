@@ -48,7 +48,7 @@ relevance path — 0.63 s instead of 6.17 s, and `torch`, `transformers` and
 `sentence_transformers` are never imported. It is a deliberate trade-off, not an
 equivalent substitute: it needs shared vocabulary, and it will decline a question
 that semantic ranking would answer from meaning alone.
-[How it works and when to use it](docs/operations.md#model-free-lexical-mode).
+[How it works and when to use it](docs/runtime.md#model-free-lexical-mode).
 
 ---
 
@@ -122,7 +122,7 @@ One thing does arrive on its own: the first `recall` downloads the embedding mod
 That needs network on that first call and roughly 30 seconds. After that it works
 offline. If you would rather it never arrives, set `MIND_PALACE_LEXICAL=1` and Mind
 Palace reads with no model at all — see
-[model-free mode](docs/operations.md#model-free-lexical-mode).
+[model-free mode](docs/runtime.md#model-free-lexical-mode).
 
 ### 2. Check it
 
@@ -416,7 +416,7 @@ Stated up front, because the trust boundary is part of the product:
   into a recall response, so a model that reads one without that distinction is a
   prompt-injection surface. Enforcing that boundary is the consuming application's
   job, not this one's. The rest of the security posture —
-  [what is *not* tamper-proof, authenticated, or an access-control system](docs/operations.md#security-posture)
+  [what is *not* tamper-proof, authenticated, or an access-control system](docs/deployment.md#security-posture)
   — is written down rather than assumed.
 - **A corpus name is a namespace, not a credential.** Local use needs no
   authentication. A shared deployment sets `MIND_PALACE_DEPLOYMENT=server` — which
@@ -578,7 +578,7 @@ and never the first thing.
   one version, one claim, one identity. Proven by test.
 - **Authentication.** Local development needs none, and the quickstart never asks
   for one. For a shared deployment see
-  [Production authentication](docs/operations.md#authentication).
+  [Production authentication](docs/deployment.md#authentication).
 - **Observability.** Optional OpenTelemetry instrumentation on `memory.remember`,
   `memory.recall`, `memory.explain`, `memory.receipt`, `memory.verify`,
   `runtime.start` and `runtime.model_load`. It is off unless you install and
@@ -597,7 +597,9 @@ and never the first thing.
 | [Developer experience](docs/product/developer-experience.md) | every documented path, verified |
 | [Decision memory example](examples/decision-memory/) | the whole product in one file |
 | [Project decision log example](examples/project-log/) | a real project's decisions, as memory |
-| [Operations](docs/operations.md) | deployment, the local runtime, model-free mode, security posture, authentication, observability |
+| [Operational memory feed](docs/feed.md) | the durable corpus-scoped read interface: ordering, cursors, consistency |
+| [Local runtime and model-free mode](docs/runtime.md) | the warm process, and running with no embedding model at all |
+| [Deployment and authentication](docs/deployment.md) | health, observability, security posture, credentials, multi-tenancy |
 | [Status](docs/STATUS.md) | what is measured, what is outstanding |
 | [Release map](docs/release-map.md) | milestone to version |
 | [Architecture](docs/architecture/) | how the layers fit |
@@ -748,7 +750,7 @@ missing model downgrades recall from semantic to lexical to authoritative-only, 
 says on stderr that it did — a silent fallback would be indistinguishable from a
 semantic answer, and the two select different keys. It never removes the answer.
 `MIND_PALACE_LEXICAL=1` chooses that rung on purpose:
-[model-free mode](docs/operations.md#model-free-lexical-mode).
+[model-free mode](docs/runtime.md#model-free-lexical-mode).
 
 The one exception is the legacy live-retrieval endpoint `GET /api/search`, which
 searches the vector index directly and has no lexical rung. With no model available

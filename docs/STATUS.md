@@ -124,7 +124,7 @@ Five behaviour changes, all deliberate and measured:
   lexical rung that already existed as the no-model degradation: 0.63 s instead of
   6.17 s, with the model stack never imported. It selects different keys on
   vocabulary-poor questions, by design, and is documented as a trade-off rather than a
-  substitute. See [operations](operations.md#model-free-lexical-mode).
+  substitute. See [operations](runtime.md#model-free-lexical-mode).
 - **One failure, one exception class.** The in-process SDK path raised the service's
   own `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`. All
   three now raise `MemoryClientError`, with the same code, message and status. A genuine
@@ -198,7 +198,7 @@ difference was an abstention: a question semantic ranking answered, lexical rank
 abstained on. Shipping it would have made `NO_RELEVANT_MEMORY` depend on whether the
 model happened to be cached on that machine. Not built. An *explicit* lexical mode
 ships instead, which is the same rung taken on purpose. See
-[operations](operations.md#why-not-a-lexical-fast-path).
+[operations](runtime.md#why-not-a-lexical-fast-path).
 
 ## Measured at the five-minute path
 

@@ -132,7 +132,7 @@ stack and loading a model for 61 ms of memory work.
 relevance rung that already existed as the no-model degradation: **0.63 s** instead
 of **6.17 s**, with `torch`, `transformers` and `sentence_transformers` never
 imported at all. It is documented as a deliberate trade-off, not a substitute — see
-[operations](operations.md#model-free-lexical-mode).
+[operations](runtime.md#model-free-lexical-mode).
 
 **Verifiable memory, carried forward.** Receipts, offline verification, exact-substring
 evidence, temporal state, Memory Packs and cross-surface parity all unchanged.

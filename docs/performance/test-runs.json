@@ -1,0 +1,13 @@
+{
+  "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
+  "runs": {
+    "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
+      "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",
+      "failed": "0",
+      "label": "tests/test_corpus_isolation.py tests/test_corpus_scope.py",
+      "note": "re-verified at head on a database built from migrations/ + runtime_roles.sql",
+      "passed": "24",
+      "skipped": "0"
+    }
+  }
+}

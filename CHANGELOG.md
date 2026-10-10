@@ -258,7 +258,7 @@ Memory Pack version changed, and no benchmark input was touched.
 - **Revoking an already-revoked credential reported success**, because the row was
   still updated. It now reports what actually changed, and an ambiguous id prefix
   is refused rather than resolved arbitrarily.
-- **`docs/operations.md` still said the API had no authentication.** It does.
+- **`deployment.md` still said the API had no authentication.** It does.
 
 ### Added
 
@@ -292,7 +292,7 @@ Memory Pack version changed, and no benchmark input was touched.
   credential are administrative and have no HTTP route by design.
 - **A corpus name is no longer described as a tenant boundary.** It is a namespace;
   whether a caller may address one is decided by its credential. `README.md`,
-  `docs/operations.md` and `docs/STATUS.md` are corrected, and `docs/security.md`
+  `deployment.md` and `docs/STATUS.md` are corrected, and `docs/security.md`
   documents the threat model, the deployment modes, the database roles, the five
   access surfaces, the tenant scope and the known limitations.
 
@@ -520,7 +520,7 @@ cached on the machine — the exact acceptance coupling that would make an abste
 unreproducible across two developers' laptops.
 
 An explicit mode is honest about the trade-off; an automatic one hides it. Details in
-[docs/operations.md](docs/operations.md#model-free-lexical-mode).
+[deployment.md](docs/runtime.md#model-free-lexical-mode).
 
 ### Developer experience
 

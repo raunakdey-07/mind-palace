@@ -30,6 +30,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ("docs/STATUS.md", "README.md")
 
+#: Written only by an actual pytest run. See `check_test_counts`.
+RUN_RECORD = "docs/performance/test-runs.json"
+
 # `docs/performance/x.json` <- key: a.b.c
 CITATION = re.compile(
     r"`(?P<path>docs/performance/[\w./-]+\.(?:json|txt|log))`\s*<-\s*key:\s*(?P<key>[\w.\[\]0-9]+)"
@@ -77,6 +80,78 @@ def dig(data: object, key: str) -> object:
     return cursor
 
 
+def _recorded_run_counts() -> dict[str, str]:
+    """Read the record of real suite runs, keyed by commit.
+
+    Written only by `scripts/record_test_run.py`, which in turn only runs after an
+    actual pytest invocation. It exists so a document claiming "N passed" can be
+    compared with a number somebody actually observed, rather than with whatever
+    the author believed that day.
+    """
+    path = ROOT / RUN_RECORD
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    runs = data.get("runs")
+    if not isinstance(runs, dict):
+        return {}
+    return {
+        run_id: entry["passed"]
+        for run_id, entry in runs.items()
+        if isinstance(entry, dict) and re.fullmatch(r"\d+", str(entry.get("passed", "")))
+    }
+
+
+def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[list[str], list[str]]:
+    """Every "N passed" a document states must match a recorded run.
+
+    This exists because of one specific failure. STATUS.md carried `1583 passed`
+    for a milestone; no run had produced 1583, and the real count was 1567.
+    Nothing in the build caught it, because a plausible number in a table looks
+    exactly like a measured one until it is compared with something.
+
+    If no run has ever been recorded the check says so rather than passing
+    quietly -- silence in that state is how an unmeasured figure survives.
+    """
+    problems: list[str] = []
+    notes: list[str] = []
+    recorded = _recorded_run_counts()
+    seen = sorted({int(v) for v in recorded.values()})
+
+    for doc, text in text_by_doc.items():
+        stated = {int(n.replace(",", "")) for n in re.findall(r"(\d[\d,]*)\s+passed", text)}
+        if not stated:
+            continue
+        if not recorded:
+            problems.append(
+                f"{doc}: states {'/'.join(str(n) for n in sorted(stated))} passed but "
+                f"{RUN_RECORD} records no run. Record one with scripts/record_test_run.py, "
+                f"or remove the figure."
+            )
+            continue
+        for count in sorted(stated):
+            if count not in seen:
+                problems.append(
+                    f"{doc}: claims {count} passed; no run in {RUN_RECORD} produced that "
+                    f"(recorded counts: {', '.join(str(n) for n in seen)})"
+                )
+            else:
+                commits = sorted(run_id for run_id, v in recorded.items() if int(v) == count)
+                notes.append(f"  ok  {doc}: {count} passed matches run(s) {', '.join(commits)}")
+
+    if head and not any(head[:7] in run_id for run_id in recorded):
+        notes.append(
+            f"  --  no run recorded for HEAD {head[:7]}; counts were checked against "
+            f"earlier runs"
+        )
+    return problems, notes
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--strict", action="store_true")
@@ -86,6 +161,7 @@ def main() -> int:
     notes: list[str] = []
     referenced: set[str] = set()
     citations = 0
+    text_by_doc: dict[str, str] = {}
 
     for doc in DOCS:
         path = ROOT / doc
@@ -93,6 +169,7 @@ def main() -> int:
             problems.append(f"{doc}: missing")
             continue
         text = path.read_text()
+        text_by_doc[doc] = text
 
         for match in CITATION.finditer(text):
             artifact, key = match["path"], match["key"]
@@ -127,6 +204,21 @@ def main() -> int:
                 problems.append(f"referenced but absent: {artifact}")
             elif artifact not in tracked:
                 problems.append(f"referenced but UNTRACKED: {artifact}")
+
+    head = None
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        ).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        pass
+    count_problems, count_notes = check_test_counts(text_by_doc, head)
+    problems.extend(count_problems)
+    notes.extend(count_notes)
 
     print(f"documents scanned : {len(DOCS)}")
     print(f"artifacts referenced: {len(referenced)}")

@@ -4,7 +4,7 @@ This document covers the two clocks Mind Palace keeps separate, how selectors
 resolve them, and what the M009 feed does and does not promise about ordering.
 Evidence: `api/services/memory.py`, `api/services/memory_public.py`,
 `api/services/memory_query.py`, `api/services/memory_feed.py`, and
-[`docs/operations.md`](../operations.md).
+[`deployment.md`](../deployment.md).
 
 ## Two clocks
 

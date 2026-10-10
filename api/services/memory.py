@@ -72,8 +72,30 @@ def _hash(*parts) -> str:
 
 
 def memory_document_id(corpus_id: str, path: str) -> str:
-    """Stable SHA-256(corpus_id + ':' + path), including across deletion/restore."""
-    return hashlib.sha256(f"{corpus_id}:{path}".encode("utf-8")).hexdigest()
+    """Stable SHA-256(corpus_id + ':' + path), including across deletion/restore.
+
+    `corpus_id` is stripped first, and that is load-bearing rather than tidy. The
+    column is `CHAR(64)`, and PostgreSQL blank-pads a shorter value on the way in
+    and strips the padding on a cast to text. So the id that reaches this function
+    is 64 characters wide even when the id itself is 63 -- which is exactly the
+    case for the default corpus, whose id is 56 zeroes followed by "default".
+
+    The database says so itself. `memory_documents_check` is
+
+        id = sha256(rtrim(corpus_id::text) || ':' || path)
+
+    so it hashes the *stripped* id, and this function used to hash the padded one.
+    For every corpus whose id is a 64-character digest the two agree and nobody
+    notices. For the default corpus they differ by the one padding byte, and every
+    write fails:
+
+        new row for relation "memory_documents" violates check constraint
+        "memory_documents_check"
+
+    That is `mindpalace remember` -- the README's third step -- on a fresh
+    install. See tests/test_default_corpus_is_writable.py.
+    """
+    return hashlib.sha256(f"{corpus_id.strip()}:{path}".encode("utf-8")).hexdigest()
 
 
 def _timestamp(value, *, validity: bool = False) -> datetime | None:

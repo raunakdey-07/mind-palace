@@ -121,7 +121,18 @@ async def get_corpus_by_name(db: AsyncSession, name: str, *, write: bool = False
     row = result.first()
     if not row:
         return None
-    return {"id": row[0], "name": row[1], "description": row[2]}
+    # `corpora.id` is CHAR(64), and the default corpus's id is 63 characters, so
+    # PostgreSQL blank-pads it on the way in and hands the pad back on the way
+    # out. The pad is storage, not identity: every id the product hashes is the
+    # unpadded form, and `memory_documents_check` derives document identity from
+    # `rtrim(corpus_id::text)`. Returning the padded value here put one extra
+    # byte into every document id derived from the default corpus, and every
+    # write was refused by the constraint.
+    #
+    # Strip at the boundary where the padding is introduced, rather than at each
+    # of the many places that consume the id. See
+    # tests/test_default_corpus_is_writable.py.
+    return {"id": row[0].strip(), "name": row[1], "description": row[2]}
 
 
 class CorpusScopeNotFound(LookupError):

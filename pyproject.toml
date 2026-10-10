@@ -54,6 +54,7 @@ mindpalace-mcp = "mcp_server:main"
 # memory_proof and memory_proof_cli ship for the same reason: verifying a
 # recorded memory must not require the server, the database or a model.
 py-modules = [
+    "mindpalace_errors",
     "mindpalace_sdk",
     "mcp_server",
     "memory_pack",

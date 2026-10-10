@@ -1,6 +1,15 @@
 {
   "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
   "runs": {
+    "4166e08: full suite, run 2, immediately after run 1": {
+      "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
+      "failed": "0",
+      "label": "full suite, run 2, immediately after run 1",
+      "note": "same cluster, same DATABASE_URL; proves the suite does not depend on or pollute the long-lived database",
+      "passed": "1600",
+      "seconds": 547.5,
+      "skipped": "1"
+    },
     "a51607c: full suite, run 1, hermetic session database": {
       "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
       "failed": "0",

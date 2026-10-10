@@ -1,6 +1,15 @@
 {
   "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
   "runs": {
+    "a51607c: full suite, run 1, hermetic session database": {
+      "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
+      "failed": "0",
+      "label": "full suite, run 1, hermetic session database",
+      "note": "DATABASE_URL pointed at the long-lived dev database; the session fixture built and dropped its own",
+      "passed": "1600",
+      "seconds": 550.3,
+      "skipped": "1"
+    },
     "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
       "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",
       "failed": "0",

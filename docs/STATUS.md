@@ -287,11 +287,57 @@ and never the absolute digest value.
 
 ## Correctness
 
-**Headline: on questions written by someone other than the authors, the system
-answers 131 of 157 correctly (83.4%, Wilson 95% CI 76.8%-88.6%) [v0.8.0].** The
-202-question benchmark reports 194/202 (96.0%, 92.7%-97.7%), but that set is a
-development set with eight known failures, and it must not be quoted as accuracy
-on unseen questions.
+**An accuracy figure is not the useful number.** "131/157" averages a right answer
+together with a wrong one, and an integrator cannot tell from it whether they can
+act on an answer without re-checking it. The breakdown below separates the four
+outcomes. It is produced by `scripts/quality_frame.py` from the two frozen
+artifacts and written to `docs/performance/quality-frame.json`:
+
+```bash
+python scripts/quality_frame.py
+```
+
+| Outcome | held-out v1 (n=157) | frozen M006.75 (n=60) |
+|---|---:|---:|
+| correct | 116 (73.9%) | 37 (61.7%) |
+| abstained when answerable | 11 (7.0%) | 5 (8.3%) |
+| answered wrong | 14 (8.9%) | 8 (13.3%) |
+| abstained correctly | 15 (9.6%) | 10 (16.7%) |
+| **answered when it should have abstained** | **1 (0.6%)** | **0 (0.0%)** |
+
+Evidence: `docs/performance/quality-frame.json` <- key: heldout_v1.confident_wrong
+
+**The bottom row is what decides whether this is safe to build on.** One question
+in 157, and zero in 60: the system almost always declines rather than inventing.
+That is the property that makes a memory subsystem worth having, and no aggregate
+shows it.
+
+**The costs are real and they are not small.** 11 held-out questions where the
+archive had the answer and the system returned nothing, and 14 where it returned
+something wrong. Roughly one held-out question in six is a product limitation
+rather than a success.
+
+Two caveats stated rather than buried:
+
+* One held-out question (`ho-abs-office-cat`) expected no memory, returned no
+  memory, and was graded incorrect by the frozen grader. It is counted as an
+  abstention above because the behaviour is the behaviour, but the grader and this
+  table disagree about it, and that disagreement is itself unfixed.
+* The frozen artifact records `exact = 47`. The reproducibility report says the
+  current source produces 45, and did not already produce 47 at `v0.8.0`. The
+  rows above are computed from the artifact as stored, so they are the artifact's
+  numbers, not the current source's.
+
+Evidence: `docs/performance/m0130-heldout.json` <- key: summary.strategies.C_fallback
+
+The aggregate figures remain, because the release documents have always quoted
+them and removing them would break citations in the changelog:
+
+| | |
+|---|---|
+| held-out v1 | 131/157 (83.4%, Wilson 95% CI 76.8%-88.6%) [v0.8.0] |
+| frozen M006.75 | 45/60 exact, 55/60 abstention-exact, 0 execution failures, all seven safety invariants 60/60 |
+| 202-question development set | 194/202 (96.0%) -- a development set with eight known failures, **not** an accuracy on unseen questions |
 
 The canonical authored benchmark, 202 questions, dataset hash
 `9cdecda73cbdc8ae`:

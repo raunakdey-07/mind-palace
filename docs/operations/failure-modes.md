@@ -3,7 +3,7 @@
 Each entry names a failure, how it shows up, why it happens, and what the
 repository already does about it. Sources: `api/services/memory_feed.py`,
 `api/services/memory_public.py`, `api/main.py`, `api/services/ingestion.py`,
-[`docs/operations.md`](../operations.md), and
+[`docs/deployment.md`](../deployment.md), and
 [`docs/m009/RELEASE_READINESS.md`](../m009/RELEASE_READINESS.md).
 
 ## Cursor and feed

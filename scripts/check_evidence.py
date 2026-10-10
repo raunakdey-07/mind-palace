@@ -33,6 +33,12 @@ DOCS = ("docs/STATUS.md", "README.md")
 #: Written only by an actual pytest run. See `check_test_counts`.
 RUN_RECORD = "docs/performance/test-runs.json"
 
+#: Links that are allowed to point at something git does not track, with the
+#: reason. `/eval/results/` is excluded by .gitignore on purpose: it is the
+#: output of an experiment, not an input, and it is large. The documents that
+#: cite it were written by the person who ran the experiment.
+ALLOWED_DIRS = ("eval/results",)  # checked above on the resolved path
+
 # `docs/performance/x.json` <- key: a.b.c
 CITATION = re.compile(
     r"`(?P<path>docs/performance/[\w./-]+\.(?:json|txt|log))`\s*<-\s*key:\s*(?P<key>[\w.\[\]0-9]+)"
@@ -152,6 +158,77 @@ def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[li
     return problems, notes
 
 
+def check_markdown_links() -> tuple[list[str], list[str]]:
+    """Every relative markdown link must point at a file git tracks.
+
+    This is not a link-rot check. It is a *shipping* check: a page the README
+    points at that `.gitignore` excludes is a dead link in every clone, and it
+    looks fine on the machine of whoever wrote it.
+
+    That is not hypothetical. Five pages the README cited -- errors.md,
+    providers.md, deletion-and-erasure.md and two others -- were untracked,
+    because `/docs/*` and `*.md` exclude them and nobody had added an exception.
+    A fresh `git clone` got a README whose links all 404.
+
+    Tracked-ness rather than existence is the right test precisely because it is
+    the thing that was wrong.
+    """
+    problems: list[str] = []
+    notes: list[str] = []
+    allowances: list[str] = []
+
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        ).stdout.splitlines()
+    except (subprocess.SubprocessError, OSError) as exc:
+        return [f"git ls-files failed: {exc}"], []
+
+    tracked = {str((ROOT / t).resolve()) for t in out}
+    # A link to a directory is fine when *something* inside it is tracked.
+    tracked_parents = {str(Path(t).parent) for t in tracked} | tracked
+
+    pattern = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+    checked = 0
+    for doc in sorted(ROOT.rglob("*.md")):
+        if any(part in {".git", "venvmp", "build", "dist", "node_modules"} for part in doc.parts):
+            continue
+        for raw in pattern.findall(doc.read_text(encoding="utf-8", errors="ignore")):
+            if raw.startswith(("http://", "https://", "mailto:", "#")):
+                continue
+            target = raw.partition("#")[0]
+            if not target:
+                continue
+            checked += 1
+            resolved = (doc.parent / target).resolve()
+            # Matched on the resolved path, not the raw string: the same artifact
+            # is reached as `eval/results/x.json` and `../../eval/results/x.json`.
+            if resolved.is_relative_to(ROOT / "eval" / "results"):
+                allowances.append(f"{doc.relative_to(ROOT)} -> {raw}")
+                continue
+            if not resolved.exists():
+                problems.append(f"{doc.relative_to(ROOT)}: link target does not exist: {raw}")
+            elif str(resolved) not in tracked_parents:
+                # tracked_parents holds tracked files *and* the directories holding
+                # them, so a link to either passes. Anything left is a file that
+                # exists on this machine and in nobody's clone.
+                problems.append(
+                    f"{doc.relative_to(ROOT)}: link target is NOT TRACKED BY GIT: {raw} "
+                    f"-- ships as a dead link in every clone"
+                )
+    if allowances:
+        notes.append(
+            f"  --  {len(allowances)} link(s) point at deliberately untracked local "
+            f"artifacts under eval/: frozen experiment output, excluded by .gitignore"
+        )
+    notes.append(f"  --  {checked} relative markdown links resolve to tracked files")
+    return problems, notes
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--strict", action="store_true")
@@ -219,6 +296,10 @@ def main() -> int:
     count_problems, count_notes = check_test_counts(text_by_doc, head)
     problems.extend(count_problems)
     notes.extend(count_notes)
+
+    link_problems, link_notes = check_markdown_links()
+    problems.extend(link_problems)
+    notes.extend(link_notes)
 
     print(f"documents scanned : {len(DOCS)}")
     print(f"artifacts referenced: {len(referenced)}")

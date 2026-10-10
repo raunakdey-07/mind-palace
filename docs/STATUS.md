@@ -39,8 +39,8 @@ memory. That is verified, not asserted; see the invariants below.
 | package version | `0.9.1` |
 | tag | `v0.9.1` (pending) |
 | previous release | `v0.8.0`, unmodified |
-| migration head | `007_claim_embedding_cache`, unchanged |
-| tests | **1362 passed**, plus the CI job provisions the embedding model first |
+| migration head | `010_bind_unrestricted_scope`, additive and reversible |
+| tests | **1600 passed, 1 skipped**, on a database built from `migrations/` + `scripts/db/runtime_roles.sql` |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -520,12 +520,36 @@ No multi-hop relationship reasoning is claimed or supported.
 
 ### 5. A handful of gates are unmeasured
 
-Deleting a corpus whose archive still references it returns 409 by design, but the
-end-to-end operator path for archive retention and erasure is still unresolved, and
-tombstones retain their evidence.
+Deleting a corpus used to return 409 whenever the archive referenced it, so a corpus
+that had ever recorded a fact could never be removed. That is now implemented:
+migration `009` adds `mindpalace_erase_corpus`, one SECURITY DEFINER function that
+re-checks the caller's transaction-local tenant scope, takes the advisory lock every
+writer takes, and removes all nine archive tables in dependency order plus the live
+projection and every credential's grant. The runtime role holds no `DELETE` on the
+archive, so that function is the only path; the append-only triggers still refuse
+every ordinary `DELETE`, `UPDATE` and `TRUNCATE`.
 
-Authentication is not built. Corpus namespaces are separation, not authorization,
-and an owner is not a tamper-proof boundary.
+What it does **not** remove is unchanged and stated: receipts and Memory Packs a
+customer exported, database backups, and copies they stored elsewhere. There is no
+cryptographic erasure and no TTL or purge — rows are deleted, not shredded — so
+backup retention remains the operator's obligation and its window is the known cost.
+See [security.md](security.md#data-lifecycle-deletion-erasure-and-what-survives).
+
+Authentication and authorization are built for shared deployments and are off by
+default: `MIND_PALACE_DEPLOYMENT=server` (which refuses to start unless
+`MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_INGEST_ROOTS` are set and the connected
+database role actually enforces the policies) plus a least-privileged runtime role.
+An unrecognised profile value is refused rather than reinterpreted. Corpus namespaces
+remain *not* authorization on their own, and an owner is not a tamper-proof boundary.
+What changed is that naming a corpus is no longer the decision — a bearer credential
+is, and PostgreSQL row-level security is beneath it, on every surface: REST, the
+Python SDK, the local runtime socket and MCP. Roles are finer than read/write:
+`corpus_admin` can erase the corpora it holds grants on, `principal_admin` can issue
+credentials, and a workspace credential can no longer mint authority.
+`mindpalace posture` reports whether the connected role enforces the policies, can
+enumerate credential hashes, or can delete from the archive. `/health/ready`
+reports only the verdict — `503` when the policies are not in force — because it is
+read by whatever probes the service. See [security.md](security.md).
 
 ### 6. The wheel no longer ships research tooling **[v0.9.1] — resolved**
 

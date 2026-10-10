@@ -94,6 +94,11 @@ helm/
 !/docs/research/**
 !/docs/operations/
 !/docs/operations/**
+# Material that was built, proved, and then deliberately withdrawn. It is part of
+# the project's record: without it the next person re-derives the same findings
+# and the same 42501. Not runnable from here -- it lives outside tests/ on purpose.
+!/docs/withdrawn/
+!/docs/withdrawn/**
 !/docs/evaluation/
 /docs/evaluation/*
 !/docs/evaluation/m006.md

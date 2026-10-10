@@ -117,6 +117,17 @@ python -m alembic -c migrations/alembic.ini upgrade head
 
 That is the whole setup. No API key, no account, no LLM, and no model to configure.
 
+**Expect `requirements.txt` to install about 5.9 GB.** `torch` pulls the CUDA
+runtime with it — `nvidia-cudnn`, `nvidia-cublas`, `cuda-toolkit`, `triton` — and
+most of that is unused on a machine with no GPU. Measured on a Linux container in
+the [first-hour audit](docs/first-hour-audit.md), where `pip install -r
+requirements.txt` took 202 s and produced a 5.9 GB virtualenv. Nothing else in the
+install comes close. If you would rather not download it, set
+`MIND_PALACE_LEXICAL=1` from the start: the product then never imports `torch`,
+`transformers` or `sentence_transformers`, at the cost of needing shared
+vocabulary between question and record — see
+[model-free mode](docs/runtime.md#model-free-lexical-mode).
+
 One thing does arrive on its own: the first `recall` downloads the embedding model
 (about 90 MB, once, to the Hugging Face cache) the way a browser fetches a font.
 That needs network on that first call and roughly 30 seconds. After that it works
@@ -348,6 +359,36 @@ $ mindpalace-mcp
 An agent asks `memory_recall` for an answer and `memory_explain` when it wants to
 know why the answer is trustworthy. Both return the same authoritative memory the
 CLI and the SDK do, with the same receipt.
+
+The arguments are one object deep, and **both** `request` and `request.corpus` are
+required. This is the shape that works, and the shape an agent will get wrong if
+it is not shown:
+
+```json
+{
+  "name": "memory_recall",
+  "arguments": {
+    "request": {
+      "corpus": "default",
+      "query": "Which datastore did we choose?"
+    }
+  }
+}
+```
+
+Passing `{"question": "..."}` instead fails with
+`1 validation error ... request Field required`, and so does passing `request`
+without `corpus`. The full argument schema — including `as_of`, `intent` and
+`budget` — is available from the server itself:
+
+```bash
+mindpalace-mcp   # then ask the client for tools/list, or read inputSchema
+```
+
+Fifteen tools are advertised. `memory_recall`, `memory_explain`, `memory_current`,
+`memory_history`, `memory_changes`, `memory_evidence`, `memory_as_of` and
+`memory_replay` all take that same `request` object; `search`, `sync`,
+`list_corpora`, `memory_pack` and `memory_snapshot` take their own.
 
 ---
 

@@ -118,6 +118,7 @@ monitoring/
 !docs/deployment.md
 !docs/security.md
 !docs/when-to-use.md
+!docs/first-hour-audit.md
 !docs/deletion-and-erasure.md
 !docs/errors.md
 !docs/providers.md

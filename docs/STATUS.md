@@ -1,9 +1,12 @@
 # Project status
 
 The current, verifiable state of Mind Palace and everything still outstanding.
-Everything here was measured at the release commit `f52272d` unless a line says
-otherwise. Numbers that came from earlier experiments are marked with the commit
-that produced them.
+
+Every figure here names the command that produced it and the commit it was
+measured at. A number that was not measured is marked **not established** rather
+than filled in — this table previously carried a test count that no run had ever
+produced, and a test count that nobody ran is worse than no test count, because
+a reader checks the others and assumes this one was checked too.
 
 Corrections and additions measured in the v0.8.0 work are marked **[v0.8.0]**.
 
@@ -30,14 +33,16 @@ L2  derived retrieval                 embeddings, chunks, caches, indexes
 ```
 
 L2 may be deleted and rebuilt without changing a single byte of authoritative
-memory. That is verified, not asserted; see the invariants below.
+memory. That was verified by measurement, at `f52272d`; the table below says so
+row by row, including the two rows whose harness no longer runs at this head.
 
 ## Release state
 
 | | |
 |---|---|
-| package version | `0.9.1` |
-| tag | `v0.9.1` (pending) |
+| package version | `0.9.1` (`pyproject.toml`) |
+| latest tag | **`v0.9.0`** at `b0e516e`. There is no `v0.9.1` tag, locally or on `origin` |
+| `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
 | tests | **1600 passed, 1 skipped**, on a database built from `migrations/` + `scripts/db/runtime_roles.sql` |
@@ -227,20 +232,40 @@ one claim.
 **Portability.** A bare `pip install mindpalace-os`, with no CLI extra and no
 database URL, verifies a file written by `mindpalace receipt`.
 
-## Verified invariants
+## Invariants, and when each was last measured
 
-All re-verified at `f52272d`.
+Each row names the commit that produced its evidence. A row without a commit
+was not measured at the current head, and quoting it as current would be the
+same error as the `1583` figure this table used to carry.
 
-| Invariant | Evidence |
-|---|---|
-| Deleting every L2 row leaves authoritative memory byte-identical | 12/12 packs identical, one digest |
-| Rebuilding L2 restores the same digest | 12/12 packs identical, same digest within a run. **Caveat below:** the absolute digest is not reproducible across runs |
-| The Memory Pack reader needs no server | clean-venv import pulls in no heavy dependency |
-| Retrieval cannot create authority | 202 questions, 0 untrusted claims, 0 injection markers in claims or evidence |
-| Answers survive a missing model | 202/202 answered, 163 correct |
-| Answers survive a missing retrieval path | 202/202 answered, 163 correct |
-| Authoritative output does not depend on the claim cache | 202 packs identical with L2 destroyed including the cache |
-| Corpus isolation holds | `tests/test_corpus_isolation.py`, `tests/test_corpus_scope.py` |
+| Invariant | Evidence | Measured at |
+|---|---|---|
+| Deleting every L2 row leaves authoritative memory byte-identical | 12/12 packs identical, one digest | `f52272d`. **Not re-verified at head — see below** |
+| Rebuilding L2 restores the same digest | 12/12 packs identical, same digest within a run. **Caveat below:** the absolute digest is not reproducible across runs | `f52272d`. **Not re-verified at head — see below** |
+| The Memory Pack reader needs no server | clean-venv import pulls in no heavy dependency | `f52272d` |
+| Retrieval cannot create authority | 202 questions, 0 untrusted claims, 0 injection markers in claims or evidence | `f52272d` |
+| Answers survive a missing model | 202/202 answered, 163 correct | `f52272d` |
+| Answers survive a missing retrieval path | 202/202 answered, 163 correct | `f52272d` |
+| Authoritative output does not depend on the claim cache | 202 packs identical with L2 destroyed including the cache | `f52272d` |
+| Corpus isolation holds | `tests/test_corpus_isolation.py`, `tests/test_corpus_scope.py` | **re-verified at head: 24 passed** |
+
+**Why the first two rows are not re-verified, established this session.**
+`scripts/benchmark/m011_rebuildability.py` builds a fresh per-run schema
+(`CREATE SCHEMA "m011_<uuid>"`) and replays `migrations/versions/*.py` into it.
+Migrations `008` and `009` create functions with `SET search_path = public`, so
+at `CREATE FUNCTION` time PostgreSQL validates the body against `public` — which
+in that database is empty. The run aborts:
+
+```
+asyncpg.exceptions.UndefinedTableError: relation "memory_principals" does not exist
+[SQL: CREATE OR REPLACE FUNCTION mindpalace_resolve_credential(presented_hash CHAR(64))
+```
+
+The invariant itself may well still hold; what cannot be done is re-measuring it
+with the harness as shipped. This is a defect in the harness-versus-migration
+pair, not a statement about the archive: the same `search_path` pinning was
+already found and documented in [the withdrawn record](withdrawn/README.md) as
+breaking schema replay.
 
 Evidence: `docs/performance/baseline-packs.json` <- key: set_digest
 

@@ -6,6 +6,10 @@
 
 [Current release: v0.9.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
+> **Install `0.9.0`.** `v0.9.1` is prepared but not tagged or published — the
+> latest release you can actually install is `v0.9.0`. See
+> [Current release](docs/release-map.md#current-release).
+
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**
 

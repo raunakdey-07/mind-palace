@@ -5,7 +5,7 @@ configured before real customer data goes in.
 
 This document replaces the older claim that a corpus name is a tenancy
 boundary. It is not. A corpus is a *namespace*; whether a caller may address one
-is a separate decision, and until `v0.9.2` there was no code making that
+is a separate decision, and before this branch there was no code making that
 decision at all.
 
 ## Summary
@@ -384,6 +384,11 @@ Stated plainly because it is the limit of the whole design:
 * A process that also holds a `principal_admin` credential, or the maintenance
   database role, is outside this boundary entirely.
 
+**Intentionally cross-tenant administrative operations:** creating a corpus,
+granting or revoking a credential, changing table ownership, running
+migrations. Each needs the unrestricted identity, which in practice means
+database access.
+
 **If that residual matters to you**, the fix is not configuration. It is moving
 authorization into the database — a scope the application cannot write, bound to
 the credential it presented — which is a different security model and a separate
@@ -425,13 +430,6 @@ tenant** when any of these are true:
 
 The cost is real — one migration cycle and one credential per tenant — so it is
 the exception, not the default.
-
-## Data lifecycle: deletion, erasure, and what survives
-
-**Intentionally cross-tenant administrative operations:** creating a corpus,
-granting or revoking a credential, changing table ownership, running
-migrations. Each needs the unrestricted identity, which in practice means
-database access.
 
 ## Known limitations
 

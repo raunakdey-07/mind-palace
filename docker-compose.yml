@@ -35,6 +35,10 @@ services:
 
   backend:
     build: .
+    # Binds every interface deliberately, and only because the environment below
+    # sets `MIND_PALACE_DEPLOYMENT=server` with authentication on and the
+    # least-privileged role. `server` refuses to start otherwise, so this line and
+    # those settings cannot drift apart unnoticed.
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
     volumes:
       - ./content:/app/content
@@ -46,12 +50,34 @@ services:
       ollama:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://mpadmin:secret@postgresql:5432/mindpalace
+      # A published port plus an unauthenticated service plus a database
+      # superuser is the combination `docs/security.md` warns about, and it is
+      # what this file used to ship as its default. Three settings close it:
+      #
+      #   DEPLOYMENT=server  the app refuses to start if authentication is off,
+      #                      so the service cannot come up answering anyone.
+      #   AUTH_MODE=required every request presents a credential.
+      #   RUNTIME_DATABASE_URL  a role that is not a superuser, so migration
+      #                      008's row-level policies are actually enforced.
+      #                      `scripts/db/runtime_roles.sql` creates it; until then
+      #                      /health/ready reports `rls_effective: false`.
+      #
+      #   INGEST_ROOTS         the directories `/api/ingest/repo` and
+      #                      `/api/corpora/{name}/sync` may read. Both routes take
+      #                      a path on the server's filesystem, so a shared service
+      #                      has to be told which directories are fair game.
+      DATABASE_URL: postgresql://${MIND_PALACE_RUNTIME_USER:-mindpalace_runtime}:${MIND_PALACE_RUNTIME_PASSWORD:?set MIND_PALACE_RUNTIME_PASSWORD, or use scripts/db/runtime_roles.sql}@postgresql:5432/mindpalace
+      MIND_PALACE_DEPLOYMENT: server
+      MIND_PALACE_AUTH_MODE: required
+      MIND_PALACE_INGEST_ROOTS: ${MIND_PALACE_INGEST_ROOTS:?set the directories ingestion may read, e.g. /content}
       OLLAMA_BASE_URL: http://ollama:11434
       EMBEDDING_MODEL: all-MiniLM-L6-v2
       LLM_MODEL: llama3.3:3b-instruct
       MIND_PALACE_CURSOR_SECRET: ${MIND_PALACE_CURSOR_SECRET:?set MIND_PALACE_CURSOR_SECRET to a 32+ character secret}
       MIND_PALACE_READINESS_TIMEOUT_SECONDS: "2"
+      # Migrations run as the owner, not as the runtime role: they have to write
+      # across every corpus, which is what the runtime role must not be able to.
+      MIGRATION_DATABASE_URL: postgresql://mpadmin:secret@postgresql:5432/mindpalace
     healthcheck:
       test:
         [

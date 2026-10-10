@@ -414,6 +414,33 @@ Stated up front, because the trust boundary is part of the product:
   job, not this one's. The rest of the security posture —
   [what is *not* tamper-proof, authenticated, or an access-control system](docs/operations.md#security-posture)
   — is written down rather than assumed.
+- **A corpus name is a namespace, not a credential.** Local use needs no
+  authentication. A shared deployment sets `MIND_PALACE_DEPLOYMENT=server` — which
+  refuses to start unless `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_INGEST_ROOTS`
+  and the connected database role are all correct — and runs as a least-privileged
+  role that cannot read another tenant's credential hashes or delete from the
+  archive. Access is decided by a bearer credential bound to explicit corpora,
+  enforced at one choke point and again by row-level security, on every surface.
+  `mindpalace credential issue` creates the first one, `mindpalace corpus delete`
+  erases one, and `mindpalace posture` says whether your database role actually
+  enforces the policies. See [security.md](docs/security.md).
+
+Access is **corpus-level**: a credential holding a corpus sees every row in it.
+Per-document privacy inside a shared corpus was designed, prototyped and tested,
+then withdrawn when it broke the primary write path — see
+[docs/withdrawn/](docs/withdrawn/README.md). Corpus-level is the shipped
+guarantee, and anyone needing per-record privacy inside a shared corpus should
+use separate corpora.
+
+Four documents answer the questions an integrator actually asks:
+
+| Question | Document |
+|---|---|
+| What is enforced, and what is not | [security.md](docs/security.md) |
+| What happens when something fails, and how do I tell whose fault it is | [errors.md](docs/errors.md) |
+| Do I have to use your model provider | [providers.md](docs/providers.md) |
+| What does deleting actually delete | [deletion-and-erasure.md](docs/deletion-and-erasure.md) |
+| Is this installation ready for me to build on | `python integration_conformance.py` |
 
 ---
 
@@ -494,8 +521,9 @@ temporal state and the same receipt.
 `POST /api/memory/remember` takes a statement and nothing else. Reading a file is
 a decision for a trusted operator at their own machine — `mindpalace remember
 --file` and the SDK's `file=` do it, and the HTTP endpoint deliberately does not,
-because it has no authentication and a path would let any caller read a file
-relative to the server and recall its contents.
+because a path would let any caller with a credential read a file relative to the
+server and recall its contents. A credential says which corpora you may reach; it
+does not say you may read the server's filesystem.
 
 ### The full memory API
 
@@ -663,8 +691,14 @@ Memory Pack is version 1; neither changed.
 
 A corpus is a namespace of memory. The default is `default`, which exists from the
 first migration, so the first command never has to mention one. Pass `--corpus`
-(or `corpus=`) to scope memory explicitly; that is the multi-tenant boundary, and
-it is the only reason to know the word.
+(or `corpus=`) to scope memory explicitly.
+
+A corpus name is a namespace, not a credential. Naming one is how you choose
+what to read; it is not evidence that you may. For a shared deployment, set
+`MIND_PALACE_AUTH_MODE=required` and run the service as a least-privileged
+database role, and the corpus you are allowed to reach is decided by your
+credential rather than by your request. See
+[Security and multi-tenant integration](docs/security.md).
 
 ```console
 $ mindpalace corpora

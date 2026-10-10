@@ -68,9 +68,13 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-`v0.9.1` is the current public release. It is a patch on `v0.9.0`: no memory
-semantics, no retrieval behaviour, no public response field, and no benchmark input
-changed. `v0.9.0` remains the release in which a developer can adopt Mind Palace —
+`v0.9.1` is the current public release, and the unreleased work on top of it is a
+security change: authorization implemented and enforced for shared deployments,
+row-level security on every tenant-owned table, corpus erasure, and a
+tenant-isolation suite that runs against a least-privileged database role.
+`v0.9.1` itself is a patch on
+`v0.9.0`: no memory semantics, no retrieval behaviour, no public response field,
+and no benchmark input changed. `v0.9.0` remains the release in which a developer can adopt Mind Palace —
 seven commands that take a statement and a question, answers that arrive fast, outputs
 that can be inspected and proved afterwards, and a decision log that works on a real
 project. `v0.9.1` is what makes that claim checkable from a clean machine.

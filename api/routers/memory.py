@@ -4,7 +4,14 @@
 """Public memory HTTP adapter.
 
 `POST /remember` is the product write path; every other route is a read of the
-same archive. Authentication is not currently provided.
+same archive.
+
+Authorization lives in two places and both are on the path of every route here.
+The middleware in `api.main` authenticates the caller and installs the principal;
+`api.services.corpora.get_corpus_by_name` decides whether the corpus in the
+request is one that principal may use. `snapshot` is included among the writes
+because it creates immutable state, so it needs the read-write role even though
+it cannot overwrite a claim.
 """
 
 from __future__ import annotations
@@ -22,10 +29,19 @@ logger = logging.getLogger("mindpalace.ops")
 
 router = APIRouter()
 
+#: Operations that create state. Everything else reads. `snapshot` is here
+#: because it writes immutable rows even though it cannot change a claim.
+WRITE_OPERATIONS = frozenset({"snapshot"})
+
 
 async def execute_memory(operation: str, request: MemoryRequest) -> MemoryResponse:
+    from api.services.authz import require_corpus
+    from api.services.db import current_principal
     from api.services.memory_public import MemoryError, execute
 
+    # Before the service, not inside it: a refusal here has not opened a
+    # transaction, so a read-only credential cannot reach a query at all.
+    require_corpus(current_principal(), request.corpus, write=operation in WRITE_OPERATIONS)
     try:
         return await execute(operation, request)
     except MemoryError as exc:
@@ -126,9 +142,15 @@ async def feed(
     cursor: str | None = Query(None, min_length=1, max_length=4096),
 ) -> FeedResponse:
     """Consume the durable corpus-scoped operational change feed."""
-    from api.services.db import session_scope
+    from api.services.authz import require_corpus
+    from api.services.db import current_principal, session_scope
     from api.services.memory_feed import feed as get_feed
     from api.services.memory_public import MemoryError, translate_database_error
+
+    # The feed is a corpus-named query parameter, so it needs the same check the
+    # body-carrying routes get. A signed cursor binds one corpus, but it does not
+    # authorize one.
+    require_corpus(current_principal(), corpus)
 
     started = time.perf_counter()
     continuation = cursor is not None

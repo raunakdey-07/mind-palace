@@ -81,7 +81,9 @@ class IngestionService:
             record["embedding"] = embedding
         return self.embedder.model_name, self.embedder.dimension
 
-    async def _ingest_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+    async def _ingest_content(
+        self, db, content: str, path: str, corpus_id: str, owner_principal_id: str | None = None
+    ) -> dict:
         """Shared ingestion pipeline for one parsed document.
 
         The caller owns the session lifetime. Returns a result dict with
@@ -96,9 +98,13 @@ class IngestionService:
                 self.memory_enabled or "claims" in metadata or await memory.enabled(db, corpus_id)
             )
             if use_memory:
-                result = await self._ingest_memory_content(db, content, path, corpus_id)
+                result = await self._ingest_memory_content(
+                    db, content, path, corpus_id, owner_principal_id
+                )
             else:
-                result = await self._ingest_live_content(db, content, path, corpus_id)
+                result = await self._ingest_live_content(
+                    db, content, path, corpus_id, owner_principal_id
+                )
         logging.getLogger(__name__).info(
             "document_ingested",
             extra={
@@ -110,7 +116,14 @@ class IngestionService:
         )
         return result
 
-    async def _ingest_live_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+    async def _ingest_live_content(
+        self,
+        db,
+        content: str,
+        path: str,
+        corpus_id: str,
+        owner_principal_id: str | None = None,
+    ) -> dict:
         metadata, body = parse_markdown(content)
         doc_hash = content_hash(body)
 
@@ -145,7 +158,7 @@ class IngestionService:
             }
 
         # Replace stale chunks with the freshly computed ones.
-        await delete_chunks_for_doc(db, doc_id, commit=False)
+        await delete_chunks_for_doc(db, corpus_id, doc_id, commit=False)
 
         sections = extract_sections_with_paths(body)
         chunks = chunk_with_heading_paths(sections)
@@ -165,6 +178,7 @@ class IngestionService:
 
         count = await insert_chunks(
             db,
+            corpus_id,
             doc_id,
             doc_type,
             tags,
@@ -184,7 +198,14 @@ class IngestionService:
             "message": f"Ingested {count} chunks",
         }
 
-    async def _ingest_memory_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+    async def _ingest_memory_content(
+        self,
+        db,
+        content: str,
+        path: str,
+        corpus_id: str,
+        owner_principal_id: str | None = None,
+    ) -> dict:
         """One caller-owned transaction for the archive and live-index projection."""
         from api.services import memory
 
@@ -219,9 +240,15 @@ class IngestionService:
 
         embedding_model, embedding_dimension = self._embed_records(records)
         doc_id = await upsert_document(
-            db, extract_title(metadata), path, body, metadata, corpus_id=corpus_id, force=True
+            db,
+            extract_title(metadata),
+            path,
+            body,
+            metadata,
+            corpus_id=corpus_id,
+            force=True,
         )
-        await delete_chunks_for_doc(db, doc_id, commit=False)
+        await delete_chunks_for_doc(db, corpus_id, doc_id, commit=False)
         doc_type = metadata.get("document_type") or metadata.get("type") or DEFAULT_DOC_TYPE
         if doc_type not in ("project", "kaggle", "note", "paper"):
             doc_type = DEFAULT_DOC_TYPE
@@ -230,6 +257,7 @@ class IngestionService:
             tags = [tag.strip() for tag in tags.split(",")]
         count = await insert_chunks(
             db,
+            corpus_id,
             doc_id,
             doc_type,
             tags,
@@ -240,7 +268,7 @@ class IngestionService:
             commit=False,
         )
         version = await memory.record_version(
-            db, corpus_id, path, doc_id, content, metadata, records
+            db, corpus_id, path, doc_id, content, metadata, records, owner_principal_id
         )
         await update_manifest(
             db, path, content_hash(content), doc_id, count, corpus_id, commit=False
@@ -290,8 +318,15 @@ class IngestionService:
                 getattr(self.embedder, "version", "ingest"),
                 commit=False,
             )
-        except Exception:  # noqa: BLE001 - the cache is L2, never a contract
-            logger.warning("claim_embedding_cache_fill_failed", exc_info=True)
+        except Exception as exc:  # noqa: BLE001 - the cache is L2, never a contract
+            logger.warning(
+                "claim_embedding_cache_fill_failed error=%s",
+                type(exc).__name__,
+                # No traceback: a failed embedding write carries the claim text
+                # in the constraint-violation detail, which would put a
+                # customer's memory in the log. See `unexpected_error` in
+                # api/main.py for the same reasoning at full length.
+            )
             return 0
 
     async def ingest_file(
@@ -299,10 +334,21 @@ class IngestionService:
         content: str,
         path: Optional[str] = None,
         corpus_id: str = DEFAULT_CORPUS_ID,
+        owner_principal_id: str | None = None,
     ) -> dict:
-        """Ingest a single Markdown file into the given corpus."""
+        """Ingest a single Markdown file into the given corpus.
+
+        `owner_principal_id` makes the document private to that principal inside
+        a corpus its peers also hold. Omitted, the document is shared with
+        everyone holding the corpus, which is the default and the documented
+        shape. The owner must come from the authenticated principal, never from
+        the request body -- a client that chose its own owner could mark a
+        document as another principal's.
+        """
         async with session_scope() as db:
-            return await self._ingest_content(db, content, path or "unknown", corpus_id)
+            return await self._ingest_content(
+                db, content, path or "unknown", corpus_id, owner_principal_id
+            )
 
     async def ingest_repo(
         self,
@@ -517,10 +563,18 @@ class IngestionService:
                 from api.services import memory
 
                 await memory.record_deletion(db, corpus_id, path)
-            await delete_chunks_for_doc(db, doc_id, commit=False)
-            await db.execute(text("DELETE FROM documents WHERE id = :d"), {"d": doc_id})
+            await delete_chunks_for_doc(db, corpus_id, doc_id, commit=False)
+            # `documents.id` is a global primary key, so both deletes name the
+            # corpus as well. The ids came from a corpus-scoped select above;
+            # repeating the predicate means a change to that select cannot turn
+            # this into a cross-corpus delete.
             await db.execute(
-                text("DELETE FROM ingestion_manifest WHERE doc_id = :d"), {"d": doc_id}
+                text("DELETE FROM documents WHERE id = :d AND corpus_id = :c"),
+                {"d": doc_id, "c": corpus_id},
+            )
+            await db.execute(
+                text("DELETE FROM ingestion_manifest WHERE doc_id = :d AND corpus_id = :c"),
+                {"d": doc_id, "c": corpus_id},
             )
 
         # Orphaned manifests: no matching document (doc_id NULL or dangling).

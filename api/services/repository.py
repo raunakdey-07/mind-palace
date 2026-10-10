@@ -172,11 +172,22 @@ async def update_manifest(
         await db.commit()
 
 
-async def delete_chunks_for_doc(db: AsyncSession, doc_id: str, *, commit: bool = True) -> None:
-    """Remove all chunks belonging to a document."""
+async def delete_chunks_for_doc(
+    db: AsyncSession, corpus_id: str, doc_id: str, *, commit: bool = True
+) -> None:
+    """Remove all chunks belonging to a document, within one corpus.
+
+    `chunks` has no corpus column of its own, so the boundary is reached through
+    the parent document -- which is why `corpus_id` is required. `doc_id` is a
+    global primary key, so without it this delete could remove another tenant's
+    chunks if a caller ever passed an id it had not just resolved.
+    """
     await db.execute(
-        text("DELETE FROM chunks WHERE doc_id = :doc_id"),
-        {"doc_id": doc_id},
+        text(
+            "DELETE FROM chunks WHERE doc_id = :doc_id AND doc_id IN "
+            "(SELECT id FROM documents WHERE id = :doc_id AND corpus_id = :corpus_id)"
+        ),
+        {"doc_id": doc_id, "corpus_id": corpus_id},
     )
     if commit:
         await db.commit()
@@ -184,6 +195,7 @@ async def delete_chunks_for_doc(db: AsyncSession, doc_id: str, *, commit: bool =
 
 async def insert_chunks(
     db: AsyncSession,
+    corpus_id: str,
     doc_id: str,
     document_type: str,
     tags: list[str],
@@ -194,9 +206,24 @@ async def insert_chunks(
     *,
     commit: bool = True,
 ) -> int:
-    """Insert chunk records with full metadata."""
+    """Insert chunk records with full metadata.
+
+    `corpus_id` is required and is *verified* against the document rather than
+    trusted: `chunks` has no corpus column, so without that check a caller could
+    attach another tenant's document id and write its text into a corpus it does
+    not own.
+    """
     if not chunks:
         return 0
+
+    owned = (
+        await db.execute(
+            text("SELECT 1 FROM documents WHERE id = :doc_id AND corpus_id = :corpus_id"),
+            {"doc_id": doc_id, "corpus_id": corpus_id},
+        )
+    ).first()
+    if owned is None:
+        raise ValueError(f"document {doc_id} does not belong to corpus {corpus_id}")
 
     values = []
     for i, chunk in enumerate(chunks):
@@ -245,14 +272,21 @@ async def insert_chunks(
 
 async def search_chunks(
     db: AsyncSession,
+    corpus_id: str,
     query_vector: list[float],
     k: int = 5,
     document_type: Optional[str] = None,
     tags: Optional[list[str]] = None,
 ) -> list[dict]:
-    """Semantic search with optional metadata filters."""
-    where_clauses = ["c.embedding IS NOT NULL"]
-    params = {"query": query_vector, "k": k}
+    """Semantic search with optional metadata filters, within one corpus.
+
+    `corpus_id` is required. This is the only unscoped semantic search in the
+    codebase, and it already joins `documents`; making the corpus a required
+    argument is the difference between a filter someone can forget and a
+    boundary the call cannot be written without.
+    """
+    where_clauses = ["c.embedding IS NOT NULL", "d.corpus_id = :corpus_id"]
+    params = {"query": query_vector, "k": k, "corpus_id": corpus_id}
 
     if document_type:
         where_clauses.append("c.document_type = :doc_type")
@@ -294,14 +328,20 @@ async def search_chunks(
     ]
 
 
-async def get_document(db: AsyncSession, doc_id: str) -> Optional[dict]:
-    """Fetch a document by ID."""
+async def get_document(db: AsyncSession, corpus_id: str, doc_id: str) -> Optional[dict]:
+    """Fetch a document by ID, within one corpus.
+
+    `corpus_id` is required. `documents.id` is a global primary key, so a lookup
+    by id alone resolves in every corpus at once; making the corpus a required
+    argument turns "works in a single-tenant deployment" into "cannot be called
+    at all without saying which tenant you mean".
+    """
     result = await db.execute(
         text(
             "SELECT id, title, path, document_type, date, summary, tags, git_repo "
-            "FROM documents WHERE id = :id"
+            "FROM documents WHERE id = :id AND corpus_id = :corpus_id"
         ),
-        {"id": doc_id},
+        {"id": doc_id, "corpus_id": corpus_id},
     )
     row = result.first()
     if not row:
@@ -318,15 +358,20 @@ async def get_document(db: AsyncSession, doc_id: str) -> Optional[dict]:
     }
 
 
-async def get_chunks_for_document(db: AsyncSession, doc_id: str) -> list[dict]:
-    """Fetch all chunks for a document (for summarization)."""
+async def get_chunks_for_document(db: AsyncSession, corpus_id: str, doc_id: str) -> list[dict]:
+    """Fetch all chunks for a document (for summarization), within one corpus.
+
+    `chunks` has no corpus column, so the boundary is the parent document's --
+    which is why `corpus_id` is required here rather than inferred.
+    """
     result = await db.execute(
         text(
-            "SELECT text, heading_path, order_index "
-            "FROM chunks WHERE doc_id = :doc_id "
-            "ORDER BY order_index"
+            "SELECT c.text, c.heading_path, c.order_index "
+            "FROM chunks c JOIN documents d ON c.doc_id = d.id "
+            "WHERE c.doc_id = :doc_id AND d.corpus_id = :corpus_id "
+            "ORDER BY c.order_index"
         ),
-        {"doc_id": doc_id},
+        {"doc_id": doc_id, "corpus_id": corpus_id},
     )
     return [
         {"text": row[0], "heading_path": row[1], "order_index": row[2]} for row in result.fetchall()
@@ -335,10 +380,16 @@ async def get_chunks_for_document(db: AsyncSession, doc_id: str) -> list[dict]:
 
 async def get_related_documents(
     db: AsyncSession,
+    corpus_id: str,
     doc_id: str,
     k: int = 5,
 ) -> list[dict]:
-    """Find related documents via shared tags and document type."""
+    """Find related documents via shared tags and document type, within one corpus.
+
+    `corpus_id` is required, and it constrains *both* sides: the outer scan and
+    the tag sub-query that reads the source document. Scoping only the outer
+    query would still let the sub-query read another tenant's tags.
+    """
     result = await db.execute(
         text("""
             SELECT d.id, d.title, d.path, d.document_type, d.tags,
@@ -346,12 +397,16 @@ async def get_related_documents(
             FROM documents d
             JOIN chunks c ON c.doc_id = d.id
             WHERE d.id != :doc_id
-              AND d.tags && (SELECT tags FROM documents WHERE id = :doc_id)
+              AND d.corpus_id = :corpus_id
+              AND d.tags && (
+                    SELECT tags FROM documents
+                    WHERE id = :doc_id AND corpus_id = :corpus_id
+              )
             GROUP BY d.id, d.title, d.path, d.document_type, d.tags
             ORDER BY shared_tags DESC, d.updated_at DESC
             LIMIT :k
         """),
-        {"doc_id": doc_id, "k": k},
+        {"doc_id": doc_id, "corpus_id": corpus_id, "k": k},
     )
     return [
         {

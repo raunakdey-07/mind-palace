@@ -1385,11 +1385,368 @@ def eval_retrieval(
         )
 
 
+credentials_app = typer.Typer(
+    name="credential",
+    help="Issue, list and revoke the credentials callers present to Mind Palace.",
+    no_args_is_help=True,
+)
+app.add_typer(credentials_app)
+
+
+def _authz_session():
+    """A session in the administrative principal scope, on the maintenance role.
+
+    Credential management is administrative by construction: granting access to
+    a corpus is something the grantee cannot do for themselves. Every command
+    below enters `ADMIN_PRINCIPAL` so it works identically whatever principal
+    happens to be current -- including the default local one, which is
+    unrestricted but is *not* an identity.
+
+    It also connects as `MIND_PALACE_ADMIN_DATABASE_URL` when that is set,
+    because these commands read and write `memory_principals` directly and the
+    least-privileged runtime role is deliberately denied exactly that. Listing
+    every credential in one query is the enumeration that migration `009` removes
+    from the application; running the operator CLI as the runtime role would put
+    the privilege straight back.
+    """
+    import os
+    from contextlib import asynccontextmanager
+
+    from api.services.authz import ADMIN_PRINCIPAL
+    from api.services.db import admin_session_scope, principal_scope, session_scope
+
+    admin_url = os.getenv("MIND_PALACE_ADMIN_DATABASE_URL") or os.getenv("MIGRATION_DATABASE_URL")
+    # Both are `@asynccontextmanager` helpers, so calling either one *produces* the
+    # context manager. `scope` is already one; entering it again would call it as a
+    # decorator and fail with a message about a missing argument.
+    scope = admin_session_scope(admin_url) if admin_url else session_scope()
+
+    @asynccontextmanager
+    async def _open():
+        async with scope as db:
+            with principal_scope(ADMIN_PRINCIPAL):
+                yield db
+
+    return _open()
+
+
+def _run_async(coro):
+    """Run a coroutine the way the rest of this CLI does."""
+    import asyncio
+
+    return _run(lambda: asyncio.run(coro))
+
+
+@credentials_app.command("issue")
+def credential_issue(
+    name: str = typer.Argument(..., help="A label an operator will recognise."),
+    corpus: list[str] = typer.Option(
+        ...,
+        "--corpus",
+        "-c",
+        help="A corpus this credential may read. Repeat for more.",
+    ),
+    role: str = typer.Option(
+        "read_write",
+        "--role",
+        "-r",
+        help="read_only, read_write, corpus_admin or principal_admin.",
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Print only the secret."),
+) -> None:
+    """Issue a credential and print its secret exactly once.
+
+    The corpus names must already exist: `mindpalace corpus` lists them, and the
+    first one is created by recording into it. Names come from server-side rows,
+    so a credential can never be pointed at a corpus that is not already there.
+
+    Roles are cumulative: `read_only` reads; `read_write` adds writing;
+    `corpus_admin` adds creating and erasing the corpora it holds grants on;
+    `principal_admin` adds issuing and revoking credentials. A credential does
+    not acquire access to a corpus created later -- grants are explicit.
+    """
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services import authz
+
+            return await authz.issue_credential(db, name, corpus, role)  # type: ignore[arg-type]
+
+    try:
+        issued = _run_async(run())
+    except ValueError as exc:
+        _fail(exc, False)
+        return
+    except Exception as exc:  # noqa: BLE001 - one message for the operator
+        _fail(exc, False)
+        return
+
+    if quiet:
+        typer.echo(issued["secret"])
+        return
+    typer.echo(f"credential issued: {issued['name']} ({issued['id'][:12]})")
+    typer.echo(f"  role:    {issued['role']}")
+    typer.echo(f"  corpora: {', '.join(issued['corpora'])}")
+    typer.echo("")
+    typer.echo(f"  secret:  {issued['secret']}")
+    typer.echo("")
+    typer.echo("This secret is shown once and stored only as a hash. It is not")
+    typer.echo("recoverable; issue a new credential if it is lost. Rotate by")
+    typer.echo("issuing a new one, deploying it, then revoking the old id.")
+
+
+@credentials_app.command("list")
+def credential_list() -> None:
+    """List credentials, their roles, their corpus scope and their state.
+
+    Never shows a secret or a hash: an operator can see that a credential exists
+    and what it may reach, which is what they need in order to revoke it.
+    """
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services import authz
+
+            return await authz.list_credentials(db)
+
+    try:
+        rows = _run_async(run())
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, False)
+        return
+    if not rows:
+        typer.echo("No credentials yet. Issue one:")
+        typer.echo("  mindpalace credential issue my-app --corpus default")
+        return
+    for row in rows:
+        state = "revoked" if row["disabled"] else "active"
+        typer.echo(f"{row['id'][:12]}  {row['name']}  {row['role']}  {state}")
+        typer.echo(f"    corpora: {', '.join(row['corpora']) or '(none)'}")
+
+
+@credentials_app.command("revoke")
+def credential_revoke(
+    identifier: str = typer.Argument(..., help="Credential id, or a prefix of it."),
+) -> None:
+    """Revoke a credential. It stops working on the next request."""
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services import authz
+
+            return await authz.revoke_credential(db, identifier)
+
+    try:
+        revoked = _run_async(run())
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, False)
+        return
+    if not revoked:
+        typer.echo(f"no credential matched '{identifier}'", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(f"revoked {identifier}")
+
+
+corpora_app = typer.Typer(
+    name="corpus",
+    help="Create and inspect corpora. Administrative: a corpus is a tenant boundary.",
+    no_args_is_help=True,
+)
+app.add_typer(corpora_app)
+
+
+@corpora_app.command("create")
+def corpus_create(
+    name: str = typer.Argument(..., help="Corpus name: letters, digits, '-', '_', '.'."),
+    description: str = typer.Option("", "--description", "-d", help="What it holds."),
+) -> None:
+    """Create a corpus, and issue credentials for it.
+
+    Minting a tenant boundary is administrative, which is why it is a local
+    command with database access rather than an HTTP route: in `required` mode
+    there is deliberately no network path that can create one. This is the step
+    an operator performs during workspace onboarding.
+    """
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services.corpora import create_corpus, get_corpus_by_name
+
+            existing = await get_corpus_by_name(db, name)
+            if existing:
+                return existing, False
+            return await create_corpus(db, name, description), True
+
+    try:
+        corpus, created = _run_async(run())
+    except ValueError as exc:
+        _fail(exc, False)
+        return
+    if not created:
+        typer.echo(f"corpus '{name}' already exists")
+        return
+    typer.echo(f"created corpus '{corpus['name']}' ({corpus['id'][:12]})")
+    typer.echo("")
+    typer.echo("Now grant a credential to it:")
+    typer.echo(f"  mindpalace credential issue my-app --corpus {name}")
+
+
+@corpora_app.command("delete")
+def corpus_delete(
+    name: str = typer.Argument(..., help="The corpus to erase."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Required. Erasure cannot be undone."),
+) -> None:
+    """Erase a corpus and every row of memory the server holds for it.
+
+    Removes the live projection *and* the durable archive: documents, chunks,
+    claims, evidence, versions, snapshots, embeddings, the manifest, and every
+    credential's grant to it. It is not reversible, and there is no trash.
+
+    Deliberately a local command with database access rather than an HTTP route,
+    for the same reason `corpus create` is: this is the one operation that can
+    remove a tenant's data, and it should require the same authority as creating
+    one. `DELETE /api/corpora/{name}` reaches the same code for a credential that
+    holds `manage_corpus`.
+
+    It removes what *this server* holds. It cannot remove a receipt or Memory
+    Pack the customer already exported, a database backup, or a copy they stored
+    elsewhere -- and it prints that rather than implying otherwise.
+    """
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services.corpora import delete_corpus
+
+            return await delete_corpus(db, name)
+
+    try:
+        report = _run_async(run())
+    except Exception as exc:  # noqa: BLE001 - one message for the operator
+        _fail(exc, False)
+        return
+
+    if not report["deleted"]:
+        typer.echo(f"corpus '{name}' not found", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"erased corpus '{name}' ({report['corpus_id'][:12]})")
+    typer.echo("")
+    typer.echo("rows removed, by table:")
+    for table, count in sorted(report["removed"].items()):
+        if count:
+            typer.echo(f"  {table:<28} {count}")
+    typer.echo("")
+    typer.echo(f"not removed: {report['not_removed']}")
+
+
+@credentials_app.command("grant")
+def credential_grant(
+    identifier: str = typer.Argument(..., help="Credential id, or a prefix of it."),
+    corpus: list[str] = typer.Option(..., "--corpus", "-c", help="A corpus to add."),
+) -> None:
+    """Add corpora to an existing credential, without changing its secret.
+
+    The alternative is reissuing, which changes the secret and breaks every
+    running deployment of the caller -- so that is the rotation step, never the
+    way access is widened. This one adds access and leaves the secret alone.
+    """
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services.authz import grant_corpora
+
+            return await grant_corpora(db, identifier, corpus)
+
+    try:
+        added = _run_async(run())
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, False)
+        return
+    if not added:
+        typer.echo(f"{identifier} already has access to those corpora")
+        return
+    typer.echo(f"granted {identifier}: {', '.join(added)}")
+
+
+@credentials_app.command("ungrant")
+def credential_ungrant(
+    identifier: str = typer.Argument(..., help="Credential id, or a prefix of it."),
+    corpus: list[str] = typer.Option(..., "--corpus", "-c", help="A corpus to remove."),
+) -> None:
+    """Remove corpora from a credential, keeping the credential itself usable.
+
+    This is offboarding one collection rather than a whole identity. Removing the
+    last one leaves a credential that resolves to no corpus and is therefore
+    refused on every request; use `credential revoke` to end it outright.
+    """
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services.authz import revoke_corpora
+
+            return await revoke_corpora(db, identifier, corpus)
+
+    try:
+        removed = _run_async(run())
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, False)
+        return
+    if not removed:
+        typer.echo(f"{identifier} did not have access to those corpora")
+        return
+    typer.echo(f"removed from {identifier}: {', '.join(removed)}")
+
+
+@app.command("posture")
+def posture() -> None:
+    """Report whether this database connection actually enforces row-level security.
+
+    `MIND_PALACE_AUTH_MODE=required` is an application switch. Whether the
+    database honours the policies underneath depends on the role, and a
+    superuser or a `BYPASSRLS` role ignores them entirely. This prints the
+    answer for the role this process would connect as.
+    """
+
+    async def run():
+        from api.services.db import session_scope
+        from api.services.posture import inspect
+
+        async with session_scope() as db:
+            return await inspect(db)
+
+    try:
+        found = _run_async(run())
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, False)
+        return
+
+    typer.echo(f"role:            {found.role}")
+    typer.echo(f"superuser:       {found.is_superuser}")
+    typer.echo(f"BYPASSRLS:       {found.bypasses_rls}")
+    typer.echo(f"RLS effective:   {found.rls_effective}")
+    if found.owns_protected_tables:
+        typer.echo(f"owns tables:     {', '.join(sorted(found.owns_protected_tables))}")
+    problems = found.problems()
+    if problems:
+        typer.echo("")
+        for problem in problems:
+            typer.echo(f"  [PROBLEM] {problem}")
+        typer.echo("")
+        typer.echo("This deployment gets no tenant isolation from the database.")
+        typer.echo("Use scripts/db/runtime_roles.sql and connect as mindpalace_runtime.")
+        raise typer.Exit(code=1)
+
+
 @app.command()
 def serve() -> None:
     """Start the local development server."""
     typer.echo("Run: uvicorn api.main:app --reload")
     typer.echo("Then visit http://localhost:8000/docs")
+    typer.echo("")
+    typer.echo("That is a local server. Before exposing one to a network:")
+    typer.echo("  MIND_PALACE_DEPLOYMENT=server MIND_PALACE_AUTH_MODE=required \\")
+    typer.echo("      uvicorn api.main:app --host 0.0.0.0")
+    typer.echo("In that mode the app refuses to start if authentication is off.")
 
 
 if __name__ == "__main__":

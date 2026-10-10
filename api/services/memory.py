@@ -279,12 +279,19 @@ async def record_version(
     content: str,
     metadata: dict,
     chunks: list[dict],
+    owner_principal_id: str | None = None,
 ) -> dict:
     """Archive NEW/MODIFIED/RESTORED or return the existing version with skipped=True.
 
     Change detection includes raw content and all normalized metadata, not live
     IDs or rechunking. IDs derive from identity + predecessor + event + payload.
     Evidence is validated even on an unchanged call. No commit; propagate errors.
+
+    `owner_principal_id` is inert while resource-level authorization is
+    withdrawn. It is kept on the signature so the callers, the CLI, and
+    `api/services/resources.py` still describe the intended shape, and so
+    reinstating it is a migration rather than an edit at twenty call sites. Do not
+    rely on it setting anything today -- see `docs/withdrawn/`.
     """
     if not isinstance(path, str) or not path or not isinstance(content, str):
         raise ValueError("path must be nonempty and content must be raw text")
@@ -299,7 +306,8 @@ async def record_version(
         return {**previous, "skipped": True}
     await db.execute(
         text("""
-        INSERT INTO memory_documents (corpus_id, id, path) VALUES (:c, :d, :p)
+        INSERT INTO memory_documents (corpus_id, id, path)
+        VALUES (:c, :d, :p)
         ON CONFLICT (corpus_id, id) DO NOTHING
     """),
         {"c": corpus_id, "d": identity, "p": path},

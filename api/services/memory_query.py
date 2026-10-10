@@ -367,8 +367,13 @@ async def _warm_claim_cache(db, corpus_id: str, wanted: dict, fresh: dict, embed
                 getattr(embedder, "version", "query"),
                 commit=False,
             )
-    except Exception:  # noqa: BLE001 - a cache write must never fail a read
-        logger.debug("claim_embedding_cache_warm_failed", exc_info=True)
+    except Exception as exc:  # noqa: BLE001 - a cache write must never fail a read
+        logger.debug(
+            "claim_embedding_cache_warm_failed error=%s",
+            type(exc).__name__,
+            # No traceback -- it would carry the claim text. See
+            # `unexpected_error` in api/main.py.
+        )
 
 
 def _read_only(db) -> bool:

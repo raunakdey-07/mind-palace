@@ -48,6 +48,11 @@ class StrategyResult:
 
 def _make_strategy(service: RetrievalService, query_vector: list[float], **kwargs) -> Callable:
     async def run(k: int) -> tuple[list[str], list[RetrievalResult]]:
+        # `corpus_id` must arrive in kwargs. Without it the search spans every
+        # corpus in the database, which is not what a benchmark measures and
+        # would rank a strategy against other tenants' documents.
+        if "corpus_id" not in kwargs:
+            raise ValueError("_make_strategy requires corpus_id")
         results = await service.search(query_vector, k=k, **kwargs)
         return [r.source_title for r in results], results
 

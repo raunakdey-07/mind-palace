@@ -49,6 +49,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
+import hmac
 import json
 import os
 import signal
@@ -59,6 +60,8 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from api.services.db import principal_scope
 
 #: A runtime with no requests for this long exits. Long enough to cover a working
 #: session of `remember`/`recall`/`explain`, short enough that it is not a process
@@ -497,7 +500,12 @@ async def _serve_one(
     except (ValueError, asyncio.IncompleteReadError) as exc:
         return {"ok": False, "error": {"code": "invalid_request", "message": str(exc)}}
 
-    if not isinstance(request.get("token"), str) or request["token"] != token:
+    if not isinstance(request.get("token"), str) or not hmac.compare_digest(
+        request["token"], token
+    ):
+        # Constant-time: the token is the shared secret for this user's memory,
+        # and a short-circuiting comparison leaks its prefix to a local attacker
+        # who can time the socket.
         return {"ok": False, "error": {"code": "forbidden", "message": "bad runtime token"}}
     if request.get("protocol") != PROTOCOL:
         return {
@@ -555,6 +563,59 @@ def _error(exc: Exception) -> dict:
 
 
 async def _dispatch(operation: str, request: dict, runtime: _Runtime) -> dict:
+    """Run one public operation as the runtime's configured identity.
+
+    The socket token proves the caller is a local peer of this user; it does not
+    decide which corpora the caller may reach. That is the same split as the HTTP
+    surface, where the request proves nothing about authority on its own.
+
+    So the runtime resolves a principal once, from `MIND_PALACE_RUNTIME_CREDENTIAL`,
+    and every operation below runs inside that scope. Without it, the ContextVar
+    holds the default local principal -- unrestricted, with a `{*}` database
+    scope -- and a wire-supplied corpus name would select any corpus in the
+    database. In `required` mode a runtime with no credential refuses every
+    operation rather than serving them all.
+    """
+    principal = await _runtime_principal()
+    with principal_scope(principal):
+        return await _dispatch_scoped(operation, request, runtime)
+
+
+async def _runtime_principal():
+    """The identity this runtime process acts as, resolved once per dispatch.
+
+    Resolved per dispatch rather than cached at startup, because a revoked
+    credential should stop working without a restart. It is a single indexed
+    lookup on a token the client already has in hand.
+    """
+    from api.services.authz import AuthorizationError, auth_required, resolve_principal
+    from api.services.db import AsyncSessionLocal
+
+    credential = os.getenv("MIND_PALACE_RUNTIME_CREDENTIAL") or None
+    if credential is None and auth_required():
+        # Refused before the lookup rather than after it, so the message names
+        # the setting the operator has to set. `resolve_principal` would refuse
+        # too, but with "a bearer credential is required", which tells an
+        # operator nothing about a runtime that has no way to present one.
+        raise AuthorizationError(
+            "unauthenticated",
+            "the runtime has no credential configured; set MIND_PALACE_RUNTIME_CREDENTIAL",
+            401,
+        )
+    async with AsyncSessionLocal() as db:
+        principal = await resolve_principal(db, f"Bearer {credential}" if credential else None)
+    if auth_required() and principal.unrestricted:
+        # Reachable when the configured credential does not resolve to a
+        # principal. Treated as a refusal rather than as "no restriction".
+        raise AuthorizationError(
+            "unauthenticated",
+            "the runtime credential is not recognised",
+            401,
+        )
+    return principal
+
+
+async def _dispatch_scoped(operation: str, request: dict, runtime: _Runtime) -> dict:
     """Run one public operation. Everything here is existing product code."""
     if operation == "remember":
         from api.models.remember import RememberResult

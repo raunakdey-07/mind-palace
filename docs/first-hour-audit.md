@@ -197,3 +197,69 @@ that, and it is the thing that breaks if the wheel is wrong — which it was.
   README does not warn about that.
 * The `server` deployment profile, credentials, and multi-tenancy. The audit ran
   entirely in the documented `local` default.
+## Dogfood: this repository's own documentation, as memory
+
+Eleven of this repository's documentation files were archived into one corpus
+using the documented authoring interface -- a `claims:` block whose `claim` text
+must appear verbatim in the document -- and then asked ten questions a maintainer
+of this project would actually ask. Twelve claims were authored across the eleven
+documents; all twelve were archived with evidence.
+
+| | n | which |
+|---|---:|---|
+| correct | 5 | Q1, Q2, Q5, Q6, Q10 |
+| abstained | 1 | Q9 |
+| wrong | 3 | Q3, Q7, Q8 |
+| **wrong, confidently** | 1 | Q4 |
+
+The three wrong answers and the confident-wrong one are worth reading:
+
+* **Q3, "if two users must not see each other's memory, what should I do?"**
+  answered with a SQLSTATE line from the withdrawn-feature record. The correct
+  answer -- one corpus per confidentiality boundary -- is in `when-to-use.md` and
+  was not returned.
+* **Q7, "what SQLSTATE caused the remember 503?"** answered with the sentence
+  saying the endpoint returned 503, which is the symptom, not the cause. The
+  42501 answer was returned for Q3 instead: both questions pulled from the same
+  region of the same document and the ranking put the wrong span on the wrong
+  question.
+* **Q8, "is cryptographic erasure implemented?"** answered with a sentence
+  describing what cryptographic erasure *would* do. The document's own heading
+  says it is not implemented.
+* **Q4, "does deleting a corpus remove the data from backups?"** answered
+  confidently from the cryptographic-erasure section. A reader would take away a
+  statement about backups that does not answer whether ordinary erasure reaches
+  backups. This is the one **confident-wrong** answer.
+
+**This is not comparable to the held-out numbers and must not be read as such.**
+Twelve claims across eleven documents is an extremely sparse fact set -- one or
+two facts per document -- against questions written to paraphrase rather than
+quote. The held-out set asks 157 questions of 157 authored facts and reports one
+confident-wrong; this asks ten questions of twelve facts and reports one. Same
+proportion, wildly different confidence intervals, and this sample is far too
+small to mean anything on its own.
+
+It is still worth recording, because it is the only time the product has been
+pointed at its own documentation, and because Q4 is exactly the failure a
+maintainer would find unacceptable: a confidently wrong answer about whether
+customer data left the building.
+
+## What the dogfood exposed in the authoring interface
+
+Three defects, all of them silent:
+
+1. **`parse_markdown` discards malformed frontmatter without a word.** The first
+   attempt at this corpus generated YAML that `python-frontmatter` could not
+   parse. `parse_markdown` catches every exception and returns `{}`, so the
+   `claims:` block vanished, `sync` reported `added=11, success=True`, and the
+   archive contained 11 documents and **0 claims**. Nothing anywhere said why.
+   The same silent path would swallow a typo in a real document.
+
+2. **A claim that does not appear verbatim is a hard error with a good
+   message.** `claim[0] text must appear in the supporting chunk; semantic
+   inference is not permitted` is exactly right, and it is worth keeping.
+
+3. **`sync` collapses every per-document failure into `document_ingestion_failed`.**
+   The real reason -- a missing `value:` field, a non-verbatim claim -- is
+   available only by calling the ingestion service directly. An author syncing a
+   directory gets a count and no diagnosis.

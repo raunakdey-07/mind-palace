@@ -330,6 +330,26 @@ Two caveats stated rather than buried:
 
 Evidence: `docs/performance/m0130-heldout.json` <- key: summary.strategies.C_fallback
 
+### The next held-out set is written and frozen, and unscored
+
+`docs/performance/heldout-v3-freeze.json`, dataset hash
+`d52545673ce864a9d774417085dc05f1a1d1df9be5b625107d088d42866175fb`:
+**45 questions**, 31 expecting a current fact, 3 historical, 1 conflicting, 10
+where the correct answer is silence. Regenerate with
+`python scripts/freeze_heldout_v3.py`; the hash is over the canonical question
+rows, so editing a question changes it.
+
+Named **v3**, not v2: `docs/performance/heldout-v2-freeze.json` already exists,
+32 questions, frozen 2026-10-04 and already scored. A second set called "v2"
+would make the identifier mean two things.
+
+Authored from the ten maintainer questions in
+[the first-hour audit](first-hour-audit.md) and from the question shapes the
+measured failure classes predict, paraphrased rather than quoted. No retrieval
+code was read while writing them. **It has not been scored.** Scoring happens
+once, at one commit, and any retrieval change tuned against it is a development
+result that has to be reported as one.
+
 The aggregate figures remain, because the release documents have always quoted
 them and removing them would break citations in the changelog:
 

@@ -1,6 +1,26 @@
 {
   "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
   "runs": {
+    "3108404: full suite, run A (trust round)": {
+      "collected": "1621",
+      "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",
+      "failed": "0",
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, run A (trust round)",
+      "note": "junitxml written by the runner",
+      "passed": "1619",
+      "seconds": 533.1,
+      "skipped": "2"
+    },
+    "3108404: full suite, run B (trust round, immediately after A)": {
+      "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",
+      "failed": "0",
+      "label": "full suite, run B (trust round, immediately after A)",
+      "note": "repeatability on the same cluster",
+      "passed": "1619",
+      "seconds": 530.1,
+      "skipped": "2"
+    },
     "4166e08: full suite, run 2, immediately after run 1": {
       "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
       "failed": "0",

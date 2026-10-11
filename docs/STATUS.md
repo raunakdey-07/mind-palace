@@ -337,7 +337,8 @@ Evidence: `docs/performance/m0130-heldout.json` <- key: summary.strategies.C_fal
 **45 questions**, 31 expecting a current fact, 3 historical, 1 conflicting, 10
 where the correct answer is silence. Regenerate with
 `python scripts/freeze_heldout_v3.py`; the hash is over the canonical question
-rows, so editing a question changes it.
+rows, so editing a question changes it. **It is not an independent set** -- see
+[heldout-v3-README.md](performance/heldout-v3-README.md).
 
 Named **v3**, not v2: `docs/performance/heldout-v2-freeze.json` already exists,
 32 questions, frozen 2026-10-04 and already scored. A second set called "v2"

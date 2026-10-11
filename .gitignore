@@ -119,6 +119,8 @@ monitoring/
 !docs/security.md
 !docs/when-to-use.md
 !docs/first-hour-audit.md
+!/docs/gate/
+!/docs/gate/**
 !docs/deletion-and-erasure.md
 !docs/errors.md
 !docs/providers.md

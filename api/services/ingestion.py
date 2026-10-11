@@ -210,11 +210,28 @@ class IngestionService:
         from api.services import memory
 
         await memory.lock_corpus(db, corpus_id)
-        metadata, body = parse_markdown(content)
+        metadata, body, frontmatter_warnings = parse_markdown(
+            content, path=path, collect_warnings=True
+        )
+        for warning in frontmatter_warnings:
+            # A document whose frontmatter was not usable is a *different*
+            # document from the one the author wrote, and the difference decides
+            # whether it produced memory. Logging it here, at the only place that
+            # knows the path, is what makes it visible without the caller having
+            # to re-read the file to find out why.
+            logging.getLogger(__name__).warning(
+                "frontmatter_problem",
+                extra={"corpus_id": corpus_id, **warning.as_dict()},
+            )
         chunks = chunk_with_heading_paths(extract_sections_with_paths(body))
         records = [{**chunk, "order_index": i} for i, chunk in enumerate(chunks)]
         # Validate before embedding or any live mutation. No inferred claims.
-        memory.validate_source(path, content, metadata, records)
+        # The third element is the authored claims, and until now it was
+        # discarded -- so nothing downstream could say how much memory a document
+        # actually produced. `sync` reported success on a document whose claims
+        # block had never parsed. Carrying it through is what lets the caller
+        # report documents *and* claims instead of a file count.
+        _meta, _archived, claims = memory.validate_source(path, content, metadata, records)
         previous = await memory._latest(db, corpus_id, memory.memory_document_id(corpus_id, path))
         fingerprint = memory._hash(content, metadata)
         live = (
@@ -231,8 +248,10 @@ class IngestionService:
         ):
             return {
                 "success": True,
+                "warnings": [w.as_dict() for w in frontmatter_warnings],
                 "document_id": live,
                 "chunk_count": 0,
+                "claim_count": len(claims),
                 "version_id": previous["id"],
                 "event": "UNCHANGED",
                 "message": "Document unchanged, skipped",
@@ -279,8 +298,10 @@ class IngestionService:
         await self._cache_claim_vectors(db, corpus_id, [version["id"]])
         return {
             "success": True,
+            "warnings": [w.as_dict() for w in frontmatter_warnings],
             "document_id": doc_id,
             "chunk_count": count,
+            "claim_count": len(claims),
             "version_id": version["id"],
             "event": version["event"],
             "message": f"Ingested {count} chunks with version history",
@@ -384,6 +405,12 @@ class IngestionService:
 
         added = changed = unchanged = deleted = failed = 0
         total_chunks = 0
+        total_claims = 0
+        warnings: list[dict] = []
+        # One entry per document, always. A summary that only counts successes
+        # cannot answer "did my document land?", which is the question somebody
+        # asks after a sync that reported success.
+        documents: list[dict] = []
         errors: list[str] = []
         md_files = sorted(repo_path.rglob("*.md"))
         source_paths: set[str] = set()
@@ -400,11 +427,25 @@ class IngestionService:
                 async with session_scope() as db:
                     result = await self._ingest_content(db, content, rel_path, corpus_id)
 
+                for warning in result.get("warnings", []):
+                    warnings.append({**warning, "path": rel_path})
+                    if len(errors) < MAX_SYNC_ERRORS:
+                        errors.append(f"{rel_path}: {warning['code']}")
+
                 if not result["success"]:
                     failed += 1
                     reason = str(result.get("message") or "ingestion failed")
                     if len(errors) < MAX_SYNC_ERRORS:
                         errors.append(f"{rel_path}: {reason}")
+                    documents.append(
+                        {
+                            "path": rel_path,
+                            "outcome": "failed",
+                            "reason": "ingestion_failed",
+                            "claims": 0,
+                            "chunks": 0,
+                        }
+                    )
                     logging.getLogger(__name__).warning(
                         "document_ingestion_failed",
                         extra={"corpus_id": corpus_id, "path": rel_path, "reason": reason},
@@ -413,16 +454,45 @@ class IngestionService:
 
                 if result.get("event") == "UNCHANGED":
                     unchanged += 1
+                    outcome = "unchanged"
                 elif state == "added":
                     added += 1
+                    outcome = "ingested"
                 else:
                     changed += 1
+                    outcome = "ingested"
+                claims_for_doc = int(result.get("claim_count") or 0)
+                total_claims += claims_for_doc
                 total_chunks += result.get("chunk_count", 0)
+                entry = {
+                    "path": rel_path,
+                    "outcome": outcome,
+                    "reason": None,
+                    "claims": claims_for_doc,
+                    "chunks": result.get("chunk_count", 0),
+                }
+                # A document that parsed cleanly but declared no claims is the
+                # exact shape of the dogfood failure: indexed as text, invisible
+                # to recall. Saying so is the whole point of this field.
+                if not claims_for_doc and not result.get("warnings"):
+                    entry["reason"] = "no_claims_declared"
+                    if len(errors) < MAX_SYNC_ERRORS:
+                        errors.append(f"{rel_path}: no_claims_declared")
+                documents.append(entry)
             except Exception as e:
                 failed += 1
                 reason = _sync_error(rel_path, e)
                 if len(errors) < MAX_SYNC_ERRORS:
                     errors.append(reason)
+                documents.append(
+                    {
+                        "path": rel_path,
+                        "outcome": "failed",
+                        "reason": type(e).__name__,
+                        "claims": 0,
+                        "chunks": 0,
+                    }
+                )
                 logging.getLogger(__name__).warning(
                     "document_ingestion_failed",
                     extra={
@@ -448,14 +518,24 @@ class IngestionService:
         await self._refresh_planner_statistics(corpus_id, added + changed + deleted)
 
         duration_ms = int((time.perf_counter() - start) * 1000)
+        # `success` now means what a reader assumes it means: every document
+        # either landed or said why it did not. A clean document that declared no
+        # claims is not a failure -- plain prose is legitimate -- but it is not
+        # silently equal to one that produced memory either, so it is counted and
+        # named.
         return {
-            "success": failed == 0,
+            "success": failed == 0 and not warnings,
             "corpus_id": corpus_id,
             "added": added,
             "changed": changed,
             "unchanged": unchanged,
             "deleted": deleted,
             "failed": failed,
+            "documents": len(documents),
+            "claim_count": total_claims,
+            "without_claims": sum(1 for d in documents if d["reason"] == "no_claims_declared"),
+            "document_results": documents,
+            "warnings": warnings,
             "chunk_count": total_chunks,
             "duration_ms": duration_ms,
             "message": (

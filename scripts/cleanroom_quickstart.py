@@ -20,6 +20,20 @@ So this does what the suite structurally cannot:
   retyped quickstart drifts, and then it tests what the author remembers rather
   than what a reader would run.
 
+## Mutation testing
+
+A check that has never been shown to fail is not evidence. Two mutations, each a
+real regression from this branch, must make it fail:
+
+| Mutation | Result |
+|---|---|
+| remove `mindpalace_errors` from `py-modules` | FAIL, ModuleNotFoundError |
+| remove both `CHAR(64)` strips | FAIL: the first `mindpalace remember` cannot write |
+
+The second mutation removes **both** of the default-corpus fixes, not one. Each
+alone is sufficient, so removing only one leaves the job green -- which is
+correct behaviour and a trap for whoever mutates it next. Measured, not assumed.
+
 ## What it asserts
 
 Not "it installed" -- that is the part that lies. It asserts:
@@ -286,12 +300,22 @@ for _ in range(40):
         content = (msg.get("result") or {}).get("content", [])
         text = content[0].get("text", "") if content else ""
         proc.kill()
-        sys.exit(0 if "PostgreSQL" in text else 3)
+        # The README supersedes its own earlier fact: step 7 remembers that the
+        # datastore is now CockroachDB, so by the time this runs the correct
+        # answer is CockroachDB, not the PostgreSQL asserted earlier. Asserting
+        # the *superseded* value here would have failed the job for being right.
+        sys.exit(0 if "CockroachDB" in text else 3)
 proc.kill()
 sys.exit(4)
 """
         result = runner.python(mcp, label="mcp")
-        checks.append(("MCP memory_recall with the documented shape", result.returncode == 0, ""))
+        checks.append(
+            (
+                "MCP memory_recall with the documented shape",
+                result.returncode == 0,
+                "returned no current datastore",
+            )
+        )
 
     except AssertionError as exc:
         print(f"\nFAIL: {exc}", file=sys.stderr)

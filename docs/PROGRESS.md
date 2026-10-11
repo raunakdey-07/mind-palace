@@ -16,10 +16,37 @@ The session that produced the retrieval-lab figures is recorded in
 | 0 integrity after rewrite | **DONE** | gitleaks over the 44 pushed commits: 0 findings. `.retrieval_lab_cache/` is gitignored at `.gitignore:169`, 0 tracked `.npy`. `git diff v0.9.0..HEAD` over `eval/`, `baseline-packs.json`, `dev-tokenizer.json`: empty. All 5 commits that local `main` has ahead of `origin/main` are already ancestors of this branch, so `main` is contained in the branch and there is no divergence to reconcile. |
 | 1 CI green | **DONE** | the posture step asserted `import api.main` refuses, but the product deliberately checks the database posture in the *lifespan*. Step rewritten to run the lifespan, assert nonzero exit **and** the refusal reason; positive step now runs the same check on the least-privileged role. Mutation-tested both directions. |
 | 2 151 vs 194 | **DONE** | reconciled exactly: 43 questions differ and the lab is right on **zero** that the benchmark calls wrong. 26 are top-1-vs-top-k (23 at rank 2, 3 at rank 4), 17 are the lexical-fallback path. **194 is the system number; 151 is a ranking metric for one arm and must never be quoted beside it.** |
-| 3 release train | see below | |
-| 4 retrieval lab | see below | |
-| 5 D3 note | see below | |
-| 6 STATUS honesty | see below | |
+| 3 release train | **PARTIAL** | 46 commits after v0.9.0 classified (heuristic, some rows need a human). Migrations 008/009/010 were ALL introduced by `da8a14a`, which is after v0.9.0 — **no release has ever shipped them**; v0.9.0's head is 007, same as v0.8.0. The suspected STATUS.md contradiction does not exist: line 98's "No migration" is scoped to v0.9.0 and line 47's head-010 is about this branch. Version-train proposal NOT DONE. |
+| 4 retrieval lab | **PARTIAL** | 3a harm DONE (every arm net negative). 4f/4g NOT DONE. See below. |
+| 5 D3 note | **NOT DONE** | |
+| 6 STATUS honesty | **NOT DONE** | |
+
+### Phase 1 detail, for whoever picks this up
+
+The posture step asserted `import api.main` refuses under a server deployment.
+`api/main.py` documents that importing must not require a connection and that
+the posture check lives in the **lifespan**. The step was asking the wrong
+question and had been red on every runner. It now runs the lifespan, asserts a
+nonzero exit **and** that the output contains `refusing to start`, and the
+positive step runs the same check on the least-privileged role. Mutation-tested:
+`ALTER ROLE mindpalace_runtime SUPERUSER BYPASSRLS` makes it refuse.
+
+### Phase 4 items still open, in priority order
+
+* **4a** recall@1/3/5 per arm per slice, claim and passage — NOT DONE, and it is
+  the number the "hand the model ranked candidates" design stands or falls on.
+* **4b** arm F canary (query with each passage's own text; recall@1 must be
+  near 1.0) — NOT DONE. **Until that canary runs, the git-derived figure for
+  arm F is not trustworthy.** The 0.0093 survives a gold-set correction but a
+  canary has never been run against it, so the "retrieval weakness" verdict is
+  provisional.
+* **4c** cross-validate arm E's raw-score threshold by selecting the threshold
+  inside each training fold — NOT DONE. The 36.4% ceiling is an upper bound and
+  only the fitted gate's 14.2% has been cross-validated.
+* **4d** L2 rebuild digest — NOT DONE.
+* **4e** dogfood Q4 per arm — NOT DONE. Q4 remains untested by any arm.
+* **4f** arm G — blocked on Hub. 4g independent set — the D2 decision was left
+  unedited, so **sealed scoring has not happened**.
 
 ## Session 2 — 2026-10-11
 

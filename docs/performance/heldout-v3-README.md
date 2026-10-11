@@ -46,4 +46,4 @@ of `$0.00`, and there are no human authors here. See
 [cold-reader/NOT-RUN.md](cold-reader/NOT-RUN.md).
 
 `heldout-v4-freeze.json` does not exist. The spec for it is in
-[downstream-eval-protocol.md](../downstream-eval-protocol.md) §3.
+[downstream-eval-protocol.md](downstream-eval-protocol.md) §3.

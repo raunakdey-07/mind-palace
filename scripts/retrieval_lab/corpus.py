@@ -76,7 +76,15 @@ class Question:
 
     @property
     def answerable(self) -> bool:
-        return self.key is not None
+        """Can this question be answered from the corpus at all?
+
+        Driven by `expect_state`, not by `key`. The git-derived set is passage
+        gold only -- no authored claim keys exist for this repository's own
+        documents -- so `key is None` there means "no claim gold", not "no
+        answer". Reading it the other way scored 234 answerable questions as
+        234 absent ones and reported every passage metric as undefined.
+        """
+        return self.expect_state != "ABSENT"
 
 
 @dataclass

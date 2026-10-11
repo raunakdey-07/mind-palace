@@ -201,10 +201,26 @@ model download is excluded; it is measured separately above.
 
 | path | time | venv | what it is for |
 |---|---:|---:|---|
-| `pip install -e .` (README step 1) | 5 s | 13 MB | an integrator working from a clone |
-| `pip install mindpalace-os` (wheel only) | 0 s | **13 MB** | **receipt verification only** |
-| `requirements.txt`, default index | 217 s | **5.9 GB** | what the README tells a newcomer to run |
-| `requirements.txt` + CPU torch index | 130 s | **1.5 GB** | the same thing, 4.4 GB smaller |
+| `pip install mindpalace-os` (wheel alone) | 211 s | **5.9 GB** | anything, including proof verification |
+| `requirements-runtime.txt`, CPU torch index | 114 s | **1.5 GB** | the same product, 4.4 GB smaller |
+| `requirements-runtime.txt`, default index | 98 s* | **5.9 GB** | cached from an earlier row in the same session |
+| `requirements.txt` (README step 1), default index | 217 s | **5.9 GB** | what the README tells a newcomer to run |
+| model weights, `all-MiniLM-L6-v2` | — | 888 MB | downloaded on first use, not by pip |
+| model weights, `ms-marco-MiniLM-L-6-v2` | — | 805 MB | the cross-encoder, downloaded on first use |
+
+**Correction.** An earlier version of this table said the bare wheel was 13 MB.
+It is not. That measurement ran in a container where the virtualenv activation
+had silently failed, so pip installed into the base container venv: 0 s, and the
+size command read an empty directory. Measured with the interpreter's own path
+asserted, the bare wheel is 211 s and 5.9 GB, because the wheel declares
+`sentence-transformers` and that pulls torch.
+
+`mindpalace-proof verify` is genuinely dependency-free at *run* time -- it is
+stdlib code, and the README's claim about that is correct. What was wrong was
+the implication that installing it was small. It is a 5.9 GB install, and
+`pip install mindpalace-os` now reaches a working first command
+(`mindpalace init` applies the schema itself; the wheel ships the migrations and
+declares alembic).
 
 The CPU-only wheel is the same package with the CUDA runtime omitted:
 `pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt`.

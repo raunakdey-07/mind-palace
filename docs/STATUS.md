@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1619 passed, 0 failed, 2 skipped**; 1621 collected. Run twice in a row on one cluster (533 s and 530 s). The record in `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote; `check_evidence.py` verifies all three against `pytest --collect-only` at HEAD |
+| tests | **1619 passed, 0 failed, 2 skipped**; 1621 collected. 553 s. The run record in `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote; `check_evidence.py` verifies all three against `pytest --collect-only` at HEAD |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |

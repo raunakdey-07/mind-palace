@@ -185,6 +185,15 @@ authoritative memory the CLI and the SDK return. Fifteen tools are advertised.
 `mindpalace-mcp` is on `PATH` after install; the README does not say to verify
 that, and it is the thing that breaks if the wheel is wrong — which it was.
 
+## A note on the numbers in this document
+
+Timings here were taken on mains power. One later suite run took 18 minutes
+against the 9 minutes the same suite had taken twice before, because the machine
+was running on battery; it was re-run on power and is reported at its real
+duration. A timing taken off mains is not a measurement of the software, and any
+future reader comparing a figure in this document against their own should check
+they are on power too.
+
 ## What this audit does not cover
 
 * A real `git clone` from GitHub. The audit used the working tree, so a file that

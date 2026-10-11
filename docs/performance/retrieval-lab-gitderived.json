@@ -59,8 +59,8 @@
         "n_absent": 20,
         "n_answerable": 214,
         "passage_recall@1": 0.0093,
-        "passage_recall@3": 0.014,
-        "passage_recall@5": 0.014,
+        "passage_recall@3": 0.028,
+        "passage_recall@5": 0.028,
         "recall@1": 0.0,
         "recall@3": 0.0,
         "recall@5": 0.0,
@@ -303,8 +303,8 @@
           "n_absent": 0,
           "n_answerable": 214,
           "passage_recall@1": 0.0093,
-          "passage_recall@3": 0.014,
-          "passage_recall@5": 0.014,
+          "passage_recall@3": 0.028,
+          "passage_recall@5": 0.028,
           "recall@1": 0.0,
           "recall@3": 0.0,
           "recall@5": 0.0,
@@ -423,7 +423,7 @@
           "unbacked_passage_answers": 214
         }
       },
-      "seconds": 0.85
+      "seconds": 0.67
     }
   },
   "counts": {

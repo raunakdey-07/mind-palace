@@ -114,7 +114,7 @@ def main() -> int:
             {q.qid: [p.passage_id for p in corpus.passages_for(q.key)] for q in questions if q.key}
         )
     else:
-        M.attach_gold_passages({qid: [pid] for qid, pid in passage_gold.items() if pid})
+        M.attach_gold_passages({qid: list(pids) for qid, pids in passage_gold.items() if pids})
 
     results: dict[str, dict] = {}
     for name in args.arms.split(","):

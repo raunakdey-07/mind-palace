@@ -137,7 +137,19 @@ def load_git_derived() -> tuple[Corpus, list[Question]]:
         passages.extend(_passages_for(ref, path, text))
 
     questions: list[Question] = []
-    gold: dict[str, str | None] = {}
+    # A SET of passage ids per question, not one id.
+    #
+    # The first version named `hits[0]` -- the first passage containing the
+    # queried phrase, at the earliest ref that had it. Measured: the phrase
+    # appears in a mean of 5.2 passages, and every one of the 20 inspected
+    # questions had it in more than one. Scoring against a single id therefore
+    # measured whether the retriever happened to pick the same duplicate the
+    # builder happened to look at first, which is not a property of retrieval.
+    #
+    # Every passage containing the phrase is now gold. A retriever that returns
+    # a different copy of the same release section is correct, and should be
+    # counted as correct.
+    gold: dict[str, list[str]] = {}
     final = _git_show(REFS[-1], "CHANGELOG.md") or ""
     final_sections = _sections(final)
     readme = _git_show(REFS[-1], "README.md") or ""
@@ -169,7 +181,7 @@ def load_git_derived() -> tuple[Corpus, list[Question]]:
                     expect_state="HISTORICAL",
                 )
             )
-            gold[qid] = hits[0].passage_id
+            gold[qid] = [p.passage_id for p in hits]
 
     # -- shape 2: "what does the changelog record for release V" ---------------
     for version, _body in sorted(final_sections.items()):
@@ -179,11 +191,7 @@ def load_git_derived() -> tuple[Corpus, list[Question]]:
         )
         if first_ref is None:
             continue
-        hits = [
-            p
-            for p in passages
-            if p.path == f"CHANGELOG.md@{first_ref}" and f"[{version}]" in p.text
-        ]
+        hits = [p for p in passages if f"[{version}]" in p.text]
         if not hits:
             continue
         counter += 1
@@ -197,7 +205,7 @@ def load_git_derived() -> tuple[Corpus, list[Question]]:
                 expect_state="HISTORICAL",
             )
         )
-        gold[qid] = hits[0].passage_id
+        gold[qid] = [p.passage_id for p in hits]
 
     # -- shape 3: absent, by construction --------------------------------------
     for phrase in dict.fromkeys(_PHRASE.findall(readme)):
@@ -205,7 +213,7 @@ def load_git_derived() -> tuple[Corpus, list[Question]]:
             continue
         counter += 1
         qid = f"gd-absent-{counter:03d}"
-        gold[qid] = None
+        gold[qid] = []
         questions.append(
             Question(
                 qid=qid,

@@ -127,7 +127,9 @@ def recall_at(runs: list[Run], ks: tuple[int, ...] = (1, 3, 5)) -> dict[str, flo
         with_passage_gold = [r for r in answerable if _GOLD_PASSAGES.get(r.qid)]
         if with_passage_gold:
             phits = sum(
-                1 for r in with_passage_gold if set(r.passages[:k]) & set(_GOLD_PASSAGES[r.qid])
+                1
+                for r in with_passage_gold
+                if set(r.passages[:k]) & set(_GOLD_PASSAGES[r.qid] or [])
             )
             out[f"passage_recall@{k}"] = round(phits / len(with_passage_gold), 4)
         else:

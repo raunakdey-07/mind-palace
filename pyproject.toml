@@ -15,6 +15,11 @@ dependencies = [
     "asyncpg==0.30.0",
     "pydantic>=2.0.0",
     "python-frontmatter>=1.1.0",
+    # Declared here, not only in requirements.txt. `pip install mindpalace-os`
+    # is a documented install path in the README, and the documented migrate step
+    # is `python -m alembic ...`. Without this the bare wheel has no alembic and
+    # that step fails with "No module named alembic" on a clean machine.
+    "alembic>=1.13.0",
     "sentence-transformers>=2.5.0",
     "httpx>=0.27.0",
     "prometheus-fastapi-instrumentator>=7.0.0",
@@ -81,7 +86,16 @@ where = ["."]
 # the console scripts, `py-modules` and every `api`/`cli` import are unaffected.
 # The repository still ships them, which is where `check_versioning.py`,
 # `check_evidence.py` and the benchmark harnesses run from.
-include = ["api*", "cli*"]
+include = ["api*", "cli*", "migrations*"]
+
+[tool.setuptools.package-data]
+# `migrations/` is a package (see its `__init__.py`) for exactly this reason: a
+# wheel that ships no migration scripts cannot apply its own schema, and the
+# documented third step of the README -- `python -m alembic -c
+# migrations/alembic.ini upgrade head` -- has nothing to point at. Measured: the
+# bare wheel was 13 MB with no alembic and no migrations, so `pip install
+# mindpalace-os` could not reach a working first command.
+migrations = ["alembic.ini", "*.mako", "versions/*.py", "versions/*.mako"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

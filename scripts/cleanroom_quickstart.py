@@ -129,6 +129,13 @@ def main() -> int:
     parser.add_argument("--database-url", required=True)
     parser.add_argument("--keep", action="store_true", help="leave the workdir for inspection")
     parser.add_argument(
+        "--bare",
+        action="store_true",
+        help="install the wheel ALONE, with no requirements.txt. This is the "
+        "`pip install mindpalace-os` path the README also documents, and it is "
+        "the only way to find out whether the wheel is self-sufficient.",
+    )
+    parser.add_argument(
         "--workdir-root",
         default=None,
         help="where to build the venv. /tmp is often a small tmpfs and a torch "
@@ -205,14 +212,29 @@ def main() -> int:
         runner.interpreter = str(python)
         print("   installed:", wheel.name)
 
-        migrations = work / "migrations"
-        shutil.copytree(ROOT / "migrations", migrations)
+        if not args.bare:
+            migrations = work / "migrations"
+            shutil.copytree(ROOT / "migrations", migrations)
 
         print("== migrate ==")
-        runner.sh(
-            f'"{python}" -m alembic -c migrations/alembic.ini upgrade head',
-            label="alembic upgrade head",
-        )
+        if args.bare:
+            # `mindpalace init` applies the schema itself. A wheel that ships its
+            # migrations cannot do this without them, and a wheel that declares
+            # alembic cannot do it without that -- which is why this is the only
+            # migrate step the bare path gets.
+            result = runner.sh("mindpalace init", expect=None, label="mindpalace init (bare)")
+            checks.append(
+                (
+                    "bare wheel applies its own schema",
+                    result.returncode == 0,
+                    (result.stderr or result.stdout)[:200],
+                )
+            )
+        else:
+            runner.sh(
+                f'"{python}" -m alembic -c migrations/alembic.ini upgrade head',
+                label="alembic upgrade head",
+            )
         checks.append(("migrations apply", True, ""))
 
         commands = readme_commands()

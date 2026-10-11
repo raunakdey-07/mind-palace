@@ -6,7 +6,10 @@
 from __future__ import annotations
 
 import json
+import os
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
@@ -126,6 +129,59 @@ def _corpus_or_fail(corpus: str) -> str:
         raise typer.BadParameter(str(exc)) from exc
 
 
+@dataclass(frozen=True)
+class _MigrationResult:
+    ok: bool
+    detail: str
+
+
+def _migration_dir() -> "Path | None":
+    """Where the migrations are, whether installed or checked out.
+
+    Two locations, in order: the `migrations` package that ships in the wheel,
+    then `./migrations` for a source checkout where the package is not
+    installed. The package wins because after `pip install` the working
+    directory is wherever the user happened to be, and theirs is the copy that
+    matches the code doing the migrating.
+    """
+    try:
+        import migrations as _migrations
+
+        if _migrations.ALEMBIC_INI.exists():
+            return _migrations.HERE
+    except ImportError:
+        pass
+    local = Path("migrations")
+    return local if (local / "alembic.ini").exists() else None
+
+
+def _apply_migrations() -> _MigrationResult:
+    """Apply the schema in-process. Returns what happened, never raises.
+
+    A migration failure is reported, not propagated: `init` has to be able to
+    print the fallback instruction, and a stack trace from a first command is a
+    worse answer than one line saying what to run instead.
+    """
+    directory = _migration_dir()
+    if directory is None:
+        return _MigrationResult(False, "No migrations directory found.")
+    try:
+        from alembic import command
+        from alembic.config import Config
+    except ImportError:
+        return _MigrationResult(False, "alembic is not installed in this environment.")
+
+    config = Config(str(directory / "alembic.ini"))
+    config.set_main_option("script_location", str(directory))
+    if database_url := os.environ.get("DATABASE_URL"):
+        config.set_main_option("sqlalchemy.url", database_url.replace("+asyncpg", ""))
+    try:
+        command.upgrade(config, "head")
+    except Exception as exc:  # noqa: BLE001 - reported, not raised
+        return _MigrationResult(False, f"Migration failed: {type(exc).__name__}: {exc}")
+    return _MigrationResult(True, f"migrations/upgrade head from {directory}")
+
+
 @app.command()
 def init(
     database_url: Annotated[
@@ -144,6 +200,19 @@ def init(
 
     Verifies connectivity and that the schema is applied, creates the default
     corpus if needed, then prints one command to try. Safe to run repeatedly.
+
+    ## Why this applies the schema instead of telling you how
+
+    It used to print the `python -m alembic` line and exit 1. That is honest and
+    useless for the install path the README also documents: after
+    `pip install mindpalace-os` there is no `migrations/` directory in the
+    working directory and, before this change, no alembic in the environment at
+    all. The instruction was correct and unfollowable.
+
+    So `init` now applies the schema itself when it can find the migrations,
+    whether they came from an installed wheel or from a source checkout. When it
+    genuinely cannot -- alembic missing, or no migration directory -- it prints
+    the same line as before, because that is still the right instruction then.
     """
     import asyncio
     import os
@@ -177,13 +246,18 @@ def init(
         raise typer.Exit(code=1) from exc
 
     if not all(tables):
-        typer.echo(
-            "Mind Palace is installed, but the memory schema is not applied yet.\n"
-            "\nWhat to do:\n"
-            "  python -m alembic -c migrations/alembic.ini upgrade head",
-            err=True,
-        )
-        raise typer.Exit(code=1)
+        applied = _apply_migrations()
+        if not applied.ok:
+            typer.echo(
+                "Mind Palace is installed, but the memory schema is not applied yet.\n"
+                f"\n{applied.detail}\n"
+                "\nWhat to do:\n"
+                "  python -m alembic -c migrations/alembic.ini upgrade head",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        typer.echo(f"Applied the memory schema ({applied.detail}).")
+        tables = _run(lambda: asyncio.run(check()))
 
     async def ensure() -> str:
         from api.services.corpora import get_or_create_corpus

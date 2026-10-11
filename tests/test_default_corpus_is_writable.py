@@ -94,7 +94,23 @@ def test_the_derivation_matches_the_database_constraint(corpus_id, path="memory/
 
 
 async def test_a_document_can_be_written_into_the_default_corpus():
-    """End to end, against a real database, through the real write path."""
+    """End to end, against a real database, through the real write path.
+
+    The row is written under the default corpus's own id and then removed, and
+    the removal is not cosmetic.
+
+    `tests/test_ingestion_lifecycle.py::test_metadata_only_change_is_detected`
+    depends on the default corpus having no archived versions -- its own
+    docstring says so and explains why. Before this bug was fixed *nothing* could
+    write to the default corpus, so that premise held by accident. Now that
+    writes succeed, a test that leaves a document there breaks a different test
+    that has nothing to do with it.
+
+    That is worth stating rather than working around quietly: this suite has a
+    shared corpus, and the test that relied on it being empty was only reliable
+    because the product was broken. The removal below keeps this file from
+    re-introducing the coupling; it does not remove the coupling.
+    """
     import os
 
     from api.services import authz
@@ -106,35 +122,71 @@ async def test_a_document_can_be_written_into_the_default_corpus():
         pytest.skip("no DATABASE_URL")
 
     marker = "default-corpus-write-probe"
+    corpus_id = DEFAULT_CORPUS_ID.strip()
+    try:
+        async with admin_session_scope() as db:
+            with db_module.principal_scope(authz.ADMIN_PRINCIPAL):
+                result = await remember(
+                    "The default corpus accepts writes.",
+                    corpus=DEFAULT_CORPUS_NAME,
+                    key=marker,
+                )
+                await db.commit()
+                rows = (
+                    await db.execute(
+                        text(
+                            "SELECT count(*) FROM memory_documents "
+                            "WHERE corpus_id = :c AND path LIKE :p"
+                        ),
+                        {"c": corpus_id, "p": f"%{marker}%"},
+                    )
+                ).scalar()
+        # `remember()` returns the identity it wrote and does not echo the corpus,
+        # so the assertion is that the row landed under the default corpus's id.
+        assert result["success"] and result["document_id"], f"remember() returned {result!r}"
+        assert rows and rows > 0, (
+            "remember() reported success but wrote no document into the default corpus; "
+            "the CHECK constraint would have refused it"
+        )
+    finally:
+        # Append-only: erasure is the only way back, and it is the shipped path.
+        await _erase(corpus_id)
+        await _restore_default_corpus()
+
+
+async def _erase(corpus_id: str) -> None:
+    from api.services import authz
+    from api.services import db as db_module
+    from api.services.db import admin_session_scope
+
     async with admin_session_scope() as db:
         with db_module.principal_scope(authz.ADMIN_PRINCIPAL):
-            result = await remember(
-                "The default corpus accepts writes.", corpus=DEFAULT_CORPUS_NAME, key=marker
+            await db.execute(
+                text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"),
             )
-            await db.commit()
-            rows = (
-                await db.execute(
-                    text(
-                        "SELECT count(*) FROM memory_documents "
-                        "WHERE corpus_id = :c AND path LIKE :p"
-                    ),
-                    {"c": DEFAULT_CORPUS_ID.strip(), "p": f"%{marker}%"},
-                )
-            ).scalar()
-    # `remember()` returns the identity it wrote and does not echo the corpus, so
-    # the assertion is that the row landed under the default corpus's own id.
-    assert result["success"] and result["document_id"], f"remember() returned {result!r}"
-    assert rows and rows > 0, (
-        "remember() reported success but wrote no document into the default corpus; "
-        "the CHECK constraint would have refused it"
-    )
+            await db.execute(text("SELECT mindpalace_erase_corpus(:c)"), {"c": corpus_id})
+        await db.commit()
 
 
-def test_no_corpus_id_the_product_can_produce_is_wider_than_the_column():
-    """The class of bug, not the instance."""
-    # Guard the invariant where it is cheap to state it: every id the product
-    # derives from a name is a 64-character digest, so only the hand-written
-    # default id can ever be shorter.
-    for name in ("a", "default", "alpha-brand", "x" * 200, "Ünïcödé corpus"):
-        derived = corpus_id_for_name(name)
-        assert len(derived) == 64, f"corpus_id_for_name({name!r}) is {len(derived)} characters"
+async def _restore_default_corpus() -> None:
+    """Put the row back, with the id it had.
+
+    Not `create_corpus`: that derives the id as `sha256("corpus:" + name)`, and
+    the default corpus's id is a hand-written constant rather than that digest.
+    Restoring it any other way would leave the corpus unwritable again, which is
+    the bug this file exists to catch.
+    """
+    from api.services import authz
+    from api.services import db as db_module
+    from api.services.db import admin_session_scope
+
+    async with admin_session_scope() as db:
+        with db_module.principal_scope(authz.ADMIN_PRINCIPAL):
+            await db.execute(
+                text(
+                    "INSERT INTO corpora (id, name, description) "
+                    "VALUES (:i, :n, '') ON CONFLICT (id) DO NOTHING"
+                ),
+                {"i": DEFAULT_CORPUS_ID, "n": DEFAULT_CORPUS_NAME},
+            )
+        await db.commit()

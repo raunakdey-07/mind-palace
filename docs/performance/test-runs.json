@@ -59,6 +59,17 @@
       "seconds": 510.9,
       "skipped": "2"
     },
+    "9aec524: full suite, after the retrieval lab and the packaging fix": {
+      "collected": "1621",
+      "commit": "9aec524cab48671709c5b00765eac632fd824868",
+      "failed": "0",
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, after the retrieval lab and the packaging fix",
+      "note": "junitxml written by the runner",
+      "passed": "1619",
+      "seconds": 553.7,
+      "skipped": "2"
+    },
     "a51607c: full suite, run 1, hermetic session database": {
       "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
       "failed": "0",

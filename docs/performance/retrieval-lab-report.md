@@ -134,3 +134,90 @@ was 0 s and the `du` read an empty directory. Measured properly: **211 s and
 * **L2 rebuild digest.** Not re-verified this session. The frozen
   `baseline-packs.json` and the `eval/m00675` artifact were not touched.
 * **Downstream value.** No model is reachable.
+
+
+---
+
+## Addendum, this round: retrieval harm, and what the "fixes" number hid
+
+Last round reported how many questions each arm **fixes**. That is half a
+number, and the half that flatters. Measured both ways against the shipped
+default (arm A, correct on 151 of 202 dev questions):
+
+| arm | fixed | BROKEN | net | both right | both wrong |
+|---|---|---|---|---|---|
+| B | 4 | **39** | -35 | 112 | 47 |
+| C | 0 | **10** | -10 | 141 | 51 |
+| D | 2 | **127** | -125 | 24 | 49 |
+| E | 14 | **32** | -18 | 119 | 37 |
+| F | 16 | **48** | -32 | 103 | 35 |
+
+**Every arm is net negative at the shipped 0.30 threshold.** Arm E fixes 14 and
+breaks 32. Arm F fixes 16 and breaks 48. The arm that looked best on the
+one-sided count is the second worst here.
+
+### Broken, per slice
+
+| slice | n | B fix/broken | C | D | E | F |
+|---|---:|---|---|---|---|---|
+| current | 30 | 1/11 | 0/0 | 0/28 | 2/1 | 2/13 |
+| historical | 30 | 0/1 | 0/0 | 0/29 | 1/5 | 1/12 |
+| multi-topic | 23 | 1/15 | 0/0 | 0/16 | **1/12** | 1/0 |
+| relationship | 34 | 1/2 | 0/0 | 0/16 | 2/2 | 2/12 |
+| provenance | 26 | 1/3 | 0/0 | 0/21 | 5/5 | 1/0 |
+| abstention | 25 | 0/1 | 0/9 | 2/0 | 2/0 | 0/7 |
+| temporal | 13 | 0/2 | 0/0 | 0/7 | 1/1 | 0/2 |
+| adversarial | 19 | 0/3 | 0/1 | 0/8 | 0/5 | **9/1** |
+
+Two mechanisms, not two stories:
+
+* **Arm E's multi-topic collapse is measured, not inferred**: on that slice it
+  fixes 1 and breaks 12. The shipped default already answered them; the
+  cross-encoder collapses a multi-answer question to its single best passage and
+  the threshold then admits that passage confidently. It is a *precision*
+  regression on exactly the slice where the shipped gate was doing the work.
+* **Arm D breaks 127 of 202.** Its reciprocal-rank-fusion scores top out near
+  2/61, so at a 0.30 threshold D abstains on almost everything the default
+  answered. That is a units mismatch between an arm and a gate, not a property
+  of fusion -- and it is why the lab reports equal-coverage operating points as
+  well. D is still not competitive on ranking (MRR 0.756 against E's 0.852).
+
+Arm F is the only arm with a slice where it is genuinely ahead: **adversarial,
+9 fixed against 1 broken**. That is a real effect and the most promising single
+result in the study. It is also net −32 overall.
+
+## Cross-validation of the ceiling
+
+Five-fold CV on dev, grouped by authored claim key so paraphrases of one fact
+never straddle a fold (202 questions in 107 fact-groups, mean 1.9 paraphrases
+each).
+
+| | max coverage at ≤2% confident-wrong |
+|---|---:|
+| fit on all of dev | 14.2% |
+| **out-of-fold, pooled** | **14.2%** |
+| per fold | 8.8 / 24.2 / 33.3 / 51.7 / 13.6 % |
+
+The pooled estimate does not inflate. The per-fold spread is wide at n≈40 per
+fold, which is the honest reason not to read any single fold.
+
+**The 36.4% ceiling is a different number and is not cross-validated.** It comes
+from ranking by the raw cross-encoder score at a threshold chosen on dev — no
+model is fitted, but the *threshold* is selected on the same data, and that
+selection optimism is unquantified here. Treat 36.4% as an upper bound and
+14.2% as the cross-validated figure for the fitted rule.
+
+## Reconciling "22 wrong answers"
+
+The brief's 22 = 14 + 8. Both halves are **confident-wrong only**, excluding
+abstentions, consistently:
+
+| | answered wrong | abstained when answerable | total failures |
+|---|---:|---:|---:|
+| held-out v1 (157 q) | 14 | 12 | **26** |
+| frozen M006.75 (60 q) | 8 | 5 | **13** |
+| total | **22** | 17 | **39** |
+
+So 22 is a coherent number — it is the count of *wrong answers given*, which is
+the damaging kind — but it is not a count of all failures. Every count this
+round uses is the 26 or the 39, and is labelled which.

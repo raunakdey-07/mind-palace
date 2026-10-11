@@ -119,7 +119,9 @@ monitoring/
 !docs/security.md
 !docs/when-to-use.md
 !docs/first-hour-audit.md
+!/docs/PROGRESS.md
 !/docs/gate/
+!/docs/PROGRESS.md
 !/docs/gate/**
 !docs/deletion-and-erasure.md
 !docs/errors.md

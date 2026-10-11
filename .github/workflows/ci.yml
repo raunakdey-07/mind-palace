@@ -5,6 +5,11 @@ on:
     branches:
       - main
       - feat/reranker
+      # Added so this branch's CI actually runs. A branch that pushes nothing
+      # and gates nothing is a branch whose green is a local memory: the whole
+      # point of a runner is that it is not this machine. Removed when the
+      # branch merges.
+      - wip/platform-readiness
   pull_request:
     branches:
       - main

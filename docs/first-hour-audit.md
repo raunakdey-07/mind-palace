@@ -194,6 +194,29 @@ duration. A timing taken off mains is not a measurement of the software, and any
 future reader comparing a figure in this document against their own should check
 they are on power too.
 
+## Install paths, measured this session
+
+Each in a clean container from `python:3.12-slim`, against a warm registry. The
+model download is excluded; it is measured separately above.
+
+| path | time | venv | what it is for |
+|---|---:|---:|---|
+| `pip install -e .` (README step 1) | 5 s | 13 MB | an integrator working from a clone |
+| `pip install mindpalace-os` (wheel only) | 0 s | **13 MB** | **receipt verification only** |
+| `requirements.txt`, default index | 217 s | **5.9 GB** | what the README tells a newcomer to run |
+| `requirements.txt` + CPU torch index | 130 s | **1.5 GB** | the same thing, 4.4 GB smaller |
+
+The CPU-only wheel is the same package with the CUDA runtime omitted:
+`pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt`.
+It is 40% faster and a quarter of the size. **It is not in the README**, which
+is the single largest thing in the first hour.
+
+`pip install mindpalace-os` on its own is 13 MB and **has no `alembic`**, so the
+README's step 3 (`python -m alembic ...`) cannot run on it. That is correct for
+the one use the README documents it for -- `mindpalace-proof verify`, which is
+stdlib-only -- but the sentence sits in a file that otherwise reads as "install
+this and use it".
+
 ## What this audit does not cover
 
 * A real `git clone` from GitHub. The audit used the working tree, so a file that

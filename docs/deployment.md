@@ -246,7 +246,7 @@ arbitrarily.
 |---|---|---|
 | `MIND_PALACE_AUTH_MODE` | `off` | `required` makes every protected request present a credential. |
 | `MIND_PALACE_DEPLOYMENT` | `local` | `server` refuses to start unless the settings below are right. An unrecognised value is refused. |
-| `MIND_PALACE_INGEST_ROOTS` | unset | `:`-separated directories `ingest/repo` and `sync` may read, or `none` to disable both routes. Required in `server` mode — one of the two. |
+| `MIND_PALACE_INGEST_ROOTS` | unset | `:`-separated directories `ingest/repo` and `sync_repo` may read, or `none` to disable both routes. Required in `server` mode — one of the two. |
 | `MIND_PALACE_ADMIN_DATABASE_URL` | `DATABASE_URL` | The maintenance role, for the administrative CLI commands. |
 | `MIND_PALACE_MAX_INGEST_CHARS` | `4000000` | Largest single document accepted. |
 | `MIND_PALACE_CURSOR_SECRET` | — | HMAC key for feed cursors. One per deployment. |
@@ -314,7 +314,7 @@ posture` is the right place for it, and the one place it now lives.
 
 ### Rules
 
-- **`POST /api/memory/remember`, `POST /api/memory/snapshot`, `sync` and the
+- **`POST /api/memory/remember`, `POST /api/memory/snapshot`, `sync_repo` and the
   ingestion routes** require the read-write role. A snapshot writes immutable
   rows even though it cannot change a claim.
 - `corpus_admin` additionally erases the corpora it holds grants on.

@@ -141,7 +141,7 @@ correct one.
 
 ## Related, and not the same thing
 
-* **Deleting a source file is not deleting memory.** `sync` writes a `DELETED`
+* **Deleting a source file is not deleting memory.** `ingest-repo` writes a `DELETED`
   tombstone version and removes the live row. The content remains in earlier
   versions, retrievable with `history` or `as-of`. This is deliberate: the archive
   records what was true and when, and discarding it would make a Receipt

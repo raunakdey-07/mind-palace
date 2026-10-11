@@ -387,7 +387,7 @@ mindpalace-mcp   # then ask the client for tools/list, or read inputSchema
 
 Fifteen tools are advertised. `memory_recall`, `memory_explain`, `memory_current`,
 `memory_history`, `memory_changes`, `memory_evidence`, `memory_as_of` and
-`memory_replay` all take that same `request` object; `search`, `sync`,
+`memory_replay` all take that same `request` object; `search`, `sync_repo`,
 `list_corpora`, `memory_pack` and `memory_snapshot` take their own.
 
 ---
@@ -755,8 +755,8 @@ decision-memory-1f4a9c02
 
 ## Ingesting documents
 
-`remember` is for facts. `sync` is for a directory of Markdown you already have,
-which is where authored claims live:
+`remember` is for facts. `mindpalace ingest-repo` is for a directory of Markdown
+you already have, which is where authored claims live:
 
 ```markdown
 ---

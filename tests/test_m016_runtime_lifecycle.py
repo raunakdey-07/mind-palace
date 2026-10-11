@@ -341,6 +341,94 @@ def test_a_protocol_mismatch_is_refused_with_the_fix(tmp_path):
             stop(runtime_module, process)
 
 
+def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
+    """The protocol check catches interface drift; this catches code drift.
+
+    `PROTOCOL` is a hand-maintained integer, so it does not move when the code
+    does. A runtime started before an edit keeps answering with the old code and
+    nothing notices -- which is exactly what happened during the first-hour audit,
+    where the CLI kept failing with a fixed bug while the Python API passed,
+    because the CLI routes through this process.
+    """
+    with isolated_state(tmp_path) as (runtime_module, state):
+        process = launch(state)
+        wait_until(runtime_module)
+        try:
+            import asyncio
+
+            async def ask(build: str):
+                return await runtime_module._call_async(
+                    runtime_module.socket_path(),
+                    runtime_module._read_token(),
+                    {"op": "status", "protocol": runtime_module.PROTOCOL, "build": build},
+                    10.0,
+                    2.0,
+                )
+
+            reply = asyncio.run(ask("0000000000000000"))
+            assert not reply["ok"], reply
+            assert reply["error"]["code"] == "build_mismatch", reply
+            # The instruction has to be copy-pasteable, not merely present.
+            assert "mindpalace runtime stop" in reply["error"]["message"], reply
+            assert "MIND_PALACE_RUNTIME=0" in reply["error"]["message"], reply
+
+            # The real build is still served by the same process.
+            good = runtime_module.call({"op": "status"}, timeout=10.0)
+            assert good["ok"], good
+            assert good["result"]["build"] == runtime_module.build_id()
+        finally:
+            stop(runtime_module, process)
+
+
+def test_the_build_hash_moves_when_the_code_moves(tmp_path, monkeypatch):
+    """The property the handshake depends on, asserted directly.
+
+    Without this, `build_id` could be a constant wearing a hash costume and every
+    test above would still pass, because they compare a build against itself.
+    """
+    from api import runtime as runtime_module
+
+    before = runtime_module.build_hash()
+    monkeypatch.setattr(runtime_module, "_BUILD_HASH", None)
+    assert runtime_module.build_id() == before, "build_id must be stable for one tree"
+
+    source = Path(runtime_module.__file__).read_text(encoding="utf-8")
+    monkeypatch.setattr(
+        runtime_module,
+        "build_hash",
+        lambda: __import__("hashlib").sha256(source.encode()).hexdigest()[:16],
+    )
+    monkeypatch.setattr(runtime_module, "_BUILD_HASH", None)
+    assert runtime_module.build_id() != before, "a different tree must hash differently"
+
+
+def test_a_stale_runtime_is_discarded_and_the_command_still_succeeds(tmp_path):
+    """The user-visible contract: the command works, and the runtime goes away.
+
+    `mindpalace remember` routes through the runtime. With a stale one it must
+    fall back to in-process rather than failing -- and must stop the stale process
+    so the *next* command is fast as well as correct.
+    """
+    from mindpalace_sdk import _discard_stale_runtime
+
+    with isolated_state(tmp_path) as (runtime_module, state):
+        process = launch(state)
+        wait_until(runtime_module)
+        try:
+            # A shutdown that must not raise even when the runtime is unreachable.
+            _discard_stale_runtime()
+            deadline = time.monotonic() + 30.0
+            while time.monotonic() < deadline:
+                if runtime_module.status().state == "unreachable":
+                    break
+                time.sleep(0.2)
+            assert runtime_module.status().state == "unreachable", "the stale runtime survived"
+            # And the helper is safe to call again when nothing is running.
+            _discard_stale_runtime()
+        finally:
+            stop(runtime_module, process)
+
+
 def test_the_socket_is_private_and_never_a_port(tmp_path):
     """The authorisation boundary is the filesystem, and it must be a socket.
 

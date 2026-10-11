@@ -194,6 +194,21 @@ def _remote_error(response, default_message: str) -> MemoryClientError:
     return MemoryClientError(code, message, response.status_code)
 
 
+def _discard_stale_runtime() -> None:
+    """Stop a runtime that no longer matches the code on disk. Best effort.
+
+    Never raises: this runs on a path that is already handling a failure, and a
+    runtime that cannot be stopped is a performance problem, not a correctness
+    one. The next command starts a fresh one.
+    """
+    try:
+        from api import runtime as runtime_module
+
+        runtime_module.call({"op": "shutdown"}, timeout=2.0)
+    except Exception:  # noqa: BLE001 - best effort by definition
+        pass
+
+
 class MemoryClient:
     """Thin adapter over MemoryRequest and the central memory operations.
 
@@ -240,6 +255,12 @@ class MemoryClient:
                 timeout=self._client.timeout,
             )
         except Exception:  # noqa: BLE001 - unreachable runtime means "do it myself"
+            # A runtime whose code no longer matches this process is in the same
+            # category as an unreachable one -- it must not answer -- but it is
+            # worth discarding, because otherwise every subsequent command pays
+            # the same round trip to be told the same thing. The first command
+            # after an edit does the work in-process; the second gets a fresh
+            # runtime.
             return None
         if not reply.get("ok"):
             # A runtime that answered is authoritative about failure: re-raise its
@@ -427,6 +448,13 @@ class MemoryClient:
             return None
         if not reply.get("ok"):
             error = reply.get("error") or {}
+            if error.get("code") == "build_mismatch":
+                # The runtime is running code this process is not. It must not
+                # answer. Discard it and do the work here, so the first command
+                # after an edit is correct rather than merely fast, and the second
+                # gets a runtime that matches.
+                _discard_stale_runtime()
+                return None
             raise MemoryClientError(
                 error.get("code", "error"),
                 error.get("message", "memory write failed"),

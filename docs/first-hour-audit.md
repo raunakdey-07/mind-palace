@@ -272,3 +272,60 @@ Three defects, all of them silent:
    The real reason -- a missing `value:` field, a non-verbatim claim -- is
    available only by calling the ingestion service directly. An author syncing a
    directory gets a count and no diagnosis.
+
+## The README quickstart, on every existing tag
+
+Each tag built from `git archive`, installed in a clean container with its working
+directory **outside** the repository, against a freshly created database. Each tag
+is tested as *its own* README documents it: a tag whose README has no quickstart
+is not failed for lacking one.
+
+```
+TAG              install / migrate / init / remember+recall / receipt
+v0.9.0           pass / pass / pass / pass            / issued
+v0.8.0           pass / pass / n-a     / n-a          / n-a
+v0.7.0           pass / pass / n-a     / n-a          / n-a
+v0.6.0           pass / pass / n-a     / n-a          / n-a
+v0.5.1           pass / pass / n-a     / n-a          / n-a
+v0.4.0           pass / pass / n-a     / n-a          / n-a
+v0.3.0           pass / pass / n-a     / n-a          / n-a
+v0.2.1           pass / FAIL  / n-a     / n-a          / n-a
+```
+
+**No tag fails its own documented quickstart. v0.9.0 is the only tag that has
+one**, and it passes end to end: install, migrate, init, remember, a recall that
+returns the right answer, and a receipt.
+
+`init`, `remember` and `recall` did not exist before v0.9.0, so "n-a" is the
+honest entry rather than a failure.
+
+**v0.2.1 and v0.2.0 fail to migrate, and it is a real defect in those tags.**
+`migrations/alembic.ini` has no `script_location` key, so alembic aborts with
+`No 'script_location' key found in configuration`. It was fixed in v0.3.0. This
+predates this branch and is not a regression; it is recorded because the claim
+"every released version installs and migrates" is false for two of them.
+
+## Why CI did not catch either blocker
+
+The question the branch was supposed to answer was "does a clean install work",
+and two things answered it and were both wrong in the same direction.
+
+**The golden-path test ran inside the repository.** Tests execute with the
+repository root as the working directory, so `import mindpalace_errors` resolved
+to the file in the working tree whether or not the wheel shipped it. The
+wheel-omission class of bug is *invisible from inside a source checkout*; it is
+only visible from an installed artifact with the source absent.
+
+**No test installed the wheel.** `pyproject.toml` was the single source of truth
+for what ships, and nothing read it. A test that walks the shipped tree's imports
+and compares them against the declared list is cheap; it was written only after
+the cold install failed.
+
+**The second blocker had no test at all.** `mindpalace remember` on the default
+corpus had never been executed, because no test wrote a document into the default
+corpus -- its id is the only one that is not 64 characters, and every other test
+used a hashed corpus id.
+
+**And the release gate could not see either.** `check_versioning.py` asserts
+metadata is consistent. A consistent declaration that omits a module is perfectly
+consistent. What was missing was any check that the declaration matched reality.

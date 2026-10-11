@@ -23,8 +23,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -107,10 +109,105 @@ def _recorded_run_counts() -> dict[str, str]:
     if not isinstance(runs, dict):
         return {}
     return {
-        run_id: entry["passed"]
+        run_id: entry
         for run_id, entry in runs.items()
         if isinstance(entry, dict) and re.fullmatch(r"\d+", str(entry.get("passed", "")))
     }
+
+
+def collected_test_count() -> int | None:
+    """How many tests the tree collects right now, or None if pytest cannot say.
+
+    Deliberately the cheapest possible invocation. This runs in CI on every
+    build and a full collection is not free; `MIND_PALACE_SKIP_COLLECT=1` turns
+    it off for a developer who does not want to wait.
+    """
+    if os.getenv("MIND_PALACE_SKIP_COLLECT") == "1":
+        return None
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q", str(ROOT / "tests")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return None
+    match = re.search(r"(\d+) tests? collected", result.stdout)
+    return int(match.group(1)) if match else None
+
+
+def check_run_integrity(head: str | None) -> tuple[list[str], list[str]]:
+    """Each recorded run must name its commit, its collected count, and its artifact.
+
+    A run record is only worth something if it cannot be written by hand and
+    cannot drift from the tree. Three properties, all checked:
+
+    1. the commit it claims is the commit that produced it;
+    2. the `collected` it claims is what `pytest --collect-only` says now;
+    3. it names a junitxml artifact that exists and is tracked.
+
+    Property 2 is the sharp one. A run records `collected` and `passed`, and their
+    difference is `failed + skipped + xfailed + errors`. If a document says
+    "1607 passed" and the tree collects 1618, the remaining 11 are unaccounted for
+    and the figure is a summary of a different tree than the one shipping.
+    """
+    problems: list[str] = []
+    notes: list[str] = []
+    path = ROOT / RUN_RECORD
+    if not path.exists():
+        return problems, notes
+    try:
+        runs = json.loads(path.read_text()).get("runs", {})
+    except (json.JSONDecodeError, AttributeError):
+        return problems, notes
+
+    collected = collected_test_count()
+    if collected is None:
+        notes.append("  --  collection skipped; run-collected-count not verified")
+
+    for run_id, entry in runs.items():
+        if not isinstance(entry, dict):
+            continue
+        if head and run_id.startswith(head[:7]) and entry.get("commit") != head:
+            problems.append(
+                f"{RUN_RECORD}: run {run_id!r} claims commit "
+                f"{str(entry.get('commit'))[:7]} but the run key says {head[:7]}"
+            )
+        if collected is not None and str(run_id).startswith((head or "\0")[:7]):
+            recorded = entry.get("collected")
+            if recorded is not None and int(recorded) != collected:
+                problems.append(
+                    f"{RUN_RECORD}: run {run_id!r} recorded {recorded} collected tests, "
+                    f"but the tree collects {collected} now"
+                )
+            elif recorded is not None:
+                notes.append(f"  ok  {run_id}: collected {collected} matches the tree")
+        artifact = entry.get("junitxml")
+        if artifact:
+            target = ROOT / artifact
+            if not target.exists():
+                problems.append(f"{RUN_RECORD}: run {run_id!r} names a missing artifact {artifact}")
+            elif str(target) not in _tracked_set():
+                problems.append(
+                    f"{RUN_RECORD}: run {run_id!r} names an untracked artifact {artifact}"
+                )
+    return problems, notes
+
+
+def _tracked_set() -> set[str]:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        ).stdout.splitlines()
+    except (subprocess.SubprocessError, OSError):
+        return set()
+    return {str((ROOT / t).resolve()) for t in out}
 
 
 def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[list[str], list[str]]:
@@ -127,7 +224,7 @@ def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[li
     problems: list[str] = []
     notes: list[str] = []
     recorded = _recorded_run_counts()
-    seen = sorted({int(v) for v in recorded.values()})
+    seen = sorted({int(entry["passed"]) for entry in recorded.values()})
 
     for doc, text in text_by_doc.items():
         stated = {int(n.replace(",", "")) for n in re.findall(r"(\d[\d,]*)\s+passed", text)}
@@ -147,7 +244,9 @@ def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[li
                     f"(recorded counts: {', '.join(str(n) for n in seen)})"
                 )
             else:
-                commits = sorted(run_id for run_id, v in recorded.items() if int(v) == count)
+                commits = sorted(
+                    run_id for run_id, e in recorded.items() if int(e["passed"]) == count
+                )
                 notes.append(f"  ok  {doc}: {count} passed matches run(s) {', '.join(commits)}")
 
     if head and not any(head[:7] in run_id for run_id in recorded):
@@ -296,6 +395,10 @@ def main() -> int:
     count_problems, count_notes = check_test_counts(text_by_doc, head)
     problems.extend(count_problems)
     notes.extend(count_notes)
+
+    integrity_problems, integrity_notes = check_run_integrity(head)
+    problems.extend(integrity_problems)
+    notes.extend(integrity_notes)
 
     link_problems, link_notes = check_markdown_links()
     problems.extend(link_problems)

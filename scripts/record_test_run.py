@@ -76,6 +76,8 @@ def main() -> int:
     parser.add_argument("--seconds", type=float)
     parser.add_argument("--command", help="run this first and record its result")
     parser.add_argument("--note", default="")
+    parser.add_argument("--collected", type=int, help="how many tests the tree collected")
+    parser.add_argument("--junitxml", help="path to the junitxml artifact pytest wrote")
     parser.add_argument(
         "--label", help="what this run covered, e.g. 'tests/test_corpus_isolation.py'"
     )
@@ -127,6 +129,8 @@ def main() -> int:
         **({"seconds": seconds} if seconds is not None else {}),
         **({"command": args.command} if args.command else {}),
         **({"note": args.note} if args.note else {}),
+        **({"collected": str(args.collected)} if args.collected is not None else {}),
+        **({"junitxml": args.junitxml} if args.junitxml else {}),
     }
     RECORD.parent.mkdir(parents=True, exist_ok=True)
     RECORD.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")

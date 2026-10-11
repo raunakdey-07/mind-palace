@@ -84,10 +84,18 @@ class FrontmatterSchema(BaseModel):
     # learn to skip, which is the failure this whole change exists to remove.
     date: datetime.date | None = None
     tags: list[str] = Field(default_factory=list)
-    document_type: str = Field(
-        default="note",
-        pattern=r"^(kaggle|project|note|paper)$",
-    )
+    # Free-form, and deliberately so. This was a four-value enum
+    # (kaggle|project|note|paper) while the write path accepted anything --
+    # `metadata.get("document_type")` with no check in
+    # `api/services/ingestion.py`. The mismatch was invisible because
+    # schema-validation failures were swallowed; surfacing them revealed that
+    # the project's own test corpus writes `document_type: design`, which the
+    # enum rejected.
+    #
+    # Constraining a field the product does not constrain buys nothing and costs
+    # a warning on every document using a value the system would have stored
+    # anyway. If a closed set is wanted, it belongs on the column.
+    document_type: str = "note"
     competition: str = Field(default="")
     status: str = Field(default="active")
     git_repo: str = Field(default="")
@@ -148,7 +156,13 @@ def parse_markdown(
 
     try:
         validated = FrontmatterSchema(**raw_metadata)
-        metadata = validated.model_dump()
+        # Drop keys the author did not write. `model_dump()` materialises every
+        # schema default, so a document with only a title came back carrying
+        # `date: None`, `tags: []`, `status: "active"` and six more. Callers --
+        # including the benchmark corpus loader -- distinguish "the author said
+        # this" from "this is a default", and materialising defaults erases that
+        # distinction for every document at once.
+        metadata = {k: v for k, v in validated.model_dump().items() if k in raw_metadata}
     except ValidationError as exc:
         # Preserve legacy permissive behavior -- an unknown or oddly typed field
         # must not stop a document being archived -- but say that it happened.

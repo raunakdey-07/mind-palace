@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1600 passed, 1 skipped**, on a database built from `migrations/` + `scripts/db/runtime_roles.sql` |
+| tests | **1607 passed, 2 skipped, 0 failed**, run twice in a row on the same cluster against a per-session database built from `migrations/` + `scripts/db/runtime_roles.sql` (507 s and 511 s, on mains power). Records in `docs/performance/test-runs.json` |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |

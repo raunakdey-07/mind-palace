@@ -10,6 +10,24 @@
       "seconds": 547.5,
       "skipped": "1"
     },
+    "671a892: full suite, run A, after the install fixes": {
+      "commit": "671a8925cb98f39bace587584c3a18b1d34dbed4",
+      "failed": "0",
+      "label": "full suite, run A, after the install fixes",
+      "note": "on mains power; an earlier off-mains run measured 1104 s",
+      "passed": "1607",
+      "seconds": 507.4,
+      "skipped": "2"
+    },
+    "671a892: full suite, run B, immediately after run A": {
+      "commit": "671a8925cb98f39bace587584c3a18b1d34dbed4",
+      "failed": "0",
+      "label": "full suite, run B, immediately after run A",
+      "note": "hermetic session database; proves repeatability on the same cluster",
+      "passed": "1607",
+      "seconds": 510.9,
+      "skipped": "2"
+    },
     "a51607c: full suite, run 1, hermetic session database": {
       "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
       "failed": "0",

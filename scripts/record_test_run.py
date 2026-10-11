@@ -68,6 +68,39 @@ def load() -> dict:
     return data
 
 
+def _normalise_junit(path: str) -> dict:
+    """Rewrite the checkout's absolute path out of the junitxml artifact.
+
+    ## Why this is a script and not an edit
+
+    The artifact is evidence, so the numbers in it are pytest's and nobody
+    touches them by hand. But pytest bakes the *absolute path of the checkout*
+    into `skipped` messages, so committing the file on one machine publishes
+    `/home/someone/...` to everyone. That is a host-specific path in committed
+    evidence, and the pre-push audit is right to flag it.
+
+    So the substitution happens here, in the recorder that already owns writing
+    the run record, and it is a pure prefix replacement of one string:
+
+    * every occurrence of the absolute repository root becomes `.`
+    * test counts, times, classnames and skip reasons are untouched
+    * the number of replacements is reported, so a silent no-op is visible
+
+    If it ever needed to touch anything else, this would be the wrong place to
+    do it and the artifact should not be committed at all.
+    """
+    target = Path(path)
+    if not target.exists():
+        return {"normalised": False, "reason": f"{path} does not exist"}
+    root = str(ROOT.resolve())
+    text = target.read_text(encoding="utf-8", errors="replace")
+    occurrences = text.count(root)
+    if occurrences == 0:
+        return {"normalised": False, "reason": "no absolute checkout path present"}
+    target.write_text(text.replace(root, "."), encoding="utf-8")
+    return {"normalised": True, "replacements": occurrences, "replaced_with": "."}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--passed", type=int)
@@ -131,6 +164,7 @@ def main() -> int:
         **({"note": args.note} if args.note else {}),
         **({"collected": str(args.collected)} if args.collected is not None else {}),
         **({"junitxml": args.junitxml} if args.junitxml else {}),
+        **({"junit_normalisation": _normalise_junit(args.junitxml)} if args.junitxml else {}),
     }
     RECORD.parent.mkdir(parents=True, exist_ok=True)
     RECORD.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")

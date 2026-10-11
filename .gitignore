@@ -162,3 +162,8 @@ monitoring/
 !docs/evaluation/m006.md
 !docs/evaluation/m0065.md
 /eval/results/
+
+# The retrieval lab's embedding cache: binary .npy blobs keyed by content
+# hash, several megabytes, and worthless on another machine. 596 of them were
+# committed by accident in 7ac19e6 and are being purged from this branch.
+.retrieval_lab_cache/

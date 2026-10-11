@@ -1,0 +1,5328 @@
+{
+  "arms": {
+    "B": {
+      "broken": 39,
+      "fixed": 4,
+      "net": -35,
+      "per_slice": {
+        "abstention": {
+          "broken": 1,
+          "unchanged_correct": 22,
+          "unchanged_wrong": 2
+        },
+        "adversarial": {
+          "broken": 3,
+          "unchanged_correct": 6,
+          "unchanged_wrong": 10
+        },
+        "conflict": {
+          "broken": 1,
+          "unchanged_correct": 1
+        },
+        "current": {
+          "broken": 11,
+          "fixed": 1,
+          "unchanged_correct": 17,
+          "unchanged_wrong": 1
+        },
+        "historical": {
+          "broken": 1,
+          "unchanged_correct": 28,
+          "unchanged_wrong": 1
+        },
+        "multi-topic": {
+          "broken": 15,
+          "fixed": 1,
+          "unchanged_correct": 1,
+          "unchanged_wrong": 6
+        },
+        "provenance": {
+          "broken": 3,
+          "fixed": 1,
+          "unchanged_correct": 18,
+          "unchanged_wrong": 4
+        },
+        "relationship": {
+          "broken": 2,
+          "fixed": 1,
+          "unchanged_correct": 14,
+          "unchanged_wrong": 17
+        },
+        "temporal": {
+          "broken": 2,
+          "unchanged_correct": 5,
+          "unchanged_wrong": 6
+        }
+      },
+      "unchanged_correct": 112,
+      "unchanged_wrong": 47
+    },
+    "C": {
+      "broken": 10,
+      "net": -10,
+      "per_slice": {
+        "abstention": {
+          "broken": 9,
+          "unchanged_correct": 14,
+          "unchanged_wrong": 2
+        },
+        "adversarial": {
+          "broken": 1,
+          "unchanged_correct": 8,
+          "unchanged_wrong": 10
+        },
+        "conflict": {
+          "unchanged_correct": 2
+        },
+        "current": {
+          "unchanged_correct": 28,
+          "unchanged_wrong": 2
+        },
+        "historical": {
+          "unchanged_correct": 29,
+          "unchanged_wrong": 1
+        },
+        "multi-topic": {
+          "unchanged_correct": 16,
+          "unchanged_wrong": 7
+        },
+        "provenance": {
+          "unchanged_correct": 21,
+          "unchanged_wrong": 5
+        },
+        "relationship": {
+          "unchanged_correct": 16,
+          "unchanged_wrong": 18
+        },
+        "temporal": {
+          "unchanged_correct": 7,
+          "unchanged_wrong": 6
+        }
+      },
+      "unchanged_correct": 141,
+      "unchanged_wrong": 51
+    },
+    "D": {
+      "broken": 127,
+      "fixed": 2,
+      "net": -125,
+      "per_slice": {
+        "abstention": {
+          "fixed": 2,
+          "unchanged_correct": 23
+        },
+        "adversarial": {
+          "broken": 8,
+          "unchanged_correct": 1,
+          "unchanged_wrong": 10
+        },
+        "conflict": {
+          "broken": 2
+        },
+        "current": {
+          "broken": 28,
+          "unchanged_wrong": 2
+        },
+        "historical": {
+          "broken": 29,
+          "unchanged_wrong": 1
+        },
+        "multi-topic": {
+          "broken": 16,
+          "unchanged_wrong": 7
+        },
+        "provenance": {
+          "broken": 21,
+          "unchanged_wrong": 5
+        },
+        "relationship": {
+          "broken": 16,
+          "unchanged_wrong": 18
+        },
+        "temporal": {
+          "broken": 7,
+          "unchanged_wrong": 6
+        }
+      },
+      "unchanged_correct": 24,
+      "unchanged_wrong": 49
+    },
+    "E": {
+      "broken": 32,
+      "fixed": 14,
+      "net": -18,
+      "per_slice": {
+        "abstention": {
+          "fixed": 2,
+          "unchanged_correct": 23
+        },
+        "adversarial": {
+          "broken": 5,
+          "unchanged_correct": 4,
+          "unchanged_wrong": 10
+        },
+        "conflict": {
+          "broken": 1,
+          "unchanged_correct": 1
+        },
+        "current": {
+          "broken": 1,
+          "fixed": 2,
+          "unchanged_correct": 27
+        },
+        "historical": {
+          "broken": 5,
+          "fixed": 1,
+          "unchanged_correct": 24
+        },
+        "multi-topic": {
+          "broken": 12,
+          "fixed": 1,
+          "unchanged_correct": 4,
+          "unchanged_wrong": 6
+        },
+        "provenance": {
+          "broken": 5,
+          "fixed": 5,
+          "unchanged_correct": 16
+        },
+        "relationship": {
+          "broken": 2,
+          "fixed": 2,
+          "unchanged_correct": 14,
+          "unchanged_wrong": 16
+        },
+        "temporal": {
+          "broken": 1,
+          "fixed": 1,
+          "unchanged_correct": 6,
+          "unchanged_wrong": 5
+        }
+      },
+      "unchanged_correct": 119,
+      "unchanged_wrong": 37
+    },
+    "F": {
+      "broken": 48,
+      "fixed": 16,
+      "net": -32,
+      "per_slice": {
+        "abstention": {
+          "broken": 7,
+          "unchanged_correct": 16,
+          "unchanged_wrong": 2
+        },
+        "adversarial": {
+          "broken": 1,
+          "fixed": 9,
+          "unchanged_correct": 8,
+          "unchanged_wrong": 1
+        },
+        "conflict": {
+          "broken": 1,
+          "unchanged_correct": 1
+        },
+        "current": {
+          "broken": 13,
+          "fixed": 2,
+          "unchanged_correct": 15
+        },
+        "historical": {
+          "broken": 12,
+          "fixed": 1,
+          "unchanged_correct": 17
+        },
+        "multi-topic": {
+          "fixed": 1,
+          "unchanged_correct": 16,
+          "unchanged_wrong": 6
+        },
+        "provenance": {
+          "fixed": 1,
+          "unchanged_correct": 21,
+          "unchanged_wrong": 4
+        },
+        "relationship": {
+          "broken": 12,
+          "fixed": 2,
+          "unchanged_correct": 4,
+          "unchanged_wrong": 16
+        },
+        "temporal": {
+          "broken": 2,
+          "unchanged_correct": 5,
+          "unchanged_wrong": 6
+        }
+      },
+      "unchanged_correct": 103,
+      "unchanged_wrong": 35
+    }
+  },
+  "baseline": "arm A, the shipped scorer",
+  "baseline_correct": 151,
+  "detail": {
+    "B": [
+      {
+        "cell": "unchanged_wrong",
+        "qid": "cur-01",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-02",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-03",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-04",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-05",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-06",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "fixed",
+        "qid": "cur-own-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-web",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-media",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-web",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-media",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "hist-sup-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url-now",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-gateway",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-identity",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-orders",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-billing",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-search-indexer",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-web",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-notifier",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-analytics",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-media",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-archive",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-ledger",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-risk",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-platform",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-payments",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-discovery",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-data",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-postgres",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-redis",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-queue",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-why-search",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-storage",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-warehouse",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-03-orders",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-07-notifier",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-09-search-indexer",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-11-ledger",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-rel-0.6",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-rel-0.7",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-rel-0.8",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "cft-01",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-postgres",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-redis",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-queue",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-search",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-storage",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-warehouse",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-03",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-07",
+        "slice": "provenance"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-inc-2024-09",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-11",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-gateway",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-identity",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-orders",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-billing",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-search-indexer",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-web",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-notifier",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-analytics",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-media",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-archive",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-ledger",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-risk",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-0",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-1",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-2",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-3",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-payroll",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-office",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-insurance",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "abs-catering",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-parking",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-legal",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-travel",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-expenses",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-recruiting",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-training",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-security-audit",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-oncall-rotation",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hiring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-conference",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hardware",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-vpn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "abs-sso",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-email",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-backup",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-dns",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-firewall",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-cdn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-monitoring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-logging",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-secrets",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-gateway",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-identity",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-orders",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-billing",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-search-indexer",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-web",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-notifier",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-analytics",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-media",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-archive",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-ledger",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-risk",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-postgres",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-redis",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-queue",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-search",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-storage",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-warehouse",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-release",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "fixed",
+        "qid": "mul-deploy-tier-0",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-deploy-tier-1",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-deploy-tier-2",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-deploy-tier-3",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "fixed",
+        "qid": "rel-dep-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cft-02",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-cycle",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-after-db",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-storage",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-platform",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-payments",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-discovery",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-data",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-gateway",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-db-users",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-queue",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-183",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-184",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-185",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-186",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-187",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-188",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-189",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-190",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-191",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-192",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-193",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-194",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-195",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-196",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-197",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-198",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-18",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-19",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-20",
+        "slice": "adversarial"
+      }
+    ],
+    "C": [
+      {
+        "cell": "unchanged_wrong",
+        "qid": "cur-01",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-02",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-03",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-04",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-05",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-06",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "cur-own-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-web",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-media",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-web",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-media",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "hist-sup-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url-now",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-gateway",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-identity",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-orders",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-billing",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-search-indexer",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-web",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-notifier",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-analytics",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-media",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-archive",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-ledger",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-risk",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-platform",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-payments",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-discovery",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-data",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-postgres",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-redis",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-queue",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-why-search",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-storage",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-warehouse",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-03-orders",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-07-notifier",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-09-search-indexer",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-11-ledger",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-rel-0.6",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-rel-0.7",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-rel-0.8",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cft-01",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-postgres",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-redis",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-queue",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-search",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-storage",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-warehouse",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-03",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-07",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-09",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-11",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-gateway",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-identity",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-orders",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-billing",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-search-indexer",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-web",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-notifier",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-analytics",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-media",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-archive",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-ledger",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-risk",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-0",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-1",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-2",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-3",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-payroll",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-office",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-insurance",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "abs-catering",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-parking",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-legal",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-travel",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-expenses",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-recruiting",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-training",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-security-audit",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-oncall-rotation",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hiring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-conference",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hardware",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-vpn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "abs-sso",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-email",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-backup",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-dns",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-firewall",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-cdn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-monitoring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-logging",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-secrets",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-gateway",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-identity",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-orders",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-billing",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-search-indexer",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-web",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-notifier",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-analytics",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-media",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-archive",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-ledger",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-risk",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-postgres",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-redis",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-queue",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-search",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-storage",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-warehouse",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-release",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-deploy-tier-0",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-1",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-2",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-3",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-dep-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cft-02",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-cycle",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-after-db",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-storage",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-platform",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-payments",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-discovery",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-data",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-gateway",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-esc-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-esc-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-db-users",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-queue",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-183",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-184",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-185",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-186",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-187",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-188",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-189",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-190",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-191",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-192",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-193",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-194",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-195",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-196",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-197",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-198",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-18",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-19",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-20",
+        "slice": "adversarial"
+      }
+    ],
+    "D": [
+      {
+        "cell": "unchanged_wrong",
+        "qid": "cur-01",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-02",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-03",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-04",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-05",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-06",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "cur-own-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-web",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-media",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-web",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-media",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "hist-sup-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-db-url",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-db-url-now",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-gateway",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-identity",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-orders",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-billing",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-search-indexer",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-web",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-notifier",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-analytics",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-media",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-archive",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-ledger",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-risk",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-team-platform",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-team-payments",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-team-discovery",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-team-data",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-postgres",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-redis",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-queue",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-why-search",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-storage",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-warehouse",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-inc-2024-03-orders",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-inc-2024-07-notifier",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-inc-2024-09-search-indexer",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-inc-2024-11-ledger",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-rel-0.6",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-rel-0.7",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-rel-0.8",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "cft-01",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-postgres",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-redis",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-queue",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-search",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-storage",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-warehouse",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-03",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-07",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-09",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-11",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-gateway",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-identity",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-orders",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-billing",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-search-indexer",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-web",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-notifier",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-analytics",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-media",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-archive",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-ledger",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-own-risk",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-0",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-1",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-2",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-deploy-tier-3",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-payroll",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-office",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-insurance",
+        "slice": "abstention"
+      },
+      {
+        "cell": "fixed",
+        "qid": "abs-catering",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-parking",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-legal",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-travel",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-expenses",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-recruiting",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-training",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-security-audit",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-oncall-rotation",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hiring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-conference",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hardware",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-vpn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "fixed",
+        "qid": "abs-sso",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-email",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-backup",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-dns",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-firewall",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-cdn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-monitoring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-logging",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-secrets",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-gateway",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-identity",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-orders",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-billing",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-search-indexer",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-web",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-notifier",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-analytics",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-media",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-archive",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-ledger",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-risk",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-postgres",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-redis",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-queue",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-search",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-storage",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-warehouse",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-release",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-deploy-tier-0",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-deploy-tier-1",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-deploy-tier-2",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-deploy-tier-3",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-dep-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "cft-02",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-cycle",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-after-db",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-storage",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-team-platform",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-team-payments",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-team-discovery",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-team-data",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-gateway",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-db-users",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-queue",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-183",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-184",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-185",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-186",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-187",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-188",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-189",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-190",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-191",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-192",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-193",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-194",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-195",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-196",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-197",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-198",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-18",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-19",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-20",
+        "slice": "adversarial"
+      }
+    ],
+    "E": [
+      {
+        "cell": "fixed",
+        "qid": "cur-01",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-02",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-03",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-04",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-05",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-06",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "fixed",
+        "qid": "cur-own-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-web",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-media",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-web",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-media",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-tier-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "fixed",
+        "qid": "hist-sup-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-sup-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url-now",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-gateway",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-identity",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-orders",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-billing",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-search-indexer",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-web",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-notifier",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-analytics",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-media",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-archive",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-ledger",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-esc-risk",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-platform",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-payments",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-discovery",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-data",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-postgres",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-redis",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-queue",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-why-search",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-storage",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-warehouse",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-03-orders",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-07-notifier",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-09-search-indexer",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-11-ledger",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-rel-0.6",
+        "slice": "temporal"
+      },
+      {
+        "cell": "fixed",
+        "qid": "tmp-rel-0.7",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-rel-0.8",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cft-01",
+        "slice": "conflict"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-postgres",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-redis",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-queue",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-search",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-storage",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "prv-warehouse",
+        "slice": "provenance"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-inc-2024-03",
+        "slice": "provenance"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-inc-2024-07",
+        "slice": "provenance"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-inc-2024-09",
+        "slice": "provenance"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-inc-2024-11",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-gateway",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-identity",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-orders",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-billing",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-search-indexer",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-web",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-notifier",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-analytics",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-media",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-archive",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-ledger",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-risk",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-0",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-1",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-2",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-3",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-payroll",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-office",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-insurance",
+        "slice": "abstention"
+      },
+      {
+        "cell": "fixed",
+        "qid": "abs-catering",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-parking",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-legal",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-travel",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-expenses",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-recruiting",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-training",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-security-audit",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-oncall-rotation",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hiring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-conference",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hardware",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-vpn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "fixed",
+        "qid": "abs-sso",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-email",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-backup",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-dns",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-firewall",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-cdn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-monitoring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-logging",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-secrets",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-gateway",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-identity",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-orders",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-billing",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-search-indexer",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-web",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-notifier",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-analytics",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-media",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-archive",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-ledger",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "mul-risk",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-postgres",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-redis",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-queue",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-search",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-storage",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-warehouse",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-release",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "fixed",
+        "qid": "mul-deploy-tier-0",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-1",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-2",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-3",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "fixed",
+        "qid": "rel-dep-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-dep-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "cft-02",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-cycle",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-after-db",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-storage",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-platform",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-payments",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-discovery",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-data",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-gateway",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "fixed",
+        "qid": "rel-db-users",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-queue",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-183",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-184",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-185",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-186",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-187",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-188",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-189",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-190",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-191",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-192",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-193",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-194",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-195",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-196",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-197",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-198",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-18",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-19",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-20",
+        "slice": "adversarial"
+      }
+    ],
+    "F": [
+      {
+        "cell": "fixed",
+        "qid": "cur-01",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-02",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-03",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-04",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-05",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-06",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-own-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "fixed",
+        "qid": "cur-own-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-web",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-media",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cur-own-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-gateway",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-identity",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-orders",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-billing",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-search-indexer",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-web",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-notifier",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-analytics",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-media",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-archive",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-ledger",
+        "slice": "current"
+      },
+      {
+        "cell": "broken",
+        "qid": "cur-tier-risk",
+        "slice": "current"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "fixed",
+        "qid": "hist-sup-postgres",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-redis",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-queue",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-search",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-storage",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-sup-warehouse",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-db-url-now",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-gateway",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-identity",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-orders",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-billing",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-search-indexer",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-web",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-notifier",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-analytics",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-media",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-archive",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-ledger",
+        "slice": "historical"
+      },
+      {
+        "cell": "broken",
+        "qid": "hist-esc-risk",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-platform",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-payments",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-discovery",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "hist-team-data",
+        "slice": "historical"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-postgres",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-redis",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-queue",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-why-search",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-storage",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-why-warehouse",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-03-orders",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-07-notifier",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-09-search-indexer",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-inc-2024-11-ledger",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "tmp-rel-0.6",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "tmp-rel-0.7",
+        "slice": "temporal"
+      },
+      {
+        "cell": "broken",
+        "qid": "tmp-rel-0.8",
+        "slice": "temporal"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "cft-01",
+        "slice": "conflict"
+      },
+      {
+        "cell": "fixed",
+        "qid": "prv-postgres",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-redis",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-queue",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-search",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-storage",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-warehouse",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-03",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-07",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-09",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "prv-inc-2024-11",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-gateway",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-identity",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-orders",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-billing",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-search-indexer",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-web",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-notifier",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-analytics",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-media",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-archive",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-ledger",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-own-risk",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-0",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-1",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-2",
+        "slice": "provenance"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "prv-deploy-tier-3",
+        "slice": "provenance"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-payroll",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-office",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-insurance",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "abs-catering",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-parking",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-legal",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-travel",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-expenses",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-recruiting",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-training",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-security-audit",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-oncall-rotation",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-hiring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-conference",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-hardware",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-vpn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "abs-sso",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-email",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-backup",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-dns",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-firewall",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-cdn",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-monitoring",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "abs-logging",
+        "slice": "abstention"
+      },
+      {
+        "cell": "broken",
+        "qid": "abs-secrets",
+        "slice": "abstention"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-gateway",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-identity",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-orders",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-billing",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-search-indexer",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-web",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-notifier",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-analytics",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-media",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-archive",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-ledger",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-risk",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-postgres",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-redis",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-queue",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-search",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-storage",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "mul-tech-warehouse",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-release",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "fixed",
+        "qid": "mul-deploy-tier-0",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-1",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-2",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "mul-deploy-tier-3",
+        "slice": "multi-topic"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-dep-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-dep-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "cft-02",
+        "slice": "conflict"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-cycle",
+        "slice": "relationship"
+      },
+      {
+        "cell": "fixed",
+        "qid": "rel-after-db",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-impact-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-storage",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-platform",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-payments",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-discovery",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "rel-team-data",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-gateway",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-identity",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-orders",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-billing",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-search-indexer",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-web",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-notifier",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-analytics",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-media",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-archive",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-esc-ledger",
+        "slice": "relationship"
+      },
+      {
+        "cell": "broken",
+        "qid": "rel-esc-risk",
+        "slice": "relationship"
+      },
+      {
+        "cell": "fixed",
+        "qid": "rel-db-users",
+        "slice": "relationship"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "rel-why-queue",
+        "slice": "relationship"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-183",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-184",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-185",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-186",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-187",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-188",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-189",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-190",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-191",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_wrong",
+        "qid": "adv-192",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-193",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-194",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-195",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-196",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-197",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "unchanged_correct",
+        "qid": "adv-198",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-18",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "fixed",
+        "qid": "adv-19",
+        "slice": "adversarial"
+      },
+      {
+        "cell": "broken",
+        "qid": "adv-20",
+        "slice": "adversarial"
+      }
+    ]
+  },
+  "n": 202,
+  "set": "dev",
+  "threshold": 0.3
+}

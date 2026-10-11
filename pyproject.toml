@@ -100,6 +100,22 @@ migrations = ["alembic.ini", "*.mako", "versions/*.py", "versions/*.mako"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# The repository root goes on sys.path for EVERY pytest invocation, not just
+# `python -m pytest`.
+#
+# Three test modules import `scripts.benchmark.*` and `scripts.m009_*`, and
+# `scripts/__init__.py` exists so it is an importable package. Under
+# `python -m pytest` the working directory is prepended to sys.path and those
+# imports resolve. Under the `pytest` console script they do not -- and CI runs
+# `pytest -q`, so the first real runner to execute this branch failed collection
+# with `ModuleNotFoundError: No module named 'scripts'` in three modules.
+#
+# The difference is not about the code under test. It is that a developer runs
+# `python -m pytest` out of habit and CI runs `pytest` because that is what you
+# type, so the only place the difference shows up is the machine nobody had
+# looked at yet. Setting the path here makes both invocations identical, and
+# makes any future invocation identical too.
+pythonpath = ["."]
 
 [tool.black]
 target-version = ["py311"]

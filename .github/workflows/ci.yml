@@ -49,11 +49,24 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      # The CPU index, because the runner has no GPU and the default PyPI torch
+      # wheel is the CUDA build.
+      #
+      # Measured this session, torch 2.9.1 cp311 linux x86_64:
+      #   default PyPI wheel   900 MB, and it depends on the nvidia-* tree
+      #   CPU index wheel      184 MB
+      # The 716 MB is the wheel alone; the nvidia wheels it drags in are larger
+      # again. Nothing in this suite uses CUDA, so the runner was downloading a
+      # GPU stack it could never execute -- which is also why `cache: pip` had
+      # little to save on a cold key and why a dependency bump re-downloaded
+      # gigabytes for no behavioural change.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install -e .
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r requirements.txt
+          python -m pip install --no-deps -e .
+          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
       - name: Verify package imports
         run: |
@@ -811,8 +824,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install -e .
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r requirements.txt
+          python -m pip install --no-deps -e .
 
       - name: Provision the pinned model weights
         run: python scripts/ci/provision_models.py

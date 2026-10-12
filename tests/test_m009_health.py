@@ -11,8 +11,14 @@ async def _clean_posture(_db):
     """A least-privileged runtime role, as `inspect` would report it."""
     from api.services.posture import DatabasePosture
 
+    from tenant_harness import RUNTIME_ROLE
+
     return DatabasePosture(
-        role="mindpalace_runtime",
+        # The role the session actually provisioned. The literal shipped name
+        # was never load-bearing here -- what this stub asserts is the privilege
+        # *shape* of a clean role, and the name is only ever compared to itself.
+        # Using the live name keeps one meaning for the string across the suite.
+        role=RUNTIME_ROLE,
         is_superuser=False,
         bypasses_rls=False,
         owns_protected_tables=[],

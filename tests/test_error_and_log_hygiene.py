@@ -35,6 +35,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
+from tenant_harness import RUNTIME_ROLE
+
 #: A string that must never appear in a response body, a log line, or readiness
 #: output. Distinctive enough to grep for, and shaped like the thing it stands in
 #: for -- something a customer would mind being copied out of context.
@@ -250,5 +252,17 @@ async def test_health_endpoints_reveal_no_deployment_internals():
 
     for response in (live, ready):
         body = response.text
-        for secret in ("mindpalace_runtime", "mpadmin", "postgres://", "postgresql://", CANARY):
+        # Both role names, not one: `mindpalace_runtime` is the shipped role and
+        # `RUNTIME_ROLE` is the one this session connected as. The leak this test
+        # guards against is an unauthenticated caller learning which database role
+        # the server runs as, and only the live name would actually tell them.
+        secrets = (
+            "mindpalace_runtime",
+            RUNTIME_ROLE,
+            "mpadmin",
+            "postgres://",
+            "postgresql://",
+            CANARY,
+        )
+        for secret in secrets:
             assert secret not in body, f"{response.request.url.path} leaked {secret!r}"

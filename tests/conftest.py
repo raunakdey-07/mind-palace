@@ -38,12 +38,39 @@ def pytest_sessionstart(session) -> None:
 
     try:
         os.environ["DATABASE_URL"] = session_database.create_session_database(base_url)
-    except Exception as exc:  # noqa: BLE001 - reported, not raised: a missing
-        # privilege should not look like a product failure, but it must be loud,
-        # because a non-hermetic run silently reintroduces the problem above.
-        print(f"\n[tests] could not create a session database: {exc}")
-        print("[tests] falling back to DATABASE_URL as-is; this run is NOT hermetic.")
-        return
+    except Exception as exc:  # noqa: BLE001 - re-raised below, deliberately
+        # A non-hermetic run is worse than no run.
+        #
+        # This used to print the reason and carry on against `DATABASE_URL`
+        # as-is. On CI that meant the entire suite passed against the SHARED
+        # `mindpalace` database -- the exact situation this module exists to
+        # prevent -- while reporting a green result and eight skips that read
+        # like the design. The failure was loud in the log and silent in the
+        # exit code, which is the worst place for it to be loud.
+        #
+        # So it now stops the session. A missing privilege to CREATE DATABASE
+        # is an environment problem, and the way to fix it is documented rather
+        # than worked around. `MIND_PALACE_TEST_DB=off` is the explicit opt-out
+        # for anyone who genuinely wants the shared database -- and it still
+        # prints what it is doing.
+        if os.getenv("MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC", "").strip() == "1":
+            print(
+                f"\n[tests] could not create a session database: {exc}\n"
+                "[tests] MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC=1: falling back to "
+                "DATABASE_URL as-is. This run is NOT hermetic."
+            )
+            return
+        raise RuntimeError(
+            f"could not create a session database, so this run would not be "
+            f"hermetic: {exc}\n"
+            "Refusing to run the suite against DATABASE_URL as-is, because a "
+            "shared database cannot distinguish 'the code is wrong' from "
+            "'someone changed the database'.\n"
+            "Fix the environment (the role needs CREATEDB, or the maintenance "
+            f"database {session_database.MAINTENANCE_DB!r} must exist), or set "
+            "MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC=1 to accept a non-hermetic "
+            "run deliberately."
+        ) from exc
 
     session.config._mindpalace_session_db = os.environ["DATABASE_URL"]  # noqa: SLF001
 

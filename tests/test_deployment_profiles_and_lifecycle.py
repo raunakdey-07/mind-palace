@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tenant_harness import (
     ALPHA_CORPORA,
+    RUNTIME_ROLE,
     apply_as_runtime,
     requires_tenant_db,
     runtime_url,
@@ -202,7 +203,11 @@ async def test_the_runtime_role_is_not_a_superuser_and_does_not_bypass_rls(runti
     from api.services.posture import inspect
 
     posture = await inspect(runtime_db)
-    assert posture.role == "mindpalace_runtime"
+    # The role the harness actually provisioned, not the shipped name. Asserting
+    # the literal asserted that a per-session role was the shipped role, which is
+    # the opposite of what this test is for: it exists to prove the role doing
+    # the reading cannot bypass RLS, and that role is whichever one we connected as.
+    assert posture.role == RUNTIME_ROLE
     assert posture.is_superuser is False
     assert posture.bypasses_rls is False
     assert posture.rls_effective is True

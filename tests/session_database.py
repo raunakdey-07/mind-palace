@@ -70,10 +70,37 @@ def _with_database(url: str, database: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, f"/{database}", parts.query, ""))
 
 
+def _sync_url(url: str) -> str:
+    """Force the psycopg2 driver, whatever the scheme in `DATABASE_URL` says.
+
+    A bare `postgresql://` leaves the driver to SQLAlchemy, and the answer
+    changed underneath this file: SQLAlchemy 2.0 resolved it to psycopg2,
+    2.1 resolves it to psycopg (v3). CI installs `psycopg2-binary` and not
+    `psycopg`, so on a 2.1 runner every `CREATE DATABASE` raised
+    `No module named 'psycopg'`, the session database was never created, and
+    the suite quietly fell back to running against the shared `mindpalace`
+    database -- printing "this run is NOT hermetic" and going on to report
+    eight skips as though they were the design.
+
+    The whole suite was therefore passing on a database it did not build, on
+    one runner version, and would fail on the next. `tenant_harness.sync_url`
+    pins the driver for exactly this reason; this module had to as well.
+
+    No new dependency: psycopg2 is already a runtime requirement, so pinning
+    names a driver the project ships with instead of adding one it does not.
+    """
+    return (
+        url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        .replace("postgresql+psycopg://", "postgresql+psycopg2://")
+        .replace("postgresql://", "postgresql+psycopg2://")
+    )
+
+
 def _maintenance_engine(base_url: str):
     import sqlalchemy as sa
 
-    return sa.create_engine(_with_database(base_url, MAINTENANCE_DB), isolation_level="AUTOCOMMIT")
+    url = _sync_url(_with_database(base_url, MAINTENANCE_DB))
+    return sa.create_engine(url, isolation_level="AUTOCOMMIT")
 
 
 def _database_statement(base_url: str, statement: str) -> None:

@@ -30,6 +30,7 @@ from tenant_harness import (
     ALPHA_CORPORA,
     BETA_CORPORA,
     BETA_PRIVATE_PRODUCT_FACT_7Q2,
+    RUNTIME_ROLE,
     apply_as_runtime,
     requires_tenant_db,
     runtime_url,
@@ -468,7 +469,13 @@ async def test_readiness_reports_that_a_superuser_bypasses_the_policies(monkeypa
     assert body["checks"]["row_level_security"] == "not_enforced"
     assert "database_posture" not in body
     # ... and the inventory is genuinely gone, not renamed.
-    assert "mindpalace_runtime" not in response.text
+    #
+    # Both names are checked, not one. `mindpalace_runtime` is the shipped role
+    # and `RUNTIME_ROLE` is the per-session role this session actually connected
+    # as, so a leak of either would be a real leak. Asserting only the shipped
+    # literal would have passed while the live role name went out in the clear.
+    for role_name in ("mindpalace_runtime", RUNTIME_ROLE):
+        assert role_name not in response.text, f"{role_name} leaked in the body"
     assert "bypassrls" not in response.text.lower()
 
 
@@ -510,7 +517,8 @@ async def test_readiness_reports_a_restricted_role_as_effective(world):
     assert body["checks"]["row_level_security"] == "enforced"
     # The detail is the CLI's job, not an anonymous response's.
     assert "database_posture" not in body
-    assert "mindpalace_runtime" not in json.dumps(body)
+    for role_name in ("mindpalace_runtime", RUNTIME_ROLE):
+        assert role_name not in json.dumps(body), f"{role_name} leaked in the body"
 
 
 async def test_the_role_check_agrees_with_the_role_provision_script():
@@ -530,7 +538,9 @@ async def test_the_role_check_agrees_with_the_role_provision_script():
     finally:
         await engine.dispose()
 
-    assert posture.role == "mindpalace_runtime"
+    # The role the harness provisioned, not the shipped name. The test is about
+    # what this role can do, so the name it asserts has to be the name it used.
+    assert posture.role == RUNTIME_ROLE
     assert posture.is_superuser is False
     assert posture.bypasses_rls is False
     assert posture.rls_effective is True

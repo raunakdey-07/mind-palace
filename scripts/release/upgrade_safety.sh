@@ -67,7 +67,44 @@ say "upgrading to this branch's head"
 "$PY" -m alembic -c "$REPO/migrations/alembic.ini" \
   -x script_location="$REPO/migrations" upgrade head >/dev/null
 
-# 6. The assertions.
+# 6a. The RUNTIME-ROLE assertions.
+#
+#     assert_upgrade.py runs as a superuser, and a superuser bypasses row-level
+#     security -- so it cannot see a policy keyed on the wrong column. This
+#     project's development database carried exactly that bug for months
+#     (`USING (mindpalace_allowed_corpus(id))` on `memory_documents`, whose
+#     column is `corpus_id`) and every superuser test passed.
+#
+#     So the same archive is re-read as `mindpalace_runtime`, through a
+#     credential granted to the existing corpora, and the two views must agree.
+say "provisioning the least-privileged role and asserting the runtime view"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -v runtime_password=upgrade-safety-role-password \
+  -f "$REPO/scripts/db/runtime_roles.sql" >/dev/null
+
+# Same scheme, host, port and database; a different identity. The scheme is kept
+# because a driver-qualified URL (`postgresql+asyncpg://`) is what the engine
+# expects, and userinfo is the only part that changes.
+SCHEME="${DATABASE_URL%%://*}"
+REST="${DATABASE_URL##*@}"
+RUNTIME_URL="${SCHEME}://mindpalace_runtime:upgrade-safety-role-password@${REST}"
+
+if [ -z "$REST" ] || [ "$REST" = "$DATABASE_URL" ]; then
+  echo "::error::could not build a runtime-role URL from DATABASE_URL"
+  exit 1
+fi
+
+# The credential is issued, and the grants happen, INSIDE the assertion script.
+# That is not tidiness: the operator step being asserted is "before the grant
+# this reader sees one corpus, after the grant it sees them all", and the only way
+# to observe the first half is to be the process that performs the second.
+MIND_PALACE_SUPERUSER_URL="$DATABASE_URL" \
+"$PY" "$REPO/scripts/release/assert_runtime_role.py" \
+  --superuser-url "$DATABASE_URL" \
+  --runtime-url "$RUNTIME_URL" \
+  --before "$BEFORE"
+
+# 6b. The archive assertions.
 say "asserting the upgrade preserved the archive"
 SRC="$REPO" "$PY" "$REPO/scripts/release/make_upgrade_fixture.py" \
   --out "$AFTER" --label head --export-only

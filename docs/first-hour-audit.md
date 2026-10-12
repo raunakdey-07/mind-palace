@@ -331,6 +331,26 @@ v0.3.0           pass / pass / n-a     / n-a          / n-a
 v0.2.1           pass / FAIL  / n-a     / n-a          / n-a
 ```
 
+### Which tags this covers, and which it does not
+
+**13 tags exist. 8 are rows in the table above.** The other 5 were not tested,
+and saying "every tag" anywhere near this table would be wrong.
+
+| tag | in the matrix? | why |
+|---|---|---|
+| v0.9.0 ... v0.2.1 (8 tags) | yes | one row per minor line |
+| `v0.5.0` | no | the v0.5 line is covered by `v0.5.1`, its newest patch |
+| `v0.4.1` | no | the v0.4 line is covered by `v0.4.0` |
+| `v0.2.0` | no | the v0.2 line is covered by `v0.2.1`. Its migration failure was found by **reading `alembic.ini` at that tag**, not by running it: it has no `script_location` key, the same defect as `v0.2.1`, fixed in `v0.3.0`. |
+| `v0.2.0-backup` | no | not a release. It is a **lightweight** tag pointing directly at a commit, not an annotated tag, and it is a backup marker for the v0.2.0 work. |
+| `v0.1.0-foundation` | no | the pre-release line, before there was a README quickstart to run |
+
+So an earlier statement in this project that the matrix covered "nine" tags was
+wrong: it covered **eight rows** and *nine tags considered* -- `v0.2.0` was
+considered and deliberately not run as a row. The distinction matters because
+"no tag fails its own documented quickstart" is a claim about the eight that ran,
+not about the thirteen that exist.
+
 **No tag fails its own documented quickstart. v0.9.0 is the only tag that has
 one**, and it passes end to end: install, migrate, init, remember, a recall that
 returns the right answer, and a receipt.

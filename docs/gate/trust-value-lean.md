@@ -1,5 +1,27 @@
 # Gate package — TRUST, VALUE, LEAN
 
+> ## READ THIS BEFORE ANY NUMBER BELOW
+>
+> **Arm A in this lab is not the product path.** It ranks with the shipped
+> relevance scorer but grades at **rank 1** and has **no lexical fallback**. The
+> product's own benchmark, using its own grader and its documented
+> lexical-then-semantic fallback, reports **194/202**. This lab's arm A reports
+> **151/202**.
+>
+> So every figure below -- the harm matrix, the **36.4% ceiling**, every
+> confident-wrong rate, every recall@k -- was measured **against arm A, not
+> against Mind Palace**. They are properties of that arm under that grader.
+>
+> **They are NOT ESTABLISHED for the product.**
+>
+> The data is kept rather than deleted, because the differences are informative
+> and because removing measurements is how a project loses the ability to notice
+> it was wrong. What is wrong is the framing, and this banner is the correction.
+>
+> `docs/performance/retrieval-lab-protocol.md` is the frozen protocol, and
+> `docs/STATUS.md` carries the numbers that *are* the product's.
+
+
 Decision gate for the adoption round. Every number below was produced by a
 command in this session; the command is named. Nothing here is applied.
 

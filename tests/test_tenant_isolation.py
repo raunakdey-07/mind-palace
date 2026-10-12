@@ -25,6 +25,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tenant_harness import (
+    RUNTIME_ROLE,
     ALPHA_CORPORA,
     ALPHA_PRIVATE_CAMPAIGN_FACT_9M4,
     ALPHA_PRIVATE_PRODUCT_FACT_7Q2,
@@ -179,7 +180,11 @@ def _provision() -> None:
                 sa.text(
                     "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles " "WHERE rolname = :role"
                 ),
-                {"role": "mindpalace_runtime"},
+                # `RUNTIME_ROLE`, not the literal shipped name. The harness now
+                # provisions a per-session role so it cannot rotate the cluster's
+                # `mindpalace_runtime` password; a hardcoded name here would check
+                # a role nobody provisioned and fail for the wrong reason.
+                {"role": RUNTIME_ROLE},
             ).one()
             can_login = conn.execute(
                 sa.text("SELECT has_table_privilege(:role, 'memory_claims', 'SELECT')"),

@@ -20,6 +20,7 @@ database policy.
 from __future__ import annotations
 
 import os
+import uuid
 
 import pytest
 import sqlalchemy as sa
@@ -62,8 +63,29 @@ ALL_CANARIES = (
     BETA_PRIVATE_CAMPAIGN_FACT_9M4,
 )
 
-RUNTIME_ROLE = "mindpalace_runtime"
+#: A per-session role name, NOT the shipped `mindpalace_runtime`.
+#:
+#: This harness used to provision the real role on whatever `$DATABASE_URL`
+#: pointed at, which rotated its password on the SHARED database. On CI that
+#: broke every later step that authenticated as `mindpalace_runtime`; the
+#: posture check degraded to "unknown means not proven" and reported all 13
+#: protected tables as unprotected. Three CI runs failed on that before the
+#: cause was found, and the first fix -- moving the posture steps earlier -- was
+#: treating the symptom.
+#:
+#: Roles are cluster-wide even when databases are not, so the only way a test
+#: can leave a cluster alone is to use a name nobody else is using. One is
+#: minted per session and dropped at teardown.
+# The name deliberately does NOT contain "mindpalace_runtime" as a substring.
+# If it did, every substitution below would be ambiguous -- you could not tell a
+# replaced occurrence from one inside the new name -- and a grep of the resolved
+# script could not tell whether the real role had been touched.
+RUNTIME_ROLE = "mp_tenant_test_" + uuid.uuid4().hex[:12]
 RUNTIME_PASSWORD = "tenant-isolation-test-password"
+
+#: The role name in the shipped script. Substituted for `RUNTIME_ROLE` so the
+#: harness provisions the SAME script an operator runs, with a different name.
+SHIPPED_RUNTIME_ROLE = "mindpalace_runtime"
 
 #: The provisioning script an operator actually runs, relative to the repository
 #: root. Read from disk rather than duplicated -- see `load_provision_sql`.
@@ -98,9 +120,9 @@ def load_provision_sql(
         if line.lstrip().startswith("\\"):
             continue
         resolved.append(
-            line.replace(":'runtime_password'", "'%s'" % password.replace("'", "''")).replace(
-                ":'runtime_password_skip'", "'on'" if skip_password else "'off'"
-            )
+            line.replace(":'runtime_password'", "'%s'" % password.replace("'", "''"))
+            .replace(":'runtime_password_skip'", "'on'" if skip_password else "'off'")
+            .replace(SHIPPED_RUNTIME_ROLE, RUNTIME_ROLE)
         )
 
     script = "".join(resolved)
@@ -226,7 +248,57 @@ def provisioned_runtime():
         pytest.skip("the runtime role can only be provisioned by a superuser")
 
     apply_provision_sql()
+    try:
+        _verify_provisioned_runtime()
+    finally:
+        _drop_session_role()
 
+
+def _drop_session_role() -> None:
+    """Remove the per-session role. Roles are cluster-wide, so leaving one
+    behind is litter on every machine that ever ran the suite, and a later run
+    that happened to mint the same name would silently adopt this one's grants.
+
+    CASCADE, because the role holds grants on every tenant table in every
+    database this session touched and `DROP ROLE` without it fails on those
+    dependencies -- which is why an earlier version left five roles behind: the
+    drop was refused, the exception was swallowed, and the litter was invisible.
+    The name is random and the role is a test artefact, so cascading is safe here
+    in a way it would never be for a shipped role.
+    """
+    try:
+        engine = sa.create_engine(sync_url())
+        with engine.connect() as conn:
+            conn.execute(
+                sa.text(
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    "WHERE usename = :role"
+                ),
+                {"role": RUNTIME_ROLE},
+            )
+            # `DROP OWNED BY` first, then `DROP ROLE`. Two syntax facts cost an
+            # hour here and are worth writing down:
+            #
+            #   * `DROP ROLE IF EXISTS :role` does NOT accept a bind parameter.
+            #     PostgreSQL wants an identifier list there and `$1` is a
+            #     syntax error.
+            #   * `DROP ROLE ... CASCADE` does not exist. CASCADE belongs to
+            #     `DROP OWNED BY`, not to `DROP ROLE`.
+            #
+            # The name is ours -- `mp_tenant_test_` plus hex -- so it cannot
+            # contain a quote and inlining it is not a quoting problem. Both
+            # earlier attempts failed SILENTLY, because this teardown swallows
+            # the exception, and left nine roles behind on the cluster.
+            quoted = f'"{RUNTIME_ROLE}"'
+            conn.execute(sa.text(f"DROP OWNED BY {quoted} CASCADE"))
+            conn.execute(sa.text(f"DROP ROLE IF EXISTS {quoted}"))
+            conn.commit()
+        engine.dispose()
+    except Exception:  # noqa: BLE001 - teardown must not mask a real failure
+        pass
+
+
+def _verify_provisioned_runtime() -> None:
     engine = sa.create_engine(sync_url())
     try:
         with engine.connect() as conn:

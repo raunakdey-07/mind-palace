@@ -31,6 +31,47 @@ nonzero exit **and** that the output contains `refusing to start`, and the
 positive step runs the same check on the least-privileged role. Mutation-tested:
 `ALTER ROLE mindpalace_runtime SUPERUSER BYPASSRLS` makes it refuse.
 
+### Phase 1, second failure: the posture step was pointed at a rotated role
+
+The positive posture step failed after the previous fix. The database was
+correct -- all 13 protected tables had RLS enabled AND forced, the role was
+NOSUPERUSER NOBYPASSRLS, and `psql` authenticated fine. The cause:
+
+    tests/tenant_harness.py:66   RUNTIME_PASSWORD = "tenant-isolation-test-password"
+
+The harness runs a modified copy of `scripts/db/runtime_roles.sql` against
+`$DATABASE_URL`, and that script ends in `ALTER ROLE mindpalace_runtime
+PASSWORD ...`. On CI `$DATABASE_URL` is the **shared** `mindpalace` database, so
+`Tenant isolation` rotated the runtime role's password. Every later step
+authenticating as `mindpalace_runtime` with `ci-runtime-role-password` could not
+connect, and `posture` -- which degrades to "unknown means not proven" by design
+-- reported all 13 protected tables as unprotected.
+
+The two posture steps now run immediately after provisioning, before the suite
+and before tenant isolation. Posture is a property of the deployment, so it
+belongs where the deployment is built.
+
+**Not fixed, and it should be:** `tests/tenant_harness.py` rotating a password on
+`$DATABASE_URL` is its own defect. It should provision against a database it
+owns. Flagged rather than done, because it is a test change with a wider blast
+radius than a workflow reorder.
+
+### Phase 4 items still open, in priority order
+
+### Phase 1, mutation testing of the posture steps
+
+| mutation | result |
+|---|---|
+| baseline: clean provisioning | PASS |
+| B: `DISABLE ROW LEVEL SECURITY` on `memory_claims` | FAILS, names `memory_claims` |
+| C: `NO FORCE ROW LEVEL SECURITY` on `memory_claims` | FAILS, names `memory_claims` |
+| D: rotate the runtime role's password (what the tenant harness does) | FAILS, names all 13 — **the exact CI failure** |
+| D, password restored | PASS |
+
+Mutation A ("never provision the role at all") was not a real mutation: the role
+is cluster-wide and already existed, so the connection still succeeded. Recorded
+rather than quietly dropped.
+
 ### Phase 4 items still open, in priority order
 
 * **4a** recall@1/3/5 per arm per slice, claim and passage — NOT DONE, and it is

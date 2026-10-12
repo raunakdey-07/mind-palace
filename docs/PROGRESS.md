@@ -8,6 +8,26 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
+## Session 6 — 2026-10-12: green first, then the claims, then the lab
+
+**Written first, before any work, with every phase below marked NOT DONE.**
+
+Branch is RED on CI. Run `38242335025`, `failure`, 9m42s: **Lint and Test** failed on
+2 tests, and the other four jobs (Clean install, Five-minute path, Upgrade
+safety, Docker Build) were **skipped** because they depend on it.
+
+| phase | state | one line |
+|---|---|---|
+| 1 CI green | **NOT DONE** | the two `RUNTIME_ROLE` literal failures; every other `"mindpalace_runtime"` literal used as an expectation; explain the 8 CI skips against 2 local; make the session-database fixture fail loudly instead of skipping; CPU torch index; wait for all five jobs |
+| 2 make our own claims true | **NOT DONE** | `N passed` figures tied to a commit; `runtime_roles.sql` must not print the password; PostgreSQL server logs can carry row content; the 8 FK violations; warning noise; the leaking `mp_tenant_test_<hex>` role |
+| 3 the lab measures the product | **NOT DONE** | arm A on the real product path reproducing 194/202; the harm matrix against it; recall@1/3/5; the arm-E threshold cross-validated; arm G if Hub allowed |
+| 4 downstream pilot | **NOT DONE** | needs D1. Arms A/B/C/D, at least one small and one stronger model, per slice, harm first |
+| 5 positioning and authoring cost | **NOT DONE** | `docs/what-mind-palace-claims.md`; the raw-notes-to-claims cost for a 20-page document |
+
+**Owner decides when 1.0.0 is ready.** Nothing in this file or in
+`docs/release/v1.0.0-readiness.md` implies otherwise; the readiness document is an
+informational checklist and stays labelled as one.
+
 ## Session 5 — 2026-10-12: stop misleading, then the gate, then the documents
 
 **Written first, before any work, with every phase below marked NOT DONE.** An

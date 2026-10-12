@@ -99,6 +99,32 @@ models at all.
 not move. No public response field changed, existing receipts remain verifiable, and
 no MCP tool was added.
 
+**Read that in the past tense, about `v0.9.0` specifically. It is not a statement
+about this branch.** `v0.9.0`'s head is 007. The branch's head is **010**, and
+migrations 008, 009 and 010 have **never shipped in any release** — they all
+arrived in `da8a14a`, after the `v0.9.0` tag. So the first release cut from this
+branch *does* move the schema head, by three migrations, and the "no migration"
+sentence above does not apply to it.
+
+**Upgrade notes are NOT YET WRITTEN. NOT ESTABLISHED.** No `docs/release/`
+directory exists in this tree. What is established about the `v0.9.0` -> 010
+upgrade, from `scripts/release/upgrade_safety.sh` and the runtime-role
+assertions in `scripts/release/assert_runtime_role.py`:
+
+* it applies cleanly to a real `v0.9.0` archive written through `v0.9.0`'s own
+  `remember`;
+* the `v0.9.0` receipt still verifies offline after the upgrade;
+* claim identities do not move and no claim is lost;
+* the pack is byte-identical once `valid_at` is pinned on both sides;
+* supersession survives (history PostgreSQL, recall CockroachDB);
+* the whole read surface works **as `mindpalace_runtime` in server mode with a
+  credential**, and a policy keyed on the wrong column fails the job.
+
+**A downgrade 010 -> 007 destroys `memory_principals` and disables row-level
+security on all 9 protected tables. It preserves all 6 claims.** That cost belongs
+in the upgrade notes and is not yet written down anywhere an operator would
+find it.
+
 **The runtime changed no memory semantics.** `mindpalace recall`, `explain` and
 `receipt` went from about 6.2 s to about 0.63 s, and everything they return is
 byte-identical to the in-process path — same claim identities, evidence, temporal
@@ -312,10 +338,18 @@ in 157, and zero in 60: the system almost always declines rather than inventing.
 That is the property that makes a memory subsystem worth having, and no aggregate
 shows it.
 
+**But read the runner's own note before taking credit for that 1.** The question
+`ho-abs-office-cat` expects no memory, the system returned nothing, and the
+frozen grader recorded it as incorrect (`expect_state=ABSENT`, `failure='F7'`).
+Returning nothing when nothing exists is the correct behaviour, and
+`docs/performance/quality-frame.json` says exactly that in its own `notes` field.
+**On held-out v1 the product's confident-wrong count is 0; the grader's is 1.**
+The disagreement is unfixed and is counted as a grader defect, not a product one.
+
 **The costs are real and they are not small.** 11 held-out questions where the
 archive had the answer and the system returned nothing, and 14 where it returned
-something wrong. Roughly one held-out question in six is a product limitation
-rather than a success.
+something wrong. That is 25 of 157 — roughly one held-out question in six is a
+product limitation rather than a success.
 
 Two caveats stated rather than buried:
 
@@ -354,22 +388,54 @@ result that has to be reported as one.
 The aggregate figures remain, because the release documents have always quoted
 them and removing them would break citations in the changelog:
 
-| | |
-|---|---|
-| held-out v1 | 131/157 (83.4%, Wilson 95% CI 76.8%-88.6%) [v0.8.0] |
-| frozen M006.75 | 45/60 exact, 55/60 abstention-exact, 0 execution failures, all seven safety invariants 60/60 |
-| 202-question development set | 194/202 (96.0%) -- a development set with eight known failures, **not** an accuracy on unseen questions |
+### Three scores, and they are not the same kind of number
+
+**Read this table before quoting any single figure from it.** They differ in what
+was tuned on them, and one of them has been used for diagnosis.
+
+| set | n | score | what it is |
+|---|---:|---|---|
+| **development** | 202 | **194/202 (96.0%)** | **DEVELOPMENT SCORE. Not an accuracy on unseen questions.** Retrieval, ranking and thresholds were all tuned against these 202 questions. Eight known failures remain and are listed individually below. |
+| **held-out v1** | 157 | 131/157 (83.4%, Wilson 95% CI 76.8%-88.6%) | Authored independently and frozen before retrieval code was touched, then **used to diagnose failures**. Any fix tuned against it is a development result. Treat as a diagnostic instrument, not a measurement. **Burned.** |
+| **frozen M006.75** | 60 | 45/60 exact, 55/60 abstention-exact, 0 execution failures, all seven safety invariants 60/60 | The least-tuned set here, and still only 60 questions. It is the one set that has not been used for diagnosis. |
+
+**194/202 is a development score and must never be presented as the product's
+accuracy.** Quoting it alone, or in a headline, overstates the evidence by the
+13-point gap to held-out v1 and by more than that to any set nobody has tuned
+against — which does not exist. The four-way breakdown further down is the part
+that matters operationally.
 
 The canonical authored benchmark, 202 questions, dataset hash
 `9cdecda73cbdc8ae`:
 
-| Strategy | Score |
-|---|---:|
-| semantic always | 178/202 |
-| lexical always | 164/202 |
-| lexical, then semantic | **194/202** (dev set, not a held-out result) |
+| Strategy | Score | |
+|---|---:|---|
+| semantic always | 178/202 | development |
+| lexical always | 164/202 | development |
+| lexical, then semantic | **194/202** | **development — not a held-out result** |
 
 Evidence: `docs/performance/m0115-experiments.json` <- key: summary.strategies.C_fallback
+
+### The four-way breakdown of held-out v1
+
+131/157 averages a right answer together with a wrong one. The table in
+**Correctness** above splits the same 157 into the four outcomes an integrator
+would have to act on, and that is the canonical statement. Two things about it
+belong here as well, next to the aggregate:
+
+**The costs are real and they are not small.** 11 held-out questions where the
+archive had the answer and the system returned nothing, and 14 where it returned
+something wrong. That is 25 of 157 — roughly one held-out question in six is a
+product limitation rather than a success.
+
+**The confident-wrong count is 1 on held-out v1 and 0 on the frozen set — and the
+runner says the held-out 1 is a grader disagreement, not a product failure.** The
+question `ho-abs-office-cat` expects no memory, the system returned nothing, and
+the grader recorded it as incorrect (`expect_state=ABSENT`, `failure='F7'`).
+Returning nothing when nothing exists is the correct behaviour. The runner's own
+note in the artifact says so, and this document repeats it rather than quietly
+taking the credit: **on held-out v1 the product's confident-wrong count is 0, and
+the grader's is 1.**
 
 The eight failures are fixed and classified, not a moving target:
 

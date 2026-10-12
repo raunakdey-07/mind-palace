@@ -104,6 +104,27 @@ MIND_PALACE_SUPERUSER_URL="$DATABASE_URL" \
   --runtime-url "$RUNTIME_URL" \
   --before "$BEFORE"
 
+#     Proven, not assumed. Session 5 mutated migration 008 to key the
+#     `memory_documents` policy on `id` instead of `corpus_id` -- the defect
+#     this project's development database carried -- and the job exited 1.
+#
+#     Two details of that mutation matter, and both were learned the hard way.
+#
+#     A blanket `column = "id"` for every table is NOT the test: PostgreSQL
+#     rejects it at migration time with `column "id" does not exist` on
+#     `ingestion_manifest`, so it proves the migration runs, not that the gate
+#     can see a policy. `memory_documents` has BOTH columns, which is exactly
+#     why the real defect survived: PostgreSQL accepted the statement and the
+#     policy filtered on the wrong thing.
+#
+#     And it was caught by the claim-identity comparison, not by recall. Under
+#     the mutation the runtime role answered recall, explain and history
+#     normally, because those read `memory_claims`, whose policy still names
+#     `corpus_id`. Only the document-identity read -- superuser 5, runtime 0 --
+#     showed the loss. A gate that asserted "the API works" would have passed
+#     this broken schema.
+#
+say "asserting the runtime view"
 # 6b. The archive assertions.
 say "asserting the upgrade preserved the archive"
 SRC="$REPO" "$PY" "$REPO/scripts/release/make_upgrade_fixture.py" \

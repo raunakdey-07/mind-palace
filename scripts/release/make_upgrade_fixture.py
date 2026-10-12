@@ -79,7 +79,15 @@ def main() -> int:
 
     scope = dbm.admin_session_scope if hasattr(dbm, "admin_session_scope") else dbm.session_scope
     from api.services.corpora import get_or_create_corpus
-    from api.services.remember import remember
+
+    # v0.9.0 is the first release with a dedicated `api.services.remember`
+    # module. v0.8.0 has the same schema -- head 007, the same memory tables --
+    # but its write path still lives in `api.services.memory`. Without this
+    # fallback the v0.8.0 upgrade cannot be exercised at all.
+    try:
+        from api.services.remember import remember
+    except ImportError:
+        from api.services.memory import remember
 
     async def build():
         async with scope() as db:

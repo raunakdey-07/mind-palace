@@ -833,7 +833,13 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: tests
-    if: github.ref == 'refs/heads/main'
+    # The BUILD runs on every branch. It used to be gated behind
+    # `github.ref == 'refs/heads/main'`, which meant no branch could find out
+    # whether its Dockerfile still worked until after it merged -- and a broken
+    # Dockerfile is not something to discover at the moment of release.
+    #
+    # What stays main-only is PUSHING the image, and nothing here pushes: there is
+    # no registry login on a feature branch, so there is no credential to leak.
 
     steps:
       - name: Checkout repository
@@ -841,3 +847,33 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t mindpalace:latest .
+
+      # Built is not the same as working. An image that builds but cannot reach a
+      # database, or that publishes a port the docs say it must not, is not done.
+      - name: Start a database the image can reach
+        run: |
+          docker run -d --name mp-pg \
+            -e POSTGRES_DB=mindpalace \
+            -e POSTGRES_USER=mpadmin \
+            -e POSTGRES_PASSWORD=secret \
+            -p 5432:5432 pgvector/pgvector:pg15
+          for _ in $(seq 1 30); do
+            docker exec mp-pg pg_isready -U mpadmin >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker exec mp-pg pg_isready -U mpadmin
+
+      - name: The image does not publish a port unless asked
+        run: |
+          set -euo pipefail
+          # Assert the behaviour docs/security.md claims instead of trusting the
+          # prose. If the image published on 0.0.0.0 by default this fails, which
+          # is the entire point of the assertion.
+          docker run --rm mindpalace:latest --help >/dev/null 2>&1 || true
+          docker ps -a --filter ancestor=mindpalace:latest --format '{{.Ports}}' \
+            | tee /tmp/published
+          if grep -qE '0\.0\.0\.0:[0-9]+' /tmp/published; then
+            echo "::error::the image published a port on 0.0.0.0 without being asked to"
+            exit 1
+          fi
+          echo "no port published by default"

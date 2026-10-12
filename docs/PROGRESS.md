@@ -15,7 +15,7 @@ early stop must lose nothing.
 
 | phase | state | one line |
 |---|---|---|
-| 0 stop misleading | **NOT DONE** | banners on the two lab documents; `v0.10.0` naming replaced with the 0.9.x train; tag-count reconciliation |
+| 0 stop misleading | **DONE** | banners on both lab documents: arm A is not the product path, 151/202 not 194/202, so the harm matrix, the 36.4% ceiling and every confident-wrong rate are NOT ESTABLISHED for the product. `v0.10.0` replaced with the 0.9.x train; one historical occurrence in `docs/release-map.md` kept, because it records that M015.2/M016 were consolidated. Tag counts reconciled: **13 tags exist, 8 were matrix rows**, five named with reasons. |
 | 1 upgrade gate that can see policy bugs | **NOT DONE** | runtime-role assertions after the upgrade; the operator grant step; the wrong-policy mutation (`id` instead of `corpus_id`); v0.8.0 via its own ingestion path; a ~1,000-version upgrade; Docker bind assertions with a mutation |
 | 2 harness and CI honesty | **NOT DONE** | the leaking per-session role; clean-room on min and max Python; the negative-posture mutation |
 | 3 STATUS honesty and release plan | **NOT DONE** | re-derive every number; label 194/202 dev and put held-out v1 and frozen 45/60 beside it; classify every commit with a reason; cherry-pick to decide split vs single; CHANGELOG drafts; tag checklists; `docs/release/v1.0.0-readiness.md` |

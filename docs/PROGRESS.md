@@ -56,6 +56,19 @@ belongs where the deployment is built.
 owns. Flagged rather than done, because it is a test change with a wider blast
 radius than a workflow reorder.
 
+### Phase 1, third failure: the example ran half of its own instructions
+
+`httpx.ConnectError: All connection attempts failed`.
+`examples/marketing-campaign-memory/demo.py` is a *client* -- it imports none of
+Mind Palace, not even the ASGI app object, because the point is that an
+independent application can be built on the documented HTTP interface. Its README
+says so in two shells; CI ran only the second. The step now starts the service,
+waits for `/openapi.json` to answer 200, runs the demo, and stops the service.
+Verified locally: HTTP 200, demo exit 0.
+
+Three runner-only failures had now been sitting behind each other, each hiding
+the next because the step after it was reported `skipped`.
+
 ### Phase 4 items still open, in priority order
 
 ### Phase 1, mutation testing of the posture steps
@@ -71,6 +84,19 @@ radius than a workflow reorder.
 Mutation A ("never provision the role at all") was not a real mutation: the role
 is cluster-wide and already existed, so the connection still succeeded. Recorded
 rather than quietly dropped.
+
+### Phase 1, third failure: the example ran half of its own instructions
+
+`httpx.ConnectError: All connection attempts failed`.
+`examples/marketing-campaign-memory/demo.py` is a *client* -- it imports none of
+Mind Palace, not even the ASGI app object, because the point is that an
+independent application can be built on the documented HTTP interface. Its README
+says so in two shells; CI ran only the second. The step now starts the service,
+waits for `/openapi.json` to answer 200, runs the demo, and stops the service.
+Verified locally: HTTP 200, demo exit 0.
+
+Three runner-only failures had now been sitting behind each other, each hiding
+the next because the step after it was reported `skipped`.
 
 ### Phase 4 items still open, in priority order
 

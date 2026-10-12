@@ -306,13 +306,50 @@ jobs:
       # The reference integration has to be runnable on its own, from a clean
       # checkout, exactly as its README says -- an example that only works when
       # another test has already seeded the database is not evidence of anything.
+      # This is a CLIENT example. examples/marketing-campaign-memory/README.md
+      # says so in its own "Run it" section, in two shells:
+      #
+      #   1. MIND_PALACE_AUTH_MODE=required uvicorn api.main:app --port 8000
+      #   2. python examples/marketing-campaign-memory/demo.py
+      #
+      # The step ran only the second one, so the demo tried to reach
+      # 127.0.0.1:8000 and died with `httpx.ConnectError: All connection
+      # attempts failed`. It is a real HTTP client by design -- it imports none
+      # of Mind Palace -- so there is nothing for it to fall back to.
+      #
+      # This never showed up before because every earlier step in the job failed
+      # first and this one was skipped. A skipped step is not a passing step.
       - name: The marketing reference integration runs standalone
         env:
           DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
           MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_RUNTIME: "0"
+          MIND_PALACE_URL: http://127.0.0.1:8000
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
+          set -euo pipefail
+          # The service, in this shell rather than another: a CI step has one.
+          # `python -m uvicorn` rather than the console script, so it cannot pick up a
+          # different interpreter from PATH.
+          python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > /tmp/server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          ready=""
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null "$MIND_PALACE_URL/openapi.json"; then ready=1; break; fi
+            if ! kill -0 "$server" 2>/dev/null; then
+              echo "::error::the server exited before becoming ready"
+              cat /tmp/server.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ -z "$ready" ]; then
+            echo "::error::the server never became ready at $MIND_PALACE_URL"
+            cat /tmp/server.log
+            exit 1
+          fi
           python examples/marketing-campaign-memory/demo.py
 
   five-minute-path:

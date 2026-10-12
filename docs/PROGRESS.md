@@ -148,3 +148,45 @@ release blockers fixed (wheel missing `mindpalace_errors`; default-corpus
 * **v3 is not independent of the dogfood.** v4 does not exist.
 * **Sealed scoring has never happened.** No number in this repository is
   evidence of generalisation.
+
+
+---
+
+## Session 4 — 2026-10-12: release safety
+
+**CI is green on a real runner, with the new gate job.** Run `38237730312`,
+`success`:
+
+| job | result |
+|---|---|
+| Lint and Test | success |
+| Clean install from the built wheel | success |
+| The five-minute path, from a clean checkout | success |
+| **Upgrade safety, from v0.9.0** | **success** (new this round) |
+| **Docker Build** | **success** (used to be main-only) |
+
+That is the two conditions a tag needs from CI: green on a built wheel, Docker
+included, and the v0.9.0 upgrade test passing on a runner rather than on a
+remembered local run.
+
+### What Phase 1 found
+
+The v0.9.0 -> head 010 upgrade **preserves everything**: the v0.9.0 receipt still
+verifies offline, claim identities do not move, no claim is lost, and the pack is
+byte-identical once the clock is pinned. Supersession survives the round trip —
+`history` shows PostgreSQL, `recall` returns CockroachDB.
+
+**A downgrade destroys `memory_principals` and disables RLS on all 9 protected
+tables. It preserves all 6 claims.** That belongs in the release notes.
+
+**The fixture cannot prove tenant preservation, and that is a real limit.** A
+`DELETE FROM memory_principals` mutation in migration 008 SURVIVED the job,
+because a v0.9.0 archive has no principals — the table is created by 008 itself.
+The test that does bite is the after-export asking a different question, which
+fails with `differs in ['query']`.
+
+### Phase 4 naming, applied to docs only
+
+v0.9.1 is skipped. The branch is **unreleased, planned v0.10.0**. `pyproject.toml`
+is untouched at 0.9.1 and nothing is tagged; applying the NAME to the version
+field would be a release, not a plan.

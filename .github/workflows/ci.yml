@@ -98,6 +98,91 @@ jobs:
             postgresql://mindpalace_runtime@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
             -tAc "SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user"
 
+      # These two run IMMEDIATELY after provisioning, not at the end of the job.
+      #
+      # They used to run last, after `Run tests` and `Tenant isolation`. That
+      # ordering was wrong and it failed on every runner:
+      #
+      #   tests/tenant_harness.py:66  RUNTIME_PASSWORD = "tenant-isolation-test-password"
+      #
+      # and the harness runs a modified copy of scripts/db/runtime_roles.sql
+      # against $DATABASE_URL. On CI that is the SHARED mindpalace database, so
+      # the tenant-isolation step rotates the runtime role's password. Every
+      # later step that authenticates as mindpalace_runtime with
+      # ci-runtime-role-password then fails to connect, and `posture` degrades
+      # to "unknown means not proven" -- reporting all 13 protected tables as
+      # unprotected. The database was fine. The check was pointed at a
+      # database whose role had been rotated underneath it.
+      #
+      # Measured, after reproducing the exact sequence on a disposable database:
+      #   before the tenant-isolation subset : posture PASS, all 13 tables rls+force
+      #   after  the tenant-isolation subset : role 'unknown', password auth failed
+      #
+      # Posture is a property of the DEPLOYMENT, so it belongs where the
+      # deployment is built, not where the tests have finished trampling it.
+      # The identity check has to run as the maintenance role or it is vacuous:
+      # `mindpalace_resolve_credential` is SECURITY DEFINER, so the least-
+      # privileged role authenticates through it exactly as production does.
+      # This is a NEGATIVE test: starting as a role that bypasses row-level
+      # security must fail, and must say why.
+      #
+      # It used to assert that `import api.main` fails. That is the wrong entry
+      # point, and api/main.py says so in its own docstring: importing the module
+      # must not require a connection, so the database posture is checked in the
+      # lifespan, before the server accepts a request. Asserting the import
+      # refused tested a behaviour the product deliberately does not have, and it
+      # failed on the first real runner for exactly that reason.
+      #
+      # It is strengthened, not relaxed: it now asserts BOTH a nonzero exit AND
+      # the refusal reason, so a crash for any other reason -- a typo in a URL, a
+      # missing driver -- cannot be mistaken for a posture refusal.
+      - name: A server deployment refuses an unsafe database role
+        env:
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_DEPLOYMENT: server
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_INGEST_ROOTS: /content
+        run: |
+          set +e
+          python - <<'PYEOF' > /tmp/posture.out 2>&1
+          import asyncio
+          from api.main import enforce_startup_posture
+          asyncio.run(enforce_startup_posture())
+          PYEOF
+          code=$?
+          set -e
+          cat /tmp/posture.out
+          if [ "$code" -eq 0 ]; then
+            echo "::error::started as the cluster superuser, which bypasses every"
+            echo "::error::row-level policy. A server deployment must refuse."
+            exit 1
+          fi
+          if ! grep -q "refusing to start" /tmp/posture.out; then
+            echo "::error::startup exited nonzero but did not say it refused to start."
+            echo "::error::A crash is not a posture refusal; the step must prove the reason."
+            exit 1
+          fi
+          echo "refused as expected, with a reason"
+
+      # And the positive half: the SAME check, on the least-privileged role, must
+      # pass. Run through the lifespan too, so this proves startup rather than
+      # import -- which is the thing the negative step above actually tests.
+      - name: A server deployment starts on the least-privileged role
+        env:
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
+          MIND_PALACE_DEPLOYMENT: server
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_INGEST_ROOTS: /content
+        run: |
+          python -c "from api.main import app; print('server profile accepted the runtime role')"
+          python - <<'PYEOF'
+          import asyncio
+          from api.main import enforce_startup_posture
+          asyncio.run(enforce_startup_posture())
+          print('lifespan posture check passed on the least-privileged role')
+          PYEOF
+
+
       # A deployment must not be tenant-safe by accident. `mindpalace posture`
       # exits non-zero when the role would bypass the policies, so this fails the
       # build rather than leaving it to an operator to notice in production.
@@ -217,68 +302,6 @@ jobs:
         run: |
           pytest -q tests/test_deployment_profiles_and_lifecycle.py \
                      -k migrations_apply_downgrade_and_reapply
-
-      # The identity check has to run as the maintenance role or it is vacuous:
-      # `mindpalace_resolve_credential` is SECURITY DEFINER, so the least-
-      # privileged role authenticates through it exactly as production does.
-      # This is a NEGATIVE test: starting as a role that bypasses row-level
-      # security must fail, and must say why.
-      #
-      # It used to assert that `import api.main` fails. That is the wrong entry
-      # point, and api/main.py says so in its own docstring: importing the module
-      # must not require a connection, so the database posture is checked in the
-      # lifespan, before the server accepts a request. Asserting the import
-      # refused tested a behaviour the product deliberately does not have, and it
-      # failed on the first real runner for exactly that reason.
-      #
-      # It is strengthened, not relaxed: it now asserts BOTH a nonzero exit AND
-      # the refusal reason, so a crash for any other reason -- a typo in a URL, a
-      # missing driver -- cannot be mistaken for a posture refusal.
-      - name: A server deployment refuses an unsafe database role
-        env:
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          MIND_PALACE_DEPLOYMENT: server
-          MIND_PALACE_AUTH_MODE: required
-          MIND_PALACE_INGEST_ROOTS: /content
-        run: |
-          set +e
-          python - <<'PYEOF' > /tmp/posture.out 2>&1
-          import asyncio
-          from api.main import enforce_startup_posture
-          asyncio.run(enforce_startup_posture())
-          PYEOF
-          code=$?
-          set -e
-          cat /tmp/posture.out
-          if [ "$code" -eq 0 ]; then
-            echo "::error::started as the cluster superuser, which bypasses every"
-            echo "::error::row-level policy. A server deployment must refuse."
-            exit 1
-          fi
-          if ! grep -q "refusing to start" /tmp/posture.out; then
-            echo "::error::startup exited nonzero but did not say it refused to start."
-            echo "::error::A crash is not a posture refusal; the step must prove the reason."
-            exit 1
-          fi
-          echo "refused as expected, with a reason"
-
-      # And the positive half: the SAME check, on the least-privileged role, must
-      # pass. Run through the lifespan too, so this proves startup rather than
-      # import -- which is the thing the negative step above actually tests.
-      - name: A server deployment starts on the least-privileged role
-        env:
-          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
-          MIND_PALACE_DEPLOYMENT: server
-          MIND_PALACE_AUTH_MODE: required
-          MIND_PALACE_INGEST_ROOTS: /content
-        run: |
-          python -c "from api.main import app; print('server profile accepted the runtime role')"
-          python - <<'PYEOF'
-          import asyncio
-          from api.main import enforce_startup_posture
-          asyncio.run(enforce_startup_posture())
-          print('lifespan posture check passed on the least-privileged role')
-          PYEOF
 
       # The reference integration has to be runnable on its own, from a clean
       # checkout, exactly as its README says -- an example that only works when

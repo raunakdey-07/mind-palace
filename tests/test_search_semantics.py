@@ -21,7 +21,9 @@ import pytest
 from api.services.evaluation import precision_at_k, recall_at_k, reciprocal_rank
 from api.services.retrieval import RetrievalResult, RetrievalService
 
-pytestmark = pytest.mark.asyncio
+# See tests/test_security.py: `asyncio_mode = "auto"` already runs the async
+# tests, and the sync tests at the bottom of this file were warned about on
+# every run for carrying a mark that does nothing for them.
 
 
 def _db_available() -> bool:

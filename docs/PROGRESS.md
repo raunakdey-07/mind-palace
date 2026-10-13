@@ -124,6 +124,8 @@ missing `mindpalace_errors`; default-corpus `char(64)` read-back).
 * **Sealed scoring has never happened.** No number in this repository is
   evidence of generalisation.
 * **Arm A in the retrieval lab is not the product path.** It uses rank-1 grading
-  with no lexical fallback and reproduces 151/202, not 194/202. Anything measured
-  against it is a property of that arm, not of the product. Phase 4 exists to
-  fix exactly this.
+  with no lexical fallback and reproduces **117/202 correct** (151 answered, 33
+  wrong), not 194/202. Anything measured against it is a property of that arm,
+  not of the product. Phase 3 exists to fix exactly this. *(Corrected
+  2026-10-13: this line previously said "reproduces 151/202", which conflated
+  the number answered with the number correct.)*

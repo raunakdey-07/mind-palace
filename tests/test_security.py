@@ -15,7 +15,11 @@ import pytest
 
 from api.services.corpora import DEFAULT_CORPUS_ID
 
-pytestmark = pytest.mark.asyncio
+# `asyncio_mode = "auto"` in pyproject.toml already runs `async def` tests, so a
+# module-level `pytest.mark.asyncio` buys nothing here -- and it is worse than
+# nothing for the sync tests below, which pytest warns about on every run:
+# "marked with '@pytest.mark.asyncio' but it is not an async function". That
+# warning is noise that trains people to ignore warnings.
 
 
 def _db_available() -> bool:

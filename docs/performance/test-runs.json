@@ -21,6 +21,23 @@
       "seconds": 530.1,
       "skipped": "2"
     },
+    "312958d: full suite, Phase 2, disposable PG 15.4 at 15434": {
+      "collected": "1627",
+      "commit": "312958d94920b01daa4c8bedbcebf704780b1d80",
+      "failed": "0",
+      "label": "full suite, Phase 2, disposable PG 15.4 at 15434",
+      "note": "1625 = the 1619 of the previous entry plus the 6 new tests in tests/test_evidence_gate_tied_to_head.py. Warnings fell from 39 to 8: the 28 'marked with @pytest.mark.asyncio but it is not an async function' warnings are gone after removing redundant module-level marks.",
+      "passed": "1625",
+      "skipped": "2"
+    },
+    "38400659433: CI on wip/claims-and-lab @ 312958d (runner, ubuntu-latest)": {
+      "commit": "312958d94920b01daa4c8bedbcebf704780b1d80",
+      "failed": "0",
+      "label": "CI run 38400659433, Lint and Test job, 'Run tests' step",
+      "note": "Recorded from the GitHub Actions log archive for run 38400659433 (head 312958d), fetched 2026-10-13: '1613 passed, 8 skipped, 39 warnings in 438.71s'. This is the RUNNER figure and it differs from a workstation figure of 1619 passed / 2 skipped on the same tree. The 6 extra skips are tests/test_ingestion_statistics.py with reason 'no reachable DATABASE_URL'; they do not skip on a workstation. Not established why. No junitxml: the workflow does not upload one, which is why this record has no artifact to point at.",
+      "passed": "1613",
+      "skipped": "8"
+    },
     "4166e08: full suite, run 2, immediately after run 1": {
       "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
       "failed": "0",

@@ -259,3 +259,58 @@ response whose body has already started cannot be replaced (every response this
 service builds is finished before it starts, so the path is unreachable today),
 and an operator who has configured their own `logging` handler to render tracebacks
 will of course get tracebacks.
+
+---
+
+## `corpus` and `corpora` are two different commands
+
+This is not a bug and nothing is broken. It is a naming inconsistency, recorded
+here so nobody has to rediscover it, and **nothing has been changed** — the
+options below need an owner decision.
+
+### What actually exists
+
+`python -m cli.main --help` lists both, and they do different jobs:
+
+| Command | Kind | Does |
+|---|---|---|
+| `mindpalace corpora` | top-level command | **Lists** the corpora you can read and write. One name per line. Read-only. |
+| `mindpalace corpus` | Typer sub-group (`corpora_app = typer.Typer(name="corpus")`) | **Administrative.** Sub-commands `create` and `delete`. |
+
+Source: `cli/main.py:806` defines `def corpora()` as an `@app.command()`;
+`cli/main.py:1624` defines `corpora_app` with `name="corpus"` and
+`cli/main.py:1629` calls `app.add_typer(corpora_app)`.
+
+So the inconsistency is a singular noun that is a group, next to a plural noun
+that is a single flat command. The internal variable is named `corpora_app` while
+the user-facing name is `corpus`, which is how the two drifted apart without
+anything failing.
+
+### Why it is easy to hit
+
+`corpus` and `corpora` differ by one letter and both are plausible English for
+"the thing that holds memories". Autocomplete makes it worse: typing `corpus<TAB>`
+offers both, and picking the wrong one gives either a list of sub-commands or a
+list of corpora. Neither error message says "did you mean the other one".
+
+`mindpalace corpora` is also what the CLI itself recommends on error — the
+`corpus_not_found` handler prints "List the corpora you have with: mindpalace
+corpora" — so a user who mistypes `corpus` is pointed at `corpora` and may
+reasonably conclude `corpus` does not exist at all.
+
+### Options
+
+1. **Alias.** Add `corpus list` as a hidden alias for the flat listing, and make
+   `corpus` with no sub-command print the listing too. Cheapest, fully
+   backwards-compatible, keeps both spellings alive forever. Cost: the singular
+   keeps meaning two things.
+2. **Rename.** `corpus` group keeps its name; the listing becomes `corpora list`,
+   and bare `corpora` stays as the shorthand. Cleanest end state, clearest that
+   administration and reading are different activities. Cost: one breaking change
+   for anyone scripting `mindpalace corpora`. Needs a CHANGELOG entry and a
+   deprecation window.
+3. **Leave it.** Document it and change nothing. Zero risk. Cost: the ambiguity
+   persists for every new user, and the error message keeps sending people to a
+   command that looks like a typo of the one they tried.
+
+**No option has been applied.** This file records the decision, it does not make it.

@@ -210,8 +210,11 @@ def _tracked_set() -> set[str]:
     return {str((ROOT / t).resolve()) for t in out}
 
 
-def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[list[str], list[str]]:
-    """Every "N passed" a document states must match a recorded run.
+def check_test_counts(
+    text_by_doc: dict[str, str], head: str | None, require_head: bool = False
+) -> tuple[list[str], list[str]]:
+    """Every "N passed" a document states must match a recorded run, and -- under
+    ``require_head`` -- that run must be the one for this commit.
 
     This exists because of one specific failure. STATUS.md carried `1583 passed`
     for a milestone; no run had produced 1583, and the real count was 1567.
@@ -220,14 +223,46 @@ def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[li
 
     If no run has ever been recorded the check says so rather than passing
     quietly -- silence in that state is how an unmeasured figure survives.
+
+    ## Why "some run" is not enough
+
+    The first version of this check was satisfied by any recorded run, ever.
+    That is weaker than it looks. A run record is keyed by commit, so a figure
+    copied forward from last week's tree still matches -- and matches
+    *forever*, because the old record never expires. STATUS.md carried
+    `1619 passed`, which some older commit genuinely produced, while CI on the
+    current tree reported a different split. Nothing complained, because the
+    check only asked "did any run ever produce 1619", and the answer stayed
+    yes after the tree moved.
+
+    So the figure has to be tied to a commit, and there are exactly two honest
+    ways to write one:
+
+        1619 passed                          -> must be a run at HEAD
+        1619 passed (as of 3108404)          -> must be a run at 3108404
+
+    The second form is not a loophole. It is the claim being made explicit: this
+    number describes that tree, and here is which one. A figure with no label
+    is a claim about the code you are looking at now, so it has to be backed by
+    a run of that code.
     """
     problems: list[str] = []
     notes: list[str] = []
     recorded = _recorded_run_counts()
     seen = sorted({int(entry["passed"]) for entry in recorded.values()})
+    strict_commits = {str(entry.get("commit", ""))[:7] for entry in recorded.values()}
 
     for doc, text in text_by_doc.items():
-        stated = {int(n.replace(",", "")) for n in re.findall(r"(\d[\d,]*)\s+passed", text)}
+        stated = {
+            int(n.replace(",", "")): (label or "")
+            for n, label in re.findall(
+                r"(\d[\d,]*)\s+passed"  # the figure
+                # an optional label, up to 60 characters later on the same line:
+                # '1619 passed (as of `549d2cf`)' and '1619 passed, as of 549d2cf'
+                r"(?:[^\n]{0,60}?as of\s+`?([0-9a-f]{7,40})`?\b)?",
+                text,
+            )
+        }
         if not stated:
             continue
         if not recorded:
@@ -238,16 +273,45 @@ def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[li
             )
             continue
         for count in sorted(stated):
-            if count not in seen:
+            label = stated[count]
+            matching = sorted(run_id for run_id, e in recorded.items() if int(e["passed"]) == count)
+            if not matching:
                 problems.append(
                     f"{doc}: claims {count} passed; no run in {RUN_RECORD} produced that "
                     f"(recorded counts: {', '.join(str(n) for n in seen)})"
                 )
+                continue
+            commits = sorted({str(recorded[m].get("commit", ""))[:7] for m in matching})
+            if require_head and head:
+                if label:
+                    # An explicit label is only honest if that commit really ran.
+                    if label[:7] not in strict_commits:
+                        problems.append(
+                            f"{doc}: claims {count} passed as of {label[:7]}, but no run "
+                            f"in {RUN_RECORD} was recorded at that commit "
+                            f"(runs exist at: {', '.join(sorted(strict_commits))})"
+                        )
+                    else:
+                        notes.append(
+                            f"  ok  {doc}: {count} passed labelled 'as of {label[:7]}', "
+                            f"which is a recorded run"
+                        )
+                elif head[:7] in commits:
+                    # A run of THIS commit produced it. Older runs producing the
+                    # same number is not a defect -- it is what stability looks
+                    # like -- so only the absence of a HEAD run is a problem.
+                    notes.append(f"  ok  {doc}: {count} passed matches the HEAD run")
+                else:
+                    problems.append(
+                        f"{doc}: claims {count} passed with no 'as of <commit>' label, but "
+                        f"the only runs that produced it are at "
+                        f"{', '.join(commits)} and HEAD is {head[:7]}. Either record a run "
+                        f"for this commit or label the figure "
+                        f"'{count} passed (as of {commits[0]})' so the number names the "
+                        f"tree it describes."
+                    )
             else:
-                commits = sorted(
-                    run_id for run_id, e in recorded.items() if int(e["passed"]) == count
-                )
-                notes.append(f"  ok  {doc}: {count} passed matches run(s) {', '.join(commits)}")
+                notes.append(f"  ok  {doc}: {count} passed matches run(s) {', '.join(matching)}")
 
     if head and not any(head[:7] in run_id for run_id in recorded):
         notes.append(
@@ -331,6 +395,12 @@ def check_markdown_links() -> tuple[list[str], list[str]]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--strict", action="store_true")
+    parser.add_argument(
+        "--require-head",
+        action="store_true",
+        help="an 'N passed' figure must be backed by a run of THIS commit, or be "
+        "labelled 'N passed (as of <commit>)' naming a commit that really ran",
+    )
     args = parser.parse_args()
 
     problems: list[str] = []
@@ -392,7 +462,7 @@ def main() -> int:
         ).stdout.strip()
     except (subprocess.SubprocessError, OSError):
         pass
-    count_problems, count_notes = check_test_counts(text_by_doc, head)
+    count_problems, count_notes = check_test_counts(text_by_doc, head, args.require_head)
     problems.extend(count_problems)
     notes.extend(count_notes)
 
@@ -417,7 +487,7 @@ def main() -> int:
     else:
         print("\nno problems found")
 
-    return 1 if (problems and args.strict) else 0
+    return 1 if (problems and (args.strict or args.require_head)) else 0
 
 
 if __name__ == "__main__":

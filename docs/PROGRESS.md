@@ -24,8 +24,8 @@ Phase 0 and the correction is the record.
 | phase | state | one line |
 |---|---|---|
 | 0 correct what is wrong in the repo | **PARTIAL** | **0a DONE** (two runs at `46add67`, both `success`, 5/5 jobs, nothing skipped). **0b DONE**: the harm matrix, "every arm is net negative" and the "43 questions differ" breakdown are **INVALID / NOT ESTABLISHED**, data kept, real gap stated as **77**. **0c DONE**: lab arms renamed; a bare `A/B/C` now means a benchmark strategy and nothing else. **0d DONE with one gap**: six corrections listed with primary sources re-fetched, but the **before-state is not recoverable from git** |
-| 1 the six CI-only skips | **PARTIAL** | **1a, 1b, 1c DONE**: cause **established and reproduced** (SQLAlchemy 2.1 resolves bare `postgresql://` to an uninstalled driver), fixed via `sync_url()`, **6 skipped -> 6 passed** under 2.1.4; skip gate added and **mutation-tested against the real regression** (exit 1, all six named). **1d PARTIAL**: CI column of the version table comes from a new CI step, not yet read; constraints file **proposed, not applied** |
-| 2 evidence from the runner | **PARTIAL** | **2a code DONE, runner evidence NOT YET**: junitxml uploaded, `check_evidence --require-head --junitxml` wired into the same job, both rejections covered by 12 passing tests. **The runner's own rejection is NOT DONE** -- it needs the run at this branch's head. **2b NOT DONE** |
+| 1 the six CI-only skips | **DONE** | **1a, 1b, 1c, 1d DONE**: cause **established and reproduced** (SQLAlchemy 2.1 resolves bare `postgresql://` to an uninstalled driver), fixed via `sync_url()`, **6 skipped -> 6 passed** under 2.1.4, and **the six now run on CI** (run `38446879617`: 1637 passed, 2 skipped). Skip gate **mutation-tested against the real regression** (exit 1, all six named). **1d DONE**: the 15-package table is measured on both sides; **14 of 15 match**, the two that differ are SQLAlchemy (the bug) and numpy (an untested drift). Constraints file **proposed, not applied** |
+| 2 evidence from the runner | **DONE** | **2a DONE with runner evidence**: run `38446879617` @ `d1a4612` ran the 6 fixed tests for the first time (**1637 passed, 2 skipped, 1639 collected**) and the new gate **rejected four figures in STATUS.md** — `24`, `1613`, `1619`, `1625` — exit 1. The gate then found a bug **in itself** on that same run (labelled figures were being checked against the junit), fixed, 18 tests green. **2b DONE**: the slip was introduced at `c3c8252`, recorded at `68ff8e3`, and the gate could not catch it because `--require-head` ties a figure to a commit and the record was hand-written at the right commit |
 | 3 FK violations and test-env causes | **PARTIAL** | **3a DONE**: all 15 violations named to a test and a line; 3 reproduced deliberately, **9 of 12** `memory_claim_embeddings` reproduced to `tests/test_context_product.py` as a **fixture defect**, **3 NOT ESTABLISHED**; product exposure answered with four reasons. **3b cause NOT ESTABLISHED -- the failure did not reproduce** (`5 passed`); `tests/README.md` written and the resolved database name printed once per session |
 | 4 wedge feasibility | **PARTIAL** | **4a DONE**: 2 claims / 2 passages / answered; **0/0/abstained**; **0/0/abstained** -- and the transcript's answer was in the text verbatim. **4d DONE**: `docs/wedge-decision-note.md` recommends the question set before the extractor. **4b, 4c NOT DONE** |
 | 5 the lab measures the product | **NOT DONE** | Nothing started. 5a arm on the product path reproducing 194/202 and the 77-question gap per question; 5b the harm matrix recomputed; 5c recall per arm per slice; 5d the threshold cross-validated |
@@ -290,30 +290,38 @@ upper bound anywhere in the dependency set, so **the runner and a workstation
 resolve the same requirement to different packages.** That single line is the
 whole Phase 1 bug.
 
-| package | workstation (Python 3.14.8) | CI (Python 3.11) | same? |
+| package | workstation (Python 3.14.8) | CI (Python 3.11.17) | same? |
 |---|---|---|---|
-| SQLAlchemy | 2.0.46 | **2.1.4** | **NO — this is the bug** |
+| **SQLAlchemy** | **2.0.46** | **2.1.4** | **NO — this is the bug** |
 | asyncpg | 0.30.0 | 0.30.0 | yes (`==` in requirements-runtime.txt) |
-| psycopg2-binary | 2.9.13 | from the run log | assumed |
-| alembic | 1.20.0 | from the run log | assumed |
-| pgvector | 0.5.1 | from the run log | assumed |
-| fastapi | 0.143.0 | from the run log | assumed |
-| starlette | 1.8.0 | from the run log | assumed |
-| pydantic | 2.14.1 | from the run log | assumed |
-| httpx | 0.28.1 | from the run log | assumed |
-| typer | 0.27.3 | from the run log | assumed |
-| sentence-transformers | 6.1.0 | from the run log | assumed |
-| torch | 2.14.1 | from the run log | assumed |
-| transformers | 5.19.0 | from the run log | assumed |
-| numpy | 2.4.3 | from the run log | assumed |
-| sentencepiece | **NOT INSTALLED** | from the run log | **differs** |
+| psycopg2-binary | 2.9.13 | 2.9.13 | yes |
+| alembic | 1.20.0 | 1.20.0 | yes |
+| pgvector | 0.5.1 | 0.5.1 | yes |
+| fastapi | 0.143.0 | 0.143.0 | yes |
+| starlette | 1.8.0 | 1.8.0 | yes |
+| pydantic | 2.14.1 | 2.14.1 | yes |
+| httpx | 0.28.1 | 0.28.1 | yes |
+| typer | 0.27.3 | 0.27.3 | yes |
+| sentence-transformers | 6.1.0 | 6.1.0 | yes |
+| torch | 2.14.1 | 2.14.1+cpu | yes, plus the CPU index — a deliberate difference, see `ci.yml` |
+| transformers | 5.19.0 | 5.19.0 | yes |
+| **numpy** | **2.4.3** | **2.4.6** | **NO — a patch-level drift nobody chose** |
+| sentencepiece | NOT INSTALLED | NOT INSTALLED | yes (neither) |
 
 Workstation column: `importlib.metadata.version` on this machine, this session.
-The CI column is filled from the new **"Record what the runner resolved"** step
-in `.github/workflows/ci.yml`, which prints these fifteen names plus the Python
-version on every run. It is a new step, so the first run carrying it is the one
-that produces that column; it is left as "from the run log" here rather than
-guessed.
+CI column: the **"Record what the runner resolved"** step in
+`.github/workflows/ci.yml`, added this session, read from run **38446879617** at
+`d1a4612`.
+
+**Fourteen of fifteen match. The two that do not are the two that matter, and
+neither is pinned.** SQLAlchemy 2.1.4 is the Phase 1 bug. numpy 2.4.6 against
+2.4.3 is a drift this project did not choose and has not tested on both sides;
+it is recorded here as a difference, not as a defect — **nothing in this session
+observed numpy behaving differently**, and no claim is made about it.
+
+The Python versions differ too: **3.14.8** on the workstation, **3.11.17** on
+the runner. That is a larger gap than any package and it is deliberate — CI
+pins 3.11 in `ci.yml`. It is also untested ground for the other 14.
 
 **Constraints file — proposed, NOT applied.** A `requirements-constraints.txt`
 containing:
@@ -328,14 +336,19 @@ containing:
 #   psycopg2 to psycopg (v3). This project installs psycopg2-binary. That change
 #   alone made six tests skip on every runner for four sessions -- Phase 1. The
 #   cause is FIXED in code (the tests now pin the driver through
-#   tenant_harness.sync_url). This bound is defence in depth, so the next 2.x
-#   break is a decision somebody makes rather than a surprise somebody diagnoses.
+#   tenant_harness.sync_url), and the six tests pass on the runner as of
+#   d1a4612. This bound is defence in depth, so the next 2.x break is a
+#   decision somebody makes rather than a surprise somebody diagnoses.
 # asyncpg is already `==0.30.0` in requirements-runtime.txt; it is listed here so
 #   this file is the one place to look for the version story.
 sqlalchemy>=2.0,<2.1
 ```
 
 consumed as `pip install -c requirements-constraints.txt -r requirements.txt`.
+
+**numpy is deliberately not pinned.** It drifted 2.4.3 to 2.4.6 without anyone
+choosing it and nothing observable followed. Pinning it would encode a fear
+rather than an observation, and the next session would have to work out which.
 
 **Deliberately not proposed:** a full lockfile with hashes. It would pin
 `torch`, `transformers` and `sentence-transformers` to one wheel per platform,
@@ -473,6 +486,95 @@ Three things fall out, and the second is the expensive one.
    own wording is not in the document. That is the trust property working. The
    cost is authoring, and pricing it needs a model this project does not have a
    credential for.
+
+### 2a — evidence from the runner, and the runner rejecting four figures
+
+**Run 38446879617 at `d1a4612`, the first run in this repository's history where
+the six `tests/test_ingestion_statistics.py` tests RAN on a runner.** Its own
+`Run tests` line, from job `115467468438`:
+
+```
+1637 passed, 2 skipped, 1639 collected in 388.79s
+```
+
+against `1619 passed, 8 skipped` at `46add67`. The whole difference is those
+six tests plus twelve new ones.
+
+**The junitxml is uploaded as an artifact** (`actions/upload-artifact@v4`, name
+`pytest-junitxml`, 90-day retention) and `check_evidence --require-head
+--junitxml /tmp/pytest-main.xml` runs **in the same job, two steps later**,
+reading that file. Its output:
+
+```
+  --  runner mode: /tmp/pytest-main.xml says 1637 passed, 2 skipped, 1639 collected, at d1a4612
+PROBLEMS (4):
+  !!  docs/STATUS.md: claims 24 passed;  no run produced that
+  !!  docs/STATUS.md: claims 1613 passed; no run produced that
+  !!  docs/STATUS.md: claims 1619 passed; no run produced that
+  !!  docs/STATUS.md: claims 1625 passed; no run produced that
+[error]Process completed with exit code 1.
+```
+
+**Rejects a figure from an older commit: YES.** `1613` and `1619` are real —
+runners genuinely produced them — but they were unlabelled, so they were claims
+about *this* tree, and this tree produced neither.
+
+**Rejects a hand-edited figure: YES.** `1625` is the number Session 7 laundered
+out of a log archive, by reading the `check_evidence` step's echo of the
+workstation record instead of the `Run tests` step. It was rejected here for the
+same reason as the others, and the reason is structural this time: the number
+cannot be produced by a junitxml, because **a person cannot put a `<testcase>`
+in a file.**
+
+**`GITHUB_SHA` is checked.** `--expect-sha` defaults to `$GITHUB_SHA` and is
+compared with `git rev-parse HEAD`; a mismatch fails loudly rather than
+quietly validating one commit's figure against another's junit.
+
+### 2a, part two — **the gate found a bug in itself, on that same run**
+
+The first version of runner mode replaced `RUN_RECORD` wholesale. So
+`24 passed (as of fd53840)` failed, because today's run did not produce 24 —
+even though `fd53840` really did, and the figure is a **subset** run that the
+document says so about.
+
+That is a wrong rejection, and it was caught by the gate being run against real
+documents rather than only against unit tests. The rule is now what the
+docstring always said:
+
+| figure form | checked against |
+|---|---|
+| `1637 passed` — no label | **the junitxml of this run, and nothing else** |
+| `24 passed (as of fd53840)` | **`docs/performance/test-runs.json`**, because a labelled figure is a claim about a named commit |
+
+Both pools are named in the gate's output, so the split is visible rather than
+implicit:
+
+```
+  --  runner mode: unlabelled figures are checked against this run; figures
+      labelled 'as of <commit>' are checked against docs/performance/test-runs.json
+  ok  docs/STATUS.md: 24 passed labelled 'as of fd53840', which is a recorded run
+  ok  docs/STATUS.md: 1613 passed labelled 'as of 312958d', which is a recorded run
+  ok  docs/STATUS.md: 1619 passed labelled 'as of c3c8252', which is a recorded run
+  ok  docs/STATUS.md: 1637 passed labelled 'as of d1a4612', which is a recorded run
+```
+
+`STATUS.md` now leads with **1637 passed (as of `d1a4612`)** and keeps 1613 and
+1619 with the commits that produced them. `docs/performance/test-runs.json` has
+the `d1a4612` entry with its junitxml, and `pytest-head.xml` is that junit.
+
+**18 tests** cover both gates: the 6 pre-existing ones in
+`tests/test_evidence_gate_tied_to_head.py` plus the 12 in
+`tests/test_skip_gate_and_runner_evidence.py`, all green.
+
+### 2b — the 1625 vs 1619 slip: **reconciled**
+
+| | |
+|---|---|
+| which commit recorded it | **`68ff8e3`**, "fix: the runner figure I recorded was wrong, and the gate could not catch it" |
+| which commit introduced the error | **`c3c8252`**. Run `38410829513` @ `c3c8252` was recorded as "1625 passed". Its own `Run tests` step says **`1619 passed, 8 skipped, 8 warnings in 426.79s`**. 1625 is the *workstation* count at `312958d`. |
+| why | 1625 was read out of the log archive by grepping the whole file and taking the first match, which was the `check_evidence` step echoing the workstation record back. |
+| what the gate could not catch | `--require-head` ties a figure to a **commit**, and the record had been hand-written **at the right commit**. A gate that reads what a person wrote cannot disagree with them. That limit was written down at the time and nothing was built against it; `--junitxml` is the thing built against it. |
+| now | `1625` is rejected by the runner gate (above). The `38410829513` entry in `test-runs.json` carries the correction and says so. |
 
 ---
 

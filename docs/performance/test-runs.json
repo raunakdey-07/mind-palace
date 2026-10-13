@@ -1,0 +1,91 @@
+{
+  "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
+  "runs": {
+    "3108404: full suite, run A (trust round)": {
+      "collected": "1621",
+      "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",
+      "failed": "0",
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, run A (trust round)",
+      "note": "junitxml written by the runner",
+      "passed": "1619",
+      "seconds": 533.1,
+      "skipped": "2"
+    },
+    "3108404: full suite, run B (trust round, immediately after A)": {
+      "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",
+      "failed": "0",
+      "label": "full suite, run B (trust round, immediately after A)",
+      "note": "repeatability on the same cluster",
+      "passed": "1619",
+      "seconds": 530.1,
+      "skipped": "2"
+    },
+    "4166e08: full suite, run 2, immediately after run 1": {
+      "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
+      "failed": "0",
+      "label": "full suite, run 2, immediately after run 1",
+      "note": "same cluster, same DATABASE_URL; proves the suite does not depend on or pollute the long-lived database",
+      "passed": "1600",
+      "seconds": 547.5,
+      "skipped": "1"
+    },
+    "526f326: full suite, after the ingestion-truthfulness change": {
+      "collected": "1618",
+      "commit": "526f326197449caa633b4dcfc93a4638463f49be",
+      "failed": "0",
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, after the ingestion-truthfulness change",
+      "note": "junitxml written by the runner; 1618 collected, 1616 passed, 2 skipped",
+      "passed": "1616",
+      "seconds": 524.7,
+      "skipped": "2"
+    },
+    "671a892: full suite, run A, after the install fixes": {
+      "commit": "671a8925cb98f39bace587584c3a18b1d34dbed4",
+      "failed": "0",
+      "label": "full suite, run A, after the install fixes",
+      "note": "on mains power; an earlier off-mains run measured 1104 s",
+      "passed": "1607",
+      "seconds": 507.4,
+      "skipped": "2"
+    },
+    "671a892: full suite, run B, immediately after run A": {
+      "commit": "671a8925cb98f39bace587584c3a18b1d34dbed4",
+      "failed": "0",
+      "label": "full suite, run B, immediately after run A",
+      "note": "hermetic session database; proves repeatability on the same cluster",
+      "passed": "1607",
+      "seconds": 510.9,
+      "skipped": "2"
+    },
+    "9aec524: full suite, after the retrieval lab and the packaging fix": {
+      "collected": "1621",
+      "commit": "9aec524cab48671709c5b00765eac632fd824868",
+      "failed": "0",
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, after the retrieval lab and the packaging fix",
+      "note": "junitxml written by the runner",
+      "passed": "1619",
+      "seconds": 553.7,
+      "skipped": "2"
+    },
+    "a51607c: full suite, run 1, hermetic session database": {
+      "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
+      "failed": "0",
+      "label": "full suite, run 1, hermetic session database",
+      "note": "DATABASE_URL pointed at the long-lived dev database; the session fixture built and dropped its own",
+      "passed": "1600",
+      "seconds": 550.3,
+      "skipped": "1"
+    },
+    "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
+      "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",
+      "failed": "0",
+      "label": "tests/test_corpus_isolation.py tests/test_corpus_scope.py",
+      "note": "re-verified at head on a database built from migrations/ + runtime_roles.sql",
+      "passed": "24",
+      "skipped": "0"
+    }
+  }
+}

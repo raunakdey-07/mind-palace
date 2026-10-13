@@ -5,7 +5,7 @@ implemented in the M009 release, `v0.6.0` at
 `033c1484dca53fbb40dbf82904aacf5f2834142a`. Post-release commits add live corpus
 scoping and a snapshot membership seal without changing these rows or their
 semantics. The M009 operational feed is a separate read contract over the same
-rows and is described in [`docs/operations.md`](../operations.md).
+rows and is described in [`deployment.md`](../deployment.md).
 
 ## What is stored
 
@@ -145,7 +145,7 @@ implement archive policy. Operations are `query`, `current`, `history`,
 
 The M009 feed is deliberately not one of them. It is a `GET` over
 `memory_versions` exposed through REST, SDK, and CLI only. The reason is
-recorded in [`docs/operations.md`](../operations.md): the feed has its own
+recorded in [`deployment.md`](../deployment.md): the feed has its own
 cursor, page-size, and operational error contract, and adding it to MCP would
 create a second unversioned schema on an unauthenticated tool surface.
 

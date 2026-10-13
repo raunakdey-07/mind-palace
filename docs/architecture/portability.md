@@ -173,7 +173,7 @@ published artifact before running the default `--clean` mode, which overwrites i
 
 ### The container image boundary is correct and correctly documented
 
-`docs/operations.md` lines 191 to 198 describe exactly what the image contains
+`deployment.md` lines 191 to 198 describe exactly what the image contains
 and what it does not, and the `Dockerfile` matches. The image copies `api`,
 `migrations`, and `content`, installs `requirements-docker.txt`, and runs as UID
 `10001` with `HF_HOME=/tmp/huggingface`. It excludes `cli`, `mindpalace_sdk`,

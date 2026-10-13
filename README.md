@@ -1,10 +1,14 @@
 # Mind Palace
 
 [![Release](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/releases)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://img.shields.io/github/raunakdey-07/mind-palace/actions/workflows/ci.yml/badge.svg)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/mind-palace/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Current release: v0.9.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.9.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
+
+> **Install `0.9.0`.** `v0.9.1` is prepared but not tagged or published — the
+> latest release you can actually install is `v0.9.0`. See
+> [Current release](docs/release-map.md#current-release).
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**
@@ -44,7 +48,7 @@ relevance path — 0.63 s instead of 6.17 s, and `torch`, `transformers` and
 `sentence_transformers` are never imported. It is a deliberate trade-off, not an
 equivalent substitute: it needs shared vocabulary, and it will decline a question
 that semantic ranking would answer from meaning alone.
-[How it works and when to use it](docs/operations.md#model-free-lexical-mode).
+[How it works and when to use it](docs/runtime.md#model-free-lexical-mode).
 
 ---
 
@@ -113,12 +117,23 @@ python -m alembic -c migrations/alembic.ini upgrade head
 
 That is the whole setup. No API key, no account, no LLM, and no model to configure.
 
+**Expect `requirements.txt` to install about 5.9 GB.** `torch` pulls the CUDA
+runtime with it — `nvidia-cudnn`, `nvidia-cublas`, `cuda-toolkit`, `triton` — and
+most of that is unused on a machine with no GPU. Measured on a Linux container in
+the [first-hour audit](docs/first-hour-audit.md), where `pip install -r
+requirements.txt` took 202 s and produced a 5.9 GB virtualenv. Nothing else in the
+install comes close. If you would rather not download it, set
+`MIND_PALACE_LEXICAL=1` from the start: the product then never imports `torch`,
+`transformers` or `sentence_transformers`, at the cost of needing shared
+vocabulary between question and record — see
+[model-free mode](docs/runtime.md#model-free-lexical-mode).
+
 One thing does arrive on its own: the first `recall` downloads the embedding model
 (about 90 MB, once, to the Hugging Face cache) the way a browser fetches a font.
 That needs network on that first call and roughly 30 seconds. After that it works
 offline. If you would rather it never arrives, set `MIND_PALACE_LEXICAL=1` and Mind
 Palace reads with no model at all — see
-[model-free mode](docs/operations.md#model-free-lexical-mode).
+[model-free mode](docs/runtime.md#model-free-lexical-mode).
 
 ### 2. Check it
 
@@ -345,6 +360,36 @@ An agent asks `memory_recall` for an answer and `memory_explain` when it wants t
 know why the answer is trustworthy. Both return the same authoritative memory the
 CLI and the SDK do, with the same receipt.
 
+The arguments are one object deep, and **both** `request` and `request.corpus` are
+required. This is the shape that works, and the shape an agent will get wrong if
+it is not shown:
+
+```json
+{
+  "name": "memory_recall",
+  "arguments": {
+    "request": {
+      "corpus": "default",
+      "query": "Which datastore did we choose?"
+    }
+  }
+}
+```
+
+Passing `{"question": "..."}` instead fails with
+`1 validation error ... request Field required`, and so does passing `request`
+without `corpus`. The full argument schema — including `as_of`, `intent` and
+`budget` — is available from the server itself:
+
+```bash
+mindpalace-mcp   # then ask the client for tools/list, or read inputSchema
+```
+
+Fifteen tools are advertised. `memory_recall`, `memory_explain`, `memory_current`,
+`memory_history`, `memory_changes`, `memory_evidence`, `memory_as_of` and
+`memory_replay` all take that same `request` object; `search`, `sync_repo`,
+`list_corpora`, `memory_pack` and `memory_snapshot` take their own.
+
 ---
 
 ## From Python
@@ -412,8 +457,35 @@ Stated up front, because the trust boundary is part of the product:
   into a recall response, so a model that reads one without that distinction is a
   prompt-injection surface. Enforcing that boundary is the consuming application's
   job, not this one's. The rest of the security posture —
-  [what is *not* tamper-proof, authenticated, or an access-control system](docs/operations.md#security-posture)
+  [what is *not* tamper-proof, authenticated, or an access-control system](docs/deployment.md#security-posture)
   — is written down rather than assumed.
+- **A corpus name is a namespace, not a credential.** Local use needs no
+  authentication. A shared deployment sets `MIND_PALACE_DEPLOYMENT=server` — which
+  refuses to start unless `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_INGEST_ROOTS`
+  and the connected database role are all correct — and runs as a least-privileged
+  role that cannot read another tenant's credential hashes or delete from the
+  archive. Access is decided by a bearer credential bound to explicit corpora,
+  enforced at one choke point and again by row-level security, on every surface.
+  `mindpalace credential issue` creates the first one, `mindpalace corpus delete`
+  erases one, and `mindpalace posture` says whether your database role actually
+  enforces the policies. See [security.md](docs/security.md).
+
+Access is **corpus-level**: a credential holding a corpus sees every row in it.
+Per-document privacy inside a shared corpus was designed, prototyped and tested,
+then withdrawn when it broke the primary write path — see
+[docs/withdrawn/](docs/withdrawn/README.md). Corpus-level is the shipped
+guarantee, and anyone needing per-record privacy inside a shared corpus should
+use separate corpora.
+
+Four documents answer the questions an integrator actually asks:
+
+| Question | Document |
+|---|---|
+| What is enforced, and what is not | [security.md](docs/security.md) |
+| What happens when something fails, and how do I tell whose fault it is | [errors.md](docs/errors.md) |
+| Do I have to use your model provider | [providers.md](docs/providers.md) |
+| What does deleting actually delete | [deletion-and-erasure.md](docs/deletion-and-erasure.md) |
+| Is this installation ready for me to build on | `python integration_conformance.py` |
 
 ---
 
@@ -494,8 +566,9 @@ temporal state and the same receipt.
 `POST /api/memory/remember` takes a statement and nothing else. Reading a file is
 a decision for a trusted operator at their own machine — `mindpalace remember
 --file` and the SDK's `file=` do it, and the HTTP endpoint deliberately does not,
-because it has no authentication and a path would let any caller read a file
-relative to the server and recall its contents.
+because a path would let any caller with a credential read a file relative to the
+server and recall its contents. A credential says which corpora you may reach; it
+does not say you may read the server's filesystem.
 
 ### The full memory API
 
@@ -546,7 +619,7 @@ and never the first thing.
   one version, one claim, one identity. Proven by test.
 - **Authentication.** Local development needs none, and the quickstart never asks
   for one. For a shared deployment see
-  [Production authentication](docs/operations.md#authentication).
+  [Production authentication](docs/deployment.md#authentication).
 - **Observability.** Optional OpenTelemetry instrumentation on `memory.remember`,
   `memory.recall`, `memory.explain`, `memory.receipt`, `memory.verify`,
   `runtime.start` and `runtime.model_load`. It is off unless you install and
@@ -565,7 +638,9 @@ and never the first thing.
 | [Developer experience](docs/product/developer-experience.md) | every documented path, verified |
 | [Decision memory example](examples/decision-memory/) | the whole product in one file |
 | [Project decision log example](examples/project-log/) | a real project's decisions, as memory |
-| [Operations](docs/operations.md) | deployment, the local runtime, model-free mode, security posture, authentication, observability |
+| [Operational memory feed](docs/feed.md) | the durable corpus-scoped read interface: ordering, cursors, consistency |
+| [Local runtime and model-free mode](docs/runtime.md) | the warm process, and running with no embedding model at all |
+| [Deployment and authentication](docs/deployment.md) | health, observability, security posture, credentials, multi-tenancy |
 | [Status](docs/STATUS.md) | what is measured, what is outstanding |
 | [Release map](docs/release-map.md) | milestone to version |
 | [Architecture](docs/architecture/) | how the layers fit |
@@ -663,8 +738,14 @@ Memory Pack is version 1; neither changed.
 
 A corpus is a namespace of memory. The default is `default`, which exists from the
 first migration, so the first command never has to mention one. Pass `--corpus`
-(or `corpus=`) to scope memory explicitly; that is the multi-tenant boundary, and
-it is the only reason to know the word.
+(or `corpus=`) to scope memory explicitly.
+
+A corpus name is a namespace, not a credential. Naming one is how you choose
+what to read; it is not evidence that you may. For a shared deployment, set
+`MIND_PALACE_AUTH_MODE=required` and run the service as a least-privileged
+database role, and the corpus you are allowed to reach is decided by your
+credential rather than by your request. See
+[Security and multi-tenant integration](docs/security.md).
 
 ```console
 $ mindpalace corpora
@@ -674,8 +755,8 @@ decision-memory-1f4a9c02
 
 ## Ingesting documents
 
-`remember` is for facts. `sync` is for a directory of Markdown you already have,
-which is where authored claims live:
+`remember` is for facts. `mindpalace ingest-repo` is for a directory of Markdown
+you already have, which is where authored claims live:
 
 ```markdown
 ---
@@ -710,7 +791,7 @@ missing model downgrades recall from semantic to lexical to authoritative-only, 
 says on stderr that it did — a silent fallback would be indistinguishable from a
 semantic answer, and the two select different keys. It never removes the answer.
 `MIND_PALACE_LEXICAL=1` chooses that rung on purpose:
-[model-free mode](docs/operations.md#model-free-lexical-mode).
+[model-free mode](docs/runtime.md#model-free-lexical-mode).
 
 The one exception is the legacy live-retrieval endpoint `GET /api/search`, which
 searches the vector index directly and has no lexical rung. With no model available

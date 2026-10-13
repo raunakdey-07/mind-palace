@@ -15,7 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.exc import OperationalError
 
 from api.main import app
-from api.services.corpora import CorpusArchiveConflict, CorpusScopeNotFound
+from api.services.corpora import CorpusScopeNotFound
 
 
 @pytest.mark.asyncio
@@ -77,7 +77,14 @@ async def test_delete_missing_corpus_404():
     with patch(
         "api.services.corpora.delete_corpus",
         new_callable=AsyncMock,
-        return_value=False,
+        return_value={
+            "corpus": "nope",
+            "corpus_id": None,
+            "deleted": False,
+            "reason": "not_found",
+            "removed": {},
+            "not_removed": "...",
+        },
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.delete("/api/corpora/nope")
@@ -85,17 +92,67 @@ async def test_delete_missing_corpus_404():
 
 
 @pytest.mark.asyncio
-async def test_delete_corpus_with_archive_is_409():
+async def test_delete_corpus_returns_a_deletion_report():
+    """Erasure answers with what it removed, not an empty 204.
+
+    Replaces the old contract, which returned 409 whenever the archive
+    referenced the corpus -- so a corpus that had ever recorded a fact could
+    never be removed. An empty `204` would have been worse than the `409`: it
+    would have implied that exported receipts and database backups were covered
+    too.
+    """
+    transport = ASGITransport(app=app)
+    report = {
+        "corpus": "archived",
+        "corpus_id": "c1" * 32,
+        "deleted": True,
+        "reason": None,
+        "removed": {"memory_claims": 12, "corpora": 1},
+        "not_removed": "receipts and Memory Packs already exported by a customer...",
+    }
+    with patch(
+        "api.services.corpora.delete_corpus",
+        new_callable=AsyncMock,
+        return_value=report,
+    ):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.delete("/api/corpora/archived")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["deleted"] is True
+    assert body["removed"]["memory_claims"] == 12
+    assert body["not_removed"], "the response must say what it does not reach"
+    # Nothing in the contract may carry memory content: an erasure audit trail
+    # that reproduced the content it erased would defeat the erasure.
+    assert "claim" not in body["removed"]
+    assert set(body) == {
+        "corpus",
+        "corpus_id",
+        "deleted",
+        "reason",
+        "removed",
+        "not_removed",
+    }
+
+
+@pytest.mark.asyncio
+async def test_delete_an_absent_corpus_is_404():
     transport = ASGITransport(app=app)
     with patch(
         "api.services.corpora.delete_corpus",
         new_callable=AsyncMock,
-        side_effect=CorpusArchiveConflict("corpus contains durable archive history"),
+        return_value={
+            "corpus": "gone",
+            "corpus_id": None,
+            "deleted": False,
+            "reason": "not_found",
+            "removed": {},
+            "not_removed": "...",
+        },
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.delete("/api/corpora/archived")
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == "corpus contains durable archive history"
+            resp = await client.delete("/api/corpora/gone")
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio

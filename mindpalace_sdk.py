@@ -43,6 +43,7 @@ propagate the central MemoryError unchanged.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -159,11 +160,18 @@ def _as_client_error(exc: Exception) -> Exception:
     not be dressed up as an API failure, which would send a user looking at their
     request instead of at the bug.
     """
+    from api.services.authz import AuthorizationError
     from api.services.memory_public import MemoryError as ServiceMemoryError
 
     if isinstance(exc, MemoryClientError):
         return exc
-    if isinstance(exc, ServiceMemoryError):
+    # An authorization refusal carries the same three fields as a service error
+    # and, over HTTP, arrives in the same `{"code", "message"}` envelope. Left
+    # untranslated, the same refusal would reach a caller as
+    # `AuthorizationError` in-process and as `MemoryClientError` over the wire --
+    # two exception classes for one condition, so `except MemoryClientError`
+    # would not catch it locally.
+    if isinstance(exc, (ServiceMemoryError, AuthorizationError)):
         return MemoryClientError(exc.code, exc.message, exc.status_code)
     return exc
 
@@ -184,6 +192,21 @@ def _remote_error(response, default_message: str) -> MemoryClientError:
     except ValueError:
         pass
     return MemoryClientError(code, message, response.status_code)
+
+
+def _discard_stale_runtime() -> None:
+    """Stop a runtime that no longer matches the code on disk. Best effort.
+
+    Never raises: this runs on a path that is already handling a failure, and a
+    runtime that cannot be stopped is a performance problem, not a correctness
+    one. The next command starts a fresh one.
+    """
+    try:
+        from api import runtime as runtime_module
+
+        runtime_module.call({"op": "shutdown"}, timeout=2.0)
+    except Exception:  # noqa: BLE001 - best effort by definition
+        pass
 
 
 class MemoryClient:
@@ -232,6 +255,12 @@ class MemoryClient:
                 timeout=self._client.timeout,
             )
         except Exception:  # noqa: BLE001 - unreachable runtime means "do it myself"
+            # A runtime whose code no longer matches this process is in the same
+            # category as an unreachable one -- it must not answer -- but it is
+            # worth discarding, because otherwise every subsequent command pays
+            # the same round trip to be told the same thing. The first command
+            # after an edit does the work in-process; the second gets a fresh
+            # runtime.
             return None
         if not reply.get("ok"):
             # A runtime that answered is authoritative about failure: re-raise its
@@ -253,17 +282,24 @@ class MemoryClient:
         request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
             _require_sync()
-            remote = self._through_runtime(operation, request)
-            if remote is not None:
-                return remote
-            from api.services.memory_public import execute
+            # The scope is entered before the runtime is consulted. It has to be:
+            # the socket is a process boundary, so a ContextVar cannot cross it,
+            # and the runtime resolves its own principal from
+            # `MIND_PALACE_RUNTIME_CREDENTIAL`. Taking the shortcut *outside* the
+            # scope would mean the in-process path was authorized and the socket
+            # path was not, which is the one distinction that must not exist.
+            with self._client._as_caller():
+                remote = self._through_runtime(operation, request)
+                if remote is not None:
+                    return remote
+                from api.services.memory_public import execute
 
-            try:
-                return asyncio.run(execute(operation, request))
-            except MemoryClientError:
-                raise
-            except Exception as exc:  # noqa: BLE001 - re-raised, or translated to ours
-                raise _as_client_error(exc) from exc
+                try:
+                    return asyncio.run(execute(operation, request))
+                except MemoryClientError:
+                    raise
+                except Exception as exc:  # noqa: BLE001 - re-raised, or translated
+                    raise _as_client_error(exc) from exc
 
         import httpx
 
@@ -316,13 +352,6 @@ class MemoryClient:
         name = self._corpus_name(corpus)
         if self._client.base_url is None:
             _require_sync()
-            if file is None:
-                # A file is a local read, so it stays in this process. A statement is
-                # not, and going through a runtime keeps the corpus's connection pool
-                # warm for the recall that usually follows.
-                remote = self._remember_via_runtime(name, statement, key)
-                if remote is not None:
-                    return remote
             from api.services.remember import remember as write
 
             async def run() -> MemoryResult:
@@ -330,7 +359,19 @@ class MemoryClient:
                 return MemoryResult.from_write(written, name, statement)
 
             try:
-                return MindPalace._run(run())
+                # Inside the scope for the same reason as `_execute`: the
+                # runtime resolves its own principal, and a client that cannot
+                # authenticate must fail here rather than at the socket.
+                with self._client._as_caller():
+                    if file is None:
+                        # A file is a local read, so it stays in this process. A
+                        # statement is not, and going through a runtime keeps the
+                        # corpus's connection pool warm for the recall that
+                        # usually follows.
+                        remote = self._remember_via_runtime(name, statement, key)
+                        if remote is not None:
+                            return remote
+                    return MindPalace._run(run())
             except MemoryClientError:
                 raise
             except Exception as exc:  # noqa: BLE001 - one exception type, whichever path ran
@@ -407,6 +448,13 @@ class MemoryClient:
             return None
         if not reply.get("ok"):
             error = reply.get("error") or {}
+            if error.get("code") == "build_mismatch":
+                # The runtime is running code this process is not. It must not
+                # answer. Discard it and do the work here, so the first command
+                # after an edit is correct rather than merely fast, and the second
+                # gets a runtime that matches.
+                _discard_stale_runtime()
+                return None
             raise MemoryClientError(
                 error.get("code", "error"),
                 error.get("message", "memory write failed"),
@@ -553,7 +601,8 @@ class MemoryClient:
                 async with session_scope() as db:
                     return await feed(db, corpus_name, cursor, page_size)
 
-            return asyncio.run(run())
+            with self._client._as_caller():
+                return asyncio.run(run())
         import httpx
 
         params = {"corpus": corpus_name, "page_size": page_size}
@@ -662,12 +711,20 @@ class MindPalace:
         create_if_missing: bool = True,
         base_url: str | None = None,
         headers: Mapping[str, str] | None = None,
+        api_key: str | None = None,
         timeout: float = 30,
         runtime: bool = False,
     ):
         self.name = name
         self.base_url = base_url.rstrip("/") if base_url is not None else None
         self.headers = dict(headers or {})
+        if api_key is not None:
+            # A convenience over `headers`, so a credential is one argument
+            # rather than a hand-built header, and so the in-process and remote
+            # paths are configured the same way. In `required` mode a local
+            # client also authenticates, as `api_key` plus the tenant scope it
+            # resolves to.
+            self.headers.setdefault("Authorization", f"Bearer {api_key}")
         self.timeout = timeout
         # Off by default, on purpose. A long-lived application pays the model import
         # once and then has it resident, so a runtime would only add a socket hop and
@@ -676,6 +733,10 @@ class MindPalace:
         self.use_runtime = bool(runtime)
         self.memory = MemoryClient(self)
         self._create_if_missing = create_if_missing
+        # Resolved for every local client, named or not. A local client runs in
+        # this process, so there is no request for the HTTP middleware to
+        # authenticate; this is where its identity comes from instead.
+        self._principal = self._local_principal(api_key) if base_url is None else None
         if base_url is None and name is not None:
             from api.services.embedder import Embedder
             from api.services.ingestion import IngestionService
@@ -683,7 +744,66 @@ class MindPalace:
             self._embedder = Embedder()
             self._ingestion = IngestionService()
             if create_if_missing:
-                self._run(self._ensure_corpus())
+                with self._as_caller():
+                    self._run(self._ensure_corpus())
+
+    @contextlib.contextmanager
+    def _as_caller(self):
+        """Run one operation as this client's identity.
+
+        Re-established per operation rather than held for the client's lifetime,
+        because a `ContextVar` set once would be inherited by unrelated work in
+        the same process -- including, in a web application, the next request.
+        """
+        if self._principal is None:
+            yield
+            return
+        from api.services.db import principal_scope
+
+        with principal_scope(self._principal):
+            yield
+
+    def _local_principal(self, api_key: str | None):
+        """Resolve a local client's identity, or None in single-user mode.
+
+        None in the default single-user mode, where the process default already
+        is the local principal.
+
+        Called for *every* local client, named or not. An earlier version only
+        called it when a corpus name was supplied, which left `MindPalace()`
+        without a name -- the shape the CLI builds -- authenticated in no mode:
+        its operations ran as the default local principal, unrestricted, with a
+        `{*}` database scope, even under `MIND_PALACE_AUTH_MODE=required`. A
+        client that cannot authenticate must fail at construction regardless of
+        how it was constructed.
+        """
+        from api.services.authz import auth_required, resolve_principal
+        from api.services.db import AsyncSessionLocal
+
+        if not auth_required():
+            return None
+        if api_key is None:
+            raise MemoryClientError(
+                "unauthenticated",
+                "MIND_PALACE_AUTH_MODE=required; pass api_key= to the client",
+                401,
+            )
+
+        async def _resolve():
+            async with AsyncSessionLocal() as db:
+                return await resolve_principal(db, f"Bearer {api_key}")
+
+        # Translated here because this runs from `__init__`, outside the
+        # try/except that wraps an operation. Without it a revoked or mistyped
+        # credential raised `AuthorizationError` out of the constructor, so
+        # `except MemoryClientError` -- the one line the SDK asks a caller to
+        # write -- did not catch it, while the identical refusal over HTTP did.
+        try:
+            return self._run(_resolve())
+        except MemoryClientError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - re-raised, or translated to ours
+            raise _as_client_error(exc) from exc
 
     @staticmethod
     def _run(coro):
@@ -714,6 +834,12 @@ class MindPalace:
                 pass
 
     async def _ensure_corpus(self):
+        """The coroutine, and nothing else.
+
+        Kept free of `_run` on purpose: `_run` calls `asyncio.run`, so a coroutine
+        that drove it would try to nest a loop. `__init__` enters the caller's
+        scope around the single `_run` instead.
+        """
         from api.services.corpora import get_or_create_corpus
         from api.services.db import session_scope
 
@@ -728,10 +854,11 @@ class MindPalace:
         Added files are ingested; changed files are reprocessed; files removed
         from the source are dropped from the index (when ``delete_removed``).
         """
-        corpus_id = self._corpus_id()
-        result = self._run(
-            self._ingestion.sync_repo(path, corpus_id, delete_removed=delete_removed)
-        )
+        corpus_id = self._corpus_id(write=True)
+        with self._as_caller():
+            result = self._run(
+                self._ingestion.sync_repo(path, corpus_id, delete_removed=delete_removed)
+            )
         return SyncSummary(
             success=result["success"],
             added=result["added"],
@@ -852,7 +979,8 @@ class MindPalace:
                 )
 
         try:
-            pack, _ = self._run(_build())
+            with self._as_caller():
+                pack, _ = self._run(_build())
         except ContextError as exc:
             raise MemoryClientError(exc.code, exc.message, exc.status_code) from exc
         return pack
@@ -878,15 +1006,23 @@ class MindPalace:
                     corpus_id=corpus_id,
                 )
 
-        return self._run(_search())
+        with self._as_caller():
+            return self._run(_search())
 
-    # -- internals ---------------------------------------------------------
+    # -- internals ------------------------------------------------------
 
     def _require_legacy(self) -> None:
         if self.base_url is not None or self.name is None:
             raise ValueError("sync/search/context require a named local MindPalace client")
 
-    def _corpus_id(self, must_exist: bool = False) -> str:
+    def _corpus_id(self, must_exist: bool = False, *, write: bool = False) -> str:
+        """Resolve this client's corpus to its id, checking the role it needs.
+
+        `write=True` for `sync`, which writes documents, chunks, the manifest and
+        the memory archive. Without the flag a `read_only` credential could write
+        through the SDK even though the REST route refused it -- two surfaces, two
+        answers to the same question.
+        """
         self._require_legacy()
         from api.services.corpora import get_corpus_by_name
         from api.services.db import session_scope
@@ -897,9 +1033,10 @@ class MindPalace:
 
         async def _get():
             async with session_scope() as db:
-                return await get_corpus_by_name(db, name)
+                return await get_corpus_by_name(db, name, write=write)
 
-        corpus = self._run(_get())
+        with self._as_caller():
+            corpus = self._run(_get())
         if not corpus:
             raise CorpusNotFoundError(f"corpus '{self.name}' not found")
         return corpus["id"]
@@ -919,13 +1056,55 @@ from memory_receipt import (  # noqa: E402
     verify_trust,
 )
 
+# The taxonomy is re-exported here rather than left in its own module to be
+# imported by path. An integrator should be able to write
+# `from mindpalace_sdk import ProviderError` and have that be a supported import,
+# not an accident of the file layout -- and `mindpalace_errors` stays importable
+# on its own for a deployment that wants it without the client.
+from mindpalace_errors import (  # noqa: E402
+    AuthenticationError as MindPalaceAuthenticationError,
+    ConflictError as MindPalaceConflictError,
+    DatabaseUnavailableError,
+    InternalError as MindPalaceInternalError,
+    MindPalaceError,
+    NotFoundError as MindPalaceNotFoundError,
+    ProviderAuthenticationError,
+    ProviderError,
+    ProviderIncompatibleModelError,
+    ProviderMalformedResponseError,
+    ProviderRateLimitError,
+    ProviderRefusedError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+    TransportError as MindPalaceTransportError,
+    UnauthorizedError as MindPalaceUnauthorizedError,
+    ValidationError as MindPalaceValidationError,
+)
+
 __all__ = [
     "DEFAULT_CORPUS",
     "CorpusNotFoundError",
+    "DatabaseUnavailableError",
     "MemoryClient",
     "MemoryClientError",
     "MemoryResult",
     "MindPalace",
+    "MindPalaceAuthenticationError",
+    "MindPalaceConflictError",
+    "MindPalaceError",
+    "MindPalaceInternalError",
+    "MindPalaceNotFoundError",
+    "MindPalaceTransportError",
+    "MindPalaceUnauthorizedError",
+    "MindPalaceValidationError",
+    "ProviderAuthenticationError",
+    "ProviderError",
+    "ProviderIncompatibleModelError",
+    "ProviderMalformedResponseError",
+    "ProviderRateLimitError",
+    "ProviderRefusedError",
+    "ProviderTimeoutError",
+    "ProviderUnavailableError",
     "ReceiptError",
     "SyncSummary",
     "verify_receipt",

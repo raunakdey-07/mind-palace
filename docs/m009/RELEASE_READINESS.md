@@ -27,7 +27,7 @@ used a disposable PostgreSQL database created by
 | p50/p95 | 20 measured iterations after two warm-ups; artifact includes samples | PASS |
 | query plans | `docs/m009/query-plans.md`; real 10k `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` | PASS |
 | security | cursor/config/error tests; redacted artifacts; no cursor/secret logging | PASS |
-| MCP decision | `docs/operations.md`; `README.md`; `examples/MEMORY_API.md` | PASS |
+| MCP decision | `deployment.md`; `README.md`; `examples/MEMORY_API.md` | PASS |
 | documentation | operations/API/README/changelog/release-map audit | PASS |
 | full regression | `docs/m009/full-regression.txt` | PASS |
 | static validation | `docs/m009/static-validation.txt` | PASS |
@@ -74,7 +74,7 @@ reads**:
 - a fresh traversal returned all 34 target-corpus versions.
 
 This is not a global snapshot or lossless late-arrival guarantee. See
-`docs/operations.md` for the precise limitation.
+`deployment.md` for the precise limitation.
 
 ## Scale and performance matrix
 

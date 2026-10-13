@@ -49,6 +49,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
+import hmac
 import json
 import os
 import signal
@@ -59,6 +60,8 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from api.services.db import principal_scope
 
 #: A runtime with no requests for this long exits. Long enough to cover a working
 #: session of `remember`/`recall`/`explain`, short enough that it is not a process
@@ -76,9 +79,69 @@ MAX_CONCURRENT = 4
 #: dead socket refuses instantly; this only bounds a pathological hang.
 CONNECT_TIMEOUT = 0.25
 
-#: The wire protocol version. A runtime from a different build refuses the request
-#: rather than answering it with different semantics.
+#: The wire protocol version. A runtime from a different *interface* refuses the
+#: request rather than answering it with different semantics.
 PROTOCOL = 1
+
+
+def build_hash() -> str:
+    """A short digest of the code this process is running.
+
+    ## Why this exists
+
+    `PROTOCOL` is a hand-maintained integer. It does not change when the code
+    changes, so a runtime started before an edit keeps answering with the old
+    code and nothing notices. That is not hypothetical: during the first-hour
+    audit, `mindpalace remember` on the CLI kept failing with a stale
+    CheckViolationError *after* the fix was applied and the Python API had been
+    verified working, because the CLI routes through a long-lived runtime that had
+    loaded the old module. `MIND_PALACE_RUNTIME=0` diagnosed it in one command and
+    the error said nothing about a process that had not reloaded.
+
+    A client that can see the runtime's build can refuse to talk to it, and say
+    how to fix it in one line.
+
+    ## What is hashed
+
+    Every ``.py`` file in the shipped packages and top-level modules, plus the
+    package version. Not the contents of migrations or data: a data change does
+    not change what the runtime *computes*, and would restart it for no reason.
+
+    Cost is a few milliseconds, once per process, and it is memoised because the
+    client sends it on every request.
+    """
+    import hashlib
+    import importlib.metadata
+
+    digest = hashlib.sha256()
+    try:
+        digest.update(importlib.metadata.version("mindpalace-os").encode())
+    except importlib.metadata.PackageNotFoundError:
+        # A source checkout that was never installed. The file walk below still
+        # gives a stable identity, which is what the handshake needs.
+        digest.update(b"dev")
+    roots = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent / "cli"]
+    modules = sorted(p for p in Path(__file__).resolve().parent.parent.glob("*.py") if p.is_file())
+    tree = Path(__file__).resolve().parent.parent
+    for path in [*modules, *(r for root in roots for r in sorted(root.rglob("*.py")))]:
+        try:
+            digest.update(path.relative_to(tree).as_posix().encode())
+            digest.update(path.read_bytes())
+        except OSError:
+            continue
+    return digest.hexdigest()[:16]
+
+
+_BUILD_HASH: str | None = None
+
+
+def build_id() -> str:
+    """Memoised `build_hash`; the client sends this on every request."""
+    global _BUILD_HASH
+    if _BUILD_HASH is None:
+        _BUILD_HASH = build_hash()
+    return _BUILD_HASH
+
 
 STATES = ("starting", "loading", "ready", "stopping", "failed")
 
@@ -193,7 +256,9 @@ def call(payload: dict, *, timeout: float = 30.0, connect_timeout: float = CONNE
 async def _call_async(
     path: Path, token: str, payload: dict, timeout: float, connect_timeout: float
 ) -> dict:
-    body = json.dumps({"protocol": PROTOCOL, "token": token, **payload}).encode()
+    body = json.dumps(
+        {"protocol": PROTOCOL, "build": build_id(), "token": token, **payload}
+    ).encode()
     reader, writer = await _connect(path, connect_timeout)
     try:
         writer.write(len(body).to_bytes(4, "big") + body)
@@ -497,7 +562,12 @@ async def _serve_one(
     except (ValueError, asyncio.IncompleteReadError) as exc:
         return {"ok": False, "error": {"code": "invalid_request", "message": str(exc)}}
 
-    if not isinstance(request.get("token"), str) or request["token"] != token:
+    if not isinstance(request.get("token"), str) or not hmac.compare_digest(
+        request["token"], token
+    ):
+        # Constant-time: the token is the shared secret for this user's memory,
+        # and a short-circuiting comparison leaks its prefix to a local attacker
+        # who can time the socket.
         return {"ok": False, "error": {"code": "forbidden", "message": "bad runtime token"}}
     if request.get("protocol") != PROTOCOL:
         return {
@@ -507,6 +577,24 @@ async def _serve_one(
                 "message": (
                     f"this runtime speaks protocol {PROTOCOL}; the client asked for "
                     f"{request.get('protocol')}. Restart it with `mindpalace runtime stop`."
+                ),
+            },
+        }
+
+    asked_build = request.get("build")
+    if asked_build and asked_build != build_id():
+        # The code changed under a running process. Answering with the old code
+        # would be worse than answering nothing: the caller would get a confident
+        # answer computed by a version that no longer exists. One line tells the
+        # user exactly what to do.
+        return {
+            "ok": False,
+            "error": {
+                "code": "build_mismatch",
+                "message": (
+                    f"the running runtime is build {build_id()} but this command is "
+                    f"{asked_build}. Run `mindpalace runtime stop` to discard it, or "
+                    f"MIND_PALACE_RUNTIME=0 to bypass it."
                 ),
             },
         }
@@ -534,6 +622,7 @@ def _describe(runtime: _Runtime) -> dict:
         "requests": runtime.requests,
         "detail": runtime.detail,
         "protocol": PROTOCOL,
+        "build": build_id(),
     }
 
 
@@ -555,6 +644,59 @@ def _error(exc: Exception) -> dict:
 
 
 async def _dispatch(operation: str, request: dict, runtime: _Runtime) -> dict:
+    """Run one public operation as the runtime's configured identity.
+
+    The socket token proves the caller is a local peer of this user; it does not
+    decide which corpora the caller may reach. That is the same split as the HTTP
+    surface, where the request proves nothing about authority on its own.
+
+    So the runtime resolves a principal once, from `MIND_PALACE_RUNTIME_CREDENTIAL`,
+    and every operation below runs inside that scope. Without it, the ContextVar
+    holds the default local principal -- unrestricted, with a `{*}` database
+    scope -- and a wire-supplied corpus name would select any corpus in the
+    database. In `required` mode a runtime with no credential refuses every
+    operation rather than serving them all.
+    """
+    principal = await _runtime_principal()
+    with principal_scope(principal):
+        return await _dispatch_scoped(operation, request, runtime)
+
+
+async def _runtime_principal():
+    """The identity this runtime process acts as, resolved once per dispatch.
+
+    Resolved per dispatch rather than cached at startup, because a revoked
+    credential should stop working without a restart. It is a single indexed
+    lookup on a token the client already has in hand.
+    """
+    from api.services.authz import AuthorizationError, auth_required, resolve_principal
+    from api.services.db import AsyncSessionLocal
+
+    credential = os.getenv("MIND_PALACE_RUNTIME_CREDENTIAL") or None
+    if credential is None and auth_required():
+        # Refused before the lookup rather than after it, so the message names
+        # the setting the operator has to set. `resolve_principal` would refuse
+        # too, but with "a bearer credential is required", which tells an
+        # operator nothing about a runtime that has no way to present one.
+        raise AuthorizationError(
+            "unauthenticated",
+            "the runtime has no credential configured; set MIND_PALACE_RUNTIME_CREDENTIAL",
+            401,
+        )
+    async with AsyncSessionLocal() as db:
+        principal = await resolve_principal(db, f"Bearer {credential}" if credential else None)
+    if auth_required() and principal.unrestricted:
+        # Reachable when the configured credential does not resolve to a
+        # principal. Treated as a refusal rather than as "no restriction".
+        raise AuthorizationError(
+            "unauthenticated",
+            "the runtime credential is not recognised",
+            401,
+        )
+    return principal
+
+
+async def _dispatch_scoped(operation: str, request: dict, runtime: _Runtime) -> dict:
     """Run one public operation. Everything here is existing product code."""
     if operation == "remember":
         from api.models.remember import RememberResult

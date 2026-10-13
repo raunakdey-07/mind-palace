@@ -6,6 +6,13 @@
 A corpus is the unit of tenancy in Mind Palace. Documents, chunks, and
 embeddings all belong to exactly one corpus; retrieval and ingestion are
 always corpus-scoped so data cannot leak across corpora.
+
+Scope in the SQL is correctness. Permission to *name* a corpus is
+authorization, and it is decided in `get_corpus_by_name`: the one function
+that turns a corpus name into a corpus id. Every route that reaches tenant-owned
+rows resolves its corpus here -- the nine memory operations, the feed,
+`remember`, search, context, query and the corpora routes -- so there is exactly
+one place to get right and exactly one place to test.
 """
 
 from __future__ import annotations
@@ -16,6 +23,9 @@ from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.services.authz import AuthorizationError, require_corpus, require_permission
+from api.services.db import current_principal
 
 # The migration-created corpus that holds all pre-corpus documents.
 DEFAULT_CORPUS_ID = "00000000000000000000000000000000000000000000000000000000default"
@@ -54,8 +64,26 @@ async def create_corpus(
     name: str,
     description: str = "",
 ) -> dict:
-    """Create a corpus. Raises ValueError if the name is taken or invalid."""
+    """Create a corpus. Raises ValueError if the name is taken or invalid.
+
+    Requires the unrestricted administrative identity, and that is not an
+    oversight. A corpus row is only insertable when its id is inside the caller's
+    own tenant scope -- the row-level policy's `WITH CHECK` refuses anything else
+    -- and a principal cannot hold a grant to a corpus that does not exist yet.
+    So a corpus-scoped credential can never be the first to create one, however
+    its role is spelled.
+
+    The permission that does work for a tenant is erasure: `manage_corpus` on a
+    corpus you already hold a grant to. That is the half of the pair that has an
+    unambiguous meaning, and it is the half an offboarding needs.
+    """
     name = validate_corpus_name(name)
+    principal = current_principal()
+    if not principal.unrestricted:
+        raise AuthorizationError(
+            "forbidden", "Creating a corpus is an administrative operation", 403
+        )
+    require_permission(principal, "manage_corpus", "create a corpus")
     corpus_id = corpus_id_for_name(name)
 
     existing = await get_corpus_by_name(db, name)
@@ -73,7 +101,19 @@ async def create_corpus(
     return {"id": corpus_id, "name": name, "description": description}
 
 
-async def get_corpus_by_name(db: AsyncSession, name: str) -> Optional[dict]:
+async def get_corpus_by_name(db: AsyncSession, name: str, *, write: bool = False) -> Optional[dict]:
+    """Resolve a corpus name to its id, if this principal may use it.
+
+    The authorization choke point. A name that is not in the caller's scope
+    raises rather than returning `None`: a request that names a corpus it cannot
+    use is refused the same way whether the corpus exists or not, so a caller
+    cannot enumerate tenants by watching 404s turn into 200s.
+
+    `write=True` additionally requires the read-write role. It is passed by the
+    paths that mutate -- `remember`, corpus creation and deletion, sync, and the
+    snapshot operation, which creates immutable state.
+    """
+    require_corpus(current_principal(), name, write=write)
     result = await db.execute(
         text("SELECT id, name, description FROM corpora WHERE name = :name"),
         {"name": name},
@@ -81,11 +121,18 @@ async def get_corpus_by_name(db: AsyncSession, name: str) -> Optional[dict]:
     row = result.first()
     if not row:
         return None
-    return {"id": row[0], "name": row[1], "description": row[2]}
-
-
-class CorpusArchiveConflict(RuntimeError):
-    """A corpus cannot be deleted while its durable archive references it."""
+    # `corpora.id` is CHAR(64), and the default corpus's id is 63 characters, so
+    # PostgreSQL blank-pads it on the way in and hands the pad back on the way
+    # out. The pad is storage, not identity: every id the product hashes is the
+    # unpadded form, and `memory_documents_check` derives document identity from
+    # `rtrim(corpus_id::text)`. Returning the padded value here put one extra
+    # byte into every document id derived from the default corpus, and every
+    # write was refused by the constraint.
+    #
+    # Strip at the boundary where the padding is introduced, rather than at each
+    # of the many places that consume the id. See
+    # tests/test_default_corpus_is_writable.py.
+    return {"id": row[0].strip(), "name": row[1], "description": row[2]}
 
 
 class CorpusScopeNotFound(LookupError):
@@ -103,6 +150,11 @@ async def resolve_corpus_scope(
 
     A single corpus remains ergonomic when the caller omits the name. Multiple
     corpora require an explicit name so retrieval cannot cross namespaces.
+
+    The un-named path is scoped to what the caller may use, not to the whole
+    installation: the implicit default is the single corpus *this principal* can
+    reach. A caller granted two corpora still has to name one, so an omitted
+    corpus can never silently mean "the other tenant's".
     """
     if corpus is not None:
         row = await get_corpus_by_name(db, corpus)
@@ -110,7 +162,14 @@ async def resolve_corpus_scope(
             raise CorpusScopeNotFound(f"corpus '{corpus}' not found")
         return row["id"], row["name"]
 
-    result = await db.execute(text("SELECT id, name FROM corpora ORDER BY name LIMIT 2"))
+    principal = current_principal()
+    result = await db.execute(
+        text(
+            "SELECT id, name FROM corpora "
+            "WHERE (:unrestricted OR name = ANY(:names)) ORDER BY name LIMIT 2"
+        ),
+        {"unrestricted": principal.unrestricted, "names": sorted(principal.corpora) or [""]},
+    )
     rows = result.fetchall()
     if len(rows) > 1:
         raise CorpusScopeRequired("corpus is required when multiple corpora exist")
@@ -128,14 +187,30 @@ async def get_or_create_corpus(db: AsyncSession, name: str) -> dict:
 
 
 async def list_corpora(db: AsyncSession) -> list[dict]:
-    """List all corpora with document counts."""
-    result = await db.execute(text("""
+    """List the corpora this principal may use, with document counts.
+
+    Under row-level security the corpus table is already filtered to the
+    caller's scope, so this is scoped by construction rather than by an extra
+    `WHERE` that could later be dropped. The redundant predicate for a
+    tenant-scoped principal is kept because it costs nothing and because it is
+    what makes this correct even against a runtime role for which the policy is
+    not enforced (a superuser, a `BYPASSRLS` role, or the table owner).
+    """
+    principal = current_principal()
+    result = await db.execute(
+        text("""
             SELECT c.id, c.name, c.description, count(d.id) AS document_count
             FROM corpora c
             LEFT JOIN documents d ON d.corpus_id = c.id
+            WHERE (:unrestricted OR c.name = ANY(:names))
             GROUP BY c.id, c.name, c.description
             ORDER BY c.name
-        """))
+        """),
+        {
+            "unrestricted": principal.unrestricted,
+            "names": sorted(principal.corpora) or [""],
+        },
+    )
     return [
         {
             "id": row[0],
@@ -147,34 +222,51 @@ async def list_corpora(db: AsyncSession) -> list[dict]:
     ]
 
 
-async def delete_corpus(db: AsyncSession, name: str) -> bool:
-    """Delete a corpus and all its documents/chunks. Returns True if deleted."""
+async def delete_corpus(db: AsyncSession, name: str) -> dict:
+    """Erase a corpus and every row of memory the server holds for it.
+
+    Returns a report: which tables lost how many rows, and whether anything was
+    deleted at all. The report carries table *names* and counts only -- never a
+    claim, a quote, a path or any other content -- so an erasure audit trail
+    cannot itself become a copy of what it erased.
+
+    Authorization is `manage_corpus` on a corpus this principal can already see.
+    The corpus is resolved through `get_corpus_by_name`, so naming a corpus this
+    identity may not reach is a refusal before any statement runs; the erasure
+    function then re-checks the same transaction-local scope itself, so the two
+    cannot disagree.
+
+    The work is done by `mindpalace_erase_corpus`, a `SECURITY DEFINER`
+    function. The runtime role holds no `DELETE` on any archive table, and the
+    archive's append-only triggers still reject a `DELETE` that does not come
+    through that function -- so there is exactly one way to erase, and it is this
+    one. See `docs/security.md` for what this does *not* remove.
+    """
     corpus = await get_corpus_by_name(db, name)
     if not corpus:
-        return False
-    archive_exists = (
-        await db.execute(
-            text(
-                "SELECT EXISTS (SELECT 1 FROM memory_documents WHERE corpus_id = :cid) "
-                "OR EXISTS (SELECT 1 FROM memory_snapshots WHERE corpus_id = :cid)"
-            ),
-            {"cid": corpus["id"]},
-        )
-    ).scalar_one()
-    if archive_exists:
-        raise CorpusArchiveConflict("corpus contains durable archive history")
+        return {"corpus": name, "deleted": False, "reason": "not_found", "removed": {}}
+    require_permission(current_principal(), "manage_corpus", "delete a corpus")
 
-    # Remove the derived manifest before documents. The manifest's document
-    # foreign key is nullable, so deleting documents alone would leave a
-    # corpus-less row behind.
-    await db.execute(
-        text("DELETE FROM ingestion_manifest WHERE corpus_id = :cid"), {"cid": corpus["id"]}
+    result = await db.execute(
+        text("SELECT mindpalace_erase_corpus(:cid)"),
+        {"cid": corpus["id"]},
     )
-    # chunks cascade from documents; documents cascade from the corpus
-    await db.execute(text("DELETE FROM documents WHERE corpus_id = :cid"), {"cid": corpus["id"]})
-    await db.execute(text("DELETE FROM corpora WHERE id = :cid"), {"cid": corpus["id"]})
+    report = result.scalar_one()
     await db.commit()
-    return True
+    return {
+        "corpus": name,
+        "corpus_id": report["corpus_id"],
+        "deleted": bool(report["deleted"]),
+        "reason": report.get("reason"),
+        "removed": report.get("removed", {}),
+        # Stated rather than implied. Receipts are files on customer machines and
+        # backups are PostgreSQL's own; neither is reachable from here, and a
+        # deletion report that implied otherwise would be worse than none.
+        "not_removed": (
+            "receipts and Memory Packs already exported by a customer, database "
+            "backups and replicas, and any copy the customer stored elsewhere"
+        ),
+    }
 
 
 async def corpus_stats(db: AsyncSession, name: str) -> Optional[dict]:

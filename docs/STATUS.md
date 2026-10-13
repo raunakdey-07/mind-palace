@@ -1,9 +1,12 @@
 # Project status
 
 The current, verifiable state of Mind Palace and everything still outstanding.
-Everything here was measured at the release commit `f52272d` unless a line says
-otherwise. Numbers that came from earlier experiments are marked with the commit
-that produced them.
+
+Every figure here names the command that produced it and the commit it was
+measured at. A number that was not measured is marked **not established** rather
+than filled in — this table previously carried a test count that no run had ever
+produced, and a test count that nobody ran is worse than no test count, because
+a reader checks the others and assumes this one was checked too.
 
 Corrections and additions measured in the v0.8.0 work are marked **[v0.8.0]**.
 
@@ -30,17 +33,19 @@ L2  derived retrieval                 embeddings, chunks, caches, indexes
 ```
 
 L2 may be deleted and rebuilt without changing a single byte of authoritative
-memory. That is verified, not asserted; see the invariants below.
+memory. That was verified by measurement, at `f52272d`; the table below says so
+row by row, including the two rows whose harness no longer runs at this head.
 
 ## Release state
 
 | | |
 |---|---|
-| package version | `0.9.0` |
-| tag | `v0.9.0` |
+| package version | `0.9.1` (`pyproject.toml`) |
+| latest tag | **`v0.9.0`** at `b0e516e`. There is no `v0.9.1` tag, locally or on `origin` |
+| `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
-| migration head | `007_claim_embedding_cache`, unchanged |
-| tests | **1362 passed**, plus the CI job provisions the embedding model first |
+| migration head | `010_bind_unrestricted_scope`, additive and reversible |
+| tests | **1619 passed, 0 failed, 2 skipped**; 1621 collected. 553 s. The run record in `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote; `check_evidence.py` verifies all three against `pytest --collect-only` at HEAD |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -94,6 +99,32 @@ models at all.
 not move. No public response field changed, existing receipts remain verifiable, and
 no MCP tool was added.
 
+**Read that in the past tense, about `v0.9.0` specifically. It is not a statement
+about this branch.** `v0.9.0`'s head is 007. The branch's head is **010**, and
+migrations 008, 009 and 010 have **never shipped in any release** — they all
+arrived in `da8a14a`, after the `v0.9.0` tag. So the first release cut from this
+branch *does* move the schema head, by three migrations, and the "no migration"
+sentence above does not apply to it.
+
+**Upgrade notes are NOT YET WRITTEN. NOT ESTABLISHED.** No `docs/release/`
+directory exists in this tree. What is established about the `v0.9.0` -> 010
+upgrade, from `scripts/release/upgrade_safety.sh` and the runtime-role
+assertions in `scripts/release/assert_runtime_role.py`:
+
+* it applies cleanly to a real `v0.9.0` archive written through `v0.9.0`'s own
+  `remember`;
+* the `v0.9.0` receipt still verifies offline after the upgrade;
+* claim identities do not move and no claim is lost;
+* the pack is byte-identical once `valid_at` is pinned on both sides;
+* supersession survives (history PostgreSQL, recall CockroachDB);
+* the whole read surface works **as `mindpalace_runtime` in server mode with a
+  credential**, and a policy keyed on the wrong column fails the job.
+
+**A downgrade 010 -> 007 destroys `memory_principals` and disables row-level
+security on all 9 protected tables. It preserves all 6 claims.** That cost belongs
+in the upgrade notes and is not yet written down anywhere an operator would
+find it.
+
 **The runtime changed no memory semantics.** `mindpalace recall`, `explain` and
 `receipt` went from about 6.2 s to about 0.63 s, and everything they return is
 byte-identical to the in-process path — same claim identities, evidence, temporal
@@ -119,7 +150,7 @@ Five behaviour changes, all deliberate and measured:
   lexical rung that already existed as the no-model degradation: 0.63 s instead of
   6.17 s, with the model stack never imported. It selects different keys on
   vocabulary-poor questions, by design, and is documented as a trade-off rather than a
-  substitute. See [operations](operations.md#model-free-lexical-mode).
+  substitute. See [operations](runtime.md#model-free-lexical-mode).
 - **One failure, one exception class.** The in-process SDK path raised the service's
   own `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`. All
   three now raise `MemoryClientError`, with the same code, message and status. A genuine
@@ -193,7 +224,7 @@ difference was an abstention: a question semantic ranking answered, lexical rank
 abstained on. Shipping it would have made `NO_RELEVANT_MEMORY` depend on whether the
 model happened to be cached on that machine. Not built. An *explicit* lexical mode
 ships instead, which is the same rung taken on purpose. See
-[operations](operations.md#why-not-a-lexical-fast-path).
+[operations](runtime.md#why-not-a-lexical-fast-path).
 
 ## Measured at the five-minute path
 
@@ -227,20 +258,40 @@ one claim.
 **Portability.** A bare `pip install mindpalace-os`, with no CLI extra and no
 database URL, verifies a file written by `mindpalace receipt`.
 
-## Verified invariants
+## Invariants, and when each was last measured
 
-All re-verified at `f52272d`.
+Each row names the commit that produced its evidence. A row without a commit
+was not measured at the current head, and quoting it as current would be the
+same error as the `1583` figure this table used to carry.
 
-| Invariant | Evidence |
-|---|---|
-| Deleting every L2 row leaves authoritative memory byte-identical | 12/12 packs identical, one digest |
-| Rebuilding L2 restores the same digest | 12/12 packs identical, same digest within a run. **Caveat below:** the absolute digest is not reproducible across runs |
-| The Memory Pack reader needs no server | clean-venv import pulls in no heavy dependency |
-| Retrieval cannot create authority | 202 questions, 0 untrusted claims, 0 injection markers in claims or evidence |
-| Answers survive a missing model | 202/202 answered, 163 correct |
-| Answers survive a missing retrieval path | 202/202 answered, 163 correct |
-| Authoritative output does not depend on the claim cache | 202 packs identical with L2 destroyed including the cache |
-| Corpus isolation holds | `tests/test_corpus_isolation.py`, `tests/test_corpus_scope.py` |
+| Invariant | Evidence | Measured at |
+|---|---|---|
+| Deleting every L2 row leaves authoritative memory byte-identical | 12/12 packs identical, one digest | `f52272d`. **Not re-verified at head — see below** |
+| Rebuilding L2 restores the same digest | 12/12 packs identical, same digest within a run. **Caveat below:** the absolute digest is not reproducible across runs | `f52272d`. **Not re-verified at head — see below** |
+| The Memory Pack reader needs no server | clean-venv import pulls in no heavy dependency | `f52272d` |
+| Retrieval cannot create authority | 202 questions, 0 untrusted claims, 0 injection markers in claims or evidence | `f52272d` |
+| Answers survive a missing model | 202/202 answered, 163 correct | `f52272d` |
+| Answers survive a missing retrieval path | 202/202 answered, 163 correct | `f52272d` |
+| Authoritative output does not depend on the claim cache | 202 packs identical with L2 destroyed including the cache | `f52272d` |
+| Corpus isolation holds | `tests/test_corpus_isolation.py`, `tests/test_corpus_scope.py` | **re-verified at head: 24 passed** |
+
+**Why the first two rows are not re-verified, established this session.**
+`scripts/benchmark/m011_rebuildability.py` builds a fresh per-run schema
+(`CREATE SCHEMA "m011_<uuid>"`) and replays `migrations/versions/*.py` into it.
+Migrations `008` and `009` create functions with `SET search_path = public`, so
+at `CREATE FUNCTION` time PostgreSQL validates the body against `public` — which
+in that database is empty. The run aborts:
+
+```
+asyncpg.exceptions.UndefinedTableError: relation "memory_principals" does not exist
+[SQL: CREATE OR REPLACE FUNCTION mindpalace_resolve_credential(presented_hash CHAR(64))
+```
+
+The invariant itself may well still hold; what cannot be done is re-measuring it
+with the harness as shipped. This is a defect in the harness-versus-migration
+pair, not a statement about the archive: the same `search_path` pinning was
+already found and documented in [the withdrawn record](withdrawn/README.md) as
+breaking schema replay.
 
 Evidence: `docs/performance/baseline-packs.json` <- key: set_digest
 
@@ -262,22 +313,129 @@ and never the absolute digest value.
 
 ## Correctness
 
-**Headline: on questions written by someone other than the authors, the system
-answers 131 of 157 correctly (83.4%, Wilson 95% CI 76.8%-88.6%) [v0.8.0].** The
-202-question benchmark reports 194/202 (96.0%, 92.7%-97.7%), but that set is a
-development set with eight known failures, and it must not be quoted as accuracy
-on unseen questions.
+**An accuracy figure is not the useful number.** "131/157" averages a right answer
+together with a wrong one, and an integrator cannot tell from it whether they can
+act on an answer without re-checking it. The breakdown below separates the four
+outcomes. It is produced by `scripts/quality_frame.py` from the two frozen
+artifacts and written to `docs/performance/quality-frame.json`:
+
+```bash
+python scripts/quality_frame.py
+```
+
+| Outcome | held-out v1 (n=157) | frozen M006.75 (n=60) |
+|---|---:|---:|
+| correct | 116 (73.9%) | 37 (61.7%) |
+| abstained when answerable | 11 (7.0%) | 5 (8.3%) |
+| answered wrong | 14 (8.9%) | 8 (13.3%) |
+| abstained correctly | 15 (9.6%) | 10 (16.7%) |
+| **answered when it should have abstained** | **1 (0.6%)** | **0 (0.0%)** |
+
+Evidence: `docs/performance/quality-frame.json` <- key: heldout_v1.confident_wrong
+
+**The bottom row is what decides whether this is safe to build on.** One question
+in 157, and zero in 60: the system almost always declines rather than inventing.
+That is the property that makes a memory subsystem worth having, and no aggregate
+shows it.
+
+**But read the runner's own note before taking credit for that 1.** The question
+`ho-abs-office-cat` expects no memory, the system returned nothing, and the
+frozen grader recorded it as incorrect (`expect_state=ABSENT`, `failure='F7'`).
+Returning nothing when nothing exists is the correct behaviour, and
+`docs/performance/quality-frame.json` says exactly that in its own `notes` field.
+**On held-out v1 the product's confident-wrong count is 0; the grader's is 1.**
+The disagreement is unfixed and is counted as a grader defect, not a product one.
+
+**The costs are real and they are not small.** 11 held-out questions where the
+archive had the answer and the system returned nothing, and 14 where it returned
+something wrong. That is 25 of 157 — roughly one held-out question in six is a
+product limitation rather than a success.
+
+Two caveats stated rather than buried:
+
+* One held-out question (`ho-abs-office-cat`) expected no memory, returned no
+  memory, and was graded incorrect by the frozen grader. It is counted as an
+  abstention above because the behaviour is the behaviour, but the grader and this
+  table disagree about it, and that disagreement is itself unfixed.
+* The frozen artifact records `exact = 47`. The reproducibility report says the
+  current source produces 45, and did not already produce 47 at `v0.8.0`. The
+  rows above are computed from the artifact as stored, so they are the artifact's
+  numbers, not the current source's.
+
+Evidence: `docs/performance/m0130-heldout.json` <- key: summary.strategies.C_fallback
+
+### The next held-out set is written and frozen, and unscored
+
+`docs/performance/heldout-v3-freeze.json`, dataset hash
+`d52545673ce864a9d774417085dc05f1a1d1df9be5b625107d088d42866175fb`:
+**45 questions**, 31 expecting a current fact, 3 historical, 1 conflicting, 10
+where the correct answer is silence. Regenerate with
+`python scripts/freeze_heldout_v3.py`; the hash is over the canonical question
+rows, so editing a question changes it. **It is not an independent set** -- see
+[heldout-v3-README.md](performance/heldout-v3-README.md).
+
+Named **v3**, not v2: `docs/performance/heldout-v2-freeze.json` already exists,
+32 questions, frozen 2026-10-04 and already scored. A second set called "v2"
+would make the identifier mean two things.
+
+Authored from the ten maintainer questions in
+[the first-hour audit](first-hour-audit.md) and from the question shapes the
+measured failure classes predict, paraphrased rather than quoted. No retrieval
+code was read while writing them. **It has not been scored.** Scoring happens
+once, at one commit, and any retrieval change tuned against it is a development
+result that has to be reported as one.
+
+The aggregate figures remain, because the release documents have always quoted
+them and removing them would break citations in the changelog:
+
+### Three scores, and they are not the same kind of number
+
+**Read this table before quoting any single figure from it.** They differ in what
+was tuned on them, and one of them has been used for diagnosis.
+
+| set | n | score | what it is |
+|---|---:|---|---|
+| **development** | 202 | **194/202 (96.0%)** | **DEVELOPMENT SCORE. Not an accuracy on unseen questions.** Retrieval, ranking and thresholds were all tuned against these 202 questions. Eight known failures remain and are listed individually below. |
+| **held-out v1** | 157 | 131/157 (83.4%, Wilson 95% CI 76.8%-88.6%) | Authored independently and frozen before retrieval code was touched, then **used to diagnose failures**. Any fix tuned against it is a development result. Treat as a diagnostic instrument, not a measurement. **Burned.** |
+| **frozen M006.75** | 60 | 45/60 exact, 55/60 abstention-exact, 0 execution failures, all seven safety invariants 60/60 | The least-tuned set here, and still only 60 questions. It is the one set that has not been used for diagnosis. |
+
+**194/202 is a development score and must never be presented as the product's
+accuracy.** Quoting it alone, or in a headline, overstates the evidence by the
+13-point gap to held-out v1 and by more than that to any set nobody has tuned
+against — which does not exist. The four-way breakdown further down is the part
+that matters operationally.
 
 The canonical authored benchmark, 202 questions, dataset hash
 `9cdecda73cbdc8ae`:
 
-| Strategy | Score |
-|---|---:|
-| semantic always | 178/202 |
-| lexical always | 164/202 |
-| lexical, then semantic | **194/202** (dev set, not a held-out result) |
+| Strategy | Score | |
+|---|---:|---|
+| semantic always | 178/202 | development |
+| lexical always | 164/202 | development |
+| lexical, then semantic | **194/202** | **development — not a held-out result** |
 
 Evidence: `docs/performance/m0115-experiments.json` <- key: summary.strategies.C_fallback
+
+### The four-way breakdown of held-out v1
+
+131/157 averages a right answer together with a wrong one. The table in
+**Correctness** above splits the same 157 into the four outcomes an integrator
+would have to act on, and that is the canonical statement. Two things about it
+belong here as well, next to the aggregate:
+
+**The costs are real and they are not small.** 11 held-out questions where the
+archive had the answer and the system returned nothing, and 14 where it returned
+something wrong. That is 25 of 157 — roughly one held-out question in six is a
+product limitation rather than a success.
+
+**The confident-wrong count is 1 on held-out v1 and 0 on the frozen set — and the
+runner says the held-out 1 is a grader disagreement, not a product failure.** The
+question `ho-abs-office-cat` expects no memory, the system returned nothing, and
+the grader recorded it as incorrect (`expect_state=ABSENT`, `failure='F7'`).
+Returning nothing when nothing exists is the correct behaviour. The runner's own
+note in the artifact says so, and this document repeats it rather than quietly
+taking the credit: **on held-out v1 the product's confident-wrong count is 0, and
+the grader's is 1.**
 
 The eight failures are fixed and classified, not a moving target:
 
@@ -520,19 +678,76 @@ No multi-hop relationship reasoning is claimed or supported.
 
 ### 5. A handful of gates are unmeasured
 
-Deleting a corpus whose archive still references it returns 409 by design, but the
-end-to-end operator path for archive retention and erasure is still unresolved, and
-tombstones retain their evidence.
+Deleting a corpus used to return 409 whenever the archive referenced it, so a corpus
+that had ever recorded a fact could never be removed. That is now implemented:
+migration `009` adds `mindpalace_erase_corpus`, one SECURITY DEFINER function that
+re-checks the caller's transaction-local tenant scope, takes the advisory lock every
+writer takes, and removes all nine archive tables in dependency order plus the live
+projection and every credential's grant. The runtime role holds no `DELETE` on the
+archive, so that function is the only path; the append-only triggers still refuse
+every ordinary `DELETE`, `UPDATE` and `TRUNCATE`.
 
-Authentication is not built. Corpus namespaces are separation, not authorization,
-and an owner is not a tamper-proof boundary.
+What it does **not** remove is unchanged and stated: receipts and Memory Packs a
+customer exported, database backups, and copies they stored elsewhere. There is no
+cryptographic erasure and no TTL or purge — rows are deleted, not shredded — so
+backup retention remains the operator's obligation and its window is the known cost.
+See [security.md](security.md#data-lifecycle-deletion-erasure-and-what-survives).
 
-### 6. The wheel ships research tooling
+Authentication and authorization are built for shared deployments and are off by
+default: `MIND_PALACE_DEPLOYMENT=server` (which refuses to start unless
+`MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_INGEST_ROOTS` are set and the connected
+database role actually enforces the policies) plus a least-privileged runtime role.
+An unrecognised profile value is refused rather than reinterpreted. Corpus namespaces
+remain *not* authorization on their own, and an owner is not a tamper-proof boundary.
+What changed is that naming a corpus is no longer the decision — a bearer credential
+is, and PostgreSQL row-level security is beneath it, on every surface: REST, the
+Python SDK, the local runtime socket and MCP. Roles are finer than read/write:
+`corpus_admin` can erase the corpora it holds grants on, `principal_admin` can issue
+credentials, and a workspace credential can no longer mint authority.
+`mindpalace posture` reports whether the connected role enforces the policies, can
+enumerate credential hashes, or can delete from the archive. `/health/ready`
+reports only the verdict — `503` when the policies are not in force — because it is
+read by whatever probes the service. See [security.md](security.md).
 
-The distribution includes 32 files under `scripts/benchmark/`. The packaging
-configuration has included `scripts*` since `v0.6.0`, so this is pre-existing, but
-the release grew that directory substantially. It affects artifact size, not
-correctness, and changing it is a packaging decision rather than a documentation one.
+### 6. The wheel no longer ships research tooling **[v0.9.1] — resolved**
+
+`scripts/` was in the distribution's `include` list from `v0.6.0`. Measured: **54
+files, 590 KB of 1,328 KB unpacked — 44% of the distribution** — of which 48 were
+`scripts/benchmark/`. Nothing in `api/`, `cli/` or any top-level module imports it;
+the three test modules that do (`test_m009_feed_integration`,
+`test_verifiable_memory_release`, `test_m00675_reproducibility`) run from a checkout,
+where `scripts/` is present.
+
+The wheel is now **227 KB / 74 files, down from 425 KB / 129**. The repository still
+ships those scripts, which is where `check_versioning.py`, `check_evidence.py` and the
+benchmark harnesses run from, so reproducing the published numbers still means cloning
+— which is what the instructions already said.
+`tests/test_release_packaging.py` keeps the boundary shut.
+
+### 7. A cached read still pays the model import **[v0.9.1] — measured, not changed**
+
+A semantic read whose claim vectors are *all* already cached still costs ~6.6 s on
+mains, against ~0.67 s for the same read with `MIND_PALACE_LEXICAL=1`. The cause is a
+single argument: `memory_query.py:267` passes `embedder.dimension` to `load_cached`,
+and `Embedder.dimension` calls `_get_model()` — so the read imports
+`sentence_transformers` purely to learn a number.
+
+`memory_claim_embeddings.embedding_dimension` already stores it, so the information is
+available without the model. **Not changed in this release.** The read path is the
+authoritative one, and a dimension that disagreed with the configured model would
+silently corrupt ranking rather than fail. A patch release is the wrong place to take
+that risk on evidence this thin. It is a real saving for anyone not using the runtime,
+and it is recorded here as a candidate rather than quietly taken.
+
+### Python 3.15 lazy imports **[v0.9.1] — evaluated, not adopted**
+
+Measured on CPython 3.15.0rc1; the full table is in
+[the release map](release-map.md#python-315-lazy-imports-were-evaluated-and-not-adopted).
+The short version: the model stack costs 5.61 s to import against a 0.11 s CLI import
+graph, and `sentence_transformers` is *already* deferred inside
+`Embedder._get_model()`, so lazy imports have nothing to remove on the path that
+dominates. `-X lazy_imports=all` additionally breaks real commands with a partial
+SQLAlchemy initialisation. Nothing shipped; the supported floor stays `>=3.11`.
 
 ## Rejected work, with the measurement that rejected it
 
@@ -540,6 +755,7 @@ Recorded so the same ground is not covered twice.
 
 | Candidate | Result |
 |---|---|
+| Python 3.15 lazy imports (narrow and global) | Model stack is 5.61 s of a ~5.7 s non-interpreter cost and is already deferred inside `Embedder._get_model()`; the addressable surface is ~2%. `-X lazy_imports=all` breaks SQLAlchemy dialect init |
 | Set-based archive load rewrite | Removed the quadratic scan, but a generic-plan cliff made it 12x worse in production |
 | Candidate narrowing before projection | 170/202 equivalent answers |
 | Per-document current-version pointer | 3.6 ms of a 20,894 ms query |

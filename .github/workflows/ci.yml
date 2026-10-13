@@ -5,6 +5,11 @@ on:
     branches:
       - main
       - feat/reranker
+      # Added so this branch's CI actually runs. A branch that pushes nothing
+      # and gates nothing is a branch whose green is a local memory: the whole
+      # point of a runner is that it is not this machine. Removed when the
+      # branch merges.
+      - wip/platform-readiness
   pull_request:
     branches:
       - main
@@ -44,11 +49,24 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      # The CPU index, because the runner has no GPU and the default PyPI torch
+      # wheel is the CUDA build.
+      #
+      # Measured this session, torch 2.9.1 cp311 linux x86_64:
+      #   default PyPI wheel   900 MB, and it depends on the nvidia-* tree
+      #   CPU index wheel      184 MB
+      # The 716 MB is the wheel alone; the nvidia wheels it drags in are larger
+      # again. Nothing in this suite uses CUDA, so the runner was downloading a
+      # GPU stack it could never execute -- which is also why `cache: pip` had
+      # little to save on a cold key and why a dependency bump re-downloaded
+      # gigabytes for no behavioural change.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install -e .
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r requirements.txt
+          python -m pip install --no-deps -e .
+          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
       - name: Verify package imports
         run: |
@@ -66,6 +84,125 @@ jobs:
         run: |
           python -m pip install pgvector
           python -m alembic -c migrations/alembic.ini -x script_location=migrations upgrade head
+
+      # The tenant-isolation suite is only meaningful against a role that cannot
+      # bypass row-level security, and the `postgres` service creates `mpadmin` as
+      # a superuser. `scripts/db/runtime_roles.sql` adds the least-privileged role
+      # the application would actually use; the suite creates it itself so a
+      # missing role fails loudly instead of skipping.
+      #
+      # The password is supplied here because the script refuses to provision a
+      # role that cannot log in -- which reads as an RLS problem and is not one.
+      - name: Provision the least-privileged runtime role
+        run: |
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -v runtime_password=ci-runtime-role-password \
+            -f scripts/db/runtime_roles.sql
+
+      # The script must work on a database that has never had it applied. Running
+      # it twice proves both that the grants are idempotent and that a rotation
+      # (running it again with a new password) is what the documentation claims.
+      - name: The role script is safe to re-run
+        run: |
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -v runtime_password=ci-runtime-role-password \
+            -f scripts/db/runtime_roles.sql
+          PGPASSWORD=ci-runtime-role-password psql \
+            postgresql://mindpalace_runtime@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -tAc "SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user"
+
+      # These two run IMMEDIATELY after provisioning, not at the end of the job.
+      #
+      # They used to run last, after `Run tests` and `Tenant isolation`. That
+      # ordering was wrong and it failed on every runner:
+      #
+      #   tests/tenant_harness.py:66  RUNTIME_PASSWORD = "tenant-isolation-test-password"
+      #
+      # and the harness runs a modified copy of scripts/db/runtime_roles.sql
+      # against $DATABASE_URL. On CI that is the SHARED mindpalace database, so
+      # the tenant-isolation step rotates the runtime role's password. Every
+      # later step that authenticates as mindpalace_runtime with
+      # ci-runtime-role-password then fails to connect, and `posture` degrades
+      # to "unknown means not proven" -- reporting all 13 protected tables as
+      # unprotected. The database was fine. The check was pointed at a
+      # database whose role had been rotated underneath it.
+      #
+      # Measured, after reproducing the exact sequence on a disposable database:
+      #   before the tenant-isolation subset : posture PASS, all 13 tables rls+force
+      #   after  the tenant-isolation subset : role 'unknown', password auth failed
+      #
+      # Posture is a property of the DEPLOYMENT, so it belongs where the
+      # deployment is built, not where the tests have finished trampling it.
+      # The identity check has to run as the maintenance role or it is vacuous:
+      # `mindpalace_resolve_credential` is SECURITY DEFINER, so the least-
+      # privileged role authenticates through it exactly as production does.
+      # This is a NEGATIVE test: starting as a role that bypasses row-level
+      # security must fail, and must say why.
+      #
+      # It used to assert that `import api.main` fails. That is the wrong entry
+      # point, and api/main.py says so in its own docstring: importing the module
+      # must not require a connection, so the database posture is checked in the
+      # lifespan, before the server accepts a request. Asserting the import
+      # refused tested a behaviour the product deliberately does not have, and it
+      # failed on the first real runner for exactly that reason.
+      #
+      # It is strengthened, not relaxed: it now asserts BOTH a nonzero exit AND
+      # the refusal reason, so a crash for any other reason -- a typo in a URL, a
+      # missing driver -- cannot be mistaken for a posture refusal.
+      - name: A server deployment refuses an unsafe database role
+        env:
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_DEPLOYMENT: server
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_INGEST_ROOTS: /content
+        run: |
+          set +e
+          python - <<'PYEOF' > /tmp/posture.out 2>&1
+          import asyncio
+          from api.main import enforce_startup_posture
+          asyncio.run(enforce_startup_posture())
+          PYEOF
+          code=$?
+          set -e
+          cat /tmp/posture.out
+          if [ "$code" -eq 0 ]; then
+            echo "::error::started as the cluster superuser, which bypasses every"
+            echo "::error::row-level policy. A server deployment must refuse."
+            exit 1
+          fi
+          if ! grep -q "refusing to start" /tmp/posture.out; then
+            echo "::error::startup exited nonzero but did not say it refused to start."
+            echo "::error::A crash is not a posture refusal; the step must prove the reason."
+            exit 1
+          fi
+          echo "refused as expected, with a reason"
+
+      # And the positive half: the SAME check, on the least-privileged role, must
+      # pass. Run through the lifespan too, so this proves startup rather than
+      # import -- which is the thing the negative step above actually tests.
+      - name: A server deployment starts on the least-privileged role
+        env:
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
+          MIND_PALACE_DEPLOYMENT: server
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_INGEST_ROOTS: /content
+        run: |
+          python -c "from api.main import app; print('server profile accepted the runtime role')"
+          python - <<'PYEOF'
+          import asyncio
+          from api.main import enforce_startup_posture
+          asyncio.run(enforce_startup_posture())
+          print('lifespan posture check passed on the least-privileged role')
+          PYEOF
+
+
+      # A deployment must not be tenant-safe by accident. `mindpalace posture`
+      # exits non-zero when the role would bypass the policies, so this fails the
+      # build rather than leaving it to an operator to notice in production.
+      - name: The runtime role cannot bypass row-level security
+        env:
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
+        run: python -m cli.main posture
 
       - name: Run linting
         run: |
@@ -133,6 +270,100 @@ jobs:
           TRANSFORMERS_OFFLINE: "1"
         run: |
           pytest -q
+
+      # Tenant isolation, as a separate step so a leak cannot hide inside a green
+      # run: it needs the pinned models off, the runtime role present, and a
+      # visible place for a failure to land. Same command the rest of the suite
+      # uses, not a parallel runner, so there is one way to run the tests.
+      #
+      # `test_credential_management.py` is in this list, not the general one:
+      # it covers the surfaces that are not HTTP -- the runtime socket, the
+      # unnamed SDK client, MCP -- and a bypass there is as real as one on a route.
+      #
+      # `test_scope_forgery.py` and `test_error_and_log_hygiene.py` are here for
+      # the same reason. The first asserts against the real runtime role that the
+      # `{*}` sentinel cannot be self-asserted, and fails on `009`; the second
+      # asserts that an unhandled error neither returns nor logs the row that
+      # PostgreSQL puts in its constraint detail. Both are fast, and neither
+      # belongs in a run that only passes if the whole suite is green.
+      - name: Tenant isolation, against the least-privileged role
+        env:
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_AUTH_MODE: required
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          pytest -q tests/test_tenant_isolation.py \
+                     tests/test_tenant_connection_isolation.py \
+                     tests/test_tenant_control_effectiveness.py \
+                     tests/test_credential_management.py \
+                     tests/test_deployment_profiles_and_lifecycle.py \
+                     tests/test_operator_cli.py \
+                     tests/test_marketing_reference_integration.py \
+                     tests/test_scope_forgery.py \
+                     tests/test_error_and_log_hygiene.py
+
+      # Opt-in inside the test, because it creates and drops a database. It is the
+      # only place the migration chain is driven `up -> down -> up`, and a
+      # downgrade that throws leaves an operator with no way back.
+      - name: The migration chain survives a downgrade and a re-apply
+        env:
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_MIGRATION_ROUNDTRIP: "1"
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          pytest -q tests/test_deployment_profiles_and_lifecycle.py \
+                     -k migrations_apply_downgrade_and_reapply
+
+      # The reference integration has to be runnable on its own, from a clean
+      # checkout, exactly as its README says -- an example that only works when
+      # another test has already seeded the database is not evidence of anything.
+      # This is a CLIENT example. examples/marketing-campaign-memory/README.md
+      # says so in its own "Run it" section, in two shells:
+      #
+      #   1. MIND_PALACE_AUTH_MODE=required uvicorn api.main:app --port 8000
+      #   2. python examples/marketing-campaign-memory/demo.py
+      #
+      # The step ran only the second one, so the demo tried to reach
+      # 127.0.0.1:8000 and died with `httpx.ConnectError: All connection
+      # attempts failed`. It is a real HTTP client by design -- it imports none
+      # of Mind Palace -- so there is nothing for it to fall back to.
+      #
+      # This never showed up before because every earlier step in the job failed
+      # first and this one was skipped. A skipped step is not a passing step.
+      - name: The marketing reference integration runs standalone
+        env:
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_RUNTIME: "0"
+          MIND_PALACE_URL: http://127.0.0.1:8000
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          set -euo pipefail
+          # The service, in this shell rather than another: a CI step has one.
+          # `python -m uvicorn` rather than the console script, so it cannot pick up a
+          # different interpreter from PATH.
+          python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > /tmp/server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          ready=""
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null "$MIND_PALACE_URL/openapi.json"; then ready=1; break; fi
+            if ! kill -0 "$server" 2>/dev/null; then
+              echo "::error::the server exited before becoming ready"
+              cat /tmp/server.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ -z "$ready" ]; then
+            echo "::error::the server never became ready at $MIND_PALACE_URL"
+            cat /tmp/server.log
+            exit 1
+          fi
+          python examples/marketing-campaign-memory/demo.py
 
   five-minute-path:
     name: The five-minute path, from a clean checkout
@@ -351,26 +582,38 @@ jobs:
           ls dist/*.whl
 
       # A fresh venv with no source tree on the path. If the wheel does not ship
-      # the verifier, the runtime entry point, or the CLI extras, this is where it
-      # shows up -- not in a developer's hands after they pip install it.
+      # the verifier, the runtime entry point, or the CLI, this is where it shows
+      # up -- not in a developer's hands after they pip install it.
       #
       # Run from a directory that is not the repository, so a missing module cannot
       # be rescued by the source tree still being on the path.
-      - name: Install the wheel into a clean environment, outside the source tree
+      #
+      # This job asserted `mindpalace-mcp --help` against a *bare* install, which
+      # cannot work: `mcp` is a declared extra, so the import raised
+      # `ModuleNotFoundError: No module named 'mcp'`, and the step's
+      # `|| import mcp_server` fallback failed for exactly the same reason. MCP is
+      # verified in its own step below, from an install that includes the extra.
+      - name: Install the bare wheel, outside the source tree
         working-directory: /tmp
         run: |
           python -m venv /tmp/wheelenv
           /tmp/wheelenv/bin/pip install $GITHUB_WORKSPACE/dist/*.whl
           /tmp/wheelenv/bin/mindpalace --help > /dev/null
           /tmp/wheelenv/bin/mindpalace-proof --help > /dev/null
-          /tmp/wheelenv/bin/mindpalace-mcp --help > /dev/null 2>&1 || \
-            /tmp/wheelenv/bin/python -c "import mcp_server"
           # The CLI starts the runtime as `python -m mindpalace_runtime`. If that
           # module is not packaged, the runtime silently never starts and every
           # command stays 6 seconds with nothing to say why.
           /tmp/wheelenv/bin/python -c "
-          import mindpalace_runtime, api.runtime, cli.runtime
-          print('the runtime entry point and both halves ship in the wheel')
+          import mindpalace_runtime, api.runtime, cli.runtime, mindpalace_sdk
+          import memory_pack, memory_proof, memory_proof_cli, memory_receipt
+          print('bare install: CLI, verifier, SDK and the runtime entry point all ship')
+          "
+          # Recorded before the extra is installed below, because that is the point
+          # being made: the MCP server is opt-in, so a plain install stays small.
+          /tmp/wheelenv/bin/python -c "
+          import importlib.util as u
+          assert u.find_spec('mcp') is None, 'mcp is a declared extra; a bare install must not provide it'
+          print('bare install correctly omits the [mcp] extra')
           "
 
       # The portability claim, tested as a claim: a bare `pip install
@@ -462,11 +705,155 @@ jobs:
           print('dependency-free verifier ships in the wheel')
           "
 
+      # LAST STEP ON PURPOSE. The two steps above depend on this environment being a
+      # genuinely bare install -- the receipt step asserts that the CLI extras are
+      # optional and that a recipient can verify with nothing else present. Adding
+      # `mcp` before it would not break anything, but it would make their claim
+      # untrue, and a test that quietly stops testing what it says is worse than no
+      # test. So the extra goes in last, into the same environment: a second venv
+      # would download the whole multi-gigabyte stack again for one small
+      # pure-Python package.
+      #
+      # The wheel path goes through a variable before `[mcp]` is appended. Globbing
+      # it inline works in bash but zsh reads the unquoted `[mcp]` as a character
+      # class and fails the whole word, so a literal suffix cannot be trusted to a
+      # single shell.
+      #
+      # The check is a real MCP session, not an import. `mindpalace-mcp --help` is
+      # useless here: `main()` takes no arguments and goes straight to
+      # `mcp.run_stdio_async()`, so it would block on stdin until the job timed out.
+      # "It imported" and "it serves" are different claims, and only the second is what
+      # a client depends on.
+      - name: The MCP extra provides the MCP server
+        working-directory: /tmp
+        run: |
+          wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
+          /tmp/wheelenv/bin/pip install "${wheel}[mcp]"
+          test -x /tmp/wheelenv/bin/mindpalace-mcp
+          /tmp/wheelenv/bin/python - <<'PY'
+          import json, subprocess, sys
+
+          REQUESTS = [
+              {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+               "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                          "clientInfo": {"name": "wheel-job", "version": "0"}}},
+              {"jsonrpc": "2.0", "method": "notifications/initialized"},
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+          ]
+
+          server = subprocess.Popen(
+              ["/tmp/wheelenv/bin/mindpalace-mcp"],
+              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+              stderr=subprocess.DEVNULL, text=True, bufsize=1,
+          )
+          replies = {}
+          try:
+              for request in REQUESTS:
+                  server.stdin.write(json.dumps(request) + "\n")
+                  server.stdin.flush()
+                  if "id" not in request:
+                      continue  # a notification draws no reply
+                  line = server.stdout.readline()
+                  assert line, "the MCP server closed stdout without answering"
+                  replies[json.loads(line)["id"]] = json.loads(line)
+          finally:
+              server.kill()
+              server.wait(timeout=30)
+
+          init = replies[1]["result"]
+          assert init["serverInfo"]["name"] == "mind-palace", init
+          tools = replies[2]["result"]["tools"]
+          names = sorted(tool["name"] for tool in tools)
+          assert len(tools) == 15, names
+          for required in ("memory_recall", "memory_explain", "memory_evidence",
+                           "memory_replay", "memory_pack"):
+              assert required in names, f"{required} missing from tools/list"
+          undocumented = [t["name"] for t in tools if not t.get("description")]
+          assert not undocumented, f"tools a client cannot call: {undocumented}"
+          print(f"the [mcp] extra serves a real MCP session: protocol "
+                f"{init['protocolVersion']}, {len(names)} tools, all documented")
+          PY
+
+  # Upgrade safety. Every other job measures the code as it is now; this one
+  # measures code that no longer exists meeting code that does.
+  #
+  # It builds a database with v0.9.0 -- from the TAG, not a branch -- populates it
+  # through v0.9.0's own `remember`, exports a receipt and a Memory Pack with
+  # v0.9.0, then upgrades to this branch's head and asserts that the old receipt
+  # still verifies offline, that no claim identity moved, that no claim was lost,
+  # and that the pack is byte-identical once the clock is pinned. Then it
+  # downgrades to 007 and back up, and asserts the same things.
+  #
+  # The fixture is built with the OLD code on purpose. An upgrade test that builds
+  # its fixture with the new code reads back its own assumptions and calls the
+  # migration safe.
+  upgrade-safety:
+    name: Upgrade safety, from v0.9.0
+    runs-on: ubuntu-latest
+    needs: tests
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # The v0.9.0 worktree this job checks out. `fetch-depth: 0` above is not
+          # enough on its own; the tag object has to be present.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r requirements.txt
+          python -m pip install --no-deps -e .
+
+      - name: Provision the pinned model weights
+        run: python scripts/ci/provision_models.py
+
+      - name: Verify the pinned models load offline
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: python scripts/ci/provision_models.py --verify
+
+      - name: Build a v0.9.0 archive and upgrade it to head
+        env:
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_CURSOR_SECRET: upgrade-safety-ci-cursor-secret-0000000000000000000000
+        run: ./scripts/release/upgrade_safety.sh
+
   build:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: tests
-    if: github.ref == 'refs/heads/main'
+    # The BUILD runs on every branch. It used to be gated behind
+    # `github.ref == 'refs/heads/main'`, which meant no branch could find out
+    # whether its Dockerfile still worked until after it merged -- and a broken
+    # Dockerfile is not something to discover at the moment of release.
+    #
+    # What stays main-only is PUSHING the image, and nothing here pushes: there is
+    # no registry login on a feature branch, so there is no credential to leak.
 
     steps:
       - name: Checkout repository
@@ -474,3 +861,33 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t mindpalace:latest .
+
+      # Built is not the same as working. An image that builds but cannot reach a
+      # database, or that publishes a port the docs say it must not, is not done.
+      - name: Start a database the image can reach
+        run: |
+          docker run -d --name mp-pg \
+            -e POSTGRES_DB=mindpalace \
+            -e POSTGRES_USER=mpadmin \
+            -e POSTGRES_PASSWORD=secret \
+            -p 5432:5432 pgvector/pgvector:pg15
+          for _ in $(seq 1 30); do
+            docker exec mp-pg pg_isready -U mpadmin >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker exec mp-pg pg_isready -U mpadmin
+
+      - name: The image does not publish a port unless asked
+        run: |
+          set -euo pipefail
+          # Assert the behaviour docs/security.md claims instead of trusting the
+          # prose. If the image published on 0.0.0.0 by default this fails, which
+          # is the entire point of the assertion.
+          docker run --rm mindpalace:latest --help >/dev/null 2>&1 || true
+          docker ps -a --filter ancestor=mindpalace:latest --format '{{.Ports}}' \
+            | tee /tmp/published
+          if grep -qE '0\.0\.0\.0:[0-9]+' /tmp/published; then
+            echo "::error::the image published a port on 0.0.0.0 without being asked to"
+            exit 1
+          fi
+          echo "no port published by default"

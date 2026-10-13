@@ -1,0 +1,325 @@
+{
+  "categories": {
+    "absence": 6,
+    "conflict": 1,
+    "constraint": 5,
+    "current_fact": 12,
+    "historical": 3,
+    "multi_topic": 4,
+    "near_miss": 4,
+    "relationship": 4,
+    "scope_confusion": 2,
+    "why_decision": 4
+  },
+  "dataset_hash": "d52545673ce864a9d774417085dc05f1a1d1df9be5b625107d088d42866175fb",
+  "expect_states": {
+    "ABSENT": 10,
+    "CONFLICTING": 1,
+    "CURRENT": 31,
+    "HISTORICAL": 3
+  },
+  "question_rows": [
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-cur-01",
+      "text": "Which database engine does this project depend on today?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-cur-02",
+      "text": "What is the primary data store in use right now?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-cur-03",
+      "text": "Name the component that owns order processing."
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-cur-04",
+      "text": "Where does the team log audit records?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-cur-05",
+      "text": "Which message broker carries order events?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-cur-06",
+      "text": "What backs the order event stream today?"
+    },
+    {
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "qid": "hv3-why-01",
+      "text": "The team moved off the earlier database engine. What capability drove that?"
+    },
+    {
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "qid": "hv3-why-02",
+      "text": "Why is order processing handled by the service it is handled by?"
+    },
+    {
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "qid": "hv3-why-03",
+      "text": "What problem was the current event transport chosen to solve?"
+    },
+    {
+      "category": "why_decision",
+      "expect_state": "CURRENT",
+      "qid": "hv3-why-04",
+      "text": "The audit destination changed at some point. What motivated that?"
+    },
+    {
+      "category": "historical",
+      "expect_state": "HISTORICAL",
+      "qid": "hv3-his-01",
+      "text": "What database engine was in use before the present one?"
+    },
+    {
+      "category": "historical",
+      "expect_state": "HISTORICAL",
+      "qid": "hv3-his-02",
+      "text": "Which service handled orders previously, and what took over?"
+    },
+    {
+      "category": "historical",
+      "expect_state": "HISTORICAL",
+      "qid": "hv3-his-03",
+      "text": "Where were audit records written before the current destination?"
+    },
+    {
+      "category": "absence",
+      "expect_state": "ABSENT",
+      "qid": "hv3-abs-01",
+      "text": "Which vendor supplies the office coffee?"
+    },
+    {
+      "category": "absence",
+      "expect_state": "ABSENT",
+      "qid": "hv3-abs-02",
+      "text": "What is the team's end-to-end recovery time objective?"
+    },
+    {
+      "category": "absence",
+      "expect_state": "ABSENT",
+      "qid": "hv3-abs-03",
+      "text": "Who signs off on hardware purchases?"
+    },
+    {
+      "category": "absence",
+      "expect_state": "ABSENT",
+      "qid": "hv3-abs-04",
+      "text": "What is the monthly budget for the observability stack?"
+    },
+    {
+      "category": "absence",
+      "expect_state": "ABSENT",
+      "qid": "hv3-abs-05",
+      "text": "Which law firm handles employment disputes?"
+    },
+    {
+      "category": "absence",
+      "expect_state": "ABSENT",
+      "qid": "hv3-abs-06",
+      "text": "How many support tickets were open last quarter?"
+    },
+    {
+      "category": "near_miss",
+      "expect_state": "ABSENT",
+      "qid": "hv3-near-01",
+      "text": "Summarise the project's security posture."
+    },
+    {
+      "category": "near_miss",
+      "expect_state": "ABSENT",
+      "qid": "hv3-near-02",
+      "text": "What is the capital of the country the team operates in?"
+    },
+    {
+      "category": "near_miss",
+      "expect_state": "ABSENT",
+      "qid": "hv3-near-03",
+      "text": "List every environment variable this project reads."
+    },
+    {
+      "category": "scope_confusion",
+      "expect_state": "CURRENT",
+      "qid": "hv3-scope-01",
+      "text": "Which component owns risk decisions, as distinct from the one that owns data?"
+    },
+    {
+      "category": "scope_confusion",
+      "expect_state": "CURRENT",
+      "qid": "hv3-scope-02",
+      "text": "For order events specifically, which component is authoritative?"
+    },
+    {
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "qid": "hv3-rel-01",
+      "text": "Which team is accountable for the service that stores orders?"
+    },
+    {
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "qid": "hv3-rel-02",
+      "text": "What does the order-event consumer depend on?"
+    },
+    {
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "qid": "hv3-rel-03",
+      "text": "Which component is on the critical path for replaying an order?"
+    },
+    {
+      "category": "constraint",
+      "expect_state": "CURRENT",
+      "qid": "hv3-con-01",
+      "text": "What is the retention limit on order events?"
+    },
+    {
+      "category": "constraint",
+      "expect_state": "CURRENT",
+      "qid": "hv3-con-02",
+      "text": "How many replicas must the event stream run?"
+    },
+    {
+      "category": "constraint",
+      "expect_state": "CURRENT",
+      "qid": "hv3-con-03",
+      "text": "What is the maximum payload size the order endpoint accepts?"
+    },
+    {
+      "category": "constraint",
+      "expect_state": "CURRENT",
+      "qid": "hv3-con-04",
+      "text": "Which constraint limits how long a replay may run?"
+    },
+    {
+      "category": "conflict",
+      "expect_state": "CONFLICTING",
+      "qid": "hv3-cfl-01",
+      "text": "Two components are named as owning order routing. Which are they?"
+    },
+    {
+      "category": "multi_topic",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mul-01",
+      "text": "Which datastore holds orders, and which component consumes order events?"
+    },
+    {
+      "category": "multi_topic",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mul-02",
+      "text": "Where are audit records written, and what is that destination's retention limit?"
+    },
+    {
+      "category": "multi_topic",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mul-03",
+      "text": "What replaced the earlier datastore, and what is the present datastore?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-01",
+      "text": "Which version of this project can a developer install today?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-02",
+      "text": "How many tests pass in the suite?"
+    },
+    {
+      "category": "constraint",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-03",
+      "text": "How much disk space does installing this project require?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-04",
+      "text": "Is erasure from backups supported?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-05",
+      "text": "Which authentication mode does the server deployment profile require?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-06",
+      "text": "What database role should the application connect as?"
+    },
+    {
+      "category": "near_miss",
+      "expect_state": "ABSENT",
+      "qid": "hv3-mnt-07",
+      "text": "Which of these projects has the best retrieval benchmark?"
+    },
+    {
+      "category": "relationship",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-08",
+      "text": "Which components does the event transport sit between?"
+    },
+    {
+      "category": "multi_topic",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-09",
+      "text": "Which datastore holds the archive, and where is the runbook for restoring it?"
+    },
+    {
+      "category": "current_fact",
+      "expect_state": "CURRENT",
+      "qid": "hv3-mnt-10",
+      "text": "What happens when a corpus is deleted?"
+    }
+  ],
+  "questions": 45,
+  "spec": {
+    "arm": "shipped strategy C_fallback (lexical, then semantic)",
+    "authored": "2026-10-11",
+    "categories": {
+      "absence": "something the archive does not contain; the right answer is silence",
+      "conflict": "two live claims that disagree",
+      "constraint": "a limit that constrains an otherwise plausible action",
+      "current_fact": "what is true now about one named thing",
+      "historical": "what was true before, and what replaced it",
+      "multi_topic": "a question spanning two documented areas",
+      "near_miss": "a question that sounds answerable and is not, at the vocabulary boundary",
+      "relationship": "which component owns which responsibility",
+      "scope_confusion": "two similarly named things; the answer is the one that was asked for",
+      "why_decision": "the reasoning behind a choice, asked indirectly"
+    },
+    "corpus": "the benchmark corpus (dataset_hash 9cdecda73cbdc8ae)",
+    "model": "all-MiniLM-L6-v2",
+    "name": "held-out v3",
+    "questions": 45,
+    "rules": [
+      "A question is answerable unless expect_state is ABSENT.",
+      "For an ABSENT question the only correct behaviour is to return nothing.",
+      "A question answered from the wrong document is wrong, not abstention.",
+      "Paraphrase, do not quote: the source sentence must not appear verbatim in the question.",
+      "The scoring rubric is four outcomes, not an accuracy: correct, abstained when answerable, answered wrong, answered when it should have abstained."
+    ],
+    "scoring": "exactly once, at one commit, by a scorer that has not seen retrieval code",
+    "source_of_questions": "the ten maintainer questions from the first-hour audit, plus the question shapes the measured failure classes predict",
+    "valid_at": "2026-01-15T12:00:00+00:00",
+    "why_v3": "held-out v2 already exists (32 questions, frozen 2026-10-04, already scored). A second set under that name would make the identifier ambiguous."
+  }
+}

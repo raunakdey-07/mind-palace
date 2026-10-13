@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
@@ -13,18 +14,52 @@ from api.models.memory import MemoryRequest, MemoryResponse
 
 # --- Ingestion ---
 
+#: The largest single document the service will accept, in characters.
+#:
+#: Read from the environment because the right value depends on the deployment: a
+#: service indexing long-form technical documentation wants a different one from a
+#: service taking meeting notes. It exists because the alternative is unbounded —
+#: one authenticated request could hand the parser and the embedder an arbitrarily
+#: large string and hold a connection for as long as it took to process.
+#:
+#: Four million characters is roughly a very long book. Well past anything a
+#: Markdown document legitimately is, and low enough to bound the work.
+MAX_INGEST_CHARS = int(os.getenv("MIND_PALACE_MAX_INGEST_CHARS", "4000000"))
+
 
 class IngestFileRequest(BaseModel):
     """Request body for POST /api/ingest/file."""
 
-    content: str = Field(..., description="Raw Markdown content (frontmatter + body)")
-    path: str | None = Field(None, description="File path for reference")
+    content: str = Field(
+        ...,
+        max_length=MAX_INGEST_CHARS,
+        description="Raw Markdown content (frontmatter + body)",
+    )
+    path: str | None = Field(None, max_length=2048, description="File path for reference")
+    corpus: str = Field(
+        "default",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9._-]+$",
+        description="Corpus to ingest into. The write is refused for any other corpus.",
+    )
 
 
 class IngestRepoRequest(BaseModel):
     """Request body for POST /api/ingest/repo."""
 
-    repo_path: str = Field(..., description="Local path to the content repository")
+    repo_path: str = Field(
+        ...,
+        max_length=2048,
+        description="Local path to the content repository",
+    )
+    corpus: str = Field(
+        "default",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9._-]+$",
+        description="Corpus to ingest into. The write is refused for any other corpus.",
+    )
 
 
 class IngestResponse(BaseModel):
@@ -97,7 +132,33 @@ class CorpusStatsResponse(BaseModel):
     description: str
     document_count: int
     chunk_count: int = 0
-    last_ingested: str | None = None
+    # An aware datetime, because `corpora.corpus_stats` returns PostgreSQL's
+    # `timestamptz` and declaring it a string made this response a 500 for any
+    # corpus that had actually ingested something. The JSON is unchanged -- a
+    # datetime serialises as an ISO-8601 string -- but the model now matches what
+    # the query produces instead of rejecting it.
+    last_ingested: AwareDatetime | None = None
+
+
+class CorpusDeletionResponse(BaseModel):
+    """What an erasure actually removed.
+
+    A report rather than a boolean, because "the corpus is gone" and "every row
+    of memory the server holds for it is gone" are different claims and a caller
+    planning an offboarding needs the second one.
+
+    `removed` counts rows per table and carries nothing else. No claim text, no
+    quote, no path: an erasure audit trail that reproduced the content it erased
+    would defeat the erasure, so this model has no field in which to put one.
+    """
+
+    corpus: str
+    corpus_id: str | None = None
+    deleted: bool
+    reason: str | None = None
+    removed: dict[str, int] = {}
+    #: Stated rather than implied: what this operation does not reach.
+    not_removed: str
 
 
 class SyncRequest(BaseModel):

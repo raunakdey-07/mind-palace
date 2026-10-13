@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mindpalace-os"
-version = "0.9.0"
+version = "0.9.1"
 description = "Mind Palace - AI-native Research Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,6 +15,11 @@ dependencies = [
     "asyncpg==0.30.0",
     "pydantic>=2.0.0",
     "python-frontmatter>=1.1.0",
+    # Declared here, not only in requirements.txt. `pip install mindpalace-os`
+    # is a documented install path in the README, and the documented migrate step
+    # is `python -m alembic ...`. Without this the bare wheel has no alembic and
+    # that step fails with "No module named alembic" on a clean machine.
+    "alembic>=1.13.0",
     "sentence-transformers>=2.5.0",
     "httpx>=0.27.0",
     "prometheus-fastapi-instrumentator>=7.0.0",
@@ -54,6 +59,7 @@ mindpalace-mcp = "mcp_server:main"
 # memory_proof and memory_proof_cli ship for the same reason: verifying a
 # recorded memory must not require the server, the database or a model.
 py-modules = [
+    "mindpalace_errors",
     "mindpalace_sdk",
     "mcp_server",
     "memory_pack",
@@ -72,11 +78,44 @@ py-modules = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "cli*", "scripts*"]
+# Only the runtime surface ships. `scripts/` is release, benchmark and
+# research tooling that nothing imports at runtime -- 48 of the 54 files there
+# are `scripts/benchmark/`. It stayed in the distribution because `scripts*` has
+# been in this list since v0.6.0. Removing it takes the wheel from 425 KB / 129
+# files to 227 KB / 74, measured, and no installed consumer loses anything:
+# the console scripts, `py-modules` and every `api`/`cli` import are unaffected.
+# The repository still ships them, which is where `check_versioning.py`,
+# `check_evidence.py` and the benchmark harnesses run from.
+include = ["api*", "cli*", "migrations*"]
+
+[tool.setuptools.package-data]
+# `migrations/` is a package (see its `__init__.py`) for exactly this reason: a
+# wheel that ships no migration scripts cannot apply its own schema, and the
+# documented third step of the README -- `python -m alembic -c
+# migrations/alembic.ini upgrade head` -- has nothing to point at. Measured: the
+# bare wheel was 13 MB with no alembic and no migrations, so `pip install
+# mindpalace-os` could not reach a working first command.
+migrations = ["alembic.ini", "*.mako", "versions/*.py", "versions/*.mako"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# The repository root goes on sys.path for EVERY pytest invocation, not just
+# `python -m pytest`.
+#
+# Three test modules import `scripts.benchmark.*` and `scripts.m009_*`, and
+# `scripts/__init__.py` exists so it is an importable package. Under
+# `python -m pytest` the working directory is prepended to sys.path and those
+# imports resolve. Under the `pytest` console script they do not -- and CI runs
+# `pytest -q`, so the first real runner to execute this branch failed collection
+# with `ModuleNotFoundError: No module named 'scripts'` in three modules.
+#
+# The difference is not about the code under test. It is that a developer runs
+# `python -m pytest` out of habit and CI runs `pytest` because that is what you
+# type, so the only place the difference shows up is the machine nobody had
+# looked at yet. Setting the path here makes both invocations identical, and
+# makes any future invocation identical too.
+pythonpath = ["."]
 
 [tool.black]
 target-version = ["py311"]

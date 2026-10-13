@@ -23,12 +23,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ("docs/STATUS.md", "README.md")
+
+#: Written only by an actual pytest run. See `check_test_counts`.
+RUN_RECORD = "docs/performance/test-runs.json"
+
+#: Links that are allowed to point at something git does not track, with the
+#: reason. `/eval/results/` is excluded by .gitignore on purpose: it is the
+#: output of an experiment, not an input, and it is large. The documents that
+#: cite it were written by the person who ran the experiment.
+ALLOWED_DIRS = ("eval/results",)  # checked above on the resolved path
 
 # `docs/performance/x.json` <- key: a.b.c
 CITATION = re.compile(
@@ -77,6 +88,246 @@ def dig(data: object, key: str) -> object:
     return cursor
 
 
+def _recorded_run_counts() -> dict[str, str]:
+    """Read the record of real suite runs, keyed by commit.
+
+    Written only by `scripts/record_test_run.py`, which in turn only runs after an
+    actual pytest invocation. It exists so a document claiming "N passed" can be
+    compared with a number somebody actually observed, rather than with whatever
+    the author believed that day.
+    """
+    path = ROOT / RUN_RECORD
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    runs = data.get("runs")
+    if not isinstance(runs, dict):
+        return {}
+    return {
+        run_id: entry
+        for run_id, entry in runs.items()
+        if isinstance(entry, dict) and re.fullmatch(r"\d+", str(entry.get("passed", "")))
+    }
+
+
+def collected_test_count() -> int | None:
+    """How many tests the tree collects right now, or None if pytest cannot say.
+
+    Deliberately the cheapest possible invocation. This runs in CI on every
+    build and a full collection is not free; `MIND_PALACE_SKIP_COLLECT=1` turns
+    it off for a developer who does not want to wait.
+    """
+    if os.getenv("MIND_PALACE_SKIP_COLLECT") == "1":
+        return None
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q", str(ROOT / "tests")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return None
+    match = re.search(r"(\d+) tests? collected", result.stdout)
+    return int(match.group(1)) if match else None
+
+
+def check_run_integrity(head: str | None) -> tuple[list[str], list[str]]:
+    """Each recorded run must name its commit, its collected count, and its artifact.
+
+    A run record is only worth something if it cannot be written by hand and
+    cannot drift from the tree. Three properties, all checked:
+
+    1. the commit it claims is the commit that produced it;
+    2. the `collected` it claims is what `pytest --collect-only` says now;
+    3. it names a junitxml artifact that exists and is tracked.
+
+    Property 2 is the sharp one. A run records `collected` and `passed`, and their
+    difference is `failed + skipped + xfailed + errors`. If a document says
+    "1607 passed" and the tree collects 1618, the remaining 11 are unaccounted for
+    and the figure is a summary of a different tree than the one shipping.
+    """
+    problems: list[str] = []
+    notes: list[str] = []
+    path = ROOT / RUN_RECORD
+    if not path.exists():
+        return problems, notes
+    try:
+        runs = json.loads(path.read_text()).get("runs", {})
+    except (json.JSONDecodeError, AttributeError):
+        return problems, notes
+
+    collected = collected_test_count()
+    if collected is None:
+        notes.append("  --  collection skipped; run-collected-count not verified")
+
+    for run_id, entry in runs.items():
+        if not isinstance(entry, dict):
+            continue
+        if head and run_id.startswith(head[:7]) and entry.get("commit") != head:
+            problems.append(
+                f"{RUN_RECORD}: run {run_id!r} claims commit "
+                f"{str(entry.get('commit'))[:7]} but the run key says {head[:7]}"
+            )
+        if collected is not None and str(run_id).startswith((head or "\0")[:7]):
+            recorded = entry.get("collected")
+            if recorded is not None and int(recorded) != collected:
+                problems.append(
+                    f"{RUN_RECORD}: run {run_id!r} recorded {recorded} collected tests, "
+                    f"but the tree collects {collected} now"
+                )
+            elif recorded is not None:
+                notes.append(f"  ok  {run_id}: collected {collected} matches the tree")
+        artifact = entry.get("junitxml")
+        if artifact:
+            target = ROOT / artifact
+            if not target.exists():
+                problems.append(f"{RUN_RECORD}: run {run_id!r} names a missing artifact {artifact}")
+            elif str(target) not in _tracked_set():
+                problems.append(
+                    f"{RUN_RECORD}: run {run_id!r} names an untracked artifact {artifact}"
+                )
+    return problems, notes
+
+
+def _tracked_set() -> set[str]:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        ).stdout.splitlines()
+    except (subprocess.SubprocessError, OSError):
+        return set()
+    return {str((ROOT / t).resolve()) for t in out}
+
+
+def check_test_counts(text_by_doc: dict[str, str], head: str | None) -> tuple[list[str], list[str]]:
+    """Every "N passed" a document states must match a recorded run.
+
+    This exists because of one specific failure. STATUS.md carried `1583 passed`
+    for a milestone; no run had produced 1583, and the real count was 1567.
+    Nothing in the build caught it, because a plausible number in a table looks
+    exactly like a measured one until it is compared with something.
+
+    If no run has ever been recorded the check says so rather than passing
+    quietly -- silence in that state is how an unmeasured figure survives.
+    """
+    problems: list[str] = []
+    notes: list[str] = []
+    recorded = _recorded_run_counts()
+    seen = sorted({int(entry["passed"]) for entry in recorded.values()})
+
+    for doc, text in text_by_doc.items():
+        stated = {int(n.replace(",", "")) for n in re.findall(r"(\d[\d,]*)\s+passed", text)}
+        if not stated:
+            continue
+        if not recorded:
+            problems.append(
+                f"{doc}: states {'/'.join(str(n) for n in sorted(stated))} passed but "
+                f"{RUN_RECORD} records no run. Record one with scripts/record_test_run.py, "
+                f"or remove the figure."
+            )
+            continue
+        for count in sorted(stated):
+            if count not in seen:
+                problems.append(
+                    f"{doc}: claims {count} passed; no run in {RUN_RECORD} produced that "
+                    f"(recorded counts: {', '.join(str(n) for n in seen)})"
+                )
+            else:
+                commits = sorted(
+                    run_id for run_id, e in recorded.items() if int(e["passed"]) == count
+                )
+                notes.append(f"  ok  {doc}: {count} passed matches run(s) {', '.join(commits)}")
+
+    if head and not any(head[:7] in run_id for run_id in recorded):
+        notes.append(
+            f"  --  no run recorded for HEAD {head[:7]}; counts were checked against "
+            f"earlier runs"
+        )
+    return problems, notes
+
+
+def check_markdown_links() -> tuple[list[str], list[str]]:
+    """Every relative markdown link must point at a file git tracks.
+
+    This is not a link-rot check. It is a *shipping* check: a page the README
+    points at that `.gitignore` excludes is a dead link in every clone, and it
+    looks fine on the machine of whoever wrote it.
+
+    That is not hypothetical. Five pages the README cited -- errors.md,
+    providers.md, deletion-and-erasure.md and two others -- were untracked,
+    because `/docs/*` and `*.md` exclude them and nobody had added an exception.
+    A fresh `git clone` got a README whose links all 404.
+
+    Tracked-ness rather than existence is the right test precisely because it is
+    the thing that was wrong.
+    """
+    problems: list[str] = []
+    notes: list[str] = []
+    allowances: list[str] = []
+
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        ).stdout.splitlines()
+    except (subprocess.SubprocessError, OSError) as exc:
+        return [f"git ls-files failed: {exc}"], []
+
+    tracked = {str((ROOT / t).resolve()) for t in out}
+    # A link to a directory is fine when *something* inside it is tracked.
+    tracked_parents = {str(Path(t).parent) for t in tracked} | tracked
+
+    pattern = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+    checked = 0
+    for doc in sorted(ROOT.rglob("*.md")):
+        if any(part in {".git", "venvmp", "build", "dist", "node_modules"} for part in doc.parts):
+            continue
+        for raw in pattern.findall(doc.read_text(encoding="utf-8", errors="ignore")):
+            if raw.startswith(("http://", "https://", "mailto:", "#")):
+                continue
+            target = raw.partition("#")[0]
+            if not target:
+                continue
+            checked += 1
+            resolved = (doc.parent / target).resolve()
+            # Matched on the resolved path, not the raw string: the same artifact
+            # is reached as `eval/results/x.json` and `../../eval/results/x.json`.
+            if resolved.is_relative_to(ROOT / "eval" / "results"):
+                allowances.append(f"{doc.relative_to(ROOT)} -> {raw}")
+                continue
+            if not resolved.exists():
+                problems.append(f"{doc.relative_to(ROOT)}: link target does not exist: {raw}")
+            elif str(resolved) not in tracked_parents:
+                # tracked_parents holds tracked files *and* the directories holding
+                # them, so a link to either passes. Anything left is a file that
+                # exists on this machine and in nobody's clone.
+                problems.append(
+                    f"{doc.relative_to(ROOT)}: link target is NOT TRACKED BY GIT: {raw} "
+                    f"-- ships as a dead link in every clone"
+                )
+    if allowances:
+        notes.append(
+            f"  --  {len(allowances)} link(s) point at deliberately untracked local "
+            f"artifacts under eval/: frozen experiment output, excluded by .gitignore"
+        )
+    notes.append(f"  --  {checked} relative markdown links resolve to tracked files")
+    return problems, notes
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--strict", action="store_true")
@@ -86,6 +337,7 @@ def main() -> int:
     notes: list[str] = []
     referenced: set[str] = set()
     citations = 0
+    text_by_doc: dict[str, str] = {}
 
     for doc in DOCS:
         path = ROOT / doc
@@ -93,6 +345,7 @@ def main() -> int:
             problems.append(f"{doc}: missing")
             continue
         text = path.read_text()
+        text_by_doc[doc] = text
 
         for match in CITATION.finditer(text):
             artifact, key = match["path"], match["key"]
@@ -127,6 +380,29 @@ def main() -> int:
                 problems.append(f"referenced but absent: {artifact}")
             elif artifact not in tracked:
                 problems.append(f"referenced but UNTRACKED: {artifact}")
+
+    head = None
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        ).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        pass
+    count_problems, count_notes = check_test_counts(text_by_doc, head)
+    problems.extend(count_problems)
+    notes.extend(count_notes)
+
+    integrity_problems, integrity_notes = check_run_integrity(head)
+    problems.extend(integrity_problems)
+    notes.extend(integrity_notes)
+
+    link_problems, link_notes = check_markdown_links()
+    problems.extend(link_problems)
+    notes.extend(link_notes)
 
     print(f"documents scanned : {len(DOCS)}")
     print(f"artifacts referenced: {len(referenced)}")

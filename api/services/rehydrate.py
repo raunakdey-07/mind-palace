@@ -153,6 +153,7 @@ async def rehydrate_corpus(
         ]
         count = await insert_chunks(
             db,
+            corpus_id,
             stored_document_id,
             doc_type,
             tags,
@@ -212,6 +213,11 @@ async def backfill_claim_embeddings(db: AsyncSession, corpus_id: str) -> int:
             getattr(embedder, "version", "rehydrate"),
             commit=False,
         )
-    except Exception:  # noqa: BLE001 - L2 backfill must not break rehydration
-        logger.warning("claim_embedding_backfill_failed", exc_info=True)
+    except Exception as exc:  # noqa: BLE001 - L2 backfill must not break rehydration
+        logger.warning(
+            "claim_embedding_backfill_failed error=%s",
+            type(exc).__name__,
+            # No traceback -- it would carry the claim text. See
+            # `unexpected_error` in api/main.py.
+        )
         return 0

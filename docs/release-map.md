@@ -24,6 +24,7 @@ relationship between the two numbering systems.
 | M015 / M015.1 | Receipts on every public surface, cross-surface equivalence, release | `v0.8.0` |
 | M015.2 | The five-minute memory path | `v0.9.0` |
 | M016 | Instant recall, explicit model-free mode, real-project dogfooding | `v0.9.0` |
+| M016.1 | Final limitation audit: reproducible CI, a smaller wheel, Python 3.15 evaluated | `v0.9.1` |
 
 ### The trust boundary, stated here
 
@@ -67,12 +68,46 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-`v0.9.0` is the current public release. It is the release in which a developer can
-adopt Mind Palace: seven commands that take a statement and a question, answers that
-arrive fast, outputs that can be inspected and proved afterwards, and a decision log
-that works on a real project.
+**The latest tagged public release is `v0.9.0`** (`git ls-remote --tags origin` stops
+there; the newest tag in the repository is `v0.9.0` at `b0e516e`).
 
-### What it changed
+`v0.9.1` is **prepared but not released**. `pyproject.toml` says `0.9.1` and
+`CHANGELOG.md` has a `[v0.9.1]` entry, but no `v0.9.1` tag exists and nothing has
+been published under that version. Do not `pip install mindpalace==0.9.1`; the
+installable release is `v0.9.0`.
+
+`v0.9.0` is therefore the release in which a developer can adopt Mind Palace —
+seven commands that take a statement and a question, answers that arrive fast, outputs
+that can be inspected and proved afterwards, and a decision log that works on a real
+project. `v0.9.1` is what is meant to make that claim checkable from a clean
+machine, and the unreleased work on top of it is a security change: authorization
+implemented and enforced for shared deployments, row-level security on every
+tenant-owned table, corpus erasure, and a tenant-isolation suite that runs against a
+least-privileged database role.
+
+`v0.9.1` is a patch on `v0.9.0`: no memory semantics, no retrieval behaviour, no
+public response field, and no benchmark input changed.
+
+### What v0.9.1 changed
+
+**CI can now prove it.** The `tests` job installed `sentence-transformers` but never
+the weights, and ran pytest with `HF_HUB_OFFLINE=1`, so a clean runner had the package
+and not the model: 41 tests failed on `OSError: We couldn't connect to ...`, and
+`--maxfail=1` reported only the first. A developer machine already had the cache,
+which is what hid it. Both models are now provisioned at pinned revisions, verified
+through the application's own classes with the network disabled before any test runs,
+and cached as an accelerator only. `tests/test_ci_model_provisioning.py` fails if that
+provisioning is deleted, weakened, unpinned or duplicated into one job but not the
+other.
+
+**The wheel stopped shipping the research tooling.** `scripts/` had been in the
+distribution since `v0.6.0`: 54 files, 590 KB of 1,328 KB unpacked, none of them
+imported at runtime. The wheel is 425 KB / 129 files → **227 KB / 74**.
+
+**Python 3.15 lazy imports were evaluated and not adopted.** See
+[the conclusion](#python-315-lazy-imports-were-evaluated-and-not-adopted) below.
+
+### What v0.9.0 changed
 
 **The five-minute path.** `mindpalace init`, `remember`, `recall`, `explain`,
 `history`, `receipt`, `verify`. Default corpus, so no scoping to learn. Idempotent
@@ -97,12 +132,46 @@ stack and loading a model for 61 ms of memory work.
 relevance rung that already existed as the no-model degradation: **0.63 s** instead
 of **6.17 s**, with `torch`, `transformers` and `sentence_transformers` never
 imported at all. It is documented as a deliberate trade-off, not a substitute — see
-[operations](operations.md#model-free-lexical-mode).
+[operations](runtime.md#model-free-lexical-mode).
 
 **Verifiable memory, carried forward.** Receipts, offline verification, exact-substring
 evidence, temporal state, Memory Packs and cross-surface parity all unchanged.
 
-### What it did not change
+### Python 3.15 lazy imports were evaluated and not adopted
+
+Measured on CPython **3.15.0rc1** (3.15.0 final was not released at the time of
+writing; the repository requires `>=3.11` and that is unchanged).
+
+| | normal | narrow lazy prototype | `-X lazy_imports=all` |
+|---|---:|---:|---:|
+| `mindpalace --help` | 335 ms | 335 ms | 187 ms |
+| `mindpalace init` | 846 ms | 933 ms | **crashes** |
+| `runtime status` | 194 ms | 227 ms | **crashes** |
+| lexical `recall` | 844 ms | 872 ms | **crashes** |
+
+Three findings, in order of how much they matter:
+
+1. **The semantic cold path cannot benefit, and the reason is structural.** The cost
+   is the model stack, measured at **5.61 s** of import on mains power, against a CLI
+   import graph of **0.11 s**. The model is therefore ~95% of the non-interpreter
+   cost of a cold semantic read, and it is *already deferred* — `sentence_transformers`
+   is imported inside `Embedder._get_model()`, not at module load, which is verified by
+   inspecting `sys.modules` after constructing an `Embedder`. Lazy imports cannot
+   remove a cost that is already lazy, and cannot remove it from the first operation
+   that needs a vector. The addressable surface is ~2% of the path that matters.
+2. **Global lazy mode is actively harmful.** `-X lazy_imports=all` breaks real
+   commands with `AttributeError: type object 'array' has no attribute 'ARRAY'` inside
+   SQLAlchemy's PostgreSQL dialect — a partial module initialisation caused by
+   deferring third-party imports. Reproduced; the same import succeeds under normal
+   mode and under a `__lazy_modules__ = ["sqlalchemy"]` declaration, so the failure
+   needs a specific combination rather than naming one module.
+3. **The narrow prototype bought nothing.** Declaring `fastapi`, `sqlalchemy`,
+   `pydantic`, `httpx` and `uvicorn` lazy left `--help` unchanged and made everything
+   else slightly slower.
+
+The experiment succeeded as an experiment. Nothing shipped.
+
+### What v0.9.0 did not change
 
 Memory semantics are untouched. Claim identities, evidence, provenance, temporal
 validity, supersession, conflicts and abstention are byte-identical between the

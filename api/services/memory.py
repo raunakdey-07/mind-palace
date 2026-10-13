@@ -72,8 +72,30 @@ def _hash(*parts) -> str:
 
 
 def memory_document_id(corpus_id: str, path: str) -> str:
-    """Stable SHA-256(corpus_id + ':' + path), including across deletion/restore."""
-    return hashlib.sha256(f"{corpus_id}:{path}".encode("utf-8")).hexdigest()
+    """Stable SHA-256(corpus_id + ':' + path), including across deletion/restore.
+
+    `corpus_id` is stripped first, and that is load-bearing rather than tidy. The
+    column is `CHAR(64)`, and PostgreSQL blank-pads a shorter value on the way in
+    and strips the padding on a cast to text. So the id that reaches this function
+    is 64 characters wide even when the id itself is 63 -- which is exactly the
+    case for the default corpus, whose id is 56 zeroes followed by "default".
+
+    The database says so itself. `memory_documents_check` is
+
+        id = sha256(rtrim(corpus_id::text) || ':' || path)
+
+    so it hashes the *stripped* id, and this function used to hash the padded one.
+    For every corpus whose id is a 64-character digest the two agree and nobody
+    notices. For the default corpus they differ by the one padding byte, and every
+    write fails:
+
+        new row for relation "memory_documents" violates check constraint
+        "memory_documents_check"
+
+    That is `mindpalace remember` -- the README's third step -- on a fresh
+    install. See tests/test_default_corpus_is_writable.py.
+    """
+    return hashlib.sha256(f"{corpus_id.strip()}:{path}".encode("utf-8")).hexdigest()
 
 
 def _timestamp(value, *, validity: bool = False) -> datetime | None:
@@ -279,12 +301,19 @@ async def record_version(
     content: str,
     metadata: dict,
     chunks: list[dict],
+    owner_principal_id: str | None = None,
 ) -> dict:
     """Archive NEW/MODIFIED/RESTORED or return the existing version with skipped=True.
 
     Change detection includes raw content and all normalized metadata, not live
     IDs or rechunking. IDs derive from identity + predecessor + event + payload.
     Evidence is validated even on an unchanged call. No commit; propagate errors.
+
+    `owner_principal_id` is inert while resource-level authorization is
+    withdrawn. It is kept on the signature so the callers, the CLI, and
+    `api/services/resources.py` still describe the intended shape, and so
+    reinstating it is a migration rather than an edit at twenty call sites. Do not
+    rely on it setting anything today -- see `docs/withdrawn/`.
     """
     if not isinstance(path, str) or not path or not isinstance(content, str):
         raise ValueError("path must be nonempty and content must be raw text")
@@ -299,7 +328,8 @@ async def record_version(
         return {**previous, "skipped": True}
     await db.execute(
         text("""
-        INSERT INTO memory_documents (corpus_id, id, path) VALUES (:c, :d, :p)
+        INSERT INTO memory_documents (corpus_id, id, path)
+        VALUES (:c, :d, :p)
         ON CONFLICT (corpus_id, id) DO NOTHING
     """),
         {"c": corpus_id, "d": identity, "p": path},

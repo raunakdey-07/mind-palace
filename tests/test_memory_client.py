@@ -7,6 +7,7 @@ when present, its execute boundary is patched and its MemoryError is used as-is.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import importlib
 import json
 import subprocess
@@ -480,6 +481,13 @@ def test_legacy_search_and_context(monkeypatch, strategy):
 
     db = ModuleType("api.services.db")
     db.session_scope = session_scope
+    # The client resolves its identity at construction now, so it reaches for
+    # these. The stub replaces the module wholesale, so anything the client
+    # imports from it has to exist here -- otherwise the import fails for a
+    # reason that has nothing to do with what this test is about.
+    db.AsyncSessionLocal = session_scope
+    db.principal_scope = contextlib.nullcontext
+    db.async_engine = None
     corpora = ModuleType("api.services.corpora")
     corpora.get_corpus_by_name = AsyncMock(return_value={"id": "corpus-id"})
     retrieval = ModuleType("api.services.retrieval")
@@ -503,7 +511,7 @@ def test_legacy_search_and_context(monkeypatch, strategy):
     assert mp.search("question", k=3, strategy=strategy) == ["evidence"]
     embeds_after_search = mp._embedder.embed_single.call_count
     assert mp.context("question", k=3, strategy=strategy, budget_tokens=1000) == "packed"
-    corpora.get_corpus_by_name.assert_awaited_with("session", "legacy")
+    corpora.get_corpus_by_name.assert_awaited_with("session", "legacy", write=False)
     retrieval.RetrievalService.assert_called_with("session")
     retrieval.RetrievalService.return_value.search.assert_awaited_with(
         [0.5],

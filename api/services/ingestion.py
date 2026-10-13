@@ -81,7 +81,9 @@ class IngestionService:
             record["embedding"] = embedding
         return self.embedder.model_name, self.embedder.dimension
 
-    async def _ingest_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+    async def _ingest_content(
+        self, db, content: str, path: str, corpus_id: str, owner_principal_id: str | None = None
+    ) -> dict:
         """Shared ingestion pipeline for one parsed document.
 
         The caller owns the session lifetime. Returns a result dict with
@@ -96,9 +98,13 @@ class IngestionService:
                 self.memory_enabled or "claims" in metadata or await memory.enabled(db, corpus_id)
             )
             if use_memory:
-                result = await self._ingest_memory_content(db, content, path, corpus_id)
+                result = await self._ingest_memory_content(
+                    db, content, path, corpus_id, owner_principal_id
+                )
             else:
-                result = await self._ingest_live_content(db, content, path, corpus_id)
+                result = await self._ingest_live_content(
+                    db, content, path, corpus_id, owner_principal_id
+                )
         logging.getLogger(__name__).info(
             "document_ingested",
             extra={
@@ -110,7 +116,14 @@ class IngestionService:
         )
         return result
 
-    async def _ingest_live_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+    async def _ingest_live_content(
+        self,
+        db,
+        content: str,
+        path: str,
+        corpus_id: str,
+        owner_principal_id: str | None = None,
+    ) -> dict:
         metadata, body = parse_markdown(content)
         doc_hash = content_hash(body)
 
@@ -145,7 +158,7 @@ class IngestionService:
             }
 
         # Replace stale chunks with the freshly computed ones.
-        await delete_chunks_for_doc(db, doc_id, commit=False)
+        await delete_chunks_for_doc(db, corpus_id, doc_id, commit=False)
 
         sections = extract_sections_with_paths(body)
         chunks = chunk_with_heading_paths(sections)
@@ -165,6 +178,7 @@ class IngestionService:
 
         count = await insert_chunks(
             db,
+            corpus_id,
             doc_id,
             doc_type,
             tags,
@@ -184,16 +198,40 @@ class IngestionService:
             "message": f"Ingested {count} chunks",
         }
 
-    async def _ingest_memory_content(self, db, content: str, path: str, corpus_id: str) -> dict:
+    async def _ingest_memory_content(
+        self,
+        db,
+        content: str,
+        path: str,
+        corpus_id: str,
+        owner_principal_id: str | None = None,
+    ) -> dict:
         """One caller-owned transaction for the archive and live-index projection."""
         from api.services import memory
 
         await memory.lock_corpus(db, corpus_id)
-        metadata, body = parse_markdown(content)
+        metadata, body, frontmatter_warnings = parse_markdown(
+            content, path=path, collect_warnings=True
+        )
+        for warning in frontmatter_warnings:
+            # A document whose frontmatter was not usable is a *different*
+            # document from the one the author wrote, and the difference decides
+            # whether it produced memory. Logging it here, at the only place that
+            # knows the path, is what makes it visible without the caller having
+            # to re-read the file to find out why.
+            logging.getLogger(__name__).warning(
+                "frontmatter_problem",
+                extra={"corpus_id": corpus_id, **warning.as_dict()},
+            )
         chunks = chunk_with_heading_paths(extract_sections_with_paths(body))
         records = [{**chunk, "order_index": i} for i, chunk in enumerate(chunks)]
         # Validate before embedding or any live mutation. No inferred claims.
-        memory.validate_source(path, content, metadata, records)
+        # The third element is the authored claims, and until now it was
+        # discarded -- so nothing downstream could say how much memory a document
+        # actually produced. `sync` reported success on a document whose claims
+        # block had never parsed. Carrying it through is what lets the caller
+        # report documents *and* claims instead of a file count.
+        _meta, _archived, claims = memory.validate_source(path, content, metadata, records)
         previous = await memory._latest(db, corpus_id, memory.memory_document_id(corpus_id, path))
         fingerprint = memory._hash(content, metadata)
         live = (
@@ -210,8 +248,10 @@ class IngestionService:
         ):
             return {
                 "success": True,
+                "warnings": [w.as_dict() for w in frontmatter_warnings],
                 "document_id": live,
                 "chunk_count": 0,
+                "claim_count": len(claims),
                 "version_id": previous["id"],
                 "event": "UNCHANGED",
                 "message": "Document unchanged, skipped",
@@ -219,9 +259,15 @@ class IngestionService:
 
         embedding_model, embedding_dimension = self._embed_records(records)
         doc_id = await upsert_document(
-            db, extract_title(metadata), path, body, metadata, corpus_id=corpus_id, force=True
+            db,
+            extract_title(metadata),
+            path,
+            body,
+            metadata,
+            corpus_id=corpus_id,
+            force=True,
         )
-        await delete_chunks_for_doc(db, doc_id, commit=False)
+        await delete_chunks_for_doc(db, corpus_id, doc_id, commit=False)
         doc_type = metadata.get("document_type") or metadata.get("type") or DEFAULT_DOC_TYPE
         if doc_type not in ("project", "kaggle", "note", "paper"):
             doc_type = DEFAULT_DOC_TYPE
@@ -230,6 +276,7 @@ class IngestionService:
             tags = [tag.strip() for tag in tags.split(",")]
         count = await insert_chunks(
             db,
+            corpus_id,
             doc_id,
             doc_type,
             tags,
@@ -240,7 +287,7 @@ class IngestionService:
             commit=False,
         )
         version = await memory.record_version(
-            db, corpus_id, path, doc_id, content, metadata, records
+            db, corpus_id, path, doc_id, content, metadata, records, owner_principal_id
         )
         await update_manifest(
             db, path, content_hash(content), doc_id, count, corpus_id, commit=False
@@ -251,8 +298,10 @@ class IngestionService:
         await self._cache_claim_vectors(db, corpus_id, [version["id"]])
         return {
             "success": True,
+            "warnings": [w.as_dict() for w in frontmatter_warnings],
             "document_id": doc_id,
             "chunk_count": count,
+            "claim_count": len(claims),
             "version_id": version["id"],
             "event": version["event"],
             "message": f"Ingested {count} chunks with version history",
@@ -290,8 +339,15 @@ class IngestionService:
                 getattr(self.embedder, "version", "ingest"),
                 commit=False,
             )
-        except Exception:  # noqa: BLE001 - the cache is L2, never a contract
-            logger.warning("claim_embedding_cache_fill_failed", exc_info=True)
+        except Exception as exc:  # noqa: BLE001 - the cache is L2, never a contract
+            logger.warning(
+                "claim_embedding_cache_fill_failed error=%s",
+                type(exc).__name__,
+                # No traceback: a failed embedding write carries the claim text
+                # in the constraint-violation detail, which would put a
+                # customer's memory in the log. See `unexpected_error` in
+                # api/main.py for the same reasoning at full length.
+            )
             return 0
 
     async def ingest_file(
@@ -299,10 +355,21 @@ class IngestionService:
         content: str,
         path: Optional[str] = None,
         corpus_id: str = DEFAULT_CORPUS_ID,
+        owner_principal_id: str | None = None,
     ) -> dict:
-        """Ingest a single Markdown file into the given corpus."""
+        """Ingest a single Markdown file into the given corpus.
+
+        `owner_principal_id` makes the document private to that principal inside
+        a corpus its peers also hold. Omitted, the document is shared with
+        everyone holding the corpus, which is the default and the documented
+        shape. The owner must come from the authenticated principal, never from
+        the request body -- a client that chose its own owner could mark a
+        document as another principal's.
+        """
         async with session_scope() as db:
-            return await self._ingest_content(db, content, path or "unknown", corpus_id)
+            return await self._ingest_content(
+                db, content, path or "unknown", corpus_id, owner_principal_id
+            )
 
     async def ingest_repo(
         self,
@@ -338,6 +405,12 @@ class IngestionService:
 
         added = changed = unchanged = deleted = failed = 0
         total_chunks = 0
+        total_claims = 0
+        warnings: list[dict] = []
+        # One entry per document, always. A summary that only counts successes
+        # cannot answer "did my document land?", which is the question somebody
+        # asks after a sync that reported success.
+        documents: list[dict] = []
         errors: list[str] = []
         md_files = sorted(repo_path.rglob("*.md"))
         source_paths: set[str] = set()
@@ -354,11 +427,25 @@ class IngestionService:
                 async with session_scope() as db:
                     result = await self._ingest_content(db, content, rel_path, corpus_id)
 
+                for warning in result.get("warnings", []):
+                    warnings.append({**warning, "path": rel_path})
+                    if len(errors) < MAX_SYNC_ERRORS:
+                        errors.append(f"{rel_path}: {warning['code']}")
+
                 if not result["success"]:
                     failed += 1
                     reason = str(result.get("message") or "ingestion failed")
                     if len(errors) < MAX_SYNC_ERRORS:
                         errors.append(f"{rel_path}: {reason}")
+                    documents.append(
+                        {
+                            "path": rel_path,
+                            "outcome": "failed",
+                            "reason": "ingestion_failed",
+                            "claims": 0,
+                            "chunks": 0,
+                        }
+                    )
                     logging.getLogger(__name__).warning(
                         "document_ingestion_failed",
                         extra={"corpus_id": corpus_id, "path": rel_path, "reason": reason},
@@ -367,16 +454,45 @@ class IngestionService:
 
                 if result.get("event") == "UNCHANGED":
                     unchanged += 1
+                    outcome = "unchanged"
                 elif state == "added":
                     added += 1
+                    outcome = "ingested"
                 else:
                     changed += 1
+                    outcome = "ingested"
+                claims_for_doc = int(result.get("claim_count") or 0)
+                total_claims += claims_for_doc
                 total_chunks += result.get("chunk_count", 0)
+                entry = {
+                    "path": rel_path,
+                    "outcome": outcome,
+                    "reason": None,
+                    "claims": claims_for_doc,
+                    "chunks": result.get("chunk_count", 0),
+                }
+                # A document that parsed cleanly but declared no claims is the
+                # exact shape of the dogfood failure: indexed as text, invisible
+                # to recall. Saying so is the whole point of this field.
+                if not claims_for_doc and not result.get("warnings"):
+                    entry["reason"] = "no_claims_declared"
+                    if len(errors) < MAX_SYNC_ERRORS:
+                        errors.append(f"{rel_path}: no_claims_declared")
+                documents.append(entry)
             except Exception as e:
                 failed += 1
                 reason = _sync_error(rel_path, e)
                 if len(errors) < MAX_SYNC_ERRORS:
                     errors.append(reason)
+                documents.append(
+                    {
+                        "path": rel_path,
+                        "outcome": "failed",
+                        "reason": type(e).__name__,
+                        "claims": 0,
+                        "chunks": 0,
+                    }
+                )
                 logging.getLogger(__name__).warning(
                     "document_ingestion_failed",
                     extra={
@@ -402,14 +518,24 @@ class IngestionService:
         await self._refresh_planner_statistics(corpus_id, added + changed + deleted)
 
         duration_ms = int((time.perf_counter() - start) * 1000)
+        # `success` now means what a reader assumes it means: every document
+        # either landed or said why it did not. A clean document that declared no
+        # claims is not a failure -- plain prose is legitimate -- but it is not
+        # silently equal to one that produced memory either, so it is counted and
+        # named.
         return {
-            "success": failed == 0,
+            "success": failed == 0 and not warnings,
             "corpus_id": corpus_id,
             "added": added,
             "changed": changed,
             "unchanged": unchanged,
             "deleted": deleted,
             "failed": failed,
+            "documents": len(documents),
+            "claim_count": total_claims,
+            "without_claims": sum(1 for d in documents if d["reason"] == "no_claims_declared"),
+            "document_results": documents,
+            "warnings": warnings,
             "chunk_count": total_chunks,
             "duration_ms": duration_ms,
             "message": (
@@ -517,10 +643,18 @@ class IngestionService:
                 from api.services import memory
 
                 await memory.record_deletion(db, corpus_id, path)
-            await delete_chunks_for_doc(db, doc_id, commit=False)
-            await db.execute(text("DELETE FROM documents WHERE id = :d"), {"d": doc_id})
+            await delete_chunks_for_doc(db, corpus_id, doc_id, commit=False)
+            # `documents.id` is a global primary key, so both deletes name the
+            # corpus as well. The ids came from a corpus-scoped select above;
+            # repeating the predicate means a change to that select cannot turn
+            # this into a cross-corpus delete.
             await db.execute(
-                text("DELETE FROM ingestion_manifest WHERE doc_id = :d"), {"d": doc_id}
+                text("DELETE FROM documents WHERE id = :d AND corpus_id = :c"),
+                {"d": doc_id, "c": corpus_id},
+            )
+            await db.execute(
+                text("DELETE FROM ingestion_manifest WHERE doc_id = :d AND corpus_id = :c"),
+                {"d": doc_id, "c": corpus_id},
             )
 
         # Orphaned manifests: no matching document (doc_id NULL or dangling).

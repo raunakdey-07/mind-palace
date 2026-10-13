@@ -1,0 +1,24 @@
+{
+  "frozen_m00675": {
+    "abstained_correctly": 10,
+    "abstained_when_answerable": 5,
+    "answered_when_it_should_have_abstained": 0,
+    "answered_wrong": 8,
+    "confident_wrong": 0,
+    "correct": 37,
+    "notes": [],
+    "total": 60
+  },
+  "heldout_v1": {
+    "abstained_correctly": 15,
+    "abstained_when_answerable": 11,
+    "answered_when_it_should_have_abstained": 1,
+    "answered_wrong": 14,
+    "confident_wrong": 1,
+    "correct": 116,
+    "notes": [
+      "ho-abs-office-cat: expected no memory, returned nothing, graded incorrect (expect_state=ABSENT, failure='F7'). Counted as abstained-correctly; the grader disagrees."
+    ],
+    "total": 157
+  }
+}

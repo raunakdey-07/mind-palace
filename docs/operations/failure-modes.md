@@ -3,7 +3,7 @@
 Each entry names a failure, how it shows up, why it happens, and what the
 repository already does about it. Sources: `api/services/memory_feed.py`,
 `api/services/memory_public.py`, `api/main.py`, `api/services/ingestion.py`,
-[`docs/operations.md`](../operations.md), and
+[`docs/deployment.md`](../deployment.md), and
 [`docs/m009/RELEASE_READINESS.md`](../m009/RELEASE_READINESS.md).
 
 ## Cursor and feed
@@ -167,18 +167,34 @@ missing, but prompt-level instruction is not a verified boundary.
 contained that text at those offsets. It does not prove the claim is true and
 does not establish which side of a conflict is correct.
 
-**Namespaces are treated as authorization.** They are not. There is no built-in
-authentication and no per-corpus access control. Deploy on a trusted interface
-and protect the corpus namespace at the network layer. The SDK's `headers`
-parameter can carry a proxy's own authentication, but the product does not
-enable it.
+**Namespaces are treated as authorization.** They are not — but there *is* an
+authorization layer, and mistaking a corpus name for a credential is still the
+mistake. A caller may only address corpora its credential covers, and that is
+decided at one choke point and again by row-level security; see
+[`docs/security.md`](../security.md). What a corpus name can never do is
+establish the caller's authority to reach it. Local use has no authentication at
+all (`MIND_PALACE_AUTH_MODE` defaults to `off`), so a single-user deployment
+relies on the network layer exactly as before — which is why
+`MIND_PALACE_DEPLOYMENT=server` refuses to start in that combination.
 
 **Archive rows are treated as erasable.** They are not, through ordinary DML.
-Statement-level triggers reject `UPDATE`, `DELETE`, and `TRUNCATE` on the seven
-archive tables created by `004_memory.py`, so corpus deletion fails while archive
-rows exist. This is not a retention or erasure solution, and the database owner
-is not a tamper-proof boundary. Archive retention and erasure remain an open
-item.
+Statement-level triggers reject `UPDATE`, `DELETE`, and `TRUNCATE` on the archive
+tables, so a corpus cannot be removed by a query. Erasure goes through
+`mindpalace_erase_corpus`, a `SECURITY DEFINER` function that takes an advisory
+lock, deletes in dependency order, and reports per-table counts. It is
+transactional and idempotent. It does *not* remove exported receipts, Memory
+Packs, database backups, or any copy already outside the database; see
+[`docs/security.md`](../security.md).
+
+**The tenant scope is treated as authoritative.** It is not — it is a session
+setting the application writes, and any role that can open a connection can write
+it too. Migration `010` binds the `{*}` sentinel to a role that already reads
+every row, so the runtime role cannot manufacture "every corpus", but a *named*
+scope is still forgeable by a compromised application process. Concretely: the
+process can read, write and erase any corpus whose **name** it can obtain, since a
+corpus id is `sha256("corpus:" + name)`. This is the residual limit of the design,
+not a bug to be filed; closing it means moving authorization into the database,
+which is a separate decision.
 
 **Renames are treated as moves.** They are not. A rename produces a new document
 identity, and no MOVED state is inferred.
@@ -201,6 +217,9 @@ identity, and no MOVED state is inferred.
 | In-range budget too small for the empty envelope | `422 invalid_budget` |
 | Empty `query` for the `query` operation | `422 invalid_query` |
 | Temporal intent without a cutoff, or an unresolvable stage name | `422 invalid_timestamp` |
+| `MIND_PALACE_INGEST_ROOTS=none` and a filesystem ingestion route | `403`, naming the setting |
+| Path outside `MIND_PALACE_INGEST_ROOTS` | `403`, without naming the roots |
+| Unhandled error in a handler | `500 internal_error` — no detail, no traceback |
 
 The SDK preserves the server's code, message, and status for remote failures and
 adds `timeout` (504), `transport_error` (503), and `invalid_response` (502) for
@@ -215,3 +234,28 @@ and search operations emit stage timings, candidate and returned counts, token
 estimate, and the truncation flag. Neither record contains cursor contents,
 signatures, secrets, database URLs, or document contents, and there is no new
 metrics platform beyond the existing Prometheus HTTP instrumentation.
+
+### A 500 is deliberately uninformative
+
+An unhandled error returns `{"detail": {"code": "internal_error", "message":
+"internal error"}}` and logs one line: `unhandled_error method=… path=… error=…`.
+
+The reason is PostgreSQL. Every constraint violation returns the offending row in
+its error `DETAIL`, asyncpg passes that string through verbatim, and a traceback
+that prints the exception therefore writes whatever the row contained to the
+log — a claim, a document name, a path. SQLAlchemy's `hide_parameters` cannot
+help; it hides bound parameters, and this text comes from the server.
+
+So a 500 here is less informative than it would otherwise be, and the trade is
+deliberate:
+
+* **What you get:** the request, and the exception's type. Enough to find the
+  failure in a log search.
+* **What you do not get:** the traceback, or the row. Debugging a 500 means
+  reproducing it, where `echo=True` or a debugger shows everything.
+
+Two paths are not covered, and both are stated rather than assumed away: a
+response whose body has already started cannot be replaced (every response this
+service builds is finished before it starts, so the path is unreachable today),
+and an operator who has configured their own `logging` handler to render tracebacks
+will of course get tracebacks.

@@ -4,6 +4,399 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [Unreleased]
+
+A security change, and a change to one documented claim. No memory semantics,
+temporal behaviour, evidence rule, supersession behaviour, receipt schema or
+Memory Pack version changed, and no benchmark input was touched.
+
+### Fixed
+
+- **The unrestricted tenant scope was self-assertable** (migration
+  `010_bind_unrestricted_scope`). `mindpalace.tenant_scope` is a session setting,
+  so any role that could open a connection could write `{*}` — the sentinel for
+  "this principal may reach every corpus" — and both the row-level predicate and
+  the `SECURITY DEFINER` erasure function took it at face value. The
+  least-privileged runtime role could therefore declare itself unrestricted, read
+  every tenant's rows, and **erase a corpus it held no grant on**. This was
+  demonstrated, not theorised: with a corpus id derived from its name, the corpus,
+  its document, claim, evidence row and version were all removed.
+  `{*}` is now honoured only by a role that already reads every row unauthenticated
+  — a superuser, or one that may use the owner of `corpora` — so the runtime role
+  can no longer manufacture it. The check names `session_user`, not
+  `current_user`: inside a `SECURITY DEFINER` function `current_user` is the
+  function owner, so checking it would have asked "is the definer trusted" and
+  answered yes for every caller.
+- **`PUBLIC` held `EXECUTE` on every `SECURITY DEFINER` function.** PostgreSQL
+  grants it on every new function, and the provisioning script revoked only from
+  `mindpalace_runtime`, which removed nothing — any *other* role that could
+  connect could still call `mindpalace_erase_corpus`. Revoked from `PUBLIC` and
+  granted to the runtime role by name. The row-level predicate keeps its
+  `PUBLIC` grant deliberately: a policy is evaluated as the querying user, so
+  revoking it would break isolation for every role not named.
+- **The container image published an unauthenticated API by default.** The
+  `CMD` bound `0.0.0.0` while `MIND_PALACE_AUTH_MODE` defaults to `off`, so a
+  bare `docker run` served an unauthenticated API to whatever network it landed
+  on. It now binds `127.0.0.1`; publishing it is a deliberate act, and
+  `MIND_PALACE_DEPLOYMENT=server` still refuses to start unless authentication is
+  on and the role enforces the policies.
+- **`scripts/db/runtime_roles.sql` did not parse.** Three `REVOKE EXECUTE ...
+  FROM PUBLIC` lines were missing a closing parenthesis. It had never been run
+  end to end: the test harness kept a hand-maintained copy of the script, and
+  the copy was correct. Every isolation test passed against a role no deployment
+  had. The harness now reads the shipped file and runs it, so the two cannot
+  drift apart again.
+- **Memory content reached the log through PostgreSQL's error detail.** Every
+  constraint violation returns the offending row in its `DETAIL`, asyncpg passes
+  that string through verbatim, and SQLAlchemy's `hide_parameters` cannot help —
+  it hides bound parameters, and this text comes from the server. Any traceback
+  printing the exception wrote claims, document names and paths to the log. An
+  ASGI middleware now catches unhandled errors, logs the method, path and
+  exception *type*, and returns a plain `500 internal_error`; the three
+  embedding-cache failure logs dropped `exc_info=True` for the same reason. A
+  registered `@app.exception_handler(Exception)` would not have been enough —
+  Starlette sends that response and then re-raises, explicitly so the server can
+  log the traceback. The cost is real: a 500 no longer prints a traceback, so
+  debugging means reproducing it.
+- **`/health/ready` published the database's defences.** It returned the
+  connected role's name, whether it was a superuser, whether it held `BYPASSRLS`,
+  whether it could enumerate credential hashes, and which archive tables it could
+  `DELETE` — to anything that could reach the port. It now reports a verdict
+  (`row_level_security: enforced`, and `503` when it cannot be verified in
+  `server` mode), and the inventory is what `mindpalace posture` prints for an
+  operator who holds database credentials.
+- **The reference integration imported Mind Palace's internals.** `provision.py`
+  imported `api.services.corpora`, `api.services.authz` and `api.services.db` to
+  create corpora and issue credentials, and both it and `demo.py` imported
+  `api.main.app` and drove it through `httpx.ASGITransport`. The suite's own
+  import check carried a written exception naming exactly those four lines —
+  which is a test that has already decided what it is willing to miss. Corpus
+  creation and credential issuance now go through the documented `mindpalace
+  corpus create` and `mindpalace credential issue` commands, the demo connects to
+  `MIND_PALACE_URL`, and the suite starts a real Mind Palace on a real socket for
+  it to talk to. There is no exception list any more.
+
+### Changed
+
+- **`/health/ready` answers `503` only in `server` mode.** In `local` there is no
+  second tenant to isolate from, the documented workflow is a developer
+  connecting as their own superuser, and reporting `not_ready` there would break
+  the convenient path for a problem that cannot occur — the same reasoning that
+  gates every other `server` requirement, including refusing to start.
+
+- **A previously reported claim was wrong and is now corrected.** The previous
+  report said a compromised application process was "bounded to the credentials
+  that process holds". It was not: the same `{*}` forge gave it every corpus.
+  That is now closed for the sentinel. A *named* scope remains forgeable — a
+  corpus id is `sha256("corpus:" + name)` — so a compromised process can still
+  reach any corpus whose name it can obtain. `docs/security.md` states this, and
+  `tests/test_scope_forgery.py` pins it so a change in either direction is
+  noticed.
+- **`MIND_PALACE_INGEST_ROOTS=none`** disables the two filesystem ingestion
+  routes and satisfies the `server` profile's precondition. `server` previously
+  could not start at all without a root list, which coupled *starting the
+  service* to *having a filesystem ingestion surface* and blocked an API-only
+  deployment that never touches those routes. The risk belongs to the routes, not
+  to the process. Without either a root list or `none`, it still refuses to start.
+- **`/health/ready` answers `503` when row-level security cannot be verified.**
+  An unverifiable guarantee is not a guarantee.
+
+### Added
+
+- **Corpus erasure** (migration `009_permission_and_erasure`). `DELETE
+  /api/corpora/{name}` used to return `409` whenever the archive referenced the
+  corpus, so a corpus that had ever recorded a fact could never be removed. It is
+  now one `SECURITY DEFINER` function that re-checks the caller's transaction-local
+  tenant scope, takes the same advisory lock every writer takes, and deletes all
+  nine archive tables in dependency order plus the live projection and every
+  credential's grant. `mindpalace corpus delete` is the local equivalent.
+  Authorization is `manage_corpus`, and another tenant's corpus is a `404` so the
+  refusal does not confirm it exists. The result reports table names and row
+  counts and nothing else: an erasure audit trail that reproduced the content it
+  erased would defeat the erasure, so there is no field in which to put one.
+- **Permissions finer than read/write.** `corpus_admin` (write, plus erasing the
+  corpora it holds grants on) and `principal_admin` (everything, including issuing
+  and revoking credentials) join `read_only` and `read_write`. Cumulative and
+  deny-by-default. A workspace credential can no longer mint authority, so a
+  compromised tenant credential is not a foothold on the next tenant. Creating a
+  corpus still requires the unrestricted administrative identity: a corpus row is
+  only insertable inside the caller's own tenant scope, and a principal cannot
+  hold a grant to something that does not exist yet.
+- **A credential lookup the application role cannot enumerate.** Authentication
+  resolves through `mindpalace_resolve_credential`, and `SELECT` on
+  `memory_principals` and `memory_principal_corpora` is revoked from
+  `mindpalace_runtime`. One query used to return every tenant's credential hashes,
+  roles and grants, which a memory service has no reason to be able to do. The
+  identity and its corpus scope now arrive in one round trip rather than two.
+  Administrative commands (`credential issue|list|grant|ungrant|revoke`,
+  `corpus create|delete`) run on `MIND_PALACE_ADMIN_DATABASE_URL`.
+- **`mindpalace credential grant` / `ungrant`**, so access can be widened or
+  narrowed without changing a credential's secret — reissuing breaks every running
+  deployment of the caller, so it is only ever the rotation step. Removing the
+  last corpus leaves a credential that resolves to nothing and is refused on every
+  request, which makes `ungrant` a safe suspension.
+- **`mindpalace posture` now checks privilege shape**, not just policy flags: the
+  role's privileges beyond DML, whether it can enumerate credential hashes,
+  whether it holds `DELETE` on any archive table, and whether it can `SET ROLE`
+  into a privileged role. `server` mode refuses to start on any of them, in the
+  application lifespan — after the process has its connection, before uvicorn
+  reports itself as accepting traffic.
+- **Authorization is implemented, and off by default.** `MIND_PALACE_AUTH_MODE=required`
+  makes every request present a bearer credential bound to a role and an explicit set
+  of corpora. Opaque random secrets, stored only as SHA-256 hashes; rotation is
+  issue-then-revoke; revocation takes effect on the next request. `off` remains the
+  default because the documented five-minute path is a local single-user workflow.
+  `/health/ready` reports the mode, so a deployment cannot be tenant-safe by
+  accident.
+- **Row-level security on every tenant-owned table** (migration
+  `008_tenant_scoped_access`, additive, reversible). The archive was already
+  `(corpus_id, ...)`-keyed with composite foreign keys, so this needed no schema
+  change: `ENABLE` + `FORCE` + a `USING`/`WITH CHECK` predicate. `chunks` has no
+  corpus column, so its policy reaches the corpus through the document it belongs
+  to. The predicate fails closed when no tenant scope is present.
+- **`scripts/db/runtime_roles.sql`**, which creates the separation the policies
+  depend on: a `BYPASSRLS` maintenance role that owns the schema, and a
+  `NOSUPERUSER NOBYPASSRLS` runtime role that owns nothing, holds no `DELETE` on
+  any archive table, and is granted `EXECUTE` on named functions rather than
+  `ALL FUNCTIONS`.
+- **A tenant-isolation suite** on real PostgreSQL with that least-privileged role:
+  two organisations, three roles each, canary content, every memory operation plus
+  search, context, the query surface, the feed, ingestion, corpus administration,
+  snapshots, replay, receipts and parent/child id mixing — plus connection reuse,
+  concurrency, cancellation and rollback. A negative suite removes each control in
+  turn and asserts what it was holding, so the isolation tests cannot pass
+  vacuously.
+- **`examples/marketing-campaign-memory/`**, a thin reference integration: two
+  simulated organisations, brand and per-campaign memory, four platform variants,
+  draft/review/edit/approve/reject/regenerate, and a server-enforced role matrix.
+  Content generation is a deterministic stand-in, and says so.
+
+### Fixed
+
+- **The entire administrative CLI was broken.** `_authz_session` built a context
+  manager from the session helper and then called it again, so every
+  `mindpalace corpus` and `mindpalace credential` command raised
+  `AsyncContextDecorator.__call__() missing 1 required positional argument` — which
+  the CLI's own error handler rendered as "Mind Palace could not complete that".
+  No service-level test noticed, because the failure was in the CLI's wiring.
+  `tests/test_operator_cli.py` now drives the real entry point end to end.
+- **`credential revoke` accepted a name in the Python API but not in the
+  database.** The lookup function matched only an id prefix, so an operator who
+  typed the credential's own label got "no credential matched" for a credential
+  that was right there in `credential list`.
+- **An unrecognised `MIND_PALACE_DEPLOYMENT` was silently treated as `server`.**
+  That fails closed for authentication but skipped every other server-only check,
+  so a typo like `prod` left the ingest-root and database-posture checks
+  unenforced while the service ran normally. An unknown profile is now refused.
+- **The runtime role held more privilege than the deployment needs.** It could
+  `SELECT` every credential hash, `DELETE` from every archive table, `TRUNCATE`
+  them, and `EXECUTE` every function in the schema including every
+  `SECURITY DEFINER` one. `mindpalace posture` verifies the reduced shape, so a
+  role script that drifts from what it claims is a startup failure rather than an
+  assumption.
+- **The test harness provisioned a different role from the one it tests.** It
+  granted blanket DML and `EXECUTE ON ALL FUNCTIONS` on every run, quietly undoing
+  `scripts/db/runtime_roles.sql`, so the isolation suite was proving separation
+  against a role that could delete the archive and read every tenant's hashes.
+  The harness now provisions exactly the documented role.
+- **The local runtime socket authorized nothing.** Its token proved the caller was a
+  local peer of the same user and decided nothing about which corpora that peer could
+  reach, so it dispatched any corpus named on the wire — read or write — in every
+  mode, including `required`. It was the default transport for the CLI. It now
+  resolves a principal from `MIND_PALACE_RUNTIME_CREDENTIAL` per dispatch and scopes
+  every operation with it; without one, `required` mode serves nothing. The socket
+  token is compared in constant time.
+- **An SDK client built without a corpus name authenticated in no mode** — the exact
+  shape the CLI constructs. Its operations ran as the default local principal,
+  unrestricted, under `MIND_PALACE_AUTH_MODE=required`. Every local client now
+  resolves its identity at construction, so one that cannot authenticate fails there
+  rather than partway through a workflow.
+- **The SDK took the runtime shortcut outside the caller's scope.** The socket is a
+  process boundary, so the scope has to be entered before it is used; otherwise the
+  in-process path was authorized and the socket path was not.
+- **An `AuthorizationError` escaped the SDK as itself**, so the same refusal arrived
+  as one exception class locally and another over HTTP, and `except
+  MemoryClientError` did not catch it. Including from the constructor, which runs
+  outside the translation an operation gets.
+- **`MIND_PALACE_DEPLOYMENT=server` with authentication off started anyway**, which is
+  what a bare `uvicorn api.main:app` and the default `docker compose up` produced
+  with a published port. The application factory now refuses to start, with the
+  reason. `docker-compose.yml` ships `server` + `required` and the runtime role.
+- **`scripts/db/runtime_roles.sql` documented a password variable it never read.** It
+  created `mindpalace_runtime` as `LOGIN` with no password, so an operator following
+  the documentation got a role that could not authenticate — which reads as an RLS
+  problem and is not one. The password is now a `psql` variable, quoted as a literal,
+  and a missing or empty one fails the run.
+- **`corpora.sync` wrote documents, chunks, the manifest and the archive with only a
+  read check**, so a `read_only` credential could perform a complete write into a
+  corpus it *was* granted. It now requires the read-write role, on both the REST route
+  and the SDK.
+- **MCP resolved its credential as a bare secret** where an `Authorization` header
+  value was required, so every tool answered 401 even when correctly configured. It
+  also built its clients without passing that credential on, so `context`, `search`
+  and `sync` bypassed the scope the tool had just established.
+- **`GET /api/corpora` and the un-named corpus scope enumerated every tenant.**
+  Both are now scoped to what the caller may reach, so an omitted corpus can no
+  longer mean "the other tenant's" and a listing cannot reveal corpora the caller
+  was never granted.
+- **`POST /api/ingest/*` wrote into the implicit `default` corpus.** Both routes
+  now name their corpus and go through the same authorization choke point, so the
+  shared default namespace is no longer an unauthenticated write target.
+- **Four repository functions had no corpus predicate at all** — `search_chunks`,
+  `get_document`, `get_chunks_for_document`, `get_related_documents`. All four now
+  require `corpus_id`; the last one scopes both sides of its tag sub-query, which
+  previously read another tenant's tags even when the outer query was scoped.
+- **`RelatedService`, `TimelineService` and the benchmark strategy builder called
+  retrieval with no corpus**, which `RetrievalService` reads as "every corpus". All
+  three now require one, so the global path cannot be reached by omission.
+- **`CorpusStatsResponse.last_ingested` was typed `str` and received a
+  `timestamptz`**, making `GET /api/corpora/{name}` a 500 for any corpus that had
+  ingested anything. The JSON is unchanged; the model now matches the query.
+- **Chunk writes and deletes relied entirely on `doc_id` provenance.** They now
+  require the corpus and verify the document belongs to it, and stale-document
+  deletion names the corpus as well as the id.
+- **Revoking an already-revoked credential reported success**, because the row was
+  still updated. It now reports what actually changed, and an ambiguous id prefix
+  is refused rather than resolved arbitrarily.
+- **`deployment.md` still said the API had no authentication.** It does.
+
+### Added
+
+- **`mindpalace credential issue|list|revoke` and `mindpalace corpus create`.** The
+  bootstrap was a Python snippet, which meant the first step of every deployment was
+  copying code that imports internals. These are local administrative commands on
+  purpose: a network route that mints a tenant boundary or a credential is the thing
+  the design exists to avoid. `revoke` accepts the id prefix that `list` prints.
+- **`mindpalace posture`.** Whether the current database role actually enforces the
+  row-level policies, printed and non-zero on a problem. `MIND_PALACE_AUTH_MODE` is an
+  application switch and says nothing about the role; a service could report itself
+  tenant-scoped while running as a superuser with migration `008` inert. The same
+  facts appear in `/health/ready` under `database_posture`, and a check that cannot
+  query `pg_roles`/`pg_class` reports the tables as unprotected rather than fine.
+- **`MIND_PALACE_DEPLOYMENT=local|server`** as an explicit setting rather than a
+  heuristic. `server` requires `required`, a set of ingest roots, and a database
+  role that actually enforces the policies — checked in the application lifespan,
+  before the process accepts a request. An unrecognised value is refused.
+- **`tests/test_operator_cli.py`**, which drives `mindpalace corpus` and
+  `mindpalace credential` through their real entry point. The service functions
+  they call were all tested; the wiring around them was not, and it broke.
+
+### Changed
+
+- **The reference integration no longer imports Mind Palace internals.** It called
+  `api.services.memory_public.execute` in-process and described that as public. It was
+  not: an adopter needing those imports could not be pointed at a different
+  deployment. It now speaks the public REST contract over `httpx`, through the real
+  middleware and the real policies, and a test fails if any file under the example
+  imports one. The one exception is onboarding, where creating a corpus and issuing a
+  credential are administrative and have no HTTP route by design.
+- **A corpus name is no longer described as a tenant boundary.** It is a namespace;
+  whether a caller may address one is decided by its credential. `README.md`,
+  `deployment.md` and `docs/STATUS.md` are corrected, and `docs/security.md`
+  documents the threat model, the deployment modes, the database roles, the five
+  access surfaces, the tenant scope and the known limitations.
+
+### Compatibility
+
+- **New migration, `008`.** Additive: two new tables, new policies on existing
+  tables. `downgrade` removes them. Existing data is not reclassified and no row is
+  assigned an invented owner — every pre-existing corpus keeps whatever scope it
+  had, which under `off` is unrestricted and under `required` is empty until a
+  credential is granted.
+- `MemoryResponse` gained no field, so the version 1 JSON contract is unchanged.
+  The MCP tool set is unchanged: authentication is inherited from the same choke
+  point through an environment variable, not added as a tool.
+- `DELETE /api/corpora/{name}` returns a report instead of `204`, because the
+  caller needs to know what was removed and, more importantly, what was not. An
+  empty `204` would have implied that exported receipts and database backups were
+  covered too. The status code for a successful deletion is now `200`.
+- Administrative CLI commands connect with `MIND_PALACE_ADMIN_DATABASE_URL` when it
+  is set, and fall back to `DATABASE_URL` otherwise, which is what keeps the
+  single-user local workflow working with one setting.
+- `/health/ready` gained a `database_posture` object. Additive; the existing keys
+  are unchanged.
+- A deployment that leaves `MIND_PALACE_AUTH_MODE` unset behaves exactly as before.
+  `MIND_PALACE_DEPLOYMENT` defaults to `local`, so no existing deployment is
+  refused a startup it used to get. A deployment that uses a superuser or
+  `BYPASSRLS` database role gets no tenant isolation from the database layer
+  whatever the mode says; `mindpalace posture` and `/health/ready` now say so,
+  and it is stated in `docs/security.md` rather than left to be discovered.
+- `scripts/db/runtime_roles.sql` now requires `-v runtime_password=<password>` (or
+  `-v runtime_password_skip=on`). Running it without either fails with the reason
+  instead of creating a role that cannot log in.
+
+## [v0.9.1] - 2026-10-08
+
+A patch on `v0.9.0`. No memory semantics, retrieval behaviour, public response field
+or benchmark input changed; `M006.75`/`M006.5`/`M013` results are untouched and the
+disputed 47/60 artifact was not regenerated.
+
+The point of this release is that the previous release's claims are now checkable from
+a clean machine.
+
+### Fixed
+
+- **The test suite could not pass on a clean runner.** CI installed
+  `sentence-transformers` but never the weights and ran pytest with
+  `HF_HUB_OFFLINE=1`, so a clean runner had the package and not the model. 41 tests
+  failed on `OSError: We couldn't connect to ...` -- everything that indexes or ranks
+  anything -- and `--maxfail=1` reported only the first. A developer machine already
+  had the cache, which is what hid it.
+- **The CI badge rendered as `404: badge not found`.** The URL was a release-badge
+  path with a workflow path appended; shields.io answers that with HTTP 200 and an
+  error SVG, so it looked like a mangled image rather than a dead link. Verified by
+  rendering every badge URL and reading the aria-label back.
+- **The wheel shipped the research tooling.** `scripts/` had been in the distribution
+  since `v0.6.0`: 54 files, 590 KB of 1,328 KB unpacked, 44% of the distribution, none
+  of it imported at runtime. The wheel is now **227 KB / 74 files, down from 425 KB /
+  129**. The repository still ships those scripts; they are where `check_versioning.py`,
+  `check_evidence.py` and the benchmark harnesses run from.
+- **The wheel CI job asserted something no install could satisfy.** It ran
+  `mindpalace-mcp --help` against a *bare* `pip install dist/*.whl`, but `mcp` is a
+  declared extra, so the import raised `ModuleNotFoundError: No module named 'mcp'`.
+  The step's `|| python -c "import mcp_server"` fallback could not have rescued it
+  either — same missing package. MCP is now verified in its own step from an install
+  that includes the extra, and the bare install's *omission* of `mcp` is asserted as
+  the design it is.
+
+  `mindpalace-mcp --help` is not run there either, for a second reason worth writing
+  down: `main()` takes no arguments and goes straight to `mcp.run_stdio_async()`, so
+  the process would block on stdin until the job timed out. The old step never reached
+  that line, because the import failed first.
+
+### Evaluated, not adopted
+
+- **Python 3.15 lazy imports.** Measured on CPython 3.15.0rc1. The semantic cold path
+  cannot improve: the model stack costs 5.61 s to import against a 0.11 s CLI import
+  graph, and `sentence_transformers` is *already* imported lazily inside
+  `Embedder._get_model()`, so there is nothing to defer on the path that matters.
+  A narrow `__lazy_modules__` prototype changed nothing measurable, and
+  `-X lazy_imports=all` breaks real commands with a partial SQLAlchemy initialisation
+  (`AttributeError: type object 'array' has no attribute 'ARRAY'`). Full table and
+  reasoning in [the release map](docs/release-map.md#python-315-lazy-imports-were-evaluated-and-not-adopted).
+- **The model stack as an optional install extra.** Not done, deliberately: making
+  `sentence-transformers` optional would mean a plain `pip install mindpalace-os`
+  stopped ranking semantically, which is a silent behaviour change for the majority
+  case. What *is* guaranteed, and tested, is that nothing needs the model merely to
+  import or run a command -- `tests/test_m016_model_free_package.py` blocks the stack
+  at the import hook and checks `--help`, `init`, `recall` and `explain` still work.
+
+### Measured, not changed
+
+A read whose claim vectors are all cached still costs ~6.6 s, because
+`memory_query.py:267` asks the embedder for its dimension and that loads the model.
+`memory_claim_embeddings.embedding_dimension` already records it. Recorded rather than
+changed: the read path is authoritative, and a wrong dimension would silently corrupt
+ranking. It is a future-milestone candidate, not a patch.
+
+### Compatibility
+
+- No migration; the schema head does not move. No public response field changed.
+- Python `>=3.11` remains the floor. 3.15.0rc1 runs the model-free path correctly,
+  including the announced degradation to lexical, but torch publishes cp310-cp314
+  wheels only, so the semantic path cannot run on 3.15 yet and was not measured there.
+- Memory Pack stays at version 1. The receipt schema stays at version 1.
+
 ## [v0.9.0] - 2026-10-08
 
 Milestones `M015.2` (five-minute memory path) and `M016` (instant recall, explicit
@@ -127,7 +520,7 @@ cached on the machine — the exact acceptance coupling that would make an abste
 unreproducible across two developers' laptops.
 
 An explicit mode is honest about the trade-off; an automatic one hides it. Details in
-[docs/operations.md](docs/operations.md#model-free-lexical-mode).
+[deployment.md](docs/runtime.md#model-free-lexical-mode).
 
 ### Developer experience
 
@@ -632,3 +1025,45 @@ decision-provider and Jev research is intentionally unreleased.
 [v0.5.0]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.5.0
 [v0.4.1]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.4.1
 [v0.4.0]: https://github.com/raunakdey-07/mind-palace/releases/tag/v0.4.0
+
+### Platform readiness
+
+- **An error taxonomy** (`mindpalace_errors.py`, re-exported from the SDK). One
+  base class, six components (`memory`, `auth`, `database`, `transport`,
+  `provider`, `mindpalace`), a stable machine-readable `code`, `retryable`,
+  `request_id`, and a bounded `details` dict. The existing HTTP `detail` shape is
+  preserved and the new fields were added beside it, so nothing an integrator
+  already reads changes. An unrecognised exception is reported as an internal
+  error carrying its *type* and not its message.
+- **Request ids.** Every request gets an `X-Request-Id`; an inbound one is
+  honoured so a gateway's id survives, and a header that is not a short printable
+  token is replaced. The middleware is registered outside the authentication
+  middleware, so a refusal -- the request a user is about to report -- carries one.
+- **Provider failures are classified, never forwarded.**
+  `classify_provider_error` picks a category and writes the message from a fixed
+  set, keeping the provider's request id. A provider error body routinely echoes
+  the prompt and the key.
+- **A provider conformance suite** (`tests/test_provider_conformance.py`) and
+  `docs/providers.md`, separating the model-free memory contract from the internal
+  embedding provider from the generation provider that belongs to the consuming
+  application. No API key and no network: a conformance suite that needs a paid
+  account to pass is a suite that stops being run.
+- **A deletion and erasure lifecycle document** (`docs/deletion-and-erasure.md`),
+  including the envelope-encryption design and an explicit statement that
+  cryptographic erasure is **not** implemented.
+- **An integration conformance kit** (`integration_conformance.py`), runnable
+  against any installation, with the negative checks that would catch a
+  misconfigured deployment.
+- **A design note** (`docs/platform-readiness-design.md`) recording what was found,
+  what was decided, and what was deliberately not done.
+
+### Withdrawn
+
+- **Resource-level authorization inside a corpus.** Designed, prototyped, tested,
+  and then removed from the migration chain: it made `POST /api/memory/remember`
+  return `503` for a write that has always succeeded, and the cause was not
+  diagnosed to a conclusion. Shipping a migration that breaks the primary write
+  path is not acceptable at any confidence level. The design, the three real
+  findings it produced, the adversarial suite, and the reinstating steps are in
+  [`docs/withdrawn/`](docs/withdrawn/README.md). Corpus-level isolation is
+  unchanged and remains the shipped guarantee.

@@ -7,7 +7,16 @@ A thin adapter exposing the Mind Palace core over MCP so any MCP-compatible
 AI client can use corpus memory as tools. Deliberately minimal:
 context, search, sync, list_corpora, and the public memory operations.
 The memory tools do not expose arbitrary writes; snapshot creates immutable state.
-Authentication is not currently provided.
+
+Authentication is inherited from the HTTP surface, not reimplemented: the same
+credential, the same corpus scope and the same read-write rule apply, because
+the same choke point decides them. An MCP server is a stdio process launched by
+one configured agent, so `MIND_PALACE_MCP_CREDENTIAL` carries that agent's
+credential. It is an environment variable rather than a tool argument on purpose:
+a tool argument is chosen by whoever calls the tool, and a caller who can choose
+their own credential needs no authorization at all. With
+`MIND_PALACE_AUTH_MODE=required` and no credential configured, every tool
+refuses -- MCP is not a way around the HTTP boundary.
 
 Run with:
     python -m mcp_server
@@ -18,7 +27,11 @@ Configure in an MCP client (example):
         "mind-palace": {
           "command": "python",
           "args": ["-m", "mcp_server"],
-          "env": {"DATABASE_URL": "postgresql://..."}
+          "env": {
+            "DATABASE_URL": "postgresql://...",
+            "MIND_PALACE_AUTH_MODE": "required",
+            "MIND_PALACE_MCP_CREDENTIAL": "mpk_..."
+          }
         }
       }
     }
@@ -27,6 +40,8 @@ Configure in an MCP client (example):
 from __future__ import annotations
 
 import json
+import os
+from contextlib import contextmanager
 from typing import Annotated
 
 from mcp.server.mcpserver import MCPServer
@@ -42,9 +57,61 @@ _clients: dict[str, MindPalace] = {}
 
 
 def _client(corpus: str) -> MindPalace:
+    """A local client for this process's configured credential.
+
+    The credential is the same one the tool scope resolves from. Without it,
+    `MindPalace(corpus)` built an unnamed, unauthenticated client whose own
+    authorization check ran as the default local principal -- so `context`,
+    `search` and `sync` bypassed the very scope the tool had just established.
+    """
     if corpus not in _clients:
-        _clients[corpus] = MindPalace(corpus)
+        _clients[corpus] = MindPalace(corpus, api_key=os.getenv("MIND_PALACE_MCP_CREDENTIAL"))
     return _clients[corpus]
+
+
+async def _resolved_principal():
+    """The identity this MCP process acts as, from its configured credential."""
+    from api.services.authz import AuthorizationError, auth_required, resolve_principal
+    from api.services.db import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        # As a header, not as a bare secret: `resolve_principal` takes the value an
+        # `Authorization` header carries, and passing the secret alone failed the
+        # scheme check -- so every MCP tool answered 401 even with a correctly
+        # configured credential.
+        credential = os.getenv("MIND_PALACE_MCP_CREDENTIAL") or None
+        principal = await resolve_principal(db, f"Bearer {credential}" if credential else None)
+    if auth_required() and principal.unrestricted:
+        # `resolve_principal` returns the unrestricted principal only when the
+        # mode is off, so this is reachable only if the mode changed underneath a
+        # running process. Refusing is the safe reading of that.
+        raise AuthorizationError(
+            "unauthenticated",
+            "MCP has no credential configured; set MIND_PALACE_MCP_CREDENTIAL",
+            401,
+        )
+    return principal
+
+
+@contextmanager
+def _caller():
+    """Run a synchronous tool as the configured identity, for its duration.
+
+    These four tools are called outside any running loop, so `asyncio.run` is
+    right here. It is a separate entry point from `_execute_memory` rather than a
+    fallback inside one shared helper, because the memory tools run *inside* a
+    loop and a single helper would have to choose and be wrong half the time.
+    """
+    import asyncio
+
+    from api.services.db import principal_scope
+
+    try:
+        principal = asyncio.run(_resolved_principal())
+    except Exception as exc:  # noqa: BLE001 - surfaced as a tool error, not a crash
+        raise RuntimeError("could not resolve the configured credential") from exc
+    with principal_scope(principal):
+        yield principal
 
 
 @mcp.tool()
@@ -54,14 +121,16 @@ def context(query: str, corpus: str, budget_tokens: int = 4096) -> str:
     Returns bounded text with source attribution. Prefer this over raw
     search when feeding an LLM.
     """
-    pack = _client(corpus).context(query, budget_tokens=budget_tokens)
+    with _caller():
+        pack = _client(corpus).context(query, budget_tokens=budget_tokens)
     return json.dumps(pack.to_dict(), indent=2)
 
 
 @mcp.tool()
 def search(query: str, corpus: str, k: int = 5) -> str:
     """Raw semantic search over a corpus. Returns ranked chunks with scores."""
-    results = _client(corpus).search(query, k=k)
+    with _caller():
+        results = _client(corpus).search(query, k=k)
     payload = [
         {
             "title": r.source_title,
@@ -78,7 +147,8 @@ def search(query: str, corpus: str, k: int = 5) -> str:
 @mcp.tool()
 def sync(corpus: str, path: str) -> str:
     """Synchronize a corpus with a directory of Markdown documents."""
-    summary = _client(corpus).sync(path)
+    with _caller():
+        summary = _client(corpus).sync(path)
     return json.dumps(summary.__dict__, indent=2)
 
 
@@ -94,7 +164,8 @@ def list_corpora() -> str:
 
     import asyncio
 
-    items = asyncio.run(_list())
+    with _caller():
+        items = asyncio.run(_list())
     return json.dumps(items, indent=2, default=str)
 
 
@@ -103,12 +174,24 @@ MemoryToolResult = Annotated[CallToolResult, MemoryResponse]
 _READ_MEMORY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 
 
+#: Operations that create state, and so need the read-write role. Mirrors
+#: `api.routers.memory.WRITE_OPERATIONS`; both surfaces decide the same way.
+WRITE_OPERATIONS = frozenset({"snapshot"})
+
+
 async def _execute_memory(operation: str, request: MemoryRequest) -> CallToolResult:
+    from api.services.authz import AuthorizationError, require_corpus
+    from api.services.db import current_principal, principal_scope
     from api.services.memory_public import MemoryError, execute
 
     try:
-        response = await execute(operation, request)
-    except MemoryError as exc:
+        # Resolved on this loop rather than on a private one: these tools are
+        # awaited, so `asyncio.run` would refuse.
+        principal = await _resolved_principal()
+        with principal_scope(principal):
+            require_corpus(current_principal(), request.corpus, write=operation in WRITE_OPERATIONS)
+            response = await execute(operation, request)
+    except (MemoryError, AuthorizationError) as exc:
         detail = {"code": exc.code, "message": exc.message}
         return CallToolResult(
             isError=True,

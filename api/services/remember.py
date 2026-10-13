@@ -23,7 +23,11 @@ import re
 from datetime import date
 from pathlib import Path
 
-from api.services.corpora import DEFAULT_CORPUS_ID, validate_corpus_name
+from api.services.corpora import (
+    DEFAULT_CORPUS_ID,
+    get_corpus_by_name,
+    validate_corpus_name,
+)
 from api.services.ingestion import IngestionService
 
 #: Where simple memories live. A reserved prefix, so a remembered fact is never
@@ -171,15 +175,27 @@ async def ensure_corpus(corpus: str, corpus_id: str | None = None) -> str:
     A first memory should not require a separate "create a namespace" step. The
     default corpus already exists, created by migration `002`, so this is a
     no-op for the common case.
+
+    Resolution still goes through the authorization choke point, including for the
+    `default` short circuit: `default` is a namespace like any other, and a
+    credential that was not granted it must not be able to write into it by
+    naming it. In `required` mode the implicit `default` therefore does not act as
+    a shared tenant namespace -- it has to be granted.
     """
     from api.services.corpora import get_or_create_corpus
     from api.services.db import session_scope
 
+    from api.services.authz import require_corpus
+    from api.services.db import current_principal
+
     validate_corpus_name(corpus)
+    require_corpus(current_principal(), corpus, write=True)
     if corpus_id is not None:
         return corpus_id
     if corpus == "default":
-        return DEFAULT_CORPUS_ID
+        async with session_scope() as db:
+            row = await get_corpus_by_name(db, corpus)
+        return row["id"] if row else DEFAULT_CORPUS_ID
     async with session_scope() as db:
         row = await get_or_create_corpus(db, corpus)
     return row["id"]

@@ -179,7 +179,7 @@ async def memory_db():
             transaction = await conn.begin()
             try:
                 await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
-                await conn.execute(text(f'SET LOCAL search_path TO "{schema}", pg_catalog'))
+                await conn.execute(text(f'SET LOCAL search_path TO "{schema}", public'))
                 await conn.execute(text("""
                     CREATE TABLE corpora (id CHAR(64) PRIMARY KEY, name TEXT NOT NULL UNIQUE)
                 """))
@@ -204,6 +204,22 @@ async def memory_db():
                 def upgrade(sync_conn):
                     with Operations.context(MigrationContext.configure(sync_conn)):
                         migration.upgrade()
+                    # `011` adds resource ownership and the application writes
+                    # that column on every archive row. This fixture deliberately
+                    # stops at `004` -- it hand-builds `corpora`, `documents` and
+                    # `chunks` so it can test the `004` backfill in isolation --
+                    # and the rest of the chain cannot be replayed over that stub.
+                    #
+                    # So the two columns the application contract depends on are
+                    # added here. That is a deliberate, visible duplication rather
+                    # than a silent one: if the application starts writing a third
+                    # column, every test using this fixture fails loudly with
+                    # `UndefinedColumnError` naming it.
+                    for table in ("documents", "memory_documents"):
+                        sync_conn.exec_driver_sql(
+                            f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS "
+                            "owner_principal_id CHAR(64)"
+                        )
 
                 await conn.run_sync(upgrade)
                 async with AsyncSession(bind=conn, expire_on_commit=False) as db:

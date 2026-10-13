@@ -94,6 +94,11 @@ helm/
 !/docs/research/**
 !/docs/operations/
 !/docs/operations/**
+# Material that was built, proved, and then deliberately withdrawn. It is part of
+# the project's record: without it the next person re-derives the same findings
+# and the same 42501. Not runnable from here -- it lives outside tests/ on purpose.
+!/docs/withdrawn/
+!/docs/withdrawn/**
 !/docs/evaluation/
 /docs/evaluation/*
 !/docs/evaluation/m006.md
@@ -108,7 +113,23 @@ monitoring/
 *.md
 !README.md
 !NOTICE.md
-!docs/operations.md
+!docs/feed.md
+!docs/runtime.md
+!docs/deployment.md
+!docs/security.md
+!docs/when-to-use.md
+!docs/first-hour-audit.md
+!/docs/PROGRESS.md
+!/docs/gate/
+!/docs/PROGRESS.md
+!/docs/gate/**
+!docs/deletion-and-erasure.md
+!docs/errors.md
+!docs/providers.md
+!docs/performance-resource-authorization.md
+!docs/platform-readiness-design.md
+!docs/withdrawn/
+!docs/withdrawn/**
 !docs/STATUS.md
 !docs/architecture/
 !docs/architecture/**
@@ -143,3 +164,8 @@ monitoring/
 !docs/evaluation/m006.md
 !docs/evaluation/m0065.md
 /eval/results/
+
+# The retrieval lab's embedding cache: binary .npy blobs keyed by content
+# hash, several megabytes, and worthless on another machine. 596 of them were
+# committed by accident in 7ac19e6 and are being purged from this branch.
+.retrieval_lab_cache/

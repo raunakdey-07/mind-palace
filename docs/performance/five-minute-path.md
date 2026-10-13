@@ -86,7 +86,7 @@ attractive option, because it would remove the import from *every* command rathe
 than from all but the first. Measured on a ten-fact corpus across sixteen question
 shapes: fifteen of sixteen byte-identical. The sixteenth was an abstention the
 semantic ranking did not make. See
-[operations](../operations.md#why-not-a-lexical-fast-path).
+[operations](../runtime.md#why-not-a-lexical-fast-path).
 
 ## What the runtime does, and what it costs
 

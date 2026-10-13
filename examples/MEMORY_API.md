@@ -58,7 +58,7 @@ Each HTTP request observes its own PostgreSQL MVCC statement snapshot. Rows
 committed after a cursor with a strictly later `(observed_at, version_id)` may
 appear in a later page, but late commits at or before an issued boundary can be
 missed by that continuation. This is not exactly-once, broker, CDC, or
-transactional-delivery semantics. See [`docs/operations.md`](../docs/operations.md)
+transactional-delivery semantics. See [`deployment.md`](../docs/deployment.md)
 for the complete consistency model and polling limitation at the final page.
 
 The SDK and CLI expose the same method/command:

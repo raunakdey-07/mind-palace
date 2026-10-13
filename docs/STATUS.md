@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1619 passed, 0 failed, 2 skipped**; 1621 collected. 553 s. The run record in `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote; `check_evidence.py` verifies all three against `pytest --collect-only` at HEAD |
+| tests | **1625 passed, 0 failed, 2 skipped** (as of `312958d`); 1627 collected. The two figures are labelled `as of <commit>` because `check_evidence.py --require-head` now refuses an unlabelled figure that only an older run produced. **The runner and a workstation do not agree, and both are reported.** CI run `38400659433` on `wip/claims-and-lab`: 1613 passed (as of `312958d`), 8 skipped. The 6 extra CI skips are all `tests/test_ingestion_statistics.py`, reason `no reachable DATABASE_URL`; they do not occur on a workstation, where all 6 pass. Their CI-only cause is **not established**. The newest runner run, `38410829513` on `c3c8252`, reports 1619 passed (as of `c3c8252`), 8 skipped. Both sides collect **1627**; the runner skips the 6 `tests/test_ingestion_statistics.py` tests that pass on a workstation, so it is 1627-8 there and 1627-2 here. The tests added this cycle do run on the runner. The run record in `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote; `check_evidence.py` verifies all three against `pytest --collect-only` |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -273,7 +273,7 @@ same error as the `1583` figure this table used to carry.
 | Answers survive a missing model | 202/202 answered, 163 correct | `f52272d` |
 | Answers survive a missing retrieval path | 202/202 answered, 163 correct | `f52272d` |
 | Authoritative output does not depend on the claim cache | 202 packs identical with L2 destroyed including the cache | `f52272d` |
-| Corpus isolation holds | `tests/test_corpus_isolation.py`, `tests/test_corpus_scope.py` | **re-verified at head: 24 passed** |
+| Corpus isolation holds | `tests/test_corpus_isolation.py`, `tests/test_corpus_scope.py` | **re-verified: 24 passed** (as of `fd53840`) |
 
 **Why the first two rows are not re-verified, established this session.**
 `scripts/benchmark/m011_rebuildability.py` builds a fresh per-run schema

@@ -10,6 +10,9 @@ on:
       # point of a runner is that it is not this machine. Removed when the
       # branch merges.
       - wip/platform-readiness
+      # Same reason as the line above: this branch's green must be a runner's
+      # green, not a laptop's. Removed when the branch merges.
+      - wip/claims-and-lab
   pull_request:
     branches:
       - main
@@ -263,13 +266,17 @@ jobs:
       # Everything from here needs no network. Two different requirements -- "the
       # model must exist" and "the tests must not need the network" -- and conflating
       # them is what made the original gap invisible.
+      # `-rs` prints the reason for every skip. Without it the run reports
+      # "8 skipped" and nothing else, which is how six of them stayed
+      # unexplained: a skip count is a number nobody can act on, and a silent
+      # skip looks exactly like a passing test in the summary line.
       - name: Run tests
         env:
           MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
-          pytest -q
+          pytest -q -rs
 
       # Tenant isolation, as a separate step so a leak cannot hide inside a green
       # run: it needs the pinned models off, the runtime role present, and a

@@ -21,6 +21,31 @@
       "seconds": 530.1,
       "skipped": "2"
     },
+    "312958d: full suite, Phase 2, disposable PG 15.4 at 15434": {
+      "collected": "1627",
+      "commit": "312958d94920b01daa4c8bedbcebf704780b1d80",
+      "failed": "0",
+      "label": "full suite, Phase 2, disposable PG 15.4 at 15434",
+      "note": "1625 = the 1619 of the previous entry plus the 6 new tests in tests/test_evidence_gate_tied_to_head.py. Warnings fell from 39 to 8: the 28 'marked with @pytest.mark.asyncio but it is not an async function' warnings are gone after removing redundant module-level marks.",
+      "passed": "1625",
+      "skipped": "2"
+    },
+    "38400659433: CI on wip/claims-and-lab @ 312958d (runner, ubuntu-latest)": {
+      "commit": "312958d94920b01daa4c8bedbcebf704780b1d80",
+      "failed": "0",
+      "label": "CI run 38400659433, Lint and Test job, 'Run tests' step",
+      "note": "Recorded from the GitHub Actions log archive for run 38400659433 (head 312958d), fetched 2026-10-13: '1613 passed, 8 skipped, 39 warnings in 438.71s'. This is the RUNNER figure and it differs from a workstation figure of 1619 passed / 2 skipped on the same tree. The 6 extra skips are tests/test_ingestion_statistics.py with reason 'no reachable DATABASE_URL'; they do not skip on a workstation. Not established why. No junitxml: the workflow does not upload one, which is why this record has no artifact to point at.",
+      "passed": "1613",
+      "skipped": "8"
+    },
+    "38410829513: CI on wip/claims-and-lab @ c3c8252": {
+      "commit": "c3c8252268205c4f51b316cc8994c8cdee78c652",
+      "failed": "0",
+      "label": "CI run 38410829513, Lint and Test job, 'Run tests' step",
+      "note": "CORRECTION. First written as 1625/8, which was WRONG: I read 1625 out of the check_evidence gate step, which was echoing back my own workstation record (312958d), not a runner figure. The actual 'Run tests' step of run 38410829513 says '1619 passed, 8 skipped, 8 warnings in 426.79s'. Read from that step's log.\n\nWhy 1619 and not 1625: both sides collect 1627. The runner SKIPS the 6 tests/test_ingestion_statistics.py tests ('no reachable DATABASE_URL') that pass on a workstation, so 1627-8=1619 there and 1627-2=1625 here. The 6 new tests in tests/test_evidence_gate_tied_to_head.py DO run on the runner; the difference is the ingestion_statistics skips, whose cause is NOT ESTABLISHED.\n\nThis record was hand-written from a log, which is exactly the failure mode the gate exists to catch, and the gate could not catch it: check_evidence only knows what this file says. A runner-attested count still needs a human to read the right log line. Noted as a limitation rather than papered over.",
+      "passed": "1619",
+      "skipped": "8"
+    },
     "4166e08: full suite, run 2, immediately after run 1": {
       "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
       "failed": "0",
@@ -39,6 +64,15 @@
       "note": "junitxml written by the runner; 1618 collected, 1616 passed, 2 skipped",
       "passed": "1616",
       "seconds": 524.7,
+      "skipped": "2"
+    },
+    "549d2cf: full suite, Phase 0, disposable PG 15.4 at 15434": {
+      "collected": "1621",
+      "commit": "549d2cf443cd5af85caafc3af3ea9fe1337e543f",
+      "failed": "0",
+      "label": "full suite, Phase 0, disposable PG 15.4 at 15434",
+      "note": "pytest -q run directly in a shell with PYTHONPATH unset; 3 of 4 full-suite runs this session returned exactly 1619 passed / 2 skipped / 0 failed. One run via scripts/record_test_run.py --command returned 6 failures because a stale mindpalace_test_<pid>_0 database from an earlier killed run was still present; the session database is disposable and was dropped before this run.",
+      "passed": "1619",
       "skipped": "2"
     },
     "671a892: full suite, run A, after the install fixes": {

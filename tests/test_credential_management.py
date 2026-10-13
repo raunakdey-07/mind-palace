@@ -45,7 +45,9 @@ from test_tenant_isolation import world as _shared_world_fixture
 # reader and to the linter.
 world = _shared_world_fixture
 
-pytestmark = [pytest.mark.asyncio, requires_tenant_db]
+pytestmark = [requires_tenant_db]
+# The `pytest.mark.asyncio` that used to sit in this list was redundant under
+# `asyncio_mode = "auto"` and warned on every sync test in the module.
 
 
 # ---------------------------------------------------------------------------

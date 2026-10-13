@@ -6,7 +6,7 @@
 > relevance scorer but grades at **rank 1** and has **no lexical fallback**. The
 > product's own benchmark, using its own grader and its documented
 > lexical-then-semantic fallback, reports **194/202**. This lab's arm A reports
-> **151/202**.
+> **117/202 correct** (151 answered, 33 of them wrong).
 >
 > So every figure below -- the harm matrix, the **36.4% ceiling**, every
 > confident-wrong rate, every recall@k -- was measured **against arm A, not
@@ -164,7 +164,19 @@ was 0 s and the `du` read an empty directory. Measured properly: **211 s and
 
 Last round reported how many questions each arm **fixes**. That is half a
 number, and the half that flatters. Measured both ways against the shipped
-default (arm A, correct on 151 of 202 dev questions):
+default (arm A, correct on **117** of 202 dev questions at 85% coverage).
+
+> **Correction, 2026-10-13.** This line previously read "correct on 151 of 202".
+> **151 is the number of questions arm A *answered*, not the number it got
+> right.** From `docs/performance/retrieval-lab-dev.json`, arm A at 85% coverage:
+> `answered: 151`, `correct: 117`, `wrong: 33`, `abstained_correctly: 25`,
+> `n: 202`. The harm matrix immediately below is unaffected and was always right,
+> because it is internally consistent: its own row for arm B reads
+> `both right 112 + both wrong 47 + fixed 4 + broken 39 = 202`, which puts arm A
+> at `112 + 4 = 116` correct — consistent with the artifact's 117, and
+> impossible if arm A had been correct on 151. Only the prose label was wrong.
+> The same error appears in `docs/PROGRESS.md` ("reproduces 151/202") and in
+> the banner at the top of this file; both are corrected in their own commits.
 
 | arm | fixed | BROKEN | net | both right | both wrong |
 |---|---|---|---|---|---|

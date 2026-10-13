@@ -46,7 +46,8 @@ import pytest
 
 from api.services.parser import FrontmatterWarning, parse_markdown
 
-pytestmark = [pytest.mark.asyncio]
+# See tests/test_security.py: redundant under `asyncio_mode = "auto"`, and it
+# warned on every sync test in this module.
 
 #: Unquoted scalars containing a colon. PyYAML rejects this; a hand-written
 #: claims block hits it constantly.

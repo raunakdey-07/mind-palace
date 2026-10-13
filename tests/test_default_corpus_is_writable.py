@@ -59,7 +59,8 @@ from sqlalchemy import text
 from api.services.corpora import DEFAULT_CORPUS_ID, DEFAULT_CORPUS_NAME, corpus_id_for_name
 from api.services.memory import memory_document_id
 
-pytestmark = [pytest.mark.asyncio]
+# See tests/test_security.py: redundant under `asyncio_mode = "auto"`, and it
+# warned on every sync test in this module.
 
 
 def test_the_default_corpus_id_is_not_wider_than_its_column():

@@ -1,4 +1,4 @@
-# Progress — branch `wip/platform-readiness`
+# Progress
 
 One line per phase, newest last. **NOT DONE** means the budget ran out before the
 phase started or finished, and nothing in it is claimed.
@@ -8,7 +8,31 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
-## Session 6 — 2026-10-12: green first, then the claims, then the lab
+## Session 7 — 2026-10-13: push, land the competitive doc, then the lab measures the product
+
+**Written first, before any work, with every phase below marked NOT DONE.**
+Branch `wip/claims-and-lab`, cut from `main` at `f08d8f8` (the merge of
+`wip/platform-readiness`).
+
+**Owner decisions D1 (model access) and Hub access were not filled in before this
+session started.** Both are still the bracketed placeholders, so Phase 4c's MiniLM
+LongMemEval baseline and all of Phase 5 are blocked on the owner's answer, not on the
+work. They are recorded as blocked rather than guessed.
+
+| phase | state | one line |
+|---|---|---|
+| 0 push | **DONE** | Branch pushed. Four runs, all `success`, 5/5 jobs each: **`38400659433`** @ `312958d`, **`38410829513`** @ `c3c8252`, **`38414137784`** @ `bc8af70`, **`38417158234`** @ `68ff8e3`. `log_error_verbosity = terse` in the compose file, with the `STATEMENT` caveat in the file itself |
+| 1 land the competitive doc (docs only) | **DONE** | `docs/competitive-landscape.md` added; **6 figures corrected against primary sources**; 5 Mind Palace figures verified against evidence artifacts and `STATUS.md`; 8 sources fetched and read directly, 5 marked unverified this session; linked from the docs index only; `check_evidence --strict` passing |
+| 2 finish the claims-true work | **PARTIAL** | 2a, 2b, 2d, 2e, 2f **DONE**. All 8 skips named. Evidence gate tied to HEAD, rejecting a stale figure, with 6 tests over it. The `MEMORY_TEST_DATABASE_URL` cause found and proven. Warnings 39 -> 8. `corpus` vs `corpora` documented, nothing added. **2c NOT DONE**: the 9 `memory_claim_embeddings` violations are isolated to `tests/test_context_product.py` and are a fixture defect, but the 2 `memory_evidence` and 1 `memory_snapshot_versions` are **not established** |
+| 3 the lab measures the product | **PARTIAL** | **3a premise DONE:** the product path re-run this session reproduces **194/202 exactly** (`scripts/benchmark/m0115_experiments.py`, strategy `C_fallback`, dataset `9cdecda73cbdc8ae`, A 178 and B 164 also identical to the recorded artifact). The lab's own arm A is still the old arm A at **117/202 correct**, not 151 as the docs claimed -- that error is corrected. **3a arm rewrite, 3b, 3c, 3d, 3e NOT DONE**, so every harm-matrix and recall figure remains a property of the lab arm, not of the product |
+| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | Nothing started. 4a the three input shapes, 4b the three ADR repositories with "superseded by" status, 4c LongMemEval reachability and per-category counts plus the MiniLM baseline **blocked: Hub access not answered**, 4d `docs/wedge-decision-note.md` |
+| 5 downstream pilot | **NOT DONE** | **blocked, D1 not answered.** Four arms, one small and one stronger model with exact IDs, per slice, harm first, Wilson intervals |
+
+**Owner decides when 1.0.0 is ready.** Nothing in this file implies otherwise.
+
+---
+
+## Session 6 — 2026-10-12: green first, then the claims, then the lab (branch `wip/platform-readiness`)
 
 **Written first, before any work, with every phase below marked NOT DONE.**
 
@@ -100,6 +124,55 @@ missing `mindpalace_errors`; default-corpus `char(64)` read-back).
 * **Sealed scoring has never happened.** No number in this repository is
   evidence of generalisation.
 * **Arm A in the retrieval lab is not the product path.** It uses rank-1 grading
-  with no lexical fallback and reproduces 151/202, not 194/202. Anything measured
-  against it is a property of that arm, not of the product. Phase 4 exists to
-  fix exactly this.
+  with no lexical fallback and reproduces **117/202 correct** (151 answered, 33
+  wrong), not 194/202. Anything measured against it is a property of that arm,
+  not of the product. Phase 3 exists to fix exactly this. *(Corrected
+  2026-10-13: this line previously said "reproduces 151/202", which conflated
+  the number answered with the number correct.)*
+
+---
+
+## What this session got wrong, and how it was found
+
+Kept here because the corrections are the evidence.
+
+1. **A runner figure was laundered through the gate's own output.** Run
+   `38410829513` was recorded as "1625 passed". 1625 is the *workstation*
+   count. The runner said **1619**. The number came from grepping the whole log
+   archive and taking the first match, which was the `check_evidence` step
+   echoing back the workstation record rather than the `Run tests` step. Fixed
+   in `68ff8e3`. The lesson is a real limitation, not a slip of the pen:
+   `--require-head` ties a figure to a **commit**, and it cannot tie a figure to
+   a **log**. The run record is hand-written either way, so the gate believes a
+   wrong number exactly as much as a right one.
+
+2. **An existing doc's headline number was wrong.** `docs/performance/
+   retrieval-lab-report.md` said arm A was "correct on 151 of 202". 151 is the
+   number *answered*; `correct` is 117. The harm matrix underneath was always
+   right -- its own row reads 112 + 47 + 4 + 39 = 202, putting arm A at 116 --
+   so only the prose label was wrong, and it had been copied into a banner and
+   into this file.
+
+3. **My own environment caused five test failures that were not defects**, and
+   I nearly reported them as such: an exported `PYTHONPATH` made the wheel
+   test's subprocess import from the source tree. The lesson is that "these
+   tests fail" was my conclusion before I had checked whether the tests were
+   wrong or the box was.
+
+4. **A stale session database from a killed run caused a 6-failure run**, and I
+   recorded a number from that run before noticing. Disposable databases are
+   only disposable if the previous one was actually dropped.
+
+5. **Six CI-only skips remain unexplained.** Instrumenting
+   `tests/test_ingestion_statistics.py::_db_available()` to log its real
+   exception recorded **zero** failures across a full local run, and all 6 tests
+   pass locally every time. Their CI-only cause is **not established** and is
+   not guessed at anywhere in this repository.
+
+## The mechanism that actually found things
+
+Every substantive error above was caught by a check comparing two things that
+ought to agree, and failing when they did not: the gate refusing a figure whose
+commit did not match, the lab artifact contradicting a prose label, a test
+passing alone but not in a suite, an instrumented probe logging zero hits.
+None of them was caught by re-reading the code.

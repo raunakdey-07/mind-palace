@@ -5,6 +5,14 @@ current capability matrix and landscape notes are maintained in
 [`docs/competitive/capability-matrix.md`](../competitive/capability-matrix.md)
 and [`docs/competitive/landscape.md`](../competitive/landscape.md).
 
+A second, newer document sits alongside them:
+[`docs/competitive-landscape.md`](../competitive-landscape.md). That one is a
+dated market survey (2026-10-13) of published figures for TencentDB Agent Memory,
+MemPalace, Mem0, Zep/Graphiti, Supermemory and Hindsight, with a per-source
+verification column recording which URLs were fetched and which were not. Use it for
+"what did they publish"; use `competitive/landscape.md` for the pinned-revision
+architecture review. Neither ranks systems, and neither reports a head-to-head result.
+
 The review covers Graphiti, Mem0 OSS, Letta/MemFS, MemPalace, Laya, and
 conventional RAG or vector-memory systems. It records architecture and published
 implementation boundaries. It does not rank systems or claim a head-to-head

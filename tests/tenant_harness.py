@@ -397,8 +397,7 @@ def _verify_provisioned_runtime() -> None:
         with engine.connect() as conn:
             row = conn.execute(
                 sa.text(
-                    "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles "
-                    "WHERE rolname = :role"
+                    "SELECT rolname, rolsuper, rolbypassrls " "FROM pg_roles WHERE rolname = :role"
                 ),
                 {"role": RUNTIME_ROLE},
             ).one()

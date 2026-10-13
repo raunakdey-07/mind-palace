@@ -113,6 +113,22 @@
       "seconds": 550.3,
       "skipped": "1"
     },
+    "d1a4612: full suite, workstation, disposable PG 15.4 at 15434, Session 8": {
+      "collected": "1639",
+      "commit": "d1a461230a47db2b236c85f0af449792605f54de",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, workstation, disposable PG 15.4 at 15434, Session 8",
+      "note": "The six tests/test_ingestion_statistics.py tests that skipped on every runner for four sessions now pass: SQLAlchemy 2.1 resolves a bare postgresql:// to psycopg (v3), which this project does not install, and _db_available() swallowed the ModuleNotFoundError. 1637 = 1625 + those 6 + 12 new tests in tests/test_skip_gate_and_runner_evidence.py. The 2 remaining skips are the two allowlisted opt-in ones.",
+      "passed": "1637",
+      "seconds": 1387.91,
+      "skipped": "2"
+    },
     "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
       "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",
       "failed": "0",

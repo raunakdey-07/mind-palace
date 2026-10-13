@@ -106,7 +106,7 @@ is the same circularity wearing a different hat.
 embedder is the limit. If G is about the same, the pipeline is. Both readings
 are reportable; neither is flattering by default.
 
-## 7. Authority, in arm F
+## 7. Authority, in arm `passage`
 
 F indexes passages so that body text can answer a question — 17 of the 72 dev
 passages carry no authored claim, and the dogfood's confident-wrong answer was

@@ -28,6 +28,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 from retrieval_lab import arms as arm_module  # noqa: E402
+from retrieval_lab.arms import ARMS  # noqa: E402
 from retrieval_lab import metrics as M  # noqa: E402
 from retrieval_lab.corpus import load_dev, load_heldout_v1  # noqa: E402
 from retrieval_lab.gitderived import load_git_derived  # noqa: E402
@@ -50,25 +51,18 @@ DEFAULT_THRESHOLD = 0.30
 
 
 def run_arm(name: str, index, corpus, questions, bm25) -> list[M.Run]:
-    runs = []
-    for question in questions:
-        if name == "A":
-            runs.append(arm_module.arm_a(index, question, corpus))
-        elif name == "B":
-            runs.append(arm_module.arm_b(index, question, corpus, bm25))
-        elif name == "C":
-            runs.append(arm_module.arm_c(index, question, corpus))
-        elif name == "D":
-            runs.append(arm_module.arm_d(index, question, corpus, bm25))
-        elif name == "E":
-            runs.append(arm_module.arm_e(index, question, corpus, bm25))
-        elif name == "F":
-            runs.append(arm_module.arm_f(index, question, corpus))
-        elif name == "G":
-            runs.append(arm_module.arm_g(index, question, corpus, bm25))
-        else:
-            raise SystemExit(f"unknown arm {name!r}")
-    return runs
+    runner = {
+        "shipped-rank1": lambda q: arm_module.arm_shipped_rank1(index, q, corpus),
+        "bm25": lambda q: arm_module.arm_bm25(index, q, corpus, bm25),
+        "semantic": lambda q: arm_module.arm_semantic(index, q, corpus),
+        "rrf": lambda q: arm_module.arm_rrf(index, q, corpus, bm25),
+        "fusion-rerank": lambda q: arm_module.arm_fusion_rerank(index, q, corpus, bm25),
+        "passage": lambda q: arm_module.arm_passage(index, q, corpus),
+        "bge-small": lambda q: arm_module.arm_bge_small(index, q, corpus, bm25),
+    }.get(name)
+    if runner is None:
+        raise SystemExit(f"unknown arm {name!r}; the lab's arms are {', '.join(ARMS)}")
+    return [runner(question) for question in questions]
 
 
 def per_slice(runs: list[M.Run], threshold: float) -> dict:
@@ -87,7 +81,7 @@ def per_slice(runs: list[M.Run], threshold: float) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--set", default="dev", choices=sorted(LOADERS))
-    parser.add_argument("--arms", default="A,B,C,D,E,F")
+    parser.add_argument("--arms", default="shipped-rank1,bm25,semantic,rrf,fusion-rerank,passage")
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     parser.add_argument(
         "--embedder",
@@ -119,7 +113,7 @@ def main() -> int:
     results: dict[str, dict] = {}
     for name in args.arms.split(","):
         name = name.strip()
-        if name != "F" and not corpus.claims:
+        if name != "passage" and not corpus.claims:
             # Claim-ranking arms have nothing to rank. Recorded rather than
             # silently scored as zero, which would read as "the arm failed"
             # when the honest answer is "the question was not applicable".
@@ -129,12 +123,12 @@ def main() -> int:
             }
             print(f"  arm {name}: NOT APPLICABLE -- passage-level set")
             continue
-        if name == "G":
-            ok, why = arm_module.arm_g_available()
+        if name == "bge-small":
+            ok, why = arm_module.arm_bge_small_available()
             if not ok or args.embedder == SHIPPED_EMBEDDER:
                 reason = why if not ok else "needs --embedder with the reference model"
                 results[name] = {"status": "unreachable", "reason": reason}
-                print(f"  arm G: UNREACHABLE -- {reason}")
+                print(f"  arm bge-small: UNREACHABLE -- {reason}")
                 continue
         started = time.perf_counter()
         runs = run_arm(name, index, corpus, questions, bm25)

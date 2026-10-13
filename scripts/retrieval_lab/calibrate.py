@@ -76,11 +76,11 @@ def build_rows(corpus, questions):
     ranked: list[list[str]] = []
 
     for question in questions:
-        b = arm_module.arm_b(index, question, corpus, bm25)
-        c = arm_module.arm_c(index, question, corpus)
-        d = arm_module.arm_d(index, question, corpus, bm25)
-        e = arm_module.arm_e(index, question, corpus, bm25)
-        f = arm_module.arm_f(index, question, corpus)
+        b = arm_module.arm_bm25(index, question, corpus, bm25)
+        c = arm_module.arm_semantic(index, question, corpus)
+        d = arm_module.arm_rrf(index, question, corpus, bm25)
+        e = arm_module.arm_fusion_rerank(index, question, corpus, bm25)
+        f = arm_module.arm_passage(index, question, corpus)
 
         def top2(run) -> tuple[float, float]:
             scores = run.scores or [0.0, 0.0]
@@ -214,7 +214,7 @@ def main() -> int:
                 k: v
                 for k, v in json.loads(
                     (ROOT / "docs/performance/retrieval-lab-dev.json").read_text()
-                )["arms"]["A"]["overall"]["at_70pct_coverage"].items()
+                )["arms"]["shipped-rank1"]["overall"]["at_70pct_coverage"].items()
                 if k
                 in (
                     "correct",

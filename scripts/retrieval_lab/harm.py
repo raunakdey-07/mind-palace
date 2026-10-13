@@ -78,7 +78,11 @@ def main() -> int:
 
     baseline = {
         q.qid: correct(
-            arm_module.arm_a(index, q, corpus) if q.answerable else _abstain_only(index, q, corpus),
+            (
+                arm_module.arm_shipped_rank1(index, q, corpus)
+                if q.answerable
+                else _abstain_only(index, q, corpus)
+            ),
             q,
         )
         for q in questions
@@ -87,11 +91,11 @@ def main() -> int:
     results: dict[str, dict] = {}
     detail: dict[str, list[dict]] = {}
     for name, run in (
-        ("B", lambda q: arm_module.arm_b(index, q, corpus, bm25)),
-        ("C", lambda q: arm_module.arm_c(index, q, corpus)),
-        ("D", lambda q: arm_module.arm_d(index, q, corpus, bm25)),
-        ("E", lambda q: arm_module.arm_e(index, q, corpus, bm25)),
-        ("F", lambda q: arm_module.arm_f(index, q, corpus)),
+        ("bm25", lambda q: arm_module.arm_bm25(index, q, corpus, bm25)),
+        ("semantic", lambda q: arm_module.arm_semantic(index, q, corpus)),
+        ("rrf", lambda q: arm_module.arm_rrf(index, q, corpus, bm25)),
+        ("fusion-rerank", lambda q: arm_module.arm_fusion_rerank(index, q, corpus, bm25)),
+        ("passage", lambda q: arm_module.arm_passage(index, q, corpus)),
     ):
         cells: Counter = Counter()
         by_slice: dict[str, Counter] = defaultdict(Counter)
@@ -121,7 +125,7 @@ def main() -> int:
     artifact = {
         "set": args.set,
         "threshold": THRESHOLD,
-        "baseline": "arm A, the shipped scorer",
+        "baseline": "arm `shipped-rank1`, the shipped scorer at rank 1",
         "n": len(questions),
         "baseline_correct": sum(baseline.values()),
         "arms": results,
@@ -143,7 +147,7 @@ def main() -> int:
 
 def _abstain_only(index, question, corpus):
     """An ABSENT question scored by the shipped arm, for the baseline cell."""
-    return arm_module.arm_a(index, question, corpus)
+    return arm_module.arm_shipped_rank1(index, question, corpus)
 
 
 if __name__ == "__main__":

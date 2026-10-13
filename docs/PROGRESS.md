@@ -23,20 +23,458 @@ Phase 0 and the correction is the record.
 
 | phase | state | one line |
 |---|---|---|
-| 0 correct what is wrong in the repo | **NOT DONE** | 0a CI at `46add67`/`07d0f91`, every job pasted; 0b arm A is **117 correct**, not 151 answered, and the harm matrix, "every arm is net negative" and the "43 questions differ" breakdown are INVALID/NOT ESTABLISHED with the data kept; 0c rename lab arms so "A/B/C" cannot mean two things; 0d the 6 corrections to `docs/competitive-landscape.md` with primary sources |
-| 1 the six CI-only skips | **NOT DONE** | 1a reproduce in a fresh venv from `requirements.txt` as CI resolves it (SQLAlchemy 2.1.4 vs local 2.0.51 is a **hypothesis, not a finding**); 1b fix the cause and report any resulting CI failure; 1c a skip gate with an allowlist for the two opt-in env-var skips, mutation-tested; 1d 15-package version table, constraints file **proposed, not applied** |
-| 2 evidence from the runner | **NOT DONE** | 2a upload junitxml, run `check_evidence --require-head` in the same job, reject a hand-edited figure and a stale-commit figure; 2b reconcile the 1625 vs 1619 slip |
-| 3 FK violations and test-env causes | **NOT DONE** | 3a name the test and line behind every `memory_claim_embeddings`, `memory_evidence`, `memory_snapshot_versions` violation; 3b one stated cause for the json-contract failures, document the session-DB rewrite of `MEMORY_TEST_DATABASE_URL`, print the resolved database name once per session |
-| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | 4a ingestion inventory over three input shapes; 4b three ADR repositories with "superseded by", **design only**; 4c LongMemEval via `workflow_dispatch` only, never on push, with a MiniLM top-k baseline labelled a baseline; 4d `docs/wedge-decision-note.md` |
-| 5 the lab measures the product | **NOT DONE** | 5a lab arm A on the real product path graded by the benchmark's own grader, reproducing 194/202, then the 77-question gap per question; 5b the harm matrix of every other arm recomputed against it; 5c recall@1/3/5 per arm per slice; 5d the arm-E threshold selected inside each training fold, grouped by claim key |
-| 6 release prep (docs only, no tag) | **NOT DONE** | 6a PyPI state of `mindpalace-os` and the minimal README change; 6b CHANGELOG draft, tag checklist, `security.md` version wording. **No tag.** |
+| 0 correct what is wrong in the repo | **PARTIAL** | **0a DONE** (two runs at `46add67`, both `success`, 5/5 jobs, nothing skipped). **0b DONE**: the harm matrix, "every arm is net negative" and the "43 questions differ" breakdown are **INVALID / NOT ESTABLISHED**, data kept, real gap stated as **77**. **0c DONE**: lab arms renamed; a bare `A/B/C` now means a benchmark strategy and nothing else. **0d DONE with one gap**: six corrections listed with primary sources re-fetched, but the **before-state is not recoverable from git** |
+| 1 the six CI-only skips | **PARTIAL** | **1a, 1b, 1c DONE**: cause **established and reproduced** (SQLAlchemy 2.1 resolves bare `postgresql://` to an uninstalled driver), fixed via `sync_url()`, **6 skipped -> 6 passed** under 2.1.4; skip gate added and **mutation-tested against the real regression** (exit 1, all six named). **1d PARTIAL**: CI column of the version table comes from a new CI step, not yet read; constraints file **proposed, not applied** |
+| 2 evidence from the runner | **PARTIAL** | **2a code DONE, runner evidence NOT YET**: junitxml uploaded, `check_evidence --require-head --junitxml` wired into the same job, both rejections covered by 12 passing tests. **The runner's own rejection is NOT DONE** -- it needs the run at this branch's head. **2b NOT DONE** |
+| 3 FK violations and test-env causes | **PARTIAL** | **3a DONE**: all 15 violations named to a test and a line; 3 reproduced deliberately, **9 of 12** `memory_claim_embeddings` reproduced to `tests/test_context_product.py` as a **fixture defect**, **3 NOT ESTABLISHED**; product exposure answered with four reasons. **3b cause NOT ESTABLISHED -- the failure did not reproduce** (`5 passed`); `tests/README.md` written and the resolved database name printed once per session |
+| 4 wedge feasibility | **PARTIAL** | **4a DONE**: 2 claims / 2 passages / answered; **0/0/abstained**; **0/0/abstained** -- and the transcript's answer was in the text verbatim. **4d DONE**: `docs/wedge-decision-note.md` recommends the question set before the extractor. **4b, 4c NOT DONE** |
+| 5 the lab measures the product | **NOT DONE** | Nothing started. 5a arm on the product path reproducing 194/202 and the 77-question gap per question; 5b the harm matrix recomputed; 5c recall per arm per slice; 5d the threshold cross-validated |
+| 6 release prep (docs only, no tag) | **DONE** | **6a DONE**: `mindpalace-os` is **404 on PyPI**; README's bare install changed to install from the repository, reason and the `mind-palace` collision warning beside it. **6b DONE**: CHANGELOG leads with upgrade notes (008-010, the grant step, what a downgrade destroys, no tenants, sealed scoring never happened); `docs/release/tag-checklist.md` written; `security.md` names the 0.9.x train, not a branch. **No tag cut** |
 
 **Owner alone decides when 1.0.0 is ready and when to tag.** Nothing in this file
 implies otherwise.
 
+### 0a — CI at `46add67`, every job
+
+Two runs exist at that commit. Both are pasted in full.
+
+| run | created | conclusion | Lint and Test | five-minute path | Upgrade safety from v0.9.0 | Clean install from the built wheel | Docker Build |
+|---|---|---|---|---|---|---|---|
+| **38419632646** | 2026-10-13T15:09:39Z | `success` | success | success | success | success | success |
+| **38422972841** | 2026-10-13T15:32:39Z | `success` | success | success | success | success | success |
+
+**Nothing skipped in either run.** The four dependent jobs ran rather than
+reporting `skipped`, which is the failure mode Sessions 3 and 6 recorded.
+
+Run **38422972841**'s own figures, from job `115384866281`:
+
+```
+1619 passed, 8 skipped, 8 warnings in 388.67s (0:06:28)   <- Run tests
+183 passed, 1 skipped in 171.16s (0:02:51)                <- Tenant isolation
+1 passed, 34 deselected in 1.93s                          <- migration roundtrip
+```
+
+The 8 skips are named verbatim in §1a below.
+
+### 0b — the correction, and the correction of the correction
+
+**What the documents now say.** Arm `shipped-rank1` scores **117/202 correct**
+(151 answered, 33 of them wrong, 1 of those on an absent question) at 85%
+coverage, and **127 correct** at the shipped 0.30 threshold. The product's own
+benchmark reports **194/202**. The gap is **77**, stated without explanation in
+`docs/gate/trust-value-lean.md`, `docs/performance/retrieval-lab-report.md` and
+this file.
+
+**The wrong figures, file by file:**
+
+| file | string before | string after |
+|---|---|---|
+| `docs/gate/trust-value-lean.md:9` | `**151/202**.` | `**117/202 correct** (151 answered, 33 of them wrong, 1 of them on an absent question).` |
+| `docs/performance/retrieval-lab-report.md` banner | already corrected in Session 7 | unchanged |
+| `docs/performance/retrieval-lab-report.md` addendum correction note | claimed the matrix *"was unaffected and was always right … its own row for arm B reads 112 + 47 + 4 + 39 = 202, which puts arm A at `112 + 4 = 116` correct — consistent with the artifact's 117"* | replaced: `112 + 4` is arm **B**'s count, arm A's is `112 + 39 = 151`, and 116 is not "consistent with" 117. **Session 7's correction was itself wrong**, and it used this project's own internal-consistency check on the wrong sum |
+| `docs/PROGRESS.md` standing fact | already said 117 | unchanged, plus the INVALID marking |
+
+**The harm matrix's baseline, measured.** `retrieval-lab-harm-dev.json` carries
+`"baseline_correct": 151`, and `scripts/retrieval_lab/harm.py:60-65` defines
+`correct()` so that **abstaining on an absent question counts as correct**.
+Against `retrieval-lab-dev.json`'s
+`arms.shipped-rank1.overall.at_threshold` (`answered 178`, `correct 127`,
+`wrong 49`, `false_answer 2`, `abstained_correctly 24`), the 151 is **127
+top-1-correct + 24 correctly abstained**. Recomputing each row's
+`unchanged_correct + broken` from the artifact's own `detail` list gives 151 for
+**all five** arms — the proof that the baseline was reused, not re-derived.
+
+So the matrix partitions on **"not wrong"**, a blend of correctness and
+abstention. "Every arm is net negative" is **NOT ESTABLISHED as a correctness
+claim**. The numbers are kept unaltered and are not disputed; what they mean is
+withdrawn.
+
+### 0c — the arms are named now
+
+`scripts/retrieval_lab/arms.py` exports `ARMS` and `ARM_MEANING`; the functions
+are `arm_shipped_rank1`, `arm_bm25`, `arm_semantic`, `arm_rrf`,
+`arm_fusion_rerank`, `arm_passage`, `arm_bge_small`. Every artifact key, table
+header and prose reference follows. **A bare `A/B/C` in this repository now
+means a benchmark strategy and nothing else** — the benchmark's keys
+(`A_semantic`, `B_lexical`, `C_fallback`) were deliberately left alone, because
+they are cited by `check_evidence` in `STATUS.md` and renaming them would edit a
+recorded measurement to fix a naming problem.
+
+**All lab artifacts were regenerated by re-running the lab, not by editing them.**
+
+| artifact | regenerated result |
+|---|---|
+| `retrieval-lab-dev.json` | **identical** except one field: `bm25.risk_coverage` on the `current` slice, a BM25 tie-break (`accuracy 0.6296 -> 0.6071`). A small real non-determinism, now visible only because the artifact was rebuilt |
+| `retrieval-lab-harm-dev.json` | **identical**, every cell: 4/39, 0/10, 2/127, 14/32, 16/48, same `unchanged_correct`/`unchanged_wrong`, `baseline_correct` still 151 |
+| `retrieval-lab-calibration.json` | **identical** |
+| `retrieval-lab-heldout-v1.json` | **NOT regenerated — see below.** Only the dict keys were renamed, verified to leave the leaf-value multiset unchanged |
+
+**`retrieval-lab-heldout-v1.json` — a provenance problem, NOT ESTABLISHED.**
+Regenerating it changed `counts.answerable` **140 -> 141** and
+`overall.n_absent` **17 -> 16**, and with them several hundred downstream
+numbers. Yet:
+
+* `dataset_hash` is **identical**: `13030d897faabe4be95ab369c152da010bb4475cf916377436781308073fcba0`.
+* `embedding_fingerprint` is identical: `5a4d22da8652139f`.
+* `scripts/benchmark/m0130_heldout.py`, which builds the questions, has not
+  changed since `dbdc35f` (2026-10-04); the artifact was written at `319ed10`
+  (2026-10-11).
+* `build_questions()` called directly today returns **157** questions, **16**
+  of them `ABSENT`.
+
+The committed artifact records an absent-question count the tree cannot produce.
+**Cause not established.** Two consequences, and the second matters more:
+
+1. The committed held-out lab numbers are **not reproducible**, and the
+   regenerated ones are not committed either — committing either would be
+   picking a side without evidence.
+2. **`dataset_hash` does not cover `expect_state`.** `STATUS.md` uses it as a
+   provenance anchor for these artifacts and it did not move when the
+   answerable count did. Phase 5 rebuilds this artifact and should also fix what
+   the hash covers.
+
+### 0d — the corrections to `docs/competitive-landscape.md`, and what is NOT recoverable
+
+Session 7 recorded "6 figures corrected against primary sources". **The
+before-state is not recoverable.** `git log --all --follow
+docs/competitive-landscape.md` returns exactly one commit, `48ac67b`, and the
+blob it introduced (`50ba20d`) is the only version that has ever existed in this
+repository. The pre-correction draft was never committed, never stashed
+(`git stash list` is empty), and no other ref carries it. So the *pairs* (what it
+said, what it says now) cannot be listed from evidence; only the corrections the
+document declares about itself can.
+
+**That is itself the finding**, and it is recorded rather than papered over: a
+correction that was never committed cannot be audited. A future session cannot
+tell which of this document's numbers were wrong, or how wrong.
+
+What **is** established — the six corrections the document declares, each
+re-verified against its primary source this session:
+
+| # | correction | primary source (re-fetched 2026-10-13) | changes a conclusion? |
+|---|---|---|---|
+| 1 | TencentDB licence is **MIT**, not `NOASSERTION` | `.../LICENSE` on `feat/server_team`, HTTP 200, 1,315 bytes: *"TencentDB Agent Memory is licensed under the MIT."* | **No.** Licence was already MIT in the prose; only the GitHub API's auto-detection disagreed. |
+| 2 | The tag and `ROADMAP.md` have **drifted**: release `v2.0.3-beta.1`, roadmap says *"Current release: **v2.0.1-beta.1**"* | `.../ROADMAP.md`, HTTP 200, 4,956 bytes; both strings present | **No**, but it is the one claim in the doc that is about the vendor's own accuracy, and it is now verified rather than asserted. |
+| 3 | *"Editable memories: L1 - L3"* is in the next release, with the vendor's stated reason | `.../ROADMAP.md`, HTTP 200; the string is present verbatim | **No.** It was already the basis of §5's point 4. |
+| 4 | MemPalace ships **45 MCP tools**, "not 19" | `github.com/MemPalace/mempalace` `README.md` on `main`, HTTP 200, 16,769 bytes; "45 MCP tools" present | **No.** 19 was never used in any conclusion. |
+| 5 | Earlier drafts relied on **forks and mirrors**; the canonical repository was read | `github.com/MemPalace/mempalace` `README.md`, fetched directly this session | **Yes, for provenance.** Every MemPalace figure in §3 now traces to the canonical repo rather than to a mirror. The figures themselves (96.6%, 98.4%, 92.9%) are present in that README. |
+| 6 | The AAAK **84.2% R@5** lossy-abbreviation figure is **not in the canonical README** and is carried as second-hand | `docs/competitive/landscape.md`, read 2026-09-26 (our own earlier review) | **Yes.** It is downgraded from a fact to a flagged second-hand figure. It appears in no conclusion. |
+
+**Sources re-fetched and still marked unverified** (the doc's §7 marks these, and
+nothing this session changes that): `vectorize.io`, `mem0.ai`,
+`supermemory.ai`, `atlan.com`, `studiomeyer`, `hackernoon`, `korben`. Not fetched
+this session. The Mem0 figure still has three unresolvable values
+(94.4% / 93.4% / 49.0%) and none was chosen.
+
+### 3a — every FK violation in the CI PostgreSQL log, named
+
+Source: the `Lint and Test` job log of run **38422972841** at `46add67`
+(`gh run view --job 115384866281 --log`), downloaded this session. 15 violations
+in total: 12 `memory_claim_embeddings`, 2 `memory_evidence`, 1
+`memory_snapshot_versions`. Each was then **reproduced locally** against a
+disposable PostgreSQL 15.4 container (`mp_fkprobe`, port 15437) with
+`log_min_error_statement = error`, running each suspect test alone between
+`RAISE WARNING` markers so the log segments per test.
+
+| constraint | count in CI log | test and line | deliberate or defect |
+|---|---:|---|---|
+| `memory_claim_embeddings_corpus_id_claim_id_fkey` | 12 | `tests/test_context_product.py`, **one violation per test**, from the 9 tests that call `build()` on a store | **fixture defect** |
+| `memory_evidence_corpus_id_version_id_claim_id_fkey` | 2 | `tests/test_memory_multiple_evidence.py:200` and `:204`, both through the `insert_reference` helper at `:84` | **deliberate negative tests** |
+| `memory_snapshot_versions_corpus_id_version_id_fkey` | 1 | `tests/test_memory_core.py:472`, inside `test_database_immutability_and_scoped_provenance` | **deliberate negative test** |
+
+**The `memory_evidence` pair.** The helper at
+`tests/test_memory_multiple_evidence.py:84` issues the insert; line 200 passes
+`claim_id=other["claim_id"]` and line 204 passes `version_id=other["version_id"]`.
+Both are inside `pytest.raises(IntegrityError)` and both exist to prove that a
+claim from another corpus, and a version from another corpus, are refused.
+Reproduced: exactly 2, in the same test, in that order. A **third** attempt in
+the same test (line 213, `claim_id=newer["claims"][0]["id"]`) targets the same
+constraint but never reaches it — the `evidence must exactly match its archived
+chunk` BEFORE trigger fires first. That is why the log shows 2 and not 3, and it
+is the kind of detail that is only visible by running it.
+
+**The `memory_snapshot_versions` one.** `tests/test_memory_core.py:472` inserts
+a snapshot membership naming `foreign["id"]`, a version from another corpus. It
+is the last assertion in a block of append-only and cross-corpus refusal tests,
+and it is wrapped in `pytest.raises(IntegrityError)`.
+
+**The 12 `memory_claim_embeddings`, and why 3 of them are not established.**
+Reproduced: **9**, not 12 — exactly one per test, for each of the 9 tests in
+`tests/test_context_product.py` that call `build()` on a store. The other two
+tests in the file produce none, and neither reaches the query path.
+**The remaining 3 are NOT ESTABLISHED**: they did not reproduce, and nothing
+this session attributes them.
+
+The mechanism for the 9, and it is a fixture defect rather than a product path:
+
+* `tests/test_memory_core.py::memory_db` creates a **fresh PostgreSQL schema**
+  per test (`schema = "memory_test_" + uuid4().hex`), applies **only**
+  `migrations/versions/004_memory.py`, and sets
+  `SET LOCAL search_path TO "<schema>", public`.
+* `migrations/versions/004_memory.py` contains the string
+  `memory_claim_embeddings` **zero times** — it does not create that table.
+* So `memory_claims` resolves to the per-test schema and
+  `memory_claim_embeddings` falls through `search_path` to `public`, which the
+  session database really does have. The product's
+  `api/services/claim_embeddings.py:24` `INSERT` therefore writes to
+  `public.memory_claim_embeddings`, whose `FOREIGN KEY ... REFERENCES
+  memory_claims(corpus_id, id)` (`migrations/versions/007_claim_embedding_cache.py`)
+  points at `public.memory_claims` — which has no such claim.
+* The write is caught by `except Exception` in
+  `api/services/memory_query.py::_warm_claim_cache`, logged at `debug`, and the
+  test passes.
+
+**Is the product's best-effort cache write exposed to the same violation in real
+use? No, for four reasons, each checkable:**
+
+1. Production has **one** schema, so both tables resolve to the same relations
+   and the FK's referenced rows are the rows just written. The violation requires
+   two schemas and a `search_path` that spans them; nothing in the product sets
+   one.
+2. `memory_claims` is **append-only**. The same CI log shows
+   `ERROR: memory archive is append-only` for `DELETE FROM memory_claims WHERE
+   corpus_id = $1`, so a claim cannot vanish between `pending()` and `store()`.
+3. The FK is `ON DELETE CASCADE`, so even a delete would remove the cache row
+   rather than orphan it.
+4. `store()` is called with the same `corpus_id` that `pending()` was called
+   with at all three call sites — `ingestion._cache_claim_vectors`,
+   `memory_query._warm_claim_cache`, `rehydrate.backfill_claim_embeddings` — so
+   a claim id from one corpus cannot be written under another's id.
+
+All three call sites already degrade rather than raise, so even if the condition
+were reachable it would cost latency, not correctness.
+
+### 3b — the json-contract failures: **not reproduced this session**
+
+Stated plainly because the instruction asked for one cause: **there is no
+established cause, because the failure did not reproduce.**
+
+Run this session, with the CI shape of the environment — `DATABASE_URL` set to a
+maintenance database and rewritten by the session hook, `MIND_PALACE_TEST_DB=session`,
+and `MEMORY_TEST_DATABASE_URL` set to a separate migrated database, which is
+exactly the split `.github/workflows/ci.yml` creates for the `Run tests` step:
+
+    $ pytest tests/test_m016_json_contract.py -q -rs
+    5 passed in 22.49s
+
+One candidate was found and is named so the next session does not re-derive it:
+`api/services/memory_benchmark.py:456` reads
+
+    url = database_url or os.getenv("MEMORY_TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+
+That is **product code falling back to a test-only variable**, which on CI points
+it at a different database than the one the CLI seeded into. It is the only place
+outside `scripts/benchmark/` and `tests/` that reads the variable. It did **not**
+cause a failure in this session's run, so it is recorded as a lead and **not as
+a cause**. `PYTHONPATH` was ruled out for these five tests: none of them spawns a
+subprocess, and the exported-`PYTHONPATH` problem recorded in Session 7 item 3 was
+the wheel test's subprocess importing from the source tree, a different failure
+in a different file.
+
+**Done for 3b regardless of the cause:**
+
+* `tests/README.md` **added**, documenting both variables, which one the session
+  hook rewrites, which one it deliberately does not, and why. `MEMORY_TEST_DATABASE_URL`
+  is **not** rewritten: what the variable means is unchanged, which was the
+  constraint.
+* `tests/conftest.py::_announce_databases` prints, **once per session**, the
+  database each variable names, and warns when they differ. Before this, nothing
+  in a passing run said which database half the suite was using.
+
 ---
 
-## Session 7 — 2026-10-13: push, land the competitive doc, then the lab measures the product
+### 1d — CI versus workstation, and a constraints file **proposed, not applied**
+
+`requirements-runtime.txt` opens with `sqlalchemy[asyncio]>=2.0.0`. There is no
+upper bound anywhere in the dependency set, so **the runner and a workstation
+resolve the same requirement to different packages.** That single line is the
+whole Phase 1 bug.
+
+| package | workstation (Python 3.14.8) | CI (Python 3.11) | same? |
+|---|---|---|---|
+| SQLAlchemy | 2.0.46 | **2.1.4** | **NO — this is the bug** |
+| asyncpg | 0.30.0 | 0.30.0 | yes (`==` in requirements-runtime.txt) |
+| psycopg2-binary | 2.9.13 | from the run log | assumed |
+| alembic | 1.20.0 | from the run log | assumed |
+| pgvector | 0.5.1 | from the run log | assumed |
+| fastapi | 0.143.0 | from the run log | assumed |
+| starlette | 1.8.0 | from the run log | assumed |
+| pydantic | 2.14.1 | from the run log | assumed |
+| httpx | 0.28.1 | from the run log | assumed |
+| typer | 0.27.3 | from the run log | assumed |
+| sentence-transformers | 6.1.0 | from the run log | assumed |
+| torch | 2.14.1 | from the run log | assumed |
+| transformers | 5.19.0 | from the run log | assumed |
+| numpy | 2.4.3 | from the run log | assumed |
+| sentencepiece | **NOT INSTALLED** | from the run log | **differs** |
+
+Workstation column: `importlib.metadata.version` on this machine, this session.
+The CI column is filled from the new **"Record what the runner resolved"** step
+in `.github/workflows/ci.yml`, which prints these fifteen names plus the Python
+version on every run. It is a new step, so the first run carrying it is the one
+that produces that column; it is left as "from the run log" here rather than
+guessed.
+
+**Constraints file — proposed, NOT applied.** A `requirements-constraints.txt`
+containing:
+
+```
+# Behaviour-changing upper bounds. NOT a full lockfile.
+#
+# Every bound below is here because an unbounded upgrade changed an *observable*
+# behaviour, not because a number looked nicer pinned.
+#
+# sqlalchemy: 2.1 moved the default driver for a bare `postgresql://` from
+#   psycopg2 to psycopg (v3). This project installs psycopg2-binary. That change
+#   alone made six tests skip on every runner for four sessions -- Phase 1. The
+#   cause is FIXED in code (the tests now pin the driver through
+#   tenant_harness.sync_url). This bound is defence in depth, so the next 2.x
+#   break is a decision somebody makes rather than a surprise somebody diagnoses.
+# asyncpg is already `==0.30.0` in requirements-runtime.txt; it is listed here so
+#   this file is the one place to look for the version story.
+sqlalchemy>=2.0,<2.1
+```
+
+consumed as `pip install -c requirements-constraints.txt -r requirements.txt`.
+
+**Deliberately not proposed:** a full lockfile with hashes. It would pin
+`torch`, `transformers` and `sentence-transformers` to one wheel per platform,
+and the CPU-index choice in `.github/workflows/ci.yml` already exists precisely
+because a lockfile was judged not worth that cost. Proposing one would be
+proposing a decision, not fixing a defect.
+
+---
+
+### 1a–1c — the six CI-only skips: cause, fix, and a gate that fails the build
+
+**The CI-only skips, verbatim**, from run **38422972841** at `46add67`
+(`-rs` output, `Run tests` step, line 1230-1237 of the job log):
+
+```
+SKIPPED [1] tests/test_deployment_profiles_and_lifecycle.py:1436: set MIND_PALACE_MIGRATION_ROUNDTRIP=1 to exercise CREATE DATABASE
+SKIPPED [1] tests/test_ingestion_statistics.py:413: no reachable DATABASE_URL
+SKIPPED [1] tests/test_ingestion_statistics.py:435: no reachable DATABASE_URL
+SKIPPED [1] tests/test_ingestion_statistics.py:458: no reachable DATABASE_URL
+SKIPPED [1] tests/test_ingestion_statistics.py:473: no reachable DATABASE_URL
+SKIPPED [1] tests/test_ingestion_statistics.py:525: no reachable DATABASE_URL
+SKIPPED [1] tests/test_ingestion_statistics.py:564: no reachable DATABASE_URL
+SKIPPED [1] tests/test_wheel_contents.py:110: set MIND_PALACE_TEST_BUILD_WHEEL=1 to build and inspect a wheel
+```
+
+Eight skips: **two opt-in env-var skips, six that were a defect.** Session 5,
+6 and 7 each recorded "cause not established" and each instrumented
+`_db_available()` and got zero hits. The instrumentation was looking in the wrong
+place — the function never raises, it *returns False*.
+
+**1a — reproduced, no temporary CI step needed.** The hypothesis in the brief
+(2.1.4 vs local 2.0.x, driver not installed) was tested directly rather than
+assumed. A fresh venv with only one thing changed:
+
+```
+$ python3 -m venv --system-site-packages /tmp/opencode/venv-sa214
+$ /tmp/opencode/venv-sa214/bin/pip install 'sqlalchemy==2.1.4'
+$ /tmp/opencode/venv-sa214/bin/python -c "import sqlalchemy; print(sqlalchemy.__version__)"
+2.1.4
+```
+
+Then the file, against the **same reachable** disposable database, once per
+version:
+
+| environment | result |
+|---|---|
+| workstation, SQLAlchemy 2.0.46 | `6 passed in 111.04s` |
+| SQLAlchemy 2.1.4, **before the fix** | `6 skipped in 0.43s` |
+| SQLAlchemy 2.1.4, **after the fix** | `6 passed in 110.34s` |
+
+And the exception, directly:
+
+```
+$ DATABASE_URL=postgresql://mpadmin:secret@localhost:15434/mindpalace \
+  /tmp/opencode/venv-sa214/bin/python -c "import sqlalchemy as sa; sa.create_engine('postgresql://…')"
+EXCEPTION: ModuleNotFoundError No module named 'psycopg'
+```
+
+**Cause, established.** `tests/test_ingestion_statistics.py::_db_available()`
+rewrote only `postgresql+psycopg://`. SQLAlchemy 2.0 resolves a **bare**
+`postgresql://` to psycopg2; 2.1 resolves it to **psycopg (v3)**. CI installs
+`psycopg2-binary` and not `psycopg`. `create_engine` raised, the bare
+`except Exception: return False` swallowed it, and six statistics tests stopped
+running. `DATABASE_URL` in `.github/workflows/ci.yml:41` is bare
+`postgresql://`, which is why it only ever happened on a runner.
+
+**1b — fixed in the cause, not in the symptom.** `_db_available()` now pins the
+driver through `tenant_harness.sync_url()` — the helper
+`tests/session_database.py` and `tests/tenant_harness.py` already use — instead
+of carrying a fourth copy of the rewrite list. A list of three that one file has
+to remember is how this bug comes back. The skip reason now carries the real
+exception rather than a sentence that can be false.
+
+**The tests do not fail on CI with the fix in place.** That is a prediction
+until a runner says so, and it is recorded as one; the measurement is in the
+table above and the runner's is the run id at the end of this session.
+
+**1c — a skip gate, mutation-tested.** `scripts/check_skips.py` reads the
+junitxml and fails the job on any skip outside an allowlist. The allowlist holds
+exactly the two opt-in skips, keyed on the test name **and** on the opt-in
+variable appearing in the reason, so a test that keeps its name and starts
+skipping for something else does not pass on the old entry.
+
+Mutation test, run against the **real regression** — the pre-fix file restored,
+under SQLAlchemy 2.1.4:
+
+| input | exit | what it printed |
+|---|---:|---|
+| control: the fixed file + `test_wheel_contents.py` | **0** | `every skip is allowlisted (1 of 1)` |
+| mutant: the pre-fix file under 2.1.4 (7 skips) | **1** | `UNALLOWED SKIPS (6)` and all six `tests.test_ingestion_statistics::*` names |
+| an allowlisted name skipping for a different reason | **1** | rejected |
+| a junitxml that does not exist | **1** | rejected rather than passing quietly |
+
+12 tests over both gates in
+`tests/test_skip_gate_and_runner_evidence.py`, including the two rejections
+Phase 2a needs.
+
+---
+
+### 4a — ingestion inventory, three input shapes
+
+`scripts/wedge/ingestion_inventory.py`, one disposable corpus on a throwaway
+PostgreSQL 15.4 container, one document per shape. "Passages" is the number of
+`memory_evidence` rows that shape added, read through
+`api/services/memory.py:evidence`. "Recall" is the product's own `query`
+operation against that corpus. Full JSON at `/tmp/…/inventory.json` is not
+committed; the script is, and it re-runs.
+
+| input shape | claims written | passages | chunks | recall |
+|---|---:|---:|---:|---|
+| document with `claims:` frontmatter | **2** | **2** | 1 | **answered, and correct** |
+| plain markdown, no frontmatter | **0** | **0** | 1 | **abstained** |
+| five-session conversation transcript | **0** | **0** | 6 | **abstained** |
+
+Three things fall out, and the second is the expensive one.
+
+1. **A document with no authored claims is stored and cannot answer anything.**
+   Not a threshold problem: `passages_stored` is 0, so there is no evidence row,
+   no claim to attach one to, and `current` returns nothing.
+
+2. **The transcript's answer was in the text, verbatim, and still abstained.**
+   Session 5 contains the sentence *"Checkout retries a failed payment twice
+   before giving up."* The question was *"How many times does checkout retry a
+   failed payment?"* The document was chunked into 6 chunks, the chunk holding
+   that sentence was stored, and the product returned nothing. A system that
+   ranks **chunks** would have answered; this one ranks **claims**, and there
+   were none.
+
+3. **The authoring rule is stricter than the docs suggest, and it is right.**
+   `api/services/memory.py:validate_source` requires the claim text to appear
+   **verbatim** in an archived chunk ("semantic inference is not supported") and
+   the `evidence` quote to be an **exact substring** of one. Two drafts of the
+   frontmatter document were **rejected** before the third was accepted — one for
+   a paraphrased quote, one because a claim that reads better than the document's
+   own wording is not in the document. That is the trust property working. The
+   cost is authoring, and pricing it needs a model this project does not have a
+   credential for.
+
+---
 
 **Written first, before any work, with every phase below marked NOT DONE.**
 Branch `wip/claims-and-lab`, cut from `main` at `f08d8f8` (the merge of

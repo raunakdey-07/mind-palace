@@ -5,8 +5,16 @@ configured before real customer data goes in.
 
 This document replaces the older claim that a corpus name is a tenancy
 boundary. It is not. A corpus is a *namespace*; whether a caller may address one
-is a separate decision, and before this branch there was no code making that
-decision at all.
+is a separate decision, and **before the 0.9.x train** there was no code making
+that decision at all.
+
+> **Which release this describes.** Everything below describes the code at
+> `main` on the 0.9.x train — that is, `v0.9.0` plus migrations `008`, `009` and
+> `010`, none of which have shipped in a tag. Two things below are therefore
+> *not* true of `v0.9.0` itself: the tenant scope binding that `010` introduces,
+> and the `{*}` handling that `008` introduced. If you are on `v0.9.0`, you do
+> not have either. Read this document against the commit you are running, not
+> against the tag name.
 
 ## Summary
 

@@ -18,8 +18,8 @@ safety, Docker Build) were **skipped** because they depend on it.
 
 | phase | state | one line |
 |---|---|---|
-| 1 CI green | **NOT DONE** | the two `RUNTIME_ROLE` literal failures; every other `"mindpalace_runtime"` literal used as an expectation; explain the 8 CI skips against 2 local; make the session-database fixture fail loudly instead of skipping; CPU torch index; wait for all five jobs |
-| 2 make our own claims true | **NOT DONE** | `N passed` figures tied to a commit; `runtime_roles.sql` must not print the password; PostgreSQL server logs can carry row content; the 8 FK violations; warning noise; the leaking `mp_tenant_test_<hex>` role |
+| 1 CI green | **DONE** | Run **38375728987**, `success`, 5/5 jobs, nothing skipped, 13m49s wall-clock: Lint and Test; Clean install from the built wheel; Five-minute path; **Upgrade safety, from v0.9.0**; Docker Build. Runner suite: **1613 passed, 8 skipped** (main) + 183 passed, 1 skipped (tenant isolation). **Hermetic on the runner: the `NOT hermetic` line is gone** (0 occurrences). The two `RUNTIME_ROLE` literal failures are fixed. CPU torch: default PyPI wheel **900 MB** -> CPU index **184 MB**. |
+| 2 make our own claims true | **PARTIAL** | **2b and 2f DONE.** `scripts/db/runtime_roles.sql` printed the runtime password on every run (`SELECT set_config` returns its argument and psql prints every result set); now ends in `\\g /dev/null` -- canary password: **0 in stdout, 0 in stderr, exit 0**, role still `NOSUPERUSER NOBYPASSRLS`. security.md corrected. **The leaking `mp_tenant_test_<hex>` role is fixed**: a cluster carried 24; baseline 0 -> run 1 -> 0 -> run 2 -> 0. **2a, 2c, 2d, 2e NOT DONE.** |
 | 3 the lab measures the product | **NOT DONE** | arm A on the real product path reproducing 194/202; the harm matrix against it; recall@1/3/5; the arm-E threshold cross-validated; arm G if Hub allowed |
 | 4 downstream pilot | **NOT DONE** | needs D1. Arms A/B/C/D, at least one small and one stronger model, per slice, harm first |
 | 5 positioning and authoring cost | **NOT DONE** | `docs/what-mind-palace-claims.md`; the raw-notes-to-claims cost for a 20-page document |

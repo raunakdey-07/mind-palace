@@ -8,6 +8,34 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
+## Session 8 — 2026-10-13: correct the record, the skips, and the evidence (branch `wip/wedge`)
+
+**Written first, before any work, with every phase below marked NOT DONE.**
+
+PR #4 (the 7 commits of `wip/claims-and-lab`) **is merged**: `origin/main` is
+`07d0f91` ("Merge pull request #4 from raunakdey-07/wip/claims-and-lab"). Local
+`main` was fast-forwarded to it and `wip/wedge` was cut from it. Nothing in
+Session 7 that was marked DONE is retracted below; what was wrong is corrected in
+Phase 0 and the correction is the record.
+
+**Baseline invariant at `07d0f91`, checked before any edit:**
+`git diff v0.9.0..HEAD -- eval/ docs/performance/baseline-packs.json` is **empty**.
+
+| phase | state | one line |
+|---|---|---|
+| 0 correct what is wrong in the repo | **NOT DONE** | 0a CI at `46add67`/`07d0f91`, every job pasted; 0b arm A is **117 correct**, not 151 answered, and the harm matrix, "every arm is net negative" and the "43 questions differ" breakdown are INVALID/NOT ESTABLISHED with the data kept; 0c rename lab arms so "A/B/C" cannot mean two things; 0d the 6 corrections to `docs/competitive-landscape.md` with primary sources |
+| 1 the six CI-only skips | **NOT DONE** | 1a reproduce in a fresh venv from `requirements.txt` as CI resolves it (SQLAlchemy 2.1.4 vs local 2.0.51 is a **hypothesis, not a finding**); 1b fix the cause and report any resulting CI failure; 1c a skip gate with an allowlist for the two opt-in env-var skips, mutation-tested; 1d 15-package version table, constraints file **proposed, not applied** |
+| 2 evidence from the runner | **NOT DONE** | 2a upload junitxml, run `check_evidence --require-head` in the same job, reject a hand-edited figure and a stale-commit figure; 2b reconcile the 1625 vs 1619 slip |
+| 3 FK violations and test-env causes | **NOT DONE** | 3a name the test and line behind every `memory_claim_embeddings`, `memory_evidence`, `memory_snapshot_versions` violation; 3b one stated cause for the json-contract failures, document the session-DB rewrite of `MEMORY_TEST_DATABASE_URL`, print the resolved database name once per session |
+| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | 4a ingestion inventory over three input shapes; 4b three ADR repositories with "superseded by", **design only**; 4c LongMemEval via `workflow_dispatch` only, never on push, with a MiniLM top-k baseline labelled a baseline; 4d `docs/wedge-decision-note.md` |
+| 5 the lab measures the product | **NOT DONE** | 5a lab arm A on the real product path graded by the benchmark's own grader, reproducing 194/202, then the 77-question gap per question; 5b the harm matrix of every other arm recomputed against it; 5c recall@1/3/5 per arm per slice; 5d the arm-E threshold selected inside each training fold, grouped by claim key |
+| 6 release prep (docs only, no tag) | **NOT DONE** | 6a PyPI state of `mindpalace-os` and the minimal README change; 6b CHANGELOG draft, tag checklist, `security.md` version wording. **No tag.** |
+
+**Owner alone decides when 1.0.0 is ready and when to tag.** Nothing in this file
+implies otherwise.
+
+---
+
 ## Session 7 — 2026-10-13: push, land the competitive doc, then the lab measures the product
 
 **Written first, before any work, with every phase below marked NOT DONE.**

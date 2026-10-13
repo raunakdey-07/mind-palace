@@ -57,11 +57,9 @@ from urllib.parse import urlsplit, urlunsplit
 ROOT = Path(__file__).resolve().parents[1]
 
 #: The maintenance database used to issue CREATE/DROP DATABASE. It must already
-#: exist; the suite never creates a cluster.
-MAINTENANCE_DB = os.getenv("MIND_PALACE_TEST_MAINTENANCE_DB", "postgres")
-
-#: The maintenance database used to issue CREATE/DROP DATABASE. It must already
-#: exist; the suite never creates a cluster.
+#: exist; the suite never creates a cluster. `tenant_harness` needs the same name
+#: to sweep the cluster when it removes the per-session role, and the two are
+#: read from the same variable so they cannot disagree.
 MAINTENANCE_DB = os.getenv("MIND_PALACE_TEST_MAINTENANCE_DB", "postgres")
 
 

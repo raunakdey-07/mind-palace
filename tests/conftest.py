@@ -86,6 +86,27 @@ def pytest_sessionfinish(session, exitstatus) -> None:
             print(f"\n[tests] could not drop the session database: {exc}")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def session_runtime_role():
+    """Provision the least-privileged role once per session, then remove it.
+
+    `autouse` because the role is CLUSTER state, not per-test state: one role per
+    session, and every test that reaches the database expects it to exist. Asking
+    each test to request it would mean a test that forgot would fail in a way that
+    reads like a product defect.
+
+    The body lives in `tenant_harness.provisioned_runtime`, which is where the
+    role name, the provisioning and the cluster-wide teardown are defined. It is
+    delegated to rather than written here because pytest only collects fixtures
+    from `conftest.py`, and a fixture defined in an imported module -- even with
+    `autouse` -- is silently never instantiated. That is precisely how 24 leaked
+    roles accumulated: the teardown existed, looked correct, and ran zero times.
+    """
+    from tenant_harness import provision_session_runtime
+
+    yield from provision_session_runtime()
+
+
 @pytest.fixture
 def sample_markdown() -> str:
     return """---

@@ -244,13 +244,13 @@ def require_auth_mode(monkeypatch) -> None:
     monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
 
 
-@pytest.fixture(scope="session")
-def provisioned_runtime():
-    """Create the least-privileged runtime role and prove it is least-privileged.
+def provision_session_runtime():
+    """Provision the least-privileged role, yield, then remove it. A generator.
 
-    Fails loudly rather than skipping when PostgreSQL is reachable but cannot
-    provision: a tenant suite that quietly skips because a role is missing is
-    indistinguishable from one that passed.
+    Plain function, not a fixture, because `tests/conftest.py` has to be the
+    thing pytest collects. Reaching into a fixture's `__wrapped__` to call it by
+    hand works until it does not, and "until it does not" is the worst time to
+    find out in a teardown.
     """
     if not database_available():
         pytest.skip("no reachable DATABASE_URL")
@@ -258,69 +258,156 @@ def provisioned_runtime():
         pytest.skip("the runtime role can only be provisioned by a superuser")
 
     apply_provision_sql()
-    try:
-        _verify_provisioned_runtime()
-    finally:
-        _drop_session_role()
+    _verify_provisioned_runtime()
+    yield RUNTIME_ROLE
+    _drop_session_role()
+
+
+@pytest.fixture(scope="session")
+def provisioned_runtime():
+    """Create the least-privileged runtime role for the session, then remove it.
+
+    Fails loudly rather than skipping when PostgreSQL is reachable but cannot
+    provision: a tenant suite that quietly skips because a role is missing is
+    indistinguishable from one that passed.
+
+    **autouse, and it used to be neither autouse nor requested.** No test asked
+    for this fixture, so its teardown never ran, and the one role each session
+    provisioned was orphaned on the cluster forever. A cluster carried 24 of them
+    before this was found. Requesting a fixture is how pytest runs its teardown;
+    a teardown attached to a fixture nobody wants is not a teardown.
+
+    **It had no `yield` either.** A fixture with no yield runs its body during
+    setup and returns, so the `finally` that used to wrap the body dropped the
+    role before a single test had run -- and the role the tests actually used was
+    re-created by `test_tenant_isolation._provision`, orphaned in turn.
+
+    It is also `autouse` rather than session-scoped-and-requested because the role
+    is cluster state: one role per session, not one per test that happens to want
+    it. Tests that never touch it still pay the provision, which is the cost of
+    not leaking.
+
+    It lives HERE rather than in `tests/conftest.py` because conftest is the only
+    module pytest collects fixtures from. `tenant_harness` is imported by tests,
+    not registered as a plugin, so a fixture defined in it -- even `autouse` --
+    is never instantiated. The conftest wrapper calls this one.
+    """
+    yield from provision_session_runtime()
 
 
 def _drop_session_role() -> None:
-    """Remove the per-session role. Roles are cluster-wide, so leaving one
-    behind is litter on every machine that ever ran the suite, and a later run
-    that happened to mint the same name would silently adopt this one's grants.
+    """Remove the per-session role from the WHOLE cluster.
 
-    CASCADE, because the role holds grants on every tenant table in every
-    database this session touched and `DROP ROLE` without it fails on those
-    dependencies -- which is why an earlier version left five roles behind: the
-    drop was refused, the exception was swallowed, and the litter was invisible.
-    The name is random and the role is a test artefact, so cascading is safe here
-    in a way it would never be for a shipped role.
+    A role is cluster-wide; `DROP OWNED BY` is not. It only revokes what the role
+    holds in the database it is run against, so a role provisioned against two
+    databases still has grants in the second one, and then:
+
+        ERROR:  role "mp_tenant_test_fc56609b446e" cannot be dropped because
+                some objects depend on it
+
+    This function used to run `DROP OWNED BY` against `sync_url()` only, and to
+    swallow the resulting exception. That combination is why a cluster carried
+    24 leftover roles: the teardown failed, the failure was invisible, and every
+    run added one. So it now sweeps every database in the cluster, and reports
+    what it could not remove instead of swallowing it.
+
+    CASCADE is safe here and nowhere else: the name is random and the role is a
+    test artefact.
     """
+    problems: list[str] = []
+    quoted = f'"{RUNTIME_ROLE}"'
+    for database in _all_database_names():
+        try:
+            engine = sa.create_engine(_sync_url_for(database))
+            with engine.connect() as conn:
+                conn.execute(
+                    sa.text(
+                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                        "WHERE usename = :role"
+                    ),
+                    {"role": RUNTIME_ROLE},
+                )
+                # `DROP OWNED BY` first, then `DROP ROLE`. Two syntax facts cost
+                # an hour here and are worth writing down:
+                #
+                #   * `DROP ROLE IF EXISTS :role` does NOT accept a bind
+                #     parameter. PostgreSQL wants an identifier list there and
+                #     `$1` is a syntax error.
+                #   * `DROP ROLE ... CASCADE` does not exist. CASCADE belongs to
+                #     `DROP OWNED BY`, not to `DROP ROLE`.
+                #
+                # The name is ours -- `mp_tenant_test_` plus hex -- so it cannot
+                # contain a quote and inlining it is not a quoting problem.
+                conn.execute(sa.text(f"DROP OWNED BY {quoted} CASCADE"))
+                conn.commit()
+        except Exception as exc:  # noqa: BLE001 - reported, not hidden
+            problems.append(f"{database}: {type(exc).__name__}: {exc}"[:160])
+        finally:
+            engine.dispose()
+
     try:
         engine = sa.create_engine(sync_url())
         with engine.connect() as conn:
-            conn.execute(
-                sa.text(
-                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                    "WHERE usename = :role"
-                ),
-                {"role": RUNTIME_ROLE},
-            )
-            # `DROP OWNED BY` first, then `DROP ROLE`. Two syntax facts cost an
-            # hour here and are worth writing down:
-            #
-            #   * `DROP ROLE IF EXISTS :role` does NOT accept a bind parameter.
-            #     PostgreSQL wants an identifier list there and `$1` is a
-            #     syntax error.
-            #   * `DROP ROLE ... CASCADE` does not exist. CASCADE belongs to
-            #     `DROP OWNED BY`, not to `DROP ROLE`.
-            #
-            # The name is ours -- `mp_tenant_test_` plus hex -- so it cannot
-            # contain a quote and inlining it is not a quoting problem. Both
-            # earlier attempts failed SILENTLY, because this teardown swallows
-            # the exception, and left nine roles behind on the cluster.
-            quoted = f'"{RUNTIME_ROLE}"'
-            conn.execute(sa.text(f"DROP OWNED BY {quoted} CASCADE"))
             conn.execute(sa.text(f"DROP ROLE IF EXISTS {quoted}"))
             conn.commit()
         engine.dispose()
-    except Exception:  # noqa: BLE001 - teardown must not mask a real failure
-        pass
+    except Exception as exc:  # noqa: BLE001 - reported, not hidden
+        problems.append(f"DROP ROLE: {type(exc).__name__}: {exc}"[:160])
+
+    if problems:
+        # Printed rather than raised: this runs in teardown, where an exception
+        # would mask whatever the session was actually reporting. Loud in the log
+        # is the point -- the previous version was quiet, and quiet is how 24
+        # roles accumulated.
+        print(f"\n[tests] could not remove the session role {RUNTIME_ROLE}:")
+        for line in problems[:6]:
+            print(f"[tests]   {line}")
+
+
+#: The maintenance database used to list the cluster's databases. It must already
+#: exist; nothing here ever creates a cluster.
+MAINTENANCE_DB = os.getenv("MIND_PALACE_TEST_MAINTENANCE_DB", "postgres")
+
+
+def _all_database_names() -> list[str]:
+    """Every database in the cluster, so nothing is left holding a grant."""
+    try:
+        engine = sa.create_engine(_sync_url_for(MAINTENANCE_DB))
+        with engine.connect() as conn:
+            rows = conn.execute(
+                sa.text("SELECT datname FROM pg_database WHERE NOT datistemplate")
+            ).all()
+        engine.dispose()
+        return [row[0] for row in rows]
+    except Exception:  # noqa: BLE001 - fall back to the one we know about
+        return [MAINTENANCE_DB]
+
+
+def _sync_url_for(database: str) -> str:
+    """`sync_url()` pointed at another database on the same server."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(sync_url())
+    return urlunsplit((parts.scheme, parts.netloc, f"/{database}", parts.query, ""))
 
 
 def _verify_provisioned_runtime() -> None:
     engine = sa.create_engine(sync_url())
     try:
         with engine.connect() as conn:
-            attributes = dict(
-                conn.execute(
-                    sa.text(
-                        "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles "
-                        "WHERE rolname = :role"
-                    ),
-                    {"role": RUNTIME_ROLE},
-                ).one()
-            )
+            row = conn.execute(
+                sa.text(
+                    "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles "
+                    "WHERE rolname = :role"
+                ),
+                {"role": RUNTIME_ROLE},
+            ).one()
+            # `dict(row)` is wrong here and always was: a Row is a sequence of
+            # three values, and `dict()` reads each as a key/value PAIR, so it
+            # raises `element #0 has length 27; 2 is required` on the role name.
+            # It never surfaced because the fixture wrapping this was never
+            # requested, so the line had probably never executed.
+            attributes = {"rolname": row[0], "rolsuper": row[1], "rolbypassrls": row[2]}
             can_login = conn.execute(
                 sa.text("SELECT has_table_privilege(:role, 'memory_claims', 'SELECT')"),
                 {"role": RUNTIME_ROLE},

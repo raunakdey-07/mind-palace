@@ -312,6 +312,18 @@ def main() -> int:
         except subprocess.TimeoutExpired:
             server.kill()
         server_log.close()
+        # Leave the database as it was found.
+        #
+        # This script creates a scratch corpus and a credential. `assert_upgrade.py`
+        # runs next on the same database and asserts the corpus list is UNCHANGED
+        # across the upgrade -- so an un-removed scratch corpus makes that
+        # assertion fail on an otherwise perfect upgrade, which is exactly what it
+        # did on CI. A gate that breaks the gate beside it is worse than no gate.
+        #
+        # In a `finally`, so the cleanup happens on the failure path too: the run
+        # that most needs a readable next step is the one that just failed.
+        if credential_id:
+            _cleanup(superuser, credential_id, args.issued_with)
 
     print()
     if failures:
@@ -321,6 +333,23 @@ def main() -> int:
         return 1
     print("all runtime-role assertions passed")
     return 0
+
+
+def _cleanup(superuser: dict, credential_id: str, scratch: str) -> None:
+    """Revoke the credential and delete the scratch corpus.
+
+    Best effort by design: a teardown that raises would mask the assertion result
+    that actually matters. But it prints what it could not do, because a silent
+    cleanup failure is how the scratch corpus reached `assert_upgrade.py` in the
+    first place.
+    """
+    for argv, label in (
+        (["credential", "revoke", credential_id], "revoke the credential"),
+        (["corpus", "delete", scratch], "delete the scratch corpus"),
+    ):
+        code, output = run([sys.executable, "-m", "cli.main", *argv], superuser)
+        if code != 0:
+            print(f"  note: could not {label}: {output.strip().splitlines()[-1:]}".strip())
 
 
 def _tail(path: str, lines: int = 12) -> str:

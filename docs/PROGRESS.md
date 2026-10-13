@@ -1,4 +1,4 @@
-# Progress — branch `wip/platform-readiness`
+# Progress
 
 One line per phase, newest last. **NOT DONE** means the budget ran out before the
 phase started or finished, and nothing in it is claimed.
@@ -8,7 +8,30 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
-## Session 6 — 2026-10-12: green first, then the claims, then the lab
+## Session 7 — 2026-10-13: claims-true work, then the lab measures the product
+
+**Written first, before any work, with every phase below marked NOT DONE.**
+Branch `wip/claims-and-lab`, cut from `main` at the merge of `wip/platform-readiness`.
+
+**Owner decisions D1 (model access), Hub access and human-written questions were
+not filled in before this session started.** The three values are still the
+bracketed placeholders, so Phase 2e (arm G) and all of Phase 4 are blocked on the
+owner's answer, not on the work. They are recorded as NOT ESTABLISHED / blocked
+rather than guessed.
+
+| phase | state | one line |
+|---|---|---|
+| 0 sync and verify main | **NOT DONE** | `git log --oneline -5`; the CI run on `main` with every job result including Docker Build; whether any workflow published or pushed on `main`; the frozen-evidence diff `v0.9.0..HEAD -- eval/ docs/performance/baseline-packs.json`; gitleaks over all history reachable from `main`; and every other use of the literal CI password |
+| 1 finish the claims-true work | **NOT DONE** | 1a `-rs` on the CI pytest invocation, all 8 skips named, which are legitimate; 1b evidence gate tied to HEAD rejecting a stale "N passed" figure, and STATUS.md reconciled with the latest CI run; 1c PG 15 `log_error_verbosity = terse` documented and tested with and without, both logs shown; 1d the 8 `memory_claim_embeddings` FK violations identified as deliberate or real; 1e avoidable pytest warning noise removed; 1f `corpus` vs `corpora` documented in `docs/operations.md` as options only |
+| 2 the lab measures the product | **NOT DONE** | 2a arm A on the real product path reproducing 194/202 exactly; 2b the both-ways harm matrix of every other arm against that arm A; 2c recall@1/3/5 per arm per slice at claim and passage level; 2d the arm-E threshold cross-validated inside each training fold, grouped by claim key, with coverage at <=2% confident-wrong; 2e arm G — **blocked, Hub access not answered**; 2f banners removed only once 2a-2d are done |
+| 3 claims and authoring cost | **NOT DONE** | 3a `docs/what-mind-palace-claims.md` with every number labelled development / held-out (burned) / frozen / sealed; 3b raw-notes-to-claims authoring cost for a 20-page document, in minutes, and what happens to unstructured text |
+| 4 downstream pilot | **NOT DONE** | **blocked, D1 model access not answered.** Arms A/B/C/D, one small and one stronger model, per-slice, harm first, Wilson intervals |
+
+**Owner decides when 1.0.0 is ready.** Nothing in this file implies otherwise.
+
+---
+
+## Session 6 — 2026-10-12: green first, then the claims, then the lab (branch `wip/platform-readiness`)
 
 **Written first, before any work, with every phase below marked NOT DONE.**
 

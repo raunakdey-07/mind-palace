@@ -6,6 +6,26 @@ version: "3.8"
 services:
   postgresql:
     image: ankane/pgvector
+    # `log_error_verbosity = terse` is here because PostgreSQL's *own* server log
+    # writes row content. At the default setting a constraint failure logs
+    #
+    #   ERROR:    null value in column "s" of relation "nn" violates not-null constraint
+    #   DETAIL:   Failing row contains (hygiene-probe, CANARY_PRIVATE_FACT_...)
+    #
+    # and `tests/test_error_and_log_hygiene.py` proves that exact string reaches a
+    # caller. The suite's own canary appeared 8 times in a CI PostgreSQL log at
+    # `default` and 0 times at `terse`, on PG 15.4, with the same statement. The
+    # application is already covered -- `api.main`'s handler strips it from the
+    # response body and the app log -- but nothing in the application can redact a
+    # line the server wrote before the application saw it.
+    #
+    # WHAT THIS DOES NOT COVER, stated plainly: `terse` suppresses DETAIL only.
+    # The `STATEMENT` line is still logged at every verbosity. The application
+    # parameterises (`VALUES ($1, $2, ...)`), so its statements carry no values and
+    # this is safe for it -- but any SQL built by string interpolation would put
+    # literal values in the server log regardless of this setting. `terse` is
+    # defence for the DETAIL channel, not a guarantee about the server log.
+    command: postgres -c log_error_verbosity=terse
     environment:
       POSTGRES_DB: mindpalace
       POSTGRES_USER: mpadmin

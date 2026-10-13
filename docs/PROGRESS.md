@@ -8,24 +8,25 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
-## Session 7 — 2026-10-13: claims-true work, then the lab measures the product
+## Session 7 — 2026-10-13: push, land the competitive doc, then the lab measures the product
 
 **Written first, before any work, with every phase below marked NOT DONE.**
-Branch `wip/claims-and-lab`, cut from `main` at the merge of `wip/platform-readiness`.
+Branch `wip/claims-and-lab`, cut from `main` at `f08d8f8` (the merge of
+`wip/platform-readiness`).
 
-**Owner decisions D1 (model access), Hub access and human-written questions were
-not filled in before this session started.** The three values are still the
-bracketed placeholders, so Phase 2e (arm G) and all of Phase 4 are blocked on the
-owner's answer, not on the work. They are recorded as NOT ESTABLISHED / blocked
-rather than guessed.
+**Owner decisions D1 (model access) and Hub access were not filled in before this
+session started.** Both are still the bracketed placeholders, so Phase 4c's MiniLM
+LongMemEval baseline and all of Phase 5 are blocked on the owner's answer, not on the
+work. They are recorded as blocked rather than guessed.
 
 | phase | state | one line |
 |---|---|---|
-| 0 sync and verify main | **NOT DONE** | `git log --oneline -5`; the CI run on `main` with every job result including Docker Build; whether any workflow published or pushed on `main`; the frozen-evidence diff `v0.9.0..HEAD -- eval/ docs/performance/baseline-packs.json`; gitleaks over all history reachable from `main`; and every other use of the literal CI password |
-| 1 finish the claims-true work | **NOT DONE** | 1a `-rs` on the CI pytest invocation, all 8 skips named, which are legitimate; 1b evidence gate tied to HEAD rejecting a stale "N passed" figure, and STATUS.md reconciled with the latest CI run; 1c PG 15 `log_error_verbosity = terse` documented and tested with and without, both logs shown; 1d the 8 `memory_claim_embeddings` FK violations identified as deliberate or real; 1e avoidable pytest warning noise removed; 1f `corpus` vs `corpora` documented in `docs/operations.md` as options only |
-| 2 the lab measures the product | **NOT DONE** | 2a arm A on the real product path reproducing 194/202 exactly; 2b the both-ways harm matrix of every other arm against that arm A; 2c recall@1/3/5 per arm per slice at claim and passage level; 2d the arm-E threshold cross-validated inside each training fold, grouped by claim key, with coverage at <=2% confident-wrong; 2e arm G — **blocked, Hub access not answered**; 2f banners removed only once 2a-2d are done |
-| 3 claims and authoring cost | **NOT DONE** | 3a `docs/what-mind-palace-claims.md` with every number labelled development / held-out (burned) / frozen / sealed; 3b raw-notes-to-claims authoring cost for a 20-page document, in minutes, and what happens to unstructured text |
-| 4 downstream pilot | **NOT DONE** | **blocked, D1 model access not answered.** Arms A/B/C/D, one small and one stronger model, per-slice, harm first, Wilson intervals |
+| 0 push | **NOT DONE** | push `wip/claims-and-lab`, report the CI run on it with every job; `log_error_verbosity = terse` into the compose file, and document that `STATEMENT` still logs literal SQL so safety depends on bound parameters |
+| 1 land the competitive doc (docs only) | **NOT DONE** | `docs/competitive-landscape.md` added; every Mind Palace figure (194/202, 131/157, 45/60, install sizes, 11 documents / 0 claims) verified against evidence artifacts and `STATUS.md` with each fix listed; every reachable URL in section 7 fetched with status and date; the canonical MemPalace repo, arXiv 2604.21284, and the TencentDB-Agent-Memory `INSTALL.md` / `ROADMAP.md` read directly; linked from the docs index only; `check_evidence --strict` passing |
+| 2 finish the claims-true work | **NOT DONE** | 2a `-rs` on the CI pytest invocation, all 8 skips named, which are legitimate; 2b evidence gate tied to HEAD rejecting a figure that matches only an older run, plus `STATUS.md` reconciled; 2c the `memory_claim_embeddings` FK violations (12, plus `memory_evidence` and `memory_snapshot_versions`) attributed to a test or code path; 2d why 5 `test_m016_json_contract` tests fail only when `MEMORY_TEST_DATABASE_URL` is set; 2e avoidable warning noise removed; 2f `corpus` vs `corpora` documented with options, nothing added |
+| 3 the lab measures the product | **NOT DONE** | 3a arm A on the real product path reproducing 194/202 exactly, or the gap explained first; 3b the both-ways harm matrix of every other arm against that arm A, and whether "every arm is net negative" survives; 3c recall@1/3/5 per arm per slice, claim and passage level; 3d the arm-E threshold cross-validated inside each training fold grouped by claim key, with coverage at <=2% confident-wrong beside the fit-on-dev figure; 3e banners removed only once 3a-3d are done |
+| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | 4a ingestion inventory for claims-frontmatter, plain markdown and a five-session transcript, reporting claims, passages and recall with commands; 4b three public ADR repositories with explicit "superseded by" status, licence, supersession pair counts and a deterministic LLM-free mapping to claims with exact-quote evidence; 4c LongMemEval dataset, licence, reachability and per-category counts, plus the MiniLM top-k baseline **only if Hub access is allowed — currently blocked**; 4d `docs/wedge-decision-note.md` written, nothing applied |
+| 5 downstream pilot | **NOT DONE** | **blocked, D1 not answered.** Four arms, one small and one stronger model with exact IDs, per slice, harm first, Wilson intervals |
 
 **Owner decides when 1.0.0 is ready.** Nothing in this file implies otherwise.
 

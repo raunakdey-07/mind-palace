@@ -38,6 +38,14 @@
       "passed": "1613",
       "skipped": "8"
     },
+    "38410829513: CI on wip/claims-and-lab @ c3c8252": {
+      "commit": "c3c8252268205c4f51b316cc8994c8cdee78c652",
+      "failed": "0",
+      "label": "CI run 38410829513, Lint and Test job, 'Run tests' step",
+      "note": "Fetched 2026-10-13 from the log archive of run 38410829513 (head c3c8252): '1625 passed, 8 skipped'. 1625 is the workstation count, so the 6 tests added in tests/test_evidence_gate_tied_to_head.py do run on the runner. The 8 skips are 2 workstation skips plus the 6 CI-only tests/test_ingestion_statistics.py skips whose cause is NOT ESTABLISHED. No junitxml: the workflow uploads none.",
+      "passed": "1625",
+      "skipped": "8"
+    },
     "4166e08: full suite, run 2, immediately after run 1": {
       "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
       "failed": "0",

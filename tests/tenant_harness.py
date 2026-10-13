@@ -122,6 +122,16 @@ def load_provision_sql(
         resolved.append(
             line.replace(":'runtime_password'", "'%s'" % password.replace("'", "''"))
             .replace(":'runtime_password_skip'", "'on'" if skip_password else "'off'")
+            # `\g /dev/null` is how the shipped script keeps psql from printing
+            # the password back. It is a psql meta-command, so it is removed
+            # here for the same reason `\if` and `\set` are.
+            #
+            # It also happened to terminate the statement, and psycopg2 requires
+            # a semicolon between statements in a multi-statement execute, so
+            # the replacement restores one. Dropping `\g` without restoring the
+            # terminator fails the whole provisioning script with
+            # `syntax error at or near "set_config"`.
+            .replace(" \\g /dev/null", ";")
             .replace(SHIPPED_RUNTIME_ROLE, RUNTIME_ROLE)
         )
 

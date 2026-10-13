@@ -67,8 +67,22 @@ $$;
     \set runtime_password_skip 'off'
 \endif
 
-SELECT set_config('mindpalace.runtime_password', :'runtime_password', false);
-SELECT set_config('mindpalace.skip_password', :'runtime_password_skip', false);
+-- The password has to reach the DO block below. This used to be a bare
+-- `SELECT set_config(...)`, which printed the value: `set_config` returns what
+-- it was given and psql prints every result set. On a CI runner whose log is
+-- archived and readable by anyone with repo access, that put the runtime role's
+-- password in the job log on every run.
+--
+-- `\g /dev/null` executes the statement and throws the result set away. The
+-- `:'runtime_password'` interpolation stays outside any dollar-quoted body
+-- because psql does not expand variables inside one -- an earlier attempt to
+-- wrap this in a DO block failed with a syntax error at the colon.
+--
+-- A plain SQL driver has no `\g`, so `tests/tenant_harness.load_provision_sql`
+-- strips it for the same reason it strips `\if` and `\set`. Dropping it is also
+-- harmless there: a driver was never going to print a result set.
+SELECT set_config('mindpalace.runtime_password', :'runtime_password', false) \g /dev/null
+SELECT set_config('mindpalace.skip_password', :'runtime_password_skip', false) \g /dev/null
 
 DO $$
 DECLARE

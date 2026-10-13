@@ -47,6 +47,7 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -59,6 +60,9 @@ if REPO not in sys.path:
     sys.path.insert(0, REPO)
 
 PORT = 8931
+
+#: Where the spawned server's output goes, so a startup failure can explain itself.
+LOG_FILE = os.path.join(tempfile.gettempdir(), "mp-upgrade-runtime-server.log")
 
 
 def run(command: list[str], env: dict | None = None) -> tuple[int, str]:
@@ -146,7 +150,19 @@ def main() -> int:
         "MIND_PALACE_AUTH_MODE": "required",
         "MIND_PALACE_DEPLOYMENT": "server",
         "MIND_PALACE_RUNTIME": "0",
+        # Required in server mode, and the refusal is correct: without it a
+        # caller can ask the service to read any directory the process can see.
+        # This gate reads no files, so the two filesystem routes are disabled.
+        "MIND_PALACE_INGEST_ROOTS": "none",
     }
+    # The server's own stderr goes to a file, never to DEVNULL.
+    #
+    # It was DEVNULL, and the result was a CI failure that said only "nothing
+    # answered on http://127.0.0.1:8931" -- with the actual reason, one line in
+    # uvicorn's output, thrown away. A harness that hides the diagnosis of the
+    # failure it is reporting costs the next person the whole debugging round
+    # trip, and this one already cost one.
+    server_log = open(LOG_FILE, "w+", encoding="utf-8")  # noqa: SIM115 - closed below
     server = subprocess.Popen(
         [
             sys.executable,
@@ -161,13 +177,18 @@ def main() -> int:
             "warning",
         ],
         env={**os.environ, **server_env},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=server_log,
+        stderr=subprocess.STDOUT,
         start_new_session=True,
     )
     try:
         if not _wait_for(base, 180):
-            check("the runtime-role server started", False, f"nothing answered on {base}")
+            server_log.flush()
+            check(
+                "the runtime-role server started",
+                False,
+                f"nothing answered on {base}; the server said:\n{_tail(LOG_FILE)}",
+            )
             return 1
         check("the server runs as mindpalace_runtime in required mode", True)
 
@@ -290,6 +311,7 @@ def main() -> int:
             server.wait(timeout=20)
         except subprocess.TimeoutExpired:
             server.kill()
+        server_log.close()
 
     print()
     if failures:
@@ -299,6 +321,16 @@ def main() -> int:
         return 1
     print("all runtime-role assertions passed")
     return 0
+
+
+def _tail(path: str, lines: int = 12) -> str:
+    """The last few lines of a file, indented, for a failure message."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            text = handle.read().strip().splitlines()[-lines:]
+    except OSError:
+        return "(no output captured)"
+    return "\n".join(f"          {line}" for line in text) or "(no output captured)"
 
 
 def _wait_for(base: str, seconds: int) -> bool:

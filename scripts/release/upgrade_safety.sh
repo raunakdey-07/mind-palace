@@ -78,9 +78,23 @@ say "upgrading to this branch's head"
 #     So the same archive is re-read as `mindpalace_runtime`, through a
 #     credential granted to the existing corpora, and the two views must agree.
 say "provisioning the least-privileged role and asserting the runtime view"
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+
+# Not `>/dev/null` with no check.
+#
+# This step is what makes every assertion after it meaningful -- without the
+# least-privileged role and its policies there is nothing to assert against --
+# and a silent failure here surfaces much later as "the server did not start",
+# which points at the wrong file entirely. It already cost one debugging round
+# trip on CI. The password is not in the output to begin with (the script
+# suppresses it), so showing it costs nothing.
+if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -v runtime_password=upgrade-safety-role-password \
-  -f "$REPO/scripts/db/runtime_roles.sql" >/dev/null
+  -f "$REPO/scripts/db/runtime_roles.sql"; then
+  echo "::error::could not provision the least-privileged runtime role."
+  echo "::error::Every assertion after this point would run against a database"
+  echo "::error::with no row-level security, so this is fatal rather than skipped."
+  exit 1
+fi
 
 # Same scheme, host, port and database; a different identity. The scheme is kept
 # because a driver-qualified URL (`postgresql+asyncpg://`) is what the engine

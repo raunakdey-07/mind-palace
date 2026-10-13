@@ -145,11 +145,26 @@ psql "$ADMIN_DATABASE_URL" -v runtime_password="$MIND_PALACE_RUNTIME_PASSWORD" \
 ```
 
 The password is a `psql` variable rather than a line in the file, so the script
-contains no credential and a password with a quote or a semicolon in it is
+contains no credential, and a password with a quote or a semicolon in it is
 quoted as a literal rather than ending the statement. Supplying no password is
 refused, because a role that exists but cannot log in reads as an RLS problem and
 is not one. If a secret manager holds the password, provision the role with
 `-v runtime_password_skip=on` and set it there.
+
+**The script also does not print the password.** It used to, on every run:
+`SELECT set_config('mindpalace.runtime_password', ...)` returns the value it was
+given, and `psql` prints every result set, so the runtime role's password landed
+in the output — including in an archived CI log readable by anyone with repository
+access. The assignment now ends in `\g /dev/null`, which runs the statement and
+discards the result. Verified this session by running the shipped script with a
+canary password against a migrated database: zero occurrences in stdout, zero in
+stderr, exit 0, and the role still authenticates and is still `NOSUPERUSER
+NOBYPASSRLS`.
+
+Two channels remain visible to anyone who can already see the process, and the
+script does not claim otherwise: the `-v runtime_password=...` on the command line
+is visible in `ps`, and in shell history. Neither is a property of this script.
+Use `-v runtime_password_skip=on` with a secret manager if that matters to you.
 
 Run the application with `DATABASE_URL` pointing at `mindpalace_runtime`. A
 deployment that runs the ordinary application as a superuser gets **no** tenant

@@ -42,8 +42,8 @@
       "commit": "c3c8252268205c4f51b316cc8994c8cdee78c652",
       "failed": "0",
       "label": "CI run 38410829513, Lint and Test job, 'Run tests' step",
-      "note": "Fetched 2026-10-13 from the log archive of run 38410829513 (head c3c8252): '1625 passed, 8 skipped'. 1625 is the workstation count, so the 6 tests added in tests/test_evidence_gate_tied_to_head.py do run on the runner. The 8 skips are 2 workstation skips plus the 6 CI-only tests/test_ingestion_statistics.py skips whose cause is NOT ESTABLISHED. No junitxml: the workflow uploads none.",
-      "passed": "1625",
+      "note": "CORRECTION. First written as 1625/8, which was WRONG: I read 1625 out of the check_evidence gate step, which was echoing back my own workstation record (312958d), not a runner figure. The actual 'Run tests' step of run 38410829513 says '1619 passed, 8 skipped, 8 warnings in 426.79s'. Read from that step's log.\n\nWhy 1619 and not 1625: both sides collect 1627. The runner SKIPS the 6 tests/test_ingestion_statistics.py tests ('no reachable DATABASE_URL') that pass on a workstation, so 1627-8=1619 there and 1627-2=1625 here. The 6 new tests in tests/test_evidence_gate_tied_to_head.py DO run on the runner; the difference is the ingestion_statistics skips, whose cause is NOT ESTABLISHED.\n\nThis record was hand-written from a log, which is exactly the failure mode the gate exists to catch, and the gate could not catch it: check_evidence only knows what this file says. A runner-attested count still needs a human to read the right log line. Noted as a limitation rather than papered over.",
+      "passed": "1619",
       "skipped": "8"
     },
     "4166e08: full suite, run 2, immediately after run 1": {

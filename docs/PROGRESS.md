@@ -94,6 +94,133 @@ the history file.
 
 ---
 
+## Design note: `memory_remember` as an MCP tool
+
+**Owner approval to IMPLEMENT: _blank in the brief._** Nothing below has been
+built. This is the note the brief asks for when the answer is NO or absent, and
+an absent answer is not an approval.
+
+### The finding that motivates it
+
+An agent cannot write a fact today. The 15 MCP tools are `context`,
+`list_corpora`, `memory_as_of`, `memory_changes`, `memory_current`,
+`memory_evidence`, `memory_explain`, `memory_history`, `memory_pack`,
+`memory_query`, `memory_recall`, `memory_replay`, `memory_snapshot`, `search`,
+`sync`. `remember` is reachable from the CLI, the SDK and REST, and from no MCP
+client. The only MCP write that carries a claim is `sync(corpus, path)`, which
+needs a file the agent has to author on disk with a `claims:` block.
+
+### Tool and arguments
+
+Mirror the SDK exactly, so there is no second argument shape to keep in step:
+
+```
+memory_remember(statement: str, corpus: str | None = None,
+                key: str | None = None, file: str | None = None)
+```
+
+`statement`, `corpus`, `key`, `file` — the four parameters of
+`MindPalace.remember` at `mindpalace_sdk.py:874`. Returns `MemoryResult`, the
+same dataclass `sync` already returns, serialised as the tool's structured
+output. `file` is read by the server, not by the agent, and is subject to
+`require_permitted` like any other ingest path.
+
+### Role and credential
+
+Same as every other MCP tool: the credential is
+`MIND_PALACE_MCP_CREDENTIAL`, resolved by the existing `_caller()` /
+`_client(corpus)` machinery, and the caller needs the `read_write` role. No new
+credential, no new scope table, no new env var. A credential with only read
+rights must be refused **by the existing authorization path, not by a check in
+the tool** — a tool-level check would be the first thing to drift.
+
+### Idempotency
+
+Already correct and worth keeping as the contract. Remembering an identical
+statement returns `unchanged=True` and the same `version_id`; remembering the
+same `key` with new text supersedes. So an agent retrying a failed call cannot
+duplicate, and an agent looping cannot grow the corpus. A tool that did not
+preserve this would be a new footgun, not a new capability.
+
+### The exact-quote rejection
+
+**It does not apply here, and pretending otherwise would be the real design
+error.** `remember` takes the statement and generates its own exact-substring
+evidence from it, so there is no separate `evidence` field to mismatch — the
+failure mode that bites document authors does not exist on this path.
+
+Two exceptions, and both must be returned to the agent as data, not as a tool
+error:
+- `file=` with a statement that is not a substring of that file. Same rejection
+  the ingest path raises, same wording: *"evidence must be an exact substring of
+  an archived chunk"*. An agent needs the document version in the message, or it
+  cannot work out which file it mis-quoted.
+- a `key` that fails `validate_corpus_name` / corpus resolution. Returned as the
+  structured error the other tools already return.
+
+A rejection must come back as a normal tool result carrying the reason, never as
+a JSON-RPC protocol error. A protocol error looks like a broken server and
+invites a retry; a structured refusal tells the model what to change.
+
+### Untrusted source text
+
+The sharp edge. `statement` is attacker-controllable in the threat model where a
+model has ingested a document and is asked to remember something from it. Three
+consequences:
+
+1. **The statement is data, not instruction.** It must never be interpolated
+   into anything that changes behaviour. This is already true of every write
+   path; it is named here because an MCP tool is called *by a model reading
+   text*, which is the one place where that assumption is load-bearing.
+2. **No secret-free claim is a safe claim.** Storing a string from an untrusted
+   document makes it retrievable by anyone who can read the corpus, and
+   retrievable is durable. There is no sanitisation that makes this safe; the
+   only mitigation is that the caller's credential decides.
+3. **`file=` is the sharper one.** An agent can be talked into `file="/etc/..."`.
+   `require_permitted` already refuses paths outside `MIND_PALACE_INGEST_ROOTS`
+   and its message deliberately does not name the allowed roots. That refusal
+   must be surfaced verbatim and must not be enriched for the MCP case.
+
+The honest position: this tool makes it *easier* for a model to write to memory,
+and the system's answer to bad memory is `history` and erasure, not prevention.
+That trade should be an explicit owner decision, not a side effect.
+
+### Tests needed
+
+- the tool appears in `tools/list` and every tool has a description;
+- `statement` alone writes a claim whose evidence is its own exact substring;
+- repeating it returns `unchanged=True` and the same `version_id`;
+- a second `key` supersedes and `memory_history` shows both;
+- `file=` outside the ingest roots is refused, and the message names no root;
+- `file=` with a non-substring statement returns the rejection as a *result*;
+- a read-only credential is refused;
+- an untrusted string containing instruction-shaped text is stored verbatim and
+  changes no behaviour.
+
+### What a test would already break
+
+`.github/workflows/ci.yml:875` asserts `len(tools) == 15`. That is the **only**
+place the tool list is pinned — `tests/test_mcp_server.py` has three tests and
+none enumerates the tools. So a sixteenth tool breaks CI in one line, in the same
+job this session wired the clean-room script into, and that assertion should move
+into `tests/test_mcp_server.py` first so the count lives next to the server.
+
+### Diff size estimate
+
+| | lines |
+|---|---:|
+| `@mcp.tool` + docstring + `_execute_memory("remember", ...)` | ~30 |
+| `MemoryRequest` reuse or a small write-shaped request model | ~10 |
+| authorization on the write path, if not already shared | ~15 |
+| tests | ~90 |
+| `ci.yml` `15` → `16` | 1 |
+| **total** | **~145** |
+
+Above the ~120 line bar in the brief, before any argument-shape validation worth
+writing. The honest answer to "under ~120?" is **no**, so even with approval this
+wants its own round rather than being bolted on.
+---
+
 ## Standing facts
 
 - **`origin/main` is `07d0f91`, the merge of PR #4.** Neither `wip/wedge` nor

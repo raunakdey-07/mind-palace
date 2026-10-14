@@ -16,6 +16,7 @@ on:
       # Same reason as the line above: this branch's green must be a runner's
       # green, not a laptop's. Removed when the branch merges.
       - wip/wedge
+      - wip/independent-set
   pull_request:
     branches:
       - main

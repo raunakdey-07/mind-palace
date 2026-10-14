@@ -120,9 +120,12 @@ def main() -> int:
         "caveat": (
             "ungradable_but_scored lists answerable questions with no gold key. "
             'They carry failure:"" and *_ok:true in the frozen artifact and are '
-            "included in scored_as_recorded. Excluding them would change the "
-            f"denominator from {len(rows)} to {len(gradeable)}. This artifact "
-            "records that; it does not apply it."
+            "included in scored_as_recorded. Excluding JUST these would change the "
+            f"denominator from {len(rows)} to {len(rows) - len(ungradable)}. "
+            f"`gradeable` is a different and much smaller number ({len(gradeable)}) "
+            "because it also excludes every ABSENT question, and those ARE "
+            "legitimately graded -- correct there means abstained. This artifact "
+            "records the situation; it does not apply a correction."
         ),
         "rows": rows,
     }

@@ -900,7 +900,10 @@ jobs:
           TRANSFORMERS_OFFLINE: "1"
         run: |
           wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
-          python scripts/cleanroom_quickstart.py \
+          # The wheelenv interpreter, not the runner's: the script creates its own
+          # database and psycopg2 is a declared dependency of the wheel, so it is
+          # already installed here and is not on the runner's system python.
+          /tmp/wheelenv/bin/python scripts/cleanroom_quickstart.py \
             --wheel "$wheel" \
             --database-url "$DATABASE_URL" \
             --torch-index https://download.pytorch.org/whl/cpu

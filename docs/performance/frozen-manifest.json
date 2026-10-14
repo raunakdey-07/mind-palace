@@ -1,6 +1,6 @@
 {
   "algorithm": "sha256",
-  "count": 32,
+  "count": 30,
   "files": {
     "docs/performance/baseline-packs.json": "47b6da2ad65eac1165d4239da636952ec5538cf12977e69b2de6b7352d698842",
     "docs/performance/downstream-eval-protocol.freeze.json": "d982d926ebbf2e9de3e366ed7c9a07b7274d00121e3ea0bc420281d30869cad2",
@@ -16,9 +16,7 @@
     "eval/m00675/manifest.json": "ece2d23a03ac0bce5c5532575ffd8228b166066a45996f945091ed6eca36b3ec",
     "eval/m00675/result.json": "6ef168c4b8188c8afa433f26777ae2ec503a96fc4769b3c4d6a0e780ab8b2591",
     "eval/m007/adjudication/README.md": "3ae809afb45b1815a15df7bf3731583e8db42dc8a4ce37236c0c639660f0542c",
-    "eval/m007/adjudication/REVIEWER_GUIDE.md": "90a757caf41ac15c40744c29ccf3f43a5400738cf27195207c2a5b9b99d58a37",
     "eval/m007/adjudication/adjudication_template.jsonl": "cbb9916c41b0a1c61967f4a5f5ad5f6854e74a7b6aaa630f920eac44b3124590",
-    "eval/m007/adjudication/instructions.md": "b3cfe80a9c42b98ca9330cb13a6744a80e582d1d4daa2b3a1316f8a89bf95f26",
     "eval/m007/adjudication/metadata-audit.json": "834caeb8f1369e40ba314ddb1ceb1bef08fc5ea9eb842625b4920c4c760c1c75",
     "eval/m007/adjudication/review_set.jsonl": "f3536d20aca0c128ca8a71dd00a9784d6767cd5e1096c700c0e4a7fb10bb8928",
     "eval/m007/adjudication/reviewer-materials-manifest.json": "a34455ed9b4419520de0117c1ea625a7e39212e325193ce5e7ab0f7c498a057c",

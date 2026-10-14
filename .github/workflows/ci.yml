@@ -900,9 +900,12 @@ jobs:
           TRANSFORMERS_OFFLINE: "1"
         run: |
           wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
-          # The wheelenv interpreter, not the runner's: the script creates its own
-          # database and psycopg2 is a declared dependency of the wheel, so it is
-          # already installed here and is not on the runner's system python.
+          # The script creates its own database, so it needs psycopg2. That is a
+          # declared dependency under the `migrations` extra, not a core one, so
+          # neither the runner's python nor the bare wheelenv has it. Installing
+          # the extra into the venv this job already built is smaller than adding
+          # a dependency or a new venv.
+          /tmp/wheelenv/bin/pip install --quiet "${wheel}[migrations]"
           /tmp/wheelenv/bin/python scripts/cleanroom_quickstart.py \
             --wheel "$wheel" \
             --database-url "$DATABASE_URL" \

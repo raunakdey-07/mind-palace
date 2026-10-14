@@ -112,7 +112,8 @@ pip install -r requirements.txt
 pip install -e .
 
 # Three values the compose file requires and refuses to invent. It names each
-# one only after the previous is satisfied, so set all three up front.
+# one only after the previous is satisfied, so set all three up front. If you
+# prefer, copy .env.example to .env and compose will read them from there.
 export MIND_PALACE_RUNTIME_PASSWORD=choose-a-local-password
 export MIND_PALACE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
 export MIND_PALACE_INGEST_ROOTS="$PWD"    # directories ingestion may read
@@ -128,6 +129,7 @@ That is the whole setup. No API key, no account, no LLM, and no model to configu
 compose; `MIND_PALACE_INGEST_ROOTS` also bounds what a running API will accept,
 which is why the last one is a real setting and not just a compose-time filler.
 The three are development values — they are not secrets worth keeping.
+[.env.example](.env.example) holds all of them with what each one is for.
 
 **Expect `requirements.txt` to install about 5.9 GB.** `torch` pulls the CUDA
 runtime with it — `nvidia-cudnn`, `nvidia-cublas`, `cuda-toolkit`, `triton` — and

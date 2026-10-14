@@ -94,6 +94,23 @@ def is_tracked(rel: str, known: set[str]) -> bool:
     return any(p.startswith(prefix) for p in known)
 
 
+def untracked_not_ignored() -> list[str]:
+    """Files git has never heard of AND no rule hides.
+
+    This is the state that hid seven documents. `--ignored` would not list them
+    (nothing ignores them), and `git ls-files` would not list them (nothing
+    tracks them), so every existing check passed while they were invisible.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "--others", "--exclude-standard"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=120,
+    ).stdout.split()
+    return [p for p in out if p.startswith(("docs/", "eval/")) and not p.endswith(".pyc")]
+
+
 def ignored_documents() -> list[str]:
     out = subprocess.run(
         ["git", "-C", str(ROOT), "ls-files", "--others", "--ignored", "--exclude-standard"],
@@ -188,11 +205,40 @@ def main() -> int:
             advisory_checked += n
 
     ignored = ignored_documents()
+    # Every .md under docs/ or eval/ must land in exactly one of three states:
+    #
+    #   1. TRACKED                                     -- normal, and the goal
+    #   2. ignored AND named explicitly in .gitignore  -- a decision somebody wrote
+    #   3. neither                                      -- FORGOTTEN, and the failure
+    #
+    # State 3 is the one that produced this gate. Seven documents sat there for
+    # months: written, reported as deliverables, in no clone, and invisible to
+    # every check because nothing looked for "untracked and not ignored".
+    # State 2 without the naming -- ignored by a blanket rule nobody re-read -- is
+    # the same failure wearing a disguise.
+    gitignore_text = (ROOT / ".gitignore").read_text(encoding="utf-8", errors="ignore")
+    deliberate = {
+        line.strip().lstrip("/")
+        for line in gitignore_text.splitlines()
+        if line.strip() and not line.strip().startswith("#") and line.strip().endswith(".md")
+    }
+
     for path in ignored:
+        if path.endswith(".md") and path not in deliberate:
+            problems.append(
+                f"IGNORED DOCUMENT: {path} -- ignored under docs/ or eval/, but no "
+                f".gitignore rule names that exact path. Name it if the decision is "
+                f"deliberate."
+            )
+
+    forgotten = untracked_not_ignored()
+    for path in forgotten:
         if path.endswith(".md"):
             problems.append(
-                f"IGNORED DOCUMENT: {path} -- a Markdown file under docs/ or eval/ that git "
-                f"does not track. If it is a deliverable it must ship."
+                f"FORGOTTEN FILE: {path} -- a Markdown file under docs/ or eval/ that git "
+                f"neither tracks nor ignores. `git add -A` will not stage it unless "
+                f"forced, and nothing has failed until now. Commit it, or add an "
+                f"explicit .gitignore rule naming it."
             )
 
     print(f"claim-bearing documents : {len(DOCS)}")

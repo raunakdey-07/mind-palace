@@ -84,14 +84,14 @@ install comes close. If you would rather not download it, set
 `MIND_PALACE_LEXICAL=1` from the start: the product then never imports `torch`,
 `transformers` or `sentence_transformers`, at the cost of needing shared
 vocabulary between question and record — see
-[model-free mode](docs/runtime.md#model-free-lexical-mode).
+[model-free mode](../docs/runtime.md#model-free-lexical-mode).
 
 One thing does arrive on its own: the first `recall` downloads the embedding model
 (about 90 MB, once, to the Hugging Face cache) the way a browser fetches a font.
 That needs network on that first call and roughly 30 seconds. After that it works
 offline. If you would rather it never arrives, set `MIND_PALACE_LEXICAL=1` and Mind
 Palace reads with no model at all — see
-[model-free mode](docs/runtime.md#model-free-lexical-mode).
+[model-free mode](../docs/runtime.md#model-free-lexical-mode).
 
 ### 2. Check it
 
@@ -378,9 +378,9 @@ print(explained.receipt["memory_pack_digest"])     # why it was returned, provab
 
 Two complete runnable versions:
 
-- [`examples/decision-memory/`](examples/decision-memory/) — the whole product in one
+- [`examples/decision-memory/`](../examples/decision-memory/) — the whole product in one
   file, from `remember` to `verify`.
-- [`examples/project-log/`](examples/project-log/) — this project's own decision log
+- [`examples/project-log/`](../examples/project-log/) — this project's own decision log
   as memory. The questions a contributor actually asks, answered with the evidence
   attached, and honestly abstained on where nothing was decided.
 

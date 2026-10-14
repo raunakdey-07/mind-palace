@@ -223,7 +223,7 @@ held-out set, is **131/157 (83.4%)** — a generalisation number and a known
 limitation. Neither is superseded by the other. This release changed no benchmark
 input, policy, evaluator semantic, tokenizer or threshold, and that is measured:
 all 60 canonical per-question decisions are identical to `v0.8.0`. See
-[the reproducibility report](docs/evaluation/m00675-reproducibility.md), which also
+[the reproducibility report](../../docs/evaluation/m00675-reproducibility.md), which also
 records one discrepancy this release found and deliberately did not paper over.
 
 ---
@@ -360,7 +360,7 @@ what to read; it is not evidence that you may. For a shared deployment, set
 `MIND_PALACE_AUTH_MODE=required` and run the service as a least-privileged
 database role, and the corpus you are allowed to reach is decided by your
 credential rather than by your request. See
-[Security and multi-tenant integration](docs/security.md).
+[Security and multi-tenant integration](../../docs/security.md).
 
 ```console
 $ mindpalace corpora

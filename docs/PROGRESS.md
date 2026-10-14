@@ -1314,3 +1314,84 @@ ought to agree, and failing when they did not: the gate refusing a figure whose
 commit did not match, the lab artifact contradicting a prose label, a test
 passing alone but not in a suite, an instrumented probe logging zero hits.
 None of them was caught by re-reading the code.
+
+---
+
+## Session 11 — 2026-10-14: reduction round (branch `wip/independent-set`)
+
+### Neither branch has ever reached main — re-verified, not changed
+
+```
+$ git ls-remote --heads origin
+  07d0f91  refs/heads/main
+  09bbc28  refs/heads/wip/wedge
+  986f3e5 -> 7c4179e  refs/heads/wip/independent-set
+$ gh pr list --state all --json headRefName,state \
+    -q '.[]|select(.headRefName|test("wedge|independent-set"))'
+  (blank)
+```
+
+`origin/main` is still `07d0f91`, the merge of PR #4. **No PR has ever been
+opened for `wip/wedge` or `wip/independent-set`, and neither is merged.** That
+is an owner decision and this round did not take it. 13 real tags (25 lines from
+`ls-remote --tags` because annotated tags are listed twice), latest still v0.9.x.
+
+### Phase 0c — DONE. Manifest reconciled, two files tracked, owner-approved
+
+32 files = **24 `eval/` + 8 `docs/performance/`**. The "30 vs 24+8" discrepancy
+was 22 `eval/` entries because the two M007.1 adjudication documents were
+untracked, so the `eval/` side was two short of its intended count. Both are now
+tracked with digests in the manifest. **Zero existing frozen files modified** —
+`git diff --cached --stat -- eval/` is 134 insertions in 2 new files, nothing else.
+
+### Phase 1 — DONE. The first hour as a stranger, in a clean clone and venv
+
+Followed the README literally. Install: **79 s, 5.9 GB, exit 0** — the README's
+"5.9 GB" is exact. Three failures, each unnamed in the README:
+
+| # | Command | What happened | Quit risk |
+|---|---|---|---|
+| 1 | `docker compose up -d postgresql` | failed 3×, one undocumented required variable per failure: `MIND_PALACE_RUNTIME_PASSWORD`, `MIND_PALACE_INGEST_ROOTS`, `MIND_PALACE_CURSOR_SECRET` | **highest** — 3rd command, fails in 1 s, "That is the whole setup" is directly above it |
+| 2 | `mindpalace ingest-repo ./docs` | `[ERROR] API error: [Errno 111] Connection refused`. It is an HTTP client to a hard-coded `localhost:8000`; every other command is in-process. Then 403 unless the path is inside `MIND_PALACE_INGEST_ROOTS` | **high** — the only documented way to ingest a document |
+| 3 | `recall` over plain Markdown or a transcript | answers `Nothing was invented: Mind Palace records only what was remembered.` Both files *were* ingested and chunked (3 docs, 4 chunks). What they lack is a `claims:` block | **high** — reads as "the document was ignored" |
+
+Fixed README text and the abstention message only. The abstention itself is
+correct and unchanged. `docker compose config` with the README's values verbatim
+now exits 0. **1643 passed, 2 skipped** — unchanged from `986f3e5`, zero test
+changes.
+
+### Phase 2 — DONE. The labelled-passage option, dev set only
+
+`scripts/lab/passage_option.py`, report only, not imported by anything.
+
+| Operating point | absent→passage | of which already answered | absent→**gold** | answerable abstentions | rescued in top 3 |
+|---|---|---|---|---|---|
+| 0.30 (shipped) | 2 / 26 | 2 | **0** | **0** | **0** |
+| 0.570753 (85% cov.) | 2 / 26 | 1 | **0** | 27 | **20** |
+
+At the **shipped** threshold there is nothing to rescue: the arm abstains on zero
+answerable questions, so the option's only effect is on absent questions — and
+the two that would receive a passage are the two it already falsely answers. The
+option's entire value sits at the 85%-coverage point, which the product does not
+ship.
+
+NOT ESTABLISHED: `_finish` derives the passage list by expanding claim keys, so a
+document with no claims has an empty passage list by construction. This sizes the
+gold-side benefit and the abstain rule's effect on absent questions. It does not
+model a passage retriever, and the dev corpus is mostly claimed.
+
+### A defect found while running the suite, NOT fixed
+
+Running with only `MEMORY_TEST_DATABASE_URL` set and no `DATABASE_URL` gives
+**1645 skipped in 9.75 s and exit 0** — the entire suite, green, having run
+nothing. `tests/tenant_harness.py` probes `DATABASE_URL`. `check_skips.py`
+validates that skips are allowlisted; nothing checks that *any* test ran. Not
+fixed this round: adding that check is a new gate.
+
+### NOT DONE
+
+- Independent question set — NOT STARTED. Nothing scored.
+- `shipped-rank1` per-question output, needed to explain the 77 gap — NOT DONE.
+- LongMemEval — NOT REACHED.
+- Condensing this file — **NOT APPLIED.** It is 1316 lines and the brief says one
+  page. Cutting ten sessions of proof-bearing history is an owner decision.

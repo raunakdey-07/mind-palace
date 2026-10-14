@@ -801,23 +801,18 @@ The primary datastore is PostgreSQL. It runs in three availability zones.
 mindpalace ingest-repo ./docs
 ```
 
-`ingest-repo` is an HTTP client: unlike `remember` and `recall`, which run
-in-process, it posts to `http://localhost:8000` and needs the API running.
-
-```bash
-python -m uvicorn api.main:app --port 8000 &
-```
-
-The path must be inside `MIND_PALACE_INGEST_ROOTS`, or the API answers 403.
+`ingest-repo` runs in-process, like every other command here. The path must be
+inside `MIND_PALACE_INGEST_ROOTS`, or it is refused.
 
 The `claims:` block is the authoring interface: it says what to remember, and the
 evidence quote must appear verbatim in the document. Nothing is inferred, because
 inference is where memory systems quietly start lying about their evidence.
 
 A document with **no** `claims:` block is still stored and searchable, but it
-answers nothing: recall reads authored claims, not prose. Plain Markdown and
-transcripts need claims written for them — [docs/authoring.md](docs/authoring.md)
-is the reference.
+answers nothing: recall reads authored claims, not prose. Ingest one and you will
+see it named in the output as `no_claims_declared`. Plain Markdown and
+transcripts need claims written for them —
+[docs/authoring.md](docs/authoring.md) is the reference.
 
 ## Retrieval
 

@@ -158,7 +158,8 @@ recall@1, dev, 202 questions (176 answerable, 26 absent):
 > `(-score, claim_key)`. This is a **bug fix and it costs one question** — every
 > operating point loses exactly one correct answer, recall@1 falls and recall@3
 > rises. The old number was an accident of file enumeration, not a result.
-> Old and new side by side are in `docs/PROGRESS.md` §0c. No threshold was
+> Old and new side by side are in `docs/internal/progress-history.md` §0c
+> (Session 8). No threshold was
 > retuned and no other arm moved.
 | historical | 30 | 0.967 | 0.933 | 0.967 | 0.933 | **1.000** | 0.600 |
 | provenance | 26 | 0.808 | 0.731 | 0.808 | 0.731 | **1.000** | 0.846 |
@@ -332,7 +333,7 @@ default (arm `shipped-rank1`, correct on **117** of 202 dev questions at 85% cov
 > path rather than this one.
 >
 > **The "43 questions differ" breakdown is INVALID.** It was recorded in
-> `docs/PROGRESS.md` at commit `cc9ec5c` (Session 3): *"reconciled exactly: 43
+> `docs/internal/progress-history.md` at commit `cc9ec5c` (Session 3): *"reconciled exactly: 43
 > questions differ and the lab is right on zero that the benchmark calls wrong.
 > 26 are top-1-vs-top-k (23 at rank 2, 3 at rank 4), 17 are the lexical-fallback
 > path."* 43 = 194 − 151, so it was computed on the same false 151. The real gap

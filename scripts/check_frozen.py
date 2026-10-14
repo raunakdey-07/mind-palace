@@ -32,8 +32,8 @@ The manifest is the evidence. The diff is a convenience.
 
 Everything under `eval/` that git tracks, plus the benchmark artifacts under
 `docs/performance/` that `docs/STATUS.md` cites. `eval/results/` is deliberately
-**not** covered -- it is ignored, and see the header of
-`docs/PROGRESS.md` Session 10 §1d for why a git-based guard cannot reach it.
+**not** covered -- it is ignored, and see Session 10 §1d in
+`docs/internal/progress-history.md` for why a git-based guard cannot reach it.
 """
 
 from __future__ import annotations

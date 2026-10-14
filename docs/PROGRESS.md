@@ -8,6 +8,41 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
+## Session 10 — 2026-10-14: stop files vanishing, then correct the record (branch `wip/independent-set`)
+
+**Written first, before any work, with every phase below marked NOT DONE.**
+
+**PR state at the start of this session, and it has not changed:**
+
+```
+$ gh pr list --state all
+  #4  MERGED  wip/claims-and-lab          2026-10-13T15:32:44Z
+  #3  MERGED  wip/platform-readiness      2026-10-13T10:36:32Z
+  #2  MERGED  milestone/v0.8.0-dev        2026-10-06T07:20:44Z
+  #1  MERGED  feat/reranker               2026-08-09T07:20:44Z
+```
+
+`origin/main` is **`07d0f91`**. **There is no open PR, and there has never been
+one for `wip/wedge` or for this branch.** `git branch -a --contains 0031cb4`
+returns only `wip/independent-set` and its remote. So the owner has not merged,
+the "fast-forward main and cut a new branch" step is **not taken**, and work
+continues on this branch. No merge was attempted and none will be.
+
+| phase | state | one line |
+|---|---|---|
+| 0 restate reality | **NOT DONE** | 0a PR state and `origin/main`, reported above and in §0a below; 0b the complete Session 9 deliverable table, including items not previously shown, each with proof or NOT DONE |
+| 1 stop files and evidence from vanishing | **NOT DONE** | 1a audit every ignored or untracked file under `docs/`, `scripts/`, `tests/`, `eval/`, and every path named in PROGRESS.md, STATUS.md, the release map and the changelog that is not tracked; 1b replace the blanket `*.md` ignore with explicit scratch paths, and commit the four missing documents **after checking each still says what the ledger claimed**; 1c a CI check that every relative link and every path named in the ledger exists in `git ls-files`, **mutation-tested**; 1d a committed SHA-256 manifest of every frozen file, verified in CI, with untracked frozen files reported and a proposal only |
+| 2 correct the record | **NOT DONE** | 2a remove every claim that the held-out hash does not cover `expect_state`; 2b whether the 0-of-202 gold-key gap is the same one-question discrepancy, and a **new** auditable artifact that records gold per question; 2c document the BM25 cost and add the interval rule to the lab protocol; 2d remove `MEMORY_TEST_DATABASE_URL` from product code, owner-approved |
+| 3 finish what is not done | **NOT DONE** | 3a the independent set (repos, converter, generator, freeze, `docs/evaluation/independent-set-v1.md`, **not scored**); 3b lab arm A on the product path reproducing 194/202 and the 77-question gap per question; 3c the dev-only passage-option measurement and the quote-rule message check |
+
+**Four owner decisions at the gate**: labelled passages for no-claims documents;
+score the independent set once next round; the PyPI name; the tag.
+
+**Owner alone decides on tagging and 1.0.0.** Nothing in this file implies
+otherwise.
+
+---
+
 ## Session 9 — 2026-10-14: reconcile the numbers, then build a question set we did not write (branch `wip/independent-set`)
 
 **Written first, before any work, with every phase below marked NOT DONE.**

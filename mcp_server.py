@@ -152,6 +152,133 @@ def sync(corpus: str, path: str) -> str:
     return json.dumps(summary.__dict__, indent=2)
 
 
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        openWorldHint=False,
+    ),
+)
+def memory_remember(
+    statement: str,
+    corpus: str,
+    key: str | None = None,
+    file: str | None = None,
+) -> CallToolResult:
+    """Record one statement as authoritative memory, with exact-substring evidence.
+
+    The arguments mirror the SDK's `remember(statement, corpus=, key=, file=)`
+    and the call goes through that same function, so an agent and a script cannot
+    write memory differently.
+
+    Without `file`, the evidence for the claim is the statement itself: it proves
+    what you were told, not that it is true. With `file`, the statement must
+    appear verbatim in that file, and the file must be inside
+    MIND_PALACE_INGEST_ROOTS.
+
+    Idempotent: submitting an identical statement again returns the same
+    version_id with event UNCHANGED. Submitting the same `key` with new text
+    supersedes the previous value.
+
+    Takes no credential. The caller's identity is the one
+    MIND_PALACE_MCP_CREDENTIAL resolves to, and that identity needs write access
+    to the corpus.
+    """
+    from api.services.authz import AuthorizationError
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+    from api.services.remember import RememberError
+    from mindpalace_sdk import MemoryClientError
+
+    try:
+        resolved = _checked_file(statement, file, require_permitted)
+    except IngestPathRefused as exc:
+        return _refusal("ingest_path_refused", str(exc))
+    except RememberError as exc:
+        return _refusal("invalid_evidence", str(exc))
+
+    try:
+        # `_caller()` resolves the credential on entry, so the authorization
+        # failure happens there and not inside the write. The whole block is
+        # inside the try for that reason.
+        with _caller():
+            written = _client(corpus).remember(statement, corpus=corpus, key=key, file=resolved)
+    except AuthorizationError as exc:
+        # Caught like `_execute_memory` catches it. Anything else escapes as a
+        # generic ToolError, which an agent reads as a broken server and answers
+        # by retrying -- the opposite of what a refusal should do.
+        return _refusal("forbidden", str(exc))
+    except RuntimeError as exc:
+        # `_caller()` resolves the credential on entry and wraps anything that
+        # goes wrong as RuntimeError, keeping the real error as __cause__. Unwrap
+        # only an authorization failure and let the rest through unchanged:
+        # a blanket RuntimeError catch here would turn a bug into a refusal.
+        if isinstance(exc.__cause__, AuthorizationError):
+            return _refusal("forbidden", str(exc.__cause__))
+        raise
+    except RememberError as exc:
+        return _refusal("invalid_evidence", str(exc))
+    except MemoryClientError as exc:
+        return _refusal(getattr(exc, "code", "remember_failed"), str(exc))
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(_result_dict(written), indent=2))]
+    )
+
+
+def _checked_file(statement: str, file: str | None, require_permitted) -> str | None:
+    """Resolve `file` against the ingest roots and the exact-quote rule.
+
+    Returns the resolved path, or None when there is no file to check. Raises
+    rather than returning a reason: the caller builds the taxonomy entry, and the
+    reason must not name the allowed roots.
+    """
+    from api.services.remember import RememberError
+
+    if file is None:
+        return None
+    resolved = require_permitted(file)
+    # `remember(file=...)` on its own treats the file as the statement. When a
+    # statement is also supplied, the two are separate things and the claim's
+    # evidence has to be found in the document -- otherwise the caller is asking
+    # for a quote the file does not contain.
+    if statement:
+        try:
+            content = resolved.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            raise RememberError(f"cannot read the file given to memory_remember: {exc}") from exc
+        if statement not in content:
+            raise RememberError(
+                "statement is not an exact substring of the file given to "
+                "memory_remember. Copy the sentence out of the file character for "
+                "character -- paraphrasing, re-wrapping, smart quotes and em dashes "
+                "are all rejected."
+            )
+    return str(resolved)
+
+
+def _refusal(code: str, message: str) -> CallToolResult:
+    """A refusal the agent can read and act on, not a transport error.
+
+    The text carries the reason and never the statement: this runs on a path an
+    attacker can influence, and an error message is the easiest place for memory
+    content to leak back into a transcript.
+    """
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps({"code": code, "message": message}))],
+        isError=True,
+    )
+
+
+def _result_dict(written) -> dict:
+    return {
+        "corpus": written.corpus,
+        "version_id": written.version_id,
+        "event": written.event,
+        "path": written.path,
+        "key": written.key,
+        "unchanged": written.unchanged,
+    }
+
+
 @mcp.tool()
 def list_corpora() -> str:
     """List available corpora with document counts."""

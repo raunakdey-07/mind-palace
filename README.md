@@ -204,10 +204,10 @@ print(f"{memory.claim}  [{memory.status}]")
   provenance, not the product.
 - **It does not authenticate its own history.** A receipt proves internal
   consistency. Trust requires an anchor you pinned yourself, outside this system.
-- **An agent cannot call `remember` over MCP.** The 15 MCP tools have no
-  `remember`; the only document write is `sync(corpus, path)`. An agent writes a
-  document with claims and syncs it. `remember` exists on the CLI, the SDK and
-  REST ([why](docs/authoring.md#how-an-agent-writes-claims)).
+- **An agent can write memory, and that is a risk.** `memory_remember` is the
+  16th MCP tool and the first that writes. Without `file=` the evidence for the
+  claim is the statement itself, so it proves what the agent was told and not that
+  it is true ([why, and the review it needs](docs/authoring.md#memory_remember)).
 - **The install is 5.9 GB**, and a writer of this size in your terminal is
   unfashionable. `MIND_PALACE_LEXICAL=1` removes the model and most of the
   weight, and costs you meaning-based matching.

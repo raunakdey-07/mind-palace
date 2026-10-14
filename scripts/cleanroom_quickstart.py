@@ -418,33 +418,77 @@ send({"jsonrpc": "2.0", "id": 1, "method": "initialize",
                  "clientInfo": {"name": "cleanroom", "version": "0"}}})
 proc.stdout.readline()
 send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+
+def rpc(req_id, name, arguments):
+    # One tool call, and the text it answered with.
+    send({"jsonrpc": "2.0", "id": req_id, "method": "tools/call",
+          "params": {"name": name, "arguments": arguments}})
+    for _ in range(60):
+        line = proc.stdout.readline()
+        if not line:
+            raise SystemExit(f"server closed stdout answering {name}")
+        msg = json.loads(line)
+        if msg.get("id") == req_id:
+            content = (msg.get("result") or {}).get("content", [])
+            return content[0].get("text", "") if content else ""
+    raise SystemExit(f"no reply to {name}")
+
+def current(text):
+    # The claim the response reports as CURRENT, or "".
+    try:
+        return json.loads(text)["current_memories"][0]["claim"]
+    except Exception:
+        return ""
+
+def fail(what, got):
+    proc.kill()
+    print(f"!! {what}: {got}", file=sys.stderr)
+    sys.exit(3)
+
+# memory_remember: the one MCP tool that writes memory.
+MCP_KEY = "mcp.datastore"
+first = json.loads(rpc(2, "memory_remember",
+                       {"statement": "The support rota runs weekly.",
+                        "corpus": "default", "key": MCP_KEY}))
+if first.get("event") != "NEW":
+    fail("a new memory_remember should report NEW", first)
+
+# Idempotent: the identical call again must not write a second version.
+again = json.loads(rpc(3, "memory_remember",
+                       {"statement": "The support rota runs weekly.",
+                        "corpus": "default", "key": MCP_KEY}))
+if again.get("event") != "UNCHANGED" or again.get("version_id") != first.get("version_id"):
+    fail("an identical memory_remember must be idempotent", again)
+
+# It comes back through recall.
+ROTA_Q = "How often does the support rota run?"
+if "weekly" not in current(rpc(4, "memory_recall",
+                               {"request": {"corpus": "default", "query": ROTA_Q}})):
+    fail("memory_recall did not return what memory_remember wrote", "")
+
+# A changed value on the same key supersedes the old one.
+rpc(5, "memory_remember",
+    {"statement": "The support rota now runs fortnightly.",
+     "corpus": "default", "key": MCP_KEY})
+if "fortnightly" not in current(rpc(6, "memory_recall",
+                                    {"request": {"corpus": "default", "query": ROTA_Q}})):
+    fail("a changed value did not supersede the old one", "")
+
+# And the README's own supersession is still what recall reports.
 QUERY = "What datastore does production use?"
-send({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-      "params": {"name": "memory_recall",
-                 "arguments": {"request": {"corpus": "default", "query": QUERY}}}})
-for _ in range(40):
-    line = proc.stdout.readline()
-    if not line:
-        break
-    msg = json.loads(line)
-    if msg.get("id") == 2:
-        content = (msg.get("result") or {}).get("content", [])
-        text = content[0].get("text", "") if content else ""
-        proc.kill()
-        # The README supersedes its own earlier fact: step 7 remembers that the
-        # datastore is now CockroachDB, so by the time this runs the correct
-        # answer is CockroachDB, not the PostgreSQL asserted earlier. Asserting
-        # the *superseded* value here would have failed the job for being right.
-        sys.exit(0 if "CockroachDB" in text else 3)
+if "CockroachDB" not in current(rpc(7, "memory_recall",
+                                    {"request": {"corpus": "default", "query": QUERY}})):
+    fail("the README supersession is no longer current", "")
+
 proc.kill()
-sys.exit(4)
+sys.exit(0)
 """
         result = runner.python(mcp, label="mcp")
         checks.append(
             (
-                "MCP memory_recall with the documented shape",
+                "MCP memory_remember writes, is idempotent, supersedes, and is recalled",
                 result.returncode == 0,
-                "returned no current datastore",
+                (result.stderr or "")[:300],
             )
         )
 

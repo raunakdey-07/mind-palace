@@ -181,20 +181,56 @@ partially stored, and a later successful ingest is not affected.
 How to write claims *from* unstructured text. No extractor exists, so there is
 nothing to document yet; `docs/wedge-decision-note.md` argues that building one
 is a later decision, not this one.
+### `memory_remember`
+
+An agent can now call `memory_remember` over MCP. It is the sixteenth tool and the
+first one that writes memory:
+
+```
+memory_remember(statement: str, corpus: str, key: str | None = None,
+                file: str | None = None)
+```
+
+The arguments and the code path are the SDK's `remember()`, so an agent and a
+script cannot write memory differently. Idempotent: the identical call again
+returns the same `version_id` and `event: UNCHANGED`. A changed value on the same
+`key` supersedes the old one.
+
+It takes no credential. The caller's identity is whatever
+`MIND_PALACE_MCP_CREDENTIAL` resolves to, and that identity needs write access to
+the corpus — a read-only credential is refused.
+
+**Without `file`, the evidence for the claim is the statement itself.** That is a
+real limitation and worth being plain about: the evidence proves *what you were
+told*, not that it is true. A model that writes `"The production root password is
+hunter2"` into memory has recorded a perfectly verified claim that is entirely
+false. Provenance is what this system offers, not truth.
+
+With `file=`, the statement must appear **verbatim** in that file, and the file
+must be inside `MIND_PALACE_INGEST_ROOTS` — the same bound that governs
+`ingest-repo`. That is the stronger form: the claim is then anchored to a document
+someone else wrote.
+
+**Untrusted text should not become claims without review.** `statement` is
+attacker-controllable wherever a model has ingested a document and been asked to
+remember something from it. Nothing in this tool prevents a model from writing
+something a user merely read. If the content is not yours — a fetched page, a
+support ticket, a scraped repo — then `remember` is the wrong call, and
+`MIND_PALACE_INGEST_ROOTS` plus human or policy review is the right one. An agent
+given this tool should be given the review step too, not just the tool.
+
 ## How an agent writes claims
 
-**An agent cannot call `remember` over MCP.** There are 15 tools and none is
-`remember`; the only writes are `sync(corpus, path)` and `memory_snapshot`. So an
-agent reaches a claim by writing a document with a `claims:` block and syncing it.
-`remember` — the one-statement write — exists on the CLI
+An agent has two ways to write memory. The older is to write a document with a
+`claims:` block and call `sync(corpus, path)`. The newer is `memory_remember`,
+described below. The one-statement write also exists on the CLI
 (`mindpalace remember "..." --key k`), the SDK
 (`MindPalace(name).remember(statement, *, corpus, key, file)`) and REST
-(`POST /remember`), but not on MCP.
+(`POST /remember`).
 
-That is the design, not a gap. `remember` asserts a statement is a fact; an agent
-asking a model to make that assertion is the thing this system exists to prevent.
-An agent that has already decided can write it down, and the exact-quote rule then
-holds it to the same evidence standard a person is held to.
+`remember` asserts a statement is a fact, and handing that assertion to a model is
+the thing this system exists to prevent — which is why it was the last write path
+to reach MCP rather than the first.
 
 The rule, for an agent: `evidence` must appear **verbatim** in the text the agent
 wrote. Not a paraphrase, not a re-wrap, not a smart quote. Generate the prose

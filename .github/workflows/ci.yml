@@ -890,14 +890,18 @@ jobs:
       # verbatim, against a wheel installed outside the source tree, in a
       # workdir that is not the repository. It is the same job, not a new one:
       # it reuses the wheel and the Postgres service this job already built.
+      #
+      # No HF_HUB_OFFLINE here. `ingest-repo` embeds, and without the weights it
+      # fails with a bare OSError -- which is what the first two attempts at this
+      # step did. Every other job provisions the weights before running anything
+      # semantic; this job had not, because nothing in it had needed them until
+      # now.
       - name: The documented commands run from the built wheel
         env:
           # This job sets DATABASE_URL per-step, and the other steps here set it
           # to an unreachable server on purpose. So it is named here, against the
           # job's own service, rather than assumed present.
           DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          HF_HUB_OFFLINE: "1"
-          TRANSFORMERS_OFFLINE: "1"
         run: |
           wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
           # The script creates its own database, so it needs psycopg2. That is a

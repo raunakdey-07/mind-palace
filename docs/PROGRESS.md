@@ -8,6 +8,41 @@ This file is the index; the detail lives in the documents it links.
 
 ---
 
+## Session 9 — 2026-10-14: reconcile the numbers, then build a question set we did not write (branch `wip/independent-set`)
+
+**Written first, before any work, with every phase below marked NOT DONE.**
+
+**The branch is NOT cut from `main`, and that is deliberate.** The brief was to
+sync `main` after the owner merged `wip/wedge` and cut from there. **It was not
+merged**: `origin/main` is `07d0f91` and `git branch -a --contains 09bbc28`
+returns only `wip/wedge` and `origin/wip/wedge`. There is also **no open PR for
+it** — `gh pr list --state all` shows PRs 1-4 and `wip/wedge` is not among them,
+so it was pushed but never proposed. Merging it is the owner's alone and is
+explicitly forbidden here. So this branch is cut from `09bbc28`, `wip/wedge`'s
+head, which loses nothing and fast-forwards cleanly into `main` the moment the
+owner merges. **The sync is deferred, not done.**
+
+**Baseline invariant at `09bbc28`, checked before any edit:**
+`git diff v0.9.0..HEAD -- eval/ docs/performance/baseline-packs.json` is **empty**.
+
+| phase | state | one line |
+|---|---|---|
+| 0 reconcile the numbers | **NOT DONE** | 0a one confusion table summing to 202 and the mapping of 117/127/151/24/33, every disagreeing document fixed and listed; 0b whether frozen `m0130-heldout.json` is affected, plus a second content hash over every graded field, required for any new set, frozen files untouched; 0c BM25 tie-break made deterministic by claim id, old and new risk-coverage side by side; 0d report only, the `MEMORY_TEST_DATABASE_URL` fallback at `api/services/memory_benchmark.py:456`; 0e fix the `memory_db` fixture and attribute the remaining 3 FK violations |
+| 1 ingestion honesty (docs and error text only) | **NOT DONE** | 1a the exact-quote rejection text, and whether it is actionable; 1b `docs/authoring.md`; 1c the labelled-passage option measured on the dev set only, under `scripts/`, nothing in the product path |
+| 2 independent question set (build and freeze, **do not score**) | **NOT DONE** | 2a three public ADR repositories with "superseded by", licence permitting use, pinned commit, records and pairs; 2b a deterministic LLM-free converter under `scripts/`; 2c a generator from the links, slice floors >=30% historical and >=15% absent; 2d freeze with both hashes and `docs/evaluation/independent-set-v1.md`. **Nothing is scored** |
+| 3 the lab measures the product | **NOT DONE** | 3a lab arm A on the real product path with the benchmark grader, reproducing 194/202, then the 77-question gap per question. **Harm matrix and arm-E cross-validation explicitly out of scope this round** |
+| 4 LongMemEval, optional and only if 0-3 are done | **NOT DONE** | Not started. Gated on 0-3. `workflow_dispatch` only, never on push; labelled a baseline, never a Mind Palace result |
+
+**Five owner decisions are put at the decision gate at the end of this entry**:
+labelled passages for no-claims documents, removing the `MEMORY_TEST_DATABASE_URL`
+fallback from product code, scoring the independent set next round and only once,
+reserving the PyPI name, and cutting the v0.9.x tag.
+
+**Owner alone decides when 1.0.0 is ready and when to tag.** Nothing in this file
+implies otherwise.
+
+---
+
 ## Session 8 — 2026-10-13: correct the record, the skips, and the evidence (branch `wip/wedge`)
 
 **Written first, before any work, with every phase below marked NOT DONE.**

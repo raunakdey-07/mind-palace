@@ -87,7 +87,11 @@ def scan_info(plan, rel):
     for nd in walk(plan):
         if nd.get("Relation Name") == rel:
             bitmap = next(
-                (c.get("Index Name") for c in walk(nd) if c.get("Node Type") == "Bitmap Index Scan"),
+                (
+                    c.get("Index Name")
+                    for c in walk(nd)
+                    if c.get("Node Type") == "Bitmap Index Scan"
+                ),
                 None,
             )
             info = {
@@ -253,17 +257,21 @@ async def run_size(n):
                     print(f"[N={n}]   ingested {i}/{len(documents)} docs", flush=True)
 
             counts = (
-                await conn.execute(
-                    text(
-                        "SELECT (SELECT count(*) FROM memory_claims WHERE corpus_id=:c) AS claims,"
-                        " (SELECT count(*) FROM memory_evidence WHERE corpus_id=:c) AS evidence,"
-                        " (SELECT count(*) FROM memory_chunks WHERE corpus_id=:c) AS chunks,"
-                        " (SELECT count(*) FROM memory_versions WHERE corpus_id=:c) AS versions,"
-                        " (SELECT count(*) FROM memory_documents WHERE corpus_id=:c) AS documents"
-                    ),
-                    {"c": corpus_id},
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT (SELECT count(*) FROM memory_claims WHERE corpus_id=:c) AS claims,"
+                            " (SELECT count(*) FROM memory_evidence WHERE corpus_id=:c) AS evidence,"
+                            " (SELECT count(*) FROM memory_chunks WHERE corpus_id=:c) AS chunks,"
+                            " (SELECT count(*) FROM memory_versions WHERE corpus_id=:c) AS versions,"
+                            " (SELECT count(*) FROM memory_documents WHERE corpus_id=:c) AS documents"
+                        ),
+                        {"c": corpus_id},
+                    )
                 )
-            ).mappings().one()
+                .mappings()
+                .one()
+            )
             out["rows"] = {k: int(v) for k, v in counts.items()}
 
             await conn.execute(text("SET plan_cache_mode = force_custom_plan"))
@@ -271,17 +279,23 @@ async def run_size(n):
 
             pre = await stats(conn)
             out["stats_pre"] = pre
-            assert pre["memory_claims"]["reltuples"] == -1, (
-                f"N={n} claims reltuples={pre['memory_claims']['reltuples']}, expected -1")
-            assert pre["memory_evidence"]["reltuples"] == -1, (
-                f"N={n} evidence reltuples={pre['memory_evidence']['reltuples']}, expected -1")
+            assert (
+                pre["memory_claims"]["reltuples"] == -1
+            ), f"N={n} claims reltuples={pre['memory_claims']['reltuples']}, expected -1"
+            assert (
+                pre["memory_evidence"]["reltuples"] == -1
+            ), f"N={n} evidence reltuples={pre['memory_evidence']['reltuples']}, expected -1"
             assert pre["memory_claims"]["last_analyze"] is None, f"N={n} claims last_analyze set"
-            assert pre["memory_evidence"]["last_analyze"] is None, f"N={n} evidence last_analyze set"
+            assert (
+                pre["memory_evidence"]["last_analyze"] is None
+            ), f"N={n} evidence last_analyze set"
             out["fresh_install_asserted"] = True
             print(
                 f"[N={n}] fresh-install ASSERTED: claims reltuples={pre['memory_claims']['reltuples']}"
                 f" evidence reltuples={pre['memory_evidence']['reltuples']} last_analyze=NULL"
-                f" rows={out['rows']}", flush=True)
+                f" rows={out['rows']}",
+                flush=True,
+            )
 
             params = {"c": corpus_id, "path": None, "at": None}
             before = await measure(conn, sql, params, "pre-ANALYZE")
@@ -290,7 +304,9 @@ async def run_size(n):
                 f"[N={n}] PRE  hit={before['shared_hit']} exec={before['exec_ms']}ms"
                 f" claims_idx={before['claims_index']} rf={before['claims_rows_removed_by_filter']}"
                 f" | ev_idx={before['evidence_index']} rf={before['evidence_rows_removed_by_filter']}"
-                f" | est_rows={before['root_est_rows']}", flush=True)
+                f" | est_rows={before['root_est_rows']}",
+                flush=True,
+            )
 
             for tbl in ("memory_claims", "memory_evidence", "memory_versions", "memory_documents"):
                 await conn.execute(text(f"ANALYZE {tbl}"))
@@ -302,7 +318,9 @@ async def run_size(n):
                 f"[N={n}] POST hit={after['shared_hit']} exec={after['exec_ms']}ms"
                 f" claims_idx={after['claims_index']} rf={after['claims_rows_removed_by_filter']}"
                 f" | ev_idx={after['evidence_index']} rf={after['evidence_rows_removed_by_filter']}"
-                f" | est_rows={after['root_est_rows']}", flush=True)
+                f" | est_rows={after['root_est_rows']}",
+                flush=True,
+            )
 
             identical = (
                 got_before["sha256"] == got_after["sha256"]
@@ -314,12 +332,17 @@ async def run_size(n):
             out["rows_sha256_before"] = got_before["sha256"]
             out["rows_sha256_after"] = got_after["sha256"]
             out["rows_identical_across_analyze"] = identical
-            out["hit_ratio"] = (round(before["shared_hit"] / after["shared_hit"], 2)
-                                if after["shared_hit"] else None)
+            out["hit_ratio"] = (
+                round(before["shared_hit"] / after["shared_hit"], 2)
+                if after["shared_hit"]
+                else None
+            )
             print(
                 f"[N={n}] rows byte-identical across ANALYZE: {identical}"
                 f" (sha={got_before['sha256'][:16]} n={got_before['n_rows']})"
-                f" ratio={out['hit_ratio']}x", flush=True)
+                f" ratio={out['hit_ratio']}x",
+                flush=True,
+            )
             assert identical, f"N={n}: ANALYZE changed the rows returned by _load"
         finally:
             await outer.rollback()

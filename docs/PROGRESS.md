@@ -895,12 +895,31 @@ with the server log capturing `log_min_error_statement = error`:
 
 11 passed. Same test file, same corpus, same queries.
 
-**The remaining 3 of 12: NOT ESTABLISHED.** They did not reproduce in Phase 8
-under any isolated run, and they cannot be attributed to a test this session.
-They may have been the same fixture defect in a different test that the full
-suite would have exercised; the definitive check is a full-suite run with the
-PostgreSQL log open, which this session's full-suite run does **not** cover —
-CI's log is captured by GitHub, not by `docker logs`.
+**The remaining 3 of 12: resolved by the same fix.** A full-suite run against a
+fresh disposable PostgreSQL, with the server log open the whole time:
+
+| constraint | violations in the full suite after the fix |
+|---|---:|
+| `memory_claim_embeddings_corpus_id_claim_id_fkey` | **0** |
+| `memory_evidence_corpus_id_version_id_claim_id_fkey` | 2 |
+| `memory_snapshot_versions_corpus_id_version_id_fkey` | 1 |
+
+The CI log at `46add67` held **15**: 12 of the first kind, 2 of the second, 1 of
+the third. After the fixture fix, **all 12 of the first kind are gone**, and the
+3 that remain are exactly the two `tests/test_memory_multiple_evidence.py:200`
+and `:204` cross-corpus refusals and the `tests/test_memory_core.py:472`
+snapshot-membership refusal — **deliberate negative tests, each wrapped in
+`pytest.raises(IntegrityError)`**.
+
+So all 12 are attributed: 9 were `tests/test_context_product.py`, one per test,
+and **3 more were the same fixture defect in other tests that only appear when
+the whole suite runs in order.** Their individual test names are **not**
+established — they do not reproduce in isolation, and bisecting a 1600-test
+ordering to name them is not worth the time when the fix already removes them.
+They were the same cause and the same fix covers them.
+
+**Every FK violation in the CI log is now attributed: 12 to the fixture defect,
+3 to deliberate negative tests. None is a product defect.**
 
 **Test changes: none.** No test definition, assertion, skip marker or expectation
 was added, removed or weakened. The change is to a fixture's setup: one more

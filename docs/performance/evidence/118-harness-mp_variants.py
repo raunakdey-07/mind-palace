@@ -7,6 +7,7 @@ under EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON).
 
 No ANALYZE. No new index. No new migration. No DDL outside the throwaway schema.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -182,17 +183,43 @@ RESET = (
 VARIANTS = [
     ("V0", V0_SQL, (), (), "BASELINE: production _load narrow SQL, verbatim"),
     ("V1", V1_SQL, (), (), "LEFT JOIN LATERAL for the three aggregates"),
-    ("V2", V2_SQL, (), (), "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)"),
+    (
+        "V2",
+        V2_SQL,
+        (),
+        (),
+        "WITH ... MATERIALIZED pre-aggregate, joined on (corpus_id, version_id)",
+    ),
     ("V3", V3_SQL, (), (), "correlated subqueries, version_id predicate written first"),
     ("V4", V4_SQL, (), (), "inline pre-grouped derived tables instead of CTEs"),
-    ("V5", V0_SQL, (), ("SET LOCAL default_statistics_target = 1000",),
-     "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)"),
-    ("V6a", V0_SQL, (), ("SET LOCAL enable_indexscan = off",),
-     "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered"),
-    ("V6b", V0_SQL, (), ("SET LOCAL enable_seqscan = off", "SET LOCAL enable_bitmapscan = off"),
-     "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly"),
-    ("V6c", V0_SQL, (), ("SET LOCAL random_page_cost = 1.1",),
-     "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan"),
+    (
+        "V5",
+        V0_SQL,
+        (),
+        ("SET LOCAL default_statistics_target = 1000",),
+        "V0 under default_statistics_target=1000 (session setting only, collects NO statistics)",
+    ),
+    (
+        "V6a",
+        V0_SQL,
+        (),
+        ("SET LOCAL enable_indexscan = off",),
+        "DIAGNOSTIC CONTROL: force non-index-scan paths, to see if the planner can be steered",
+    ),
+    (
+        "V6b",
+        V0_SQL,
+        (),
+        ("SET LOCAL enable_seqscan = off", "SET LOCAL enable_bitmapscan = off"),
+        "DIAGNOSTIC CONTROL: force a plain index scan, to price the composite index directly",
+    ),
+    (
+        "V6c",
+        V0_SQL,
+        (),
+        ("SET LOCAL random_page_cost = 1.1",),
+        "DIAGNOSTIC CONTROL: SSD-like random_page_cost, to see if cost model alone flips the plan",
+    ),
     ("V7", V7_SQL, (), (), "corpus_id bound to the :c parameter instead of v.corpus_id"),
 ]
 
@@ -252,8 +279,14 @@ def scan_info(plan, rel):
         if nd.get("Relation Name") == rel:
             # A Bitmap Heap Scan carries no Index Name; the Bitmap Index Scan
             # child does. Report the index that was actually used.
-            bitmap = next((c.get("Index Name") for c in walk(nd)
-                           if c.get("Node Type") == "Bitmap Index Scan"), None)
+            bitmap = next(
+                (
+                    c.get("Index Name")
+                    for c in walk(nd)
+                    if c.get("Node Type") == "Bitmap Index Scan"
+                ),
+                None,
+            )
             info = {
                 "node": nd.get("Node Type"),
                 "index": nd.get("Index Name") or bitmap,
@@ -319,21 +352,26 @@ async def run_size(n: int, reps: int, dump_v0: bool) -> dict:
         fidelity["v0_repr"] = repr(V0_SQL)
         fidelity["diff"] = [
             (i, a, b)
-            for i, (a, b) in enumerate(
-                zip(prod_sql.splitlines(True), V0_SQL.splitlines(True))
-            )
+            for i, (a, b) in enumerate(zip(prod_sql.splitlines(True), V0_SQL.splitlines(True)))
             if a != b
         ]
-    print(f"[N={n}] V0 == production _load: {fidelity['match']} "
-          f"(prod {fidelity['prod_len']} chars, harness {fidelity['v0_len']} chars)", flush=True)
+    print(
+        f"[N={n}] V0 == production _load: {fidelity['match']} "
+        f"(prod {fidelity['prod_len']} chars, harness {fidelity['v0_len']} chars)",
+        flush=True,
+    )
 
     engine = create_async_engine(URL, poolclass=NullPool)
     schema = "var_" + uuid4().hex[:10]
     corpus_id = hashlib.sha256(uuid4().bytes).hexdigest()
     out = {
-        "n": n, "schema": schema, "corpus_id": corpus_id,
-        "fidelity": fidelity, "production_sql": prod_sql,
-        "variants": {}, "dump_v0": dump_v0,
+        "n": n,
+        "schema": schema,
+        "corpus_id": corpus_id,
+        "fidelity": fidelity,
+        "production_sql": prod_sql,
+        "variants": {},
+        "dump_v0": dump_v0,
     }
     t_start = time.perf_counter()
     async with engine.connect() as conn:
@@ -358,35 +396,69 @@ async def run_size(n: int, reps: int, dump_v0: bool) -> dict:
                 ) as db:
                     await service._ingest_content(db, content, path, corpus_id)
                 if i % 200 == 0:
-                    print(f"[N={n}]   ingested {i}/{len(documents)} docs "
-                          f"({time.perf_counter() - t0:.0f}s)", flush=True)
+                    print(
+                        f"[N={n}]   ingested {i}/{len(documents)} docs "
+                        f"({time.perf_counter() - t0:.0f}s)",
+                        flush=True,
+                    )
             ingest_s = time.perf_counter() - t0
 
-            stats = (await conn.execute(text(
-                "SELECT c.relname, c.reltuples, c.relpages, s.n_live_tup, s.last_analyze, s.last_autoanalyze "
-                "FROM pg_stat_user_tables s JOIN pg_class c ON c.oid = s.relid "
-                "WHERE c.relnamespace = current_schema()::regnamespace "
-                "AND c.relname IN ('memory_claims','memory_evidence','memory_chunks','memory_versions') "
-                "ORDER BY c.relname"
-            ))).fetchall()
-            counts = (await conn.execute(text(
-                "SELECT (SELECT count(*) FROM memory_claims WHERE corpus_id=:c) AS claims,"
-                " (SELECT count(*) FROM memory_evidence WHERE corpus_id=:c) AS evidence,"
-                " (SELECT count(*) FROM memory_chunks WHERE corpus_id=:c) AS chunks,"
-                " (SELECT count(*) FROM memory_versions WHERE corpus_id=:c) AS versions,"
-                " (SELECT count(*) FROM memory_documents WHERE corpus_id=:c) AS documents"
-            ), {"c": corpus_id})).mappings().one()
+            stats = (
+                await conn.execute(
+                    text(
+                        "SELECT c.relname, c.reltuples, c.relpages, s.n_live_tup, s.last_analyze, s.last_autoanalyze "
+                        "FROM pg_stat_user_tables s JOIN pg_class c ON c.oid = s.relid "
+                        "WHERE c.relnamespace = current_schema()::regnamespace "
+                        "AND c.relname IN ('memory_claims','memory_evidence','memory_chunks','memory_versions') "
+                        "ORDER BY c.relname"
+                    )
+                )
+            ).fetchall()
+            counts = (
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT (SELECT count(*) FROM memory_claims WHERE corpus_id=:c) AS claims,"
+                            " (SELECT count(*) FROM memory_evidence WHERE corpus_id=:c) AS evidence,"
+                            " (SELECT count(*) FROM memory_chunks WHERE corpus_id=:c) AS chunks,"
+                            " (SELECT count(*) FROM memory_versions WHERE corpus_id=:c) AS versions,"
+                            " (SELECT count(*) FROM memory_documents WHERE corpus_id=:c) AS documents"
+                        ),
+                        {"c": corpus_id},
+                    )
+                )
+                .mappings()
+                .one()
+            )
             await conn.execute(text("SET plan_cache_mode = force_custom_plan"))
             settings = {}
-            for key in ("plan_cache_mode", "default_statistics_target", "jit", "shared_buffers",
-                        "work_mem", "random_page_cost", "seq_page_cost", "enable_indexscan",
-                        "enable_seqscan", "enable_bitmapscan", "server_version"):
+            for key in (
+                "plan_cache_mode",
+                "default_statistics_target",
+                "jit",
+                "shared_buffers",
+                "work_mem",
+                "random_page_cost",
+                "seq_page_cost",
+                "enable_indexscan",
+                "enable_seqscan",
+                "enable_bitmapscan",
+                "server_version",
+            ):
                 settings[key] = (await conn.execute(text("SHOW " + key))).scalar()
-            print(f"[N={n}] migrate {migrate_s:.1f}s  ingest {ingest_s:.1f}s  "
-                  f"rows={dict(counts)}", flush=True)
-            print(f"[N={n}] pg_stat_user_tables BEFORE any EXPLAIN:\n"
-                  + "\n".join("      " + " | ".join("NULL" if v is None else str(v) for v in row)
-                              for row in stats), flush=True)
+            print(
+                f"[N={n}] migrate {migrate_s:.1f}s  ingest {ingest_s:.1f}s  "
+                f"rows={dict(counts)}",
+                flush=True,
+            )
+            print(
+                f"[N={n}] pg_stat_user_tables BEFORE any EXPLAIN:\n"
+                + "\n".join(
+                    "      " + " | ".join("NULL" if v is None else str(v) for v in row)
+                    for row in stats
+                ),
+                flush=True,
+            )
 
             params = {"c": corpus_id, "path": None, "at": None}
             assert prod_params is not None and set(prod_params) == set(PARAMS_KEYS), prod_params
@@ -450,18 +522,22 @@ async def run_size(n: int, reps: int, dump_v0: bool) -> dict:
                         p.write_text(json.dumps(plans[0], indent=2) + "\n")
                         out["v0_json_path"] = str(p.relative_to(ROOT))
                 else:
-                    rec["identical_to_V0"] = (got["sha256"] == baseline_hash
-                                              and got["n_rows"] == rec["n_rows"])
+                    rec["identical_to_V0"] = (
+                        got["sha256"] == baseline_hash and got["n_rows"] == rec["n_rows"]
+                    )
                 out["variants"][name] = rec
                 plans_by_name[name] = plans
                 if n in DUMP_PLANS_FOR:
                     (EV / f"113-all-variants-n{n:05d}.json").write_text(
-                        json.dumps(out["variants"], indent=2) + "\n")
+                        json.dumps(out["variants"], indent=2) + "\n"
+                    )
                     (EV / f"114-plans-n{n:05d}.json").write_text(
-                        json.dumps({k: v[0] for k, v in plans_by_name.items()}, indent=2) + "\n")
+                        json.dumps({k: v[0] for k, v in plans_by_name.items()}, indent=2) + "\n"
+                    )
                     out["all_variants_json"] = [
                         f"docs/performance/evidence/113-all-variants-n{n:05d}.json",
-                        f"docs/performance/evidence/114-plans-n{n:05d}.json"]
+                        f"docs/performance/evidence/114-plans-n{n:05d}.json",
+                    ]
                 ci = rec["claims_index"] or {}
                 ei = rec["evidence_index"] or {}
                 print(

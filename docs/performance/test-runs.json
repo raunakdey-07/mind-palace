@@ -104,6 +104,22 @@
       "seconds": 553.7,
       "skipped": "2"
     },
+    "9ef20a8: full suite, workstation, disposable PG 15.4 at 15440, Session 9": {
+      "collected": "1639",
+      "commit": "9ef20a8d65ec1070d88b012b1d0478c3878b5a0e",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, workstation, disposable PG 15.4 at 15440, Session 9",
+      "note": "1637 = 1631 at d1a4612 + 6 new tests in tests/test_claim_rejection_message.py. Phase 0e: tests/test_memory_core.py::memory_db now applies migration 007 in the per-test schema, so memory_claim_embeddings no longer resolves into public through search_path. Full-suite PostgreSQL log: memory_claim_embeddings FK violations 12 -> 0; the 2 memory_evidence and 1 memory_snapshot_versions violations remain and are the deliberate negative tests at tests/test_memory_multiple_evidence.py:200 and :204 and tests/test_memory_core.py:472.",
+      "passed": "1637",
+      "seconds": 568.94,
+      "skipped": "2"
+    },
     "a51607c: full suite, run 1, hermetic session database": {
       "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
       "failed": "0",

@@ -655,19 +655,36 @@ and never the first thing.
 
 ## Documentation
 
+**Read these, in this order. Three documents, 1291 lines, and then stop.**
+
+| | | |
+|---|---|---|
+| 1 | This file | why it exists, and the guarantees |
+| 2 | [Quickstart](docs/quickstart.md) | commands only, no prose — the path from nothing to one answer |
+| 3 | [Authoring memory](docs/authoring.md) | how to write a document that answers |
+
+That is **1193 lines, and it is the whole first hour.**
+
+**Later — when a specific thing stops you.** None of this is needed in the first
+hour, and reading it early is how a two-page project becomes a week.
+
 | | |
 |---|---|
-| [First-use audit](docs/product/first-use-audit.md) | the problems earlier releases fixed, and how they were reproduced |
-| [Developer experience](docs/product/developer-experience.md) | every documented path, verified |
-| [Decision memory example](examples/decision-memory/) | the whole product in one file |
-| [Project decision log example](examples/project-log/) | a real project's decisions, as memory |
-| [Operational memory feed](docs/feed.md) | the durable corpus-scoped read interface: ordering, cursors, consistency |
 | [Local runtime and model-free mode](docs/runtime.md) | the warm process, and running with no embedding model at all |
-| [Deployment and authentication](docs/deployment.md) | health, observability, security posture, credentials, multi-tenancy |
-| [Status](docs/STATUS.md) | what is measured, what is outstanding |
-| [Release map](docs/release-map.md) | milestone to version |
+| [Deployment and authentication](docs/deployment.md) | health, observability, credentials, multi-tenancy |
+| [Security](docs/security.md) | threat model, credential handling, what is logged |
+| [Errors](docs/errors.md) | every code the CLI and API return |
+| [Deletion and erasure](docs/deletion-and-erasure.md) | removing a person's data |
+| [Operational memory feed](docs/feed.md) | corpus-scoped read interface: ordering, cursors, consistency |
+| [Providers](docs/providers.md) | LLM and embedding providers |
 | [Architecture](docs/architecture/) | how the layers fit |
+| [Status](docs/STATUS.md) | what is measured, what is outstanding |
+| [Changelog](CHANGELOG.md) | every release, and every fix |
+| [Release map](docs/release-map.md) | milestone to version |
 | [Evaluation](docs/evaluation/) | the frozen benchmarks and their results |
+| [Progress](docs/PROGRESS.md) | one line per phase; [full history](docs/internal/progress-history.md) |
+| [Examples](examples/) | the whole product in one file, [decision memory](examples/decision-memory/) and [project log](examples/project-log/) |
+| [Withdrawn](docs/withdrawn/README.md) | material deliberately removed, and why |
 
 ## Contributing
 

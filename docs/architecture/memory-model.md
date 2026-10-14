@@ -175,3 +175,195 @@ that authors `claims:` is archived even if the flag is off
   or per-corpus access control.
 - Archive retention and erasure are unresolved. Ordinary DML cannot erase
   archive rows, and corpus deletion fails while archive rows exist.
+
+---
+
+## From the README, expanded
+
+These sections were in README.md until 2026-10-14, when the README was cut
+from 883 lines to about 200. Nothing was deleted; it moved here.
+
+## What is different, and why it matters
+
+Two distinctions do the work. They are the reason this is not a vector store with a
+chat interface bolted on.
+
+```text
+semantic similarity   ≠   memory authority
+retrieval             ≠   historical truth
+```
+
+**Similarity is not authority.** A search index answers "what text looks like your
+question". Mind Palace answers "what is true, what replaced it, and on what
+evidence" — and it will decline rather than guess when nothing it knows is relevant.
+A claim is authoritative because a human wrote it and the archive recorded its
+provenance, not because it scored well.
+
+**Retrieval is not history.** A vector index returns the nearest documents and has no
+opinion about last month. Every memory here carries validity, supersession and
+conflicts, so `--as-of` returns what was true then — and the old answer stays
+readable after the fact.
+
+Concretely, that means:
+
+| | |
+|---|---|
+| **evidence** | the exact character span of the archived text that supports a claim |
+| **provenance** | which document and version a claim came from |
+| **time** | validity intervals, and `--as-of` to ask what was true at an instant |
+| **supersession** | what replaced what, oldest first, never overwritten |
+| **conflicts** | two live claims are reported as a conflict, not silently merged |
+| **verification** | a receipt anyone can check later, offline, with no database |
+
+Evaluation is real and reported honestly, and the numbers are not the flattering
+ones. The frozen M006.75 held-out benchmark scores **45/60 (75.0%)** exact on the
+current source, with every safety invariant at **60/60** and zero execution failures.
+The broader generalisation figure, from an independently authored 157-question
+held-out set, is **131/157 (83.4%)** — a generalisation number and a known
+limitation. Neither is superseded by the other. This release changed no benchmark
+input, policy, evaluator semantic, tokenizer or threshold, and that is measured:
+all 60 canonical per-question decisions are identical to `v0.8.0`. See
+[the reproducibility report](docs/evaluation/m00675-reproducibility.md), which also
+records one discrepancy this release found and deliberately did not paper over.
+
+---
+
+## Progressive disclosure
+
+The product is three layers, and you stop at the one you need.
+
+| Level | You need | Commands |
+|---|---|---|
+| **Simple** | to use memory | `remember`, `recall` |
+| **Explainable** | to trust it | `explain`, `history`, `recall --explain` |
+| **Verifiable** | to hand it to someone else | `receipt`, `verify` |
+| **Agent-native** | to let an agent use it | MCP |
+| **Production** | to run it | idempotent writes, auth, telemetry |
+
+Nothing below the line you are standing on is required to use the layer above it.
+Claim IDs, evidence IDs, validity intervals, Memory Pack internals, pgvector,
+retrieval policies and receipt digests are all real and all progressive: they
+appear when you ask for them, and never in the first five minutes.
+
+---
+
+## How it works
+
+Everything above is a thin surface over one model. Read this section when you
+want the guarantees rather than the commands.
+
+```text
+L0  source and verbatim versions      immutable
+L1  authoritative knowledge            claims, evidence, validity,
+                                        supersession, conflicts, snapshots
+L2  derived retrieval                 embeddings, chunks, caches, indexes
+```
+
+L2 may be deleted and rebuilt without changing a single byte of authoritative
+memory. `mindpalace reindex` rebuilds it from the archive. That separation is why
+a first memory works with no model and why a receipt verifies with no model.
+
+A remembered statement becomes one document under `memory/` carrying one authored
+claim. The claim text is the statement; the evidence quote is the same characters,
+so the archive's exact-substring rule can always re-verify them against the stored
+bytes. Version identity derives from content, which is what makes an identical
+write idempotent.
+
+### The guarantees
+
+- **Authority.** Every claim has at least one evidence span, enforced by the
+  database, and each span must be an exact substring of an archived chunk.
+- **Append-only.** Version, claim, evidence and snapshot tables reject `UPDATE`,
+  `DELETE` and `TRUNCATE` at the trigger level. History is not editable.
+- **Idempotency.** One corpus-scoped advisory lock plus a content fingerprint.
+  The same write twice, concurrently, or after a lost response resolves to one
+  version. No queue, no distributed lock.
+- **Supersession.** Remembering the same key again supersedes the previous claim;
+  the old one stays readable with its own identity.
+- **Temporal.** `as_of` reconstructs the archive as it was, so a question asked
+  before a change is answered with the value that was true then.
+- **Abstention.** A question the archive does not cover returns nothing with a
+  stated constraint. Nothing is generated.
+
+---
+
+## Why memory beyond RAG?
+
+Retrieval returns the passage that best matches a query. It does not know that the
+passage was wrong last month, that a newer document supersedes it, or that two
+sources disagree. Mind Palace answers a different question: *what was recorded,
+when, and on what basis?*
+
+The corpus owns the memory. An application asks a question and receives claims
+with status, validity, evidence and conflicts, not chunks to re-rank. That is why
+an answer can be exported, checked, and defended without the retrieval stack.
+
+## Core memory model
+
+A **claim** is one authored statement with a key, a validity window and a status.
+Each claim carries **evidence**: exact character spans of one immutable document
+version, verified by the database. When a claim is replaced, the archive records
+**supersession** rather than overwriting, so both the old and new values remain
+addressable and the transition is dated.
+
+Two claims that are current at the same time, on the same key, with different
+values, form a **conflict**. Mind Palace reports both with their sources instead of
+picking one.
+
+```text
+              ┌──────────────┐
+   NEW ──────▶│   CURRENT    │──── superseded by ──┐
+              └──────┬───────┘                    │
+                     │ evidence                   │
+                     ▼                            ▼
+            document version ──────────────►  new version
+              (immutable)                       (immutable)
+```
+
+## Verifiable Memory
+
+A **Memory Receipt** records what Mind Palace actually returned to one application,
+for one query, at one historical state: the claim identity and version, the
+document version and path that carried it, its evidence with offsets, its validity
+window, its supersession lineage, the authoritative digest, and an embedded proof.
+
+A **Memory Pack** is the bounded, portable slice of authoritative memory the
+receipt covers. It is a plain JSON artifact: model-independent, and readable with
+`memory_pack.py`, which is standard-library-only.
+
+Verification establishes **integrity and recorded provenance** — that the artifact
+still represents the state the receipt describes, and that no covered record has
+been altered since. It does **not** establish that the original source was
+factually correct. A digest alone does not establish **authenticity**: a party able
+to replace both the artifact and the receipt can recompute the digests. Supply
+`--trusted-digest` with a value pinned out of band and authenticity becomes
+checkable. `verify` states the unestablished case explicitly rather than letting a
+digest imply more than it shows.
+
+```bash
+# The dependency-free verifier, for environments without the CLI extras.
+mindpalace-proof verify receipt.json --pack memory-pack.json
+mindpalace-proof explain receipt.json --pack memory-pack.json
+```
+
+Existing v0.8.0 receipts remain verifiable. The receipt schema is version 1 and
+Memory Pack is version 1; neither changed.
+
+## Corpora
+
+A corpus is a namespace of memory. The default is `default`, which exists from the
+first migration, so the first command never has to mention one. Pass `--corpus`
+(or `corpus=`) to scope memory explicitly.
+
+A corpus name is a namespace, not a credential. Naming one is how you choose
+what to read; it is not evidence that you may. For a shared deployment, set
+`MIND_PALACE_AUTH_MODE=required` and run the service as a least-privileged
+database role, and the corpus you are allowed to reach is decided by your
+credential rather than by your request. See
+[Security and multi-tenant integration](docs/security.md).
+
+```console
+$ mindpalace corpora
+default
+decision-memory-1f4a9c02
+```

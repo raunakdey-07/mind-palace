@@ -201,38 +201,30 @@ wrote. Not a paraphrase, not a re-wrap, not a smart quote. Generate the prose
 first, then copy the sentence out of the file into both `claim` and `evidence`.
 
 ```console
-$ mkdir -p /tmp/agent-claims && cat > /tmp/agent-claims/deploy.md <<'EOF'
----
-title: Deployment architecture
-claims:
-  - key: architecture.datastore
-    value: PostgreSQL
-    claim: The primary datastore is PostgreSQL.
-    evidence: The primary datastore is PostgreSQL.
----
+$ mkdir -p ./docs && printf '%s\n' '---' 'title: Deployment architecture' 'claims:' '  - key: architecture.datastore' '    value: PostgreSQL' '    claim: The primary datastore is PostgreSQL.' '    evidence: The primary datastore is PostgreSQL.' '---' '' '# Deployment architecture' '' 'The primary datastore is PostgreSQL. It runs in three availability zones.' > ./docs/deployment.md
 
-# Deployment architecture
-
-The primary datastore is PostgreSQL. It runs in three availability zones.
-EOF
-
-$ mindpalace ingest-repo /tmp/agent-claims --corpus agentdemo
+$ mindpalace ingest-repo ./docs --corpus agentdemo
 [OK] sync: +1 ~0 =0 -0 !0, 1 chunks
 
 $ mindpalace recall "What is the primary datastore?" --corpus agentdemo
 The primary datastore is PostgreSQL.
-   source: deploy.md @ f62dd742a1a0
-   time:   true as of 2026-10-14 06:09 UTC
+   source: deployment.md @ 178141e34f2d
+   time:   true as of 2026-10-14 06:54 UTC
 ```
 
-And the rejection, which is what an agent that writes the claim and the document
-separately will get:
+`evidence` is a copy of the sentence in the body of that file. Nothing is
+inferred: if the two ever differ, the ingest is rejected and the document is
+stored but answers nothing. An agent that generates a claim and its document
+separately will produce an almost-substring and hit exactly that.
+
+The abstention, which is what a document with no `claims:` block gives:
 
 ```console
-$ mindpalace ingest-repo /tmp/agent-claims --corpus agentdemo
-[OK] sync: +0 ~0 =1 -0 !1, 0 chunks
-  - bad.md: claim[0] evidence must be an exact substring of an archived chunk;
-    searched 1 chunk(s). Copy the sentence character for character from the
-    document body -- paraphrasing, re-wrapping, smart quotes and em dashes are
-    all rejected
+$ mindpalace recall "What is our incident response SLA?" --corpus agentdemo
+No memory matched that question.
+  NO_RELEVANT_MEMORY
+
+Only authored claims are answers. A document with no `claims:` block
+in its frontmatter is stored and searchable, but contributes nothing
+here. See docs/authoring.md to author claims in it.
 ```

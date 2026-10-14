@@ -882,6 +882,29 @@ jobs:
                 f"{init['protocolVersion']}, {len(names)} tools, all documented")
           PY
 
+      # The steps above are retyped. A retyped quickstart drifts, and then it
+      # tests what the author remembers rather than what a reader would run --
+      # which is why scripts/cleanroom_quickstart.py existed with no caller.
+      #
+      # This runs the `$ ` lines extracted from README.md and docs/authoring.md,
+      # verbatim, against a wheel installed outside the source tree, in a
+      # workdir that is not the repository. It is the same job, not a new one:
+      # it reuses the wheel and the Postgres service this job already built.
+      - name: The documented commands run from the built wheel
+        env:
+          # This job sets DATABASE_URL per-step, and the other steps here set it
+          # to an unreachable server on purpose. So it is named here, against the
+          # job's own service, rather than assumed present.
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
+          python scripts/cleanroom_quickstart.py \
+            --wheel "$wheel" \
+            --database-url "$DATABASE_URL" \
+            --torch-index https://download.pytorch.org/whl/cpu
+
   # Upgrade safety. Every other job measures the code as it is now; this one
   # measures code that no longer exists meeting code that does.
   #

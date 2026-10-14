@@ -119,6 +119,29 @@ jobs:
         run: |
           python scripts/check_evidence.py --strict
 
+      # Every path README.md, CHANGELOG.md, STATUS.md, PROGRESS.md and the
+      # release map name must exist in `git ls-files`.
+      #
+      # `check_evidence.py` scans STATUS.md and README.md for markdown *links*
+      # and could not catch what this catches, for two reasons: the documents
+      # that lost files are named in backticks in prose, so there is no link to
+      # resolve, and seven of them were dropped by a blanket `*.md` in
+      # .gitignore that `git add` never reported.
+      #
+      # It also fails when an ignored Markdown file appears under docs/ or
+      # eval/ with no rule saying it should be there. A new document must be
+      # committed or deliberately ignored; being forgotten is no longer a
+      # silent option.
+      - name: Every path these documents name is tracked by git
+        run: python scripts/check_doc_paths.py
+
+      # The frozen-evidence manifest. A git diff over `eval/` and
+      # `docs/performance/` proves a tracked file did not move -- it proves
+      # nothing at all about an ignored one, and several frozen artifacts are
+      # ignored. This hashes the bytes.
+      - name: The frozen evidence has not moved
+        run: python scripts/check_frozen.py
+
       - name: Apply database migrations
         run: |
           python -m pip install pgvector

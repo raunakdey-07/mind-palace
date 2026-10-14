@@ -171,16 +171,29 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
             raise ValueError("each version may author only one claim per key")
         keys.add(claim["key"])
         references = []
+        # What an author sees when this rejects, and whether they can act on it.
+        #
+        # The message must not carry the document's text. `ClaimValidationError`
+        # exists precisely so a rejection is identifiable without putting a
+        # customer's prose in a log -- the same reasoning as `unexpected_error`
+        # in api/main.py and as the no-traceback decision in
+        # `ingestion._cache_claim_vectors`. So the remedy is stated, not shown:
+        # a count and an instruction cost nothing and leak nothing.
+        searched = len(archived)
         for quote in sorted(quotes):
             matching = next((c for c in archived if quote in c["text"]), None)
             if matching is None:
                 raise ValueError(
-                    f"claim[{index}] evidence must be an exact substring of an archived chunk"
+                    f"claim[{index}] evidence must be an exact substring of an archived "
+                    f"chunk; searched {searched} chunk(s). Copy the sentence character for "
+                    f"character from the document body -- paraphrasing, re-wrapping, "
+                    f"smart quotes and em dashes are all rejected"
                 )
             if claim["claim"] not in matching["text"]:
                 raise ValueError(
-                    f"claim[{index}] text must appear in the supporting chunk; "
-                    "semantic inference is not supported"
+                    f"claim[{index}] text must appear in the supporting chunk that its "
+                    f"evidence matched; semantic inference is not supported. The claim "
+                    f"must reuse the document's own wording"
                 )
             start = matching["text"].index(quote)
             references.append(

@@ -128,6 +128,16 @@ monitoring/
 !docs/providers.md
 !docs/competitive-landscape.md
 !docs/performance-resource-authorization.md
+# Session 9. Authoring guidance. It was silently ignored on first write by the
+# blanket `*.md` below -- the exact trap
+# `scripts/check_evidence.py::check_markdown_links` exists to catch, found here
+# by running it rather than by discovering a dead link in somebody's clone.
+!docs/authoring.md
+!docs/wedge-decision-note.md
+!docs/release/
+!/docs/release/**
+!docs/evaluation/
+!/docs/evaluation/**
 !docs/platform-readiness-design.md
 !docs/withdrawn/
 !docs/withdrawn/**

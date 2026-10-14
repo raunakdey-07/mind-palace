@@ -271,7 +271,20 @@ def arm_bm25(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> 
         scores = bm25.score(query_terms)
         for position, claim in enumerate(index.claims):
             best[claim.key] = max(best.get(claim.key, -1.0), scores[position])
-    ordered = sorted(best.items(), key=lambda kv: -kv[1])
+    # Ties break on the claim id, never on insertion order.
+    #
+    # `sorted` is stable, so without this the order of equal-scoring keys is the
+    # order `index.claims` was built in -- which is the order the corpus loader
+    # produced, which is the order files were enumerated. Two runs on the same
+    # content could then rank differently, and a risk-coverage point would move
+    # for a reason that has nothing to do with retrieval.
+    #
+    # This was measured, not theorised. Rebuilding `retrieval-lab-dev.json` on
+    # 2026-10-14 reproduced every arm exactly except `bm25.risk_coverage` on the
+    # `current` slice, where the 9th and 10th operating points swapped:
+    # `accuracy 0.6296 -> 0.6071` and back. Same corpus, same queries, same
+    # scores -- different tie order. That is a bug, not a result.
+    ordered = sorted(best.items(), key=lambda kv: (-kv[1], kv[0]))
     return _finish(question, corpus, index, [k for k, _ in ordered], [v for _, v in ordered])
 
 

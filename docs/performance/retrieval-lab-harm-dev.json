@@ -2,8 +2,8 @@
   "arms": {
     "bm25": {
       "broken": 39,
-      "fixed": 4,
-      "net": -35,
+      "fixed": 3,
+      "net": -36,
       "per_slice": {
         "abstention": {
           "broken": 1,
@@ -21,9 +21,8 @@
         },
         "current": {
           "broken": 11,
-          "fixed": 1,
           "unchanged_correct": 17,
-          "unchanged_wrong": 1
+          "unchanged_wrong": 2
         },
         "historical": {
           "broken": 1,
@@ -55,7 +54,7 @@
         }
       },
       "unchanged_correct": 112,
-      "unchanged_wrong": 47
+      "unchanged_wrong": 48
     },
     "fusion-rerank": {
       "broken": 32,
@@ -313,7 +312,7 @@
         "slice": "current"
       },
       {
-        "cell": "fixed",
+        "cell": "unchanged_wrong",
         "qid": "cur-own-search-indexer",
         "slice": "current"
       },

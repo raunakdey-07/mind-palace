@@ -26,7 +26,7 @@ verify     offline: no database, no model, no network
 
 ---
 
-## Install
+## The five-minute path
 
 Expect **5.9 GB and 79–202 s**. `torch` pulls the CUDA runtime; most of it is
 unused without a GPU. Nothing else in the install comes close. To skip it, set
@@ -95,6 +95,31 @@ current now: The datastore is now distributed CockroachDB.
 that support a claim. There is no `--as-of` example here on purpose: memory is
 stamped when it is recorded, so a time-travel query dated before the write
 returns nothing, and a worked example would have to invent a timestamp.
+
+Commands are fast from the second one onwards — a background runtime keeps the
+model warm, and `recall` drops from 6.2 s to 0.63 s. If one feels slow,
+`mindpalace runtime status` says whether a runtime is running and whether its
+model is loaded. `MIND_PALACE_RUNTIME=0` turns it off everywhere.
+
+Export what you were told, and verify it somewhere else:
+
+```console
+$ mindpalace receipt "What database does production use?" -o receipt.json
+VERIFICATION
+  receipt available: yes (1 receipt(s))
+  authoritative digest: 2c3077bd8d76627348c569dc5bd2227a08696b0aa54bf3f733f71f5abd3b1aa8
+  export and verify offline with:
+    mindpalace receipt "What database does production use?" -o receipt.json
+    mindpalace verify receipt.json
+  Authenticity is not established without a trust anchor you pinned yourself.
+
+$ mindpalace verify receipt.json
+VERIFIED
+  receipts checked: 1
+```
+
+`verify` needs no database, no model and no network. It proves the answer was not
+altered on the way out; it does **not** prove the original source was true.
 
 A question the corpus does not hold gets a refusal, not a guess:
 
@@ -175,6 +200,21 @@ print(f"{memory.claim}  [{memory.status}]")
   See [evaluation](docs/evaluation/) for what was actually measured, including
   the questions the current system gets wrong.
 
+## What is measured
+
+Two held-out numbers, and neither is superseded by the other:
+
+| benchmark | result | what it is |
+|---|---|---|
+| M006.75 frozen held-out | **45/60 (75.0%)** exact on current source | the frozen benchmark, safety invariants at 60/60 |
+| independently authored, 157 questions | **131/157 (83.4%)** | a generalisation figure, and a known limitation |
+
+Both are reported because reporting only the better one would be the dishonest
+choice. This release changed no benchmark input, policy, evaluator semantic,
+tokenizer or threshold, and that is measured: all 60 canonical per-question
+decisions are identical to `v0.8.0`. [The reproducibility report](docs/evaluation/m00675-reproducibility.md)
+records one discrepancy this release found and did not paper over.
+
 ## Reading order
 
 Three documents, and then stop.
@@ -203,7 +243,7 @@ Three documents, and then stop.
 | [Release map](docs/release-map.md) | milestone to version |
 | [Evaluation](docs/evaluation/) | the frozen benchmarks, and their results |
 | [Progress](docs/PROGRESS.md) | one line per phase; [full history](docs/internal/progress-history.md) |
-| [Examples](examples/) | the product in one file |
+| [Examples](examples/) | the product in one file: [decision memory](examples/decision-memory/), [project log](examples/project-log/) |
 | [Withdrawn](docs/withdrawn/README.md) | material deliberately removed, and why |
 
 ## Contributing

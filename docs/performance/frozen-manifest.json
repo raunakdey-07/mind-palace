@@ -1,6 +1,6 @@
 {
   "algorithm": "sha256",
-  "count": 32,
+  "count": 41,
   "files": {
     "docs/performance/baseline-packs.json": "47b6da2ad65eac1165d4239da636952ec5538cf12977e69b2de6b7352d698842",
     "docs/performance/downstream-eval-protocol.freeze.json": "d982d926ebbf2e9de3e366ed7c9a07b7274d00121e3ea0bc420281d30869cad2",
@@ -33,6 +33,15 @@
     "eval/memory_query_policy.json": "92efbd3bdf7ac4eaf9da1fb20ea5e0b0392abe0aff11828058e1d7e721cc4fdd",
     "eval/memory_questions.yaml": "f484744c93413e91f103fb55a76b69b67af3c78002854901d4004e4980370ded",
     "eval/memory_questions_heldout.yaml": "77e05babeeb0dd62d08a03865728d8ffffe50c20b57066566ab865c2dc37757a",
+    "eval/results/m006-cached.json": "cf374f2e40b1b768fa0ebcc498a44d57938ab633f2773267f98f1d5ba67556b2",
+    "eval/results/m006-cli100.json": "eadd93b4e3d7710ac0636262e820667eb98f93917496842a10bc05446ceb5342",
+    "eval/results/m006-size100.json": "55cbca9d27480baa059fcc315163da048132290df25ce23a16d989b1cf8244db",
+    "eval/results/m0065-experiment.json": "b0d4c10ea140d33af2b81b81078cdfa04c967d30c6d6a536ed0a4e9e4dcef1a0",
+    "eval/results/m0065-final.json": "8b74885d7f711f41eca4521bc59b4007e74fdf78e3a9bc5f964cb58987094b39",
+    "eval/results/m0065-initial.json": "174a41afe4a06d82d4b0218e6fa02cb814b8be04ca9c849727cdd067343f40f2",
+    "eval/results/m00675-development-final.json": "199c488332183a2a4dd186862cd68765ad85dc64c96d3367fb455c1944064ae1",
+    "eval/results/m00675-development.json": "816f692c4537ea3801d4e2971928923c325bcbad3c96d0a513d43c98c403ed87",
+    "eval/results/m00675-heldout.json": "ead7bbf83c56837a36d6b98ee73e9f721c34fb4c707ea24911b9ae9e8ae519c5",
     "eval/retrieval_benchmarks.yaml": "40854866a42321ac4b8db7fd49aa478dbd0258aba760c6a9a1f00aa004f3dd68"
   },
   "note": "SHA-256 of every frozen evidence file, committed alongside them. Regenerate with scripts/check_frozen.py --write, and only when a change to frozen evidence is intended and recorded in docs/PROGRESS.md first."

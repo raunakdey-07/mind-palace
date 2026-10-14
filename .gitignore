@@ -94,6 +94,11 @@ helm/
 !/docs/research/**
 !/docs/operations/
 !/docs/operations/**
+# docs/PROGRESS.md was 1397 lines and is now an index. The full text of all
+# prior sessions moved here, unedited, rather than being cut. Tracked so the
+# citations from docs/performance/retrieval-lab-report.md resolve on a clone.
+!/docs/internal/
+!/docs/internal/**
 # Material that was built, proved, and then deliberately withdrawn. It is part of
 # the project's record: without it the next person re-derives the same findings
 # and the same 42501. Not runnable from here -- it lives outside tests/ on purpose.
@@ -138,12 +143,19 @@ monitoring/
 # the negation the example raises SystemExit on its first line in a fresh clone.
 !examples/project-log/**/*.md
 
-# eval/results is deliberately untracked. It is experiment output, not input,
-# and it is large. See docs/PROGRESS.md Session 10 section 1d: nine frozen
-# artifacts there are cited by name from tracked documents, so those citations
-# resolve only on the author's machine. A git diff over ignored files proves
-# nothing, and no guard that reads `git ls-files` can cover them.
-/eval/results/
+# eval/results was deliberately untracked: nine frozen artifacts there are cited
+# by name from tracked documents, so a clone could not resolve those citations,
+# and no guard reading `git ls-files` could cover them.
+#
+# The owner has approved tracking them. They are measurements, and unlike the
+# rest of the benchmark output they are the ones the documentation depends on --
+# docs/evaluation/m006.md and m00675-reproducibility.md name all nine by path.
+# With them tracked, `scripts/check_frozen.py` enforces their SHA-256, which is
+# the thing a git-diff-over-ignored-files could never do.
+#
+# See docs/internal/progress-history.md Session 10 section 1d for the original
+# reasoning.
+!/eval/results/
 
 # eval/m007/adjudication/*.md -- the M007.1 blind-review protocol.
 #

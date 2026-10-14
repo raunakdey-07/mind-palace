@@ -11,14 +11,15 @@ The guard this replaces was:
 git diff v0.9.0..HEAD -- eval/ docs/performance/baseline-packs.json
 ```
 
-which has been quoted in `docs/PROGRESS.md` since Session 1 as the proof that
-frozen evidence did not move.
+which has been quoted in `docs/internal/progress-history.md` since Session 1 as
+the proof that frozen evidence did not move.
 
 **It proves something much weaker than it looks.** `git diff` only sees files
-git tracks. Nine artifacts under `eval/results/` are gitignored, and
-`docs/performance/evidence/pytest-head.xml` is a tracked artifact that a
-workstation run overwrites. A clean diff is consistent with all three
-situations and cannot tell them apart from a real change.
+git tracks, and `docs/performance/evidence/pytest-head.xml` is a tracked
+artifact that a workstation run overwrites. A clean diff is consistent with
+both and cannot tell either apart from a real change. (A third such case --
+the nine gitignored `eval/results/` artifacts -- stopped existing on
+2026-10-14, when the owner approved tracking them.)
 
 So the guard is **two things, and the second one is the point**:
 
@@ -30,10 +31,9 @@ The manifest is the evidence. The diff is a convenience.
 
 ## What "frozen" covers
 
-Everything under `eval/` that git tracks, plus the benchmark artifacts under
-`docs/performance/` that `docs/STATUS.md` cites. `eval/results/` is deliberately
-**not** covered -- it is ignored, and see Session 10 §1d in
-`docs/internal/progress-history.md` for why a git-based guard cannot reach it.
+Everything under `eval/` that git tracks -- `eval/results/` included, tracked
+with the owner's approval on 2026-10-14 -- plus the benchmark artifacts under
+`docs/performance/` that `docs/STATUS.md` cites.
 """
 
 from __future__ import annotations

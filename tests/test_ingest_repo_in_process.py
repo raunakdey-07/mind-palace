@@ -17,6 +17,15 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
+#: Its own corpus, not `default`.
+#:
+#: `tests/test_ingestion_lifecycle.py::test_metadata_only_change_is_detected`
+#: documents that it only holds when the default corpus has no memory history;
+#: once something has written there, ingestion reroutes to the memory path and a
+#: frontmatter-only edit is correctly detected, so that test fails on its
+#: premise. Ingesting into `default` from a new test file breaks it.
+CORPUS = "ingest-repo-in-process"
+
 DOC = """---
 title: In-process ingest
 claims:
@@ -63,7 +72,7 @@ def test_ingest_repo_needs_no_server(repo):
     state of the machine.
     """
     with patch("httpx.post", side_effect=AssertionError("must not use HTTP")):
-        result = _invoke(["ingest-repo", str(repo)], roots=str(repo))
+        result = _invoke(["ingest-repo", str(repo), "--corpus", CORPUS], roots=str(repo))
 
     assert result.exit_code == 0, result.output
     assert "[OK] sync:" in result.output
@@ -80,7 +89,7 @@ def test_ingest_repo_refuses_a_path_outside_the_ingest_roots(repo, tmp_path):
     allowed = tmp_path / "allowed"
     allowed.mkdir()
 
-    result = _invoke(["ingest-repo", str(repo)], roots=str(allowed))
+    result = _invoke(["ingest-repo", str(repo), "--corpus", CORPUS], roots=str(allowed))
 
     assert result.exit_code == 1
     assert "ERROR" in result.output
@@ -95,7 +104,9 @@ def test_ingest_repo_reports_a_missing_path_instead_of_a_keyerror(tmp_path):
     the SDK reads `result["added"]` -- so without an explicit check the user
     would get `Why: 'added'`, which says nothing.
     """
-    result = _invoke(["ingest-repo", str(tmp_path / "nope")], roots=str(tmp_path))
+    result = _invoke(
+        ["ingest-repo", str(tmp_path / "nope"), "--corpus", CORPUS], roots=str(tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "Path not found" in result.output

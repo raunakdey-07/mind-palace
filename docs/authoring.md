@@ -181,3 +181,58 @@ partially stored, and a later successful ingest is not affected.
 How to write claims *from* unstructured text. No extractor exists, so there is
 nothing to document yet; `docs/wedge-decision-note.md` argues that building one
 is a later decision, not this one.
+## How an agent writes claims
+
+**An agent cannot call `remember` over MCP.** There are 15 tools and none is
+`remember`; the only writes are `sync(corpus, path)` and `memory_snapshot`. So an
+agent reaches a claim by writing a document with a `claims:` block and syncing it.
+`remember` — the one-statement write — exists on the CLI
+(`mindpalace remember "..." --key k`), the SDK
+(`MindPalace(name).remember(statement, *, corpus, key, file)`) and REST
+(`POST /remember`), but not on MCP.
+
+That is the design, not a gap. `remember` asserts a statement is a fact; an agent
+asking a model to make that assertion is the thing this system exists to prevent.
+An agent that has already decided can write it down, and the exact-quote rule then
+holds it to the same evidence standard a person is held to.
+
+The rule, for an agent: `evidence` must appear **verbatim** in the text the agent
+wrote. Not a paraphrase, not a re-wrap, not a smart quote. Generate the prose
+first, then copy the sentence out of the file into both `claim` and `evidence`.
+
+```console
+$ mkdir -p /tmp/agent-claims && cat > /tmp/agent-claims/deploy.md <<'EOF'
+---
+title: Deployment architecture
+claims:
+  - key: architecture.datastore
+    value: PostgreSQL
+    claim: The primary datastore is PostgreSQL.
+    evidence: The primary datastore is PostgreSQL.
+---
+
+# Deployment architecture
+
+The primary datastore is PostgreSQL. It runs in three availability zones.
+EOF
+
+$ mindpalace ingest-repo /tmp/agent-claims --corpus agentdemo
+[OK] sync: +1 ~0 =0 -0 !0, 1 chunks
+
+$ mindpalace recall "What is the primary datastore?" --corpus agentdemo
+The primary datastore is PostgreSQL.
+   source: deploy.md @ f62dd742a1a0
+   time:   true as of 2026-10-14 06:09 UTC
+```
+
+And the rejection, which is what an agent that writes the claim and the document
+separately will get:
+
+```console
+$ mindpalace ingest-repo /tmp/agent-claims --corpus agentdemo
+[OK] sync: +0 ~0 =1 -0 !1, 0 chunks
+  - bad.md: claim[0] evidence must be an exact substring of an archived chunk;
+    searched 1 chunk(s). Copy the sentence character for character from the
+    document body -- paraphrasing, re-wrapping, smart quotes and em dashes are
+    all rejected
+```

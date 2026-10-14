@@ -30,11 +30,36 @@ def pytest_sessionstart(session) -> None:
         )
         return
 
-    base_url = os.environ.get("DATABASE_URL")
+    base_url = os.environ.get("DATABASE_URL") or os.environ.get("MEMORY_TEST_DATABASE_URL")
     if not base_url:
-        # No database configured. The suite's own skip markers handle this; a
-        # session database needs a server to ask.
-        return
+        # Previously this returned quietly and every database-backed test skipped.
+        # The suite then exited 0 having run nothing: 1645 skipped in 9.75 s, and
+        # a green build that proved nothing. `check_skips.py` validates that the
+        # skips it sees are allowlisted, not that anything ran at all.
+        #
+        # A silent skip-all is worse than a loud failure, so this stops the
+        # session instead. Set either variable to a PostgreSQL that has pgvector.
+        #
+        # UsageError rather than RuntimeError: pytest prints it as a plain
+        # message and exits 4. A RuntimeError here surfaces as INTERNALERROR and
+        # a traceback, which is true but reads like a broken checkout.
+        raise pytest.UsageError(
+            "no database configured, so every database-backed test would skip and "
+            "this run would exit 0 having proved nothing.\n"
+            "Set DATABASE_URL (or MEMORY_TEST_DATABASE_URL) to a PostgreSQL with "
+            "pgvector available, for example:\n"
+            "  docker compose up -d postgresql\n"
+            "  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace\n"
+            "  python -m alembic -c migrations/alembic.ini upgrade head\n"
+            "To run deliberately against a shared database without creating a "
+            "session one, set MIND_PALACE_TEST_DB=off."
+        )
+
+    # `create_session_database` saves and restores `os.environ["DATABASE_URL"]`
+    # directly, so the variable has to exist before it is called. Setting it
+    # here also means a run configured only through MEMORY_TEST_DATABASE_URL
+    # gets a session database instead of a directory full of skips.
+    os.environ.setdefault("DATABASE_URL", base_url)
 
     try:
         os.environ["DATABASE_URL"] = session_database.create_session_database(base_url)
@@ -61,7 +86,7 @@ def pytest_sessionstart(session) -> None:
                 "DATABASE_URL as-is. This run is NOT hermetic."
             )
             return
-        raise RuntimeError(
+        raise pytest.UsageError(
             f"could not create a session database, so this run would not be "
             f"hermetic: {exc}\n"
             "Refusing to run the suite against DATABASE_URL as-is, because a "

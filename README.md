@@ -141,6 +141,20 @@ frontmatter is the authoring interface: it says what to remember, and the
 evidence quote must appear **verbatim** in the body. Nothing is inferred, because
 inference is where memory systems quietly start lying about their evidence.
 
+```console
+$ mkdir -p ./docs && printf '%s\n' '---' 'title: Deployment architecture' 'claims:' '  - key: architecture.datastore' '    value: PostgreSQL' '    claim: The primary datastore is PostgreSQL.' '    evidence: The primary datastore is PostgreSQL.' '---' '' '# Deployment architecture' '' 'The primary datastore is PostgreSQL. It runs in three availability zones.' > ./docs/deployment.md
+
+$ mindpalace ingest-repo ./docs --corpus readmedemo
+[OK] sync: +1 ~0 =0 -0 !0, 1 chunks
+
+$ mindpalace recall "What is the primary datastore?" --corpus readmedemo
+The primary datastore is PostgreSQL.
+   source: deployment.md @ 178141e34f2d
+   time:   true as of 2026-10-14 06:54 UTC
+```
+
+The file that wrote is this, and it is what the author types:
+
 ```markdown
 ---
 title: Deployment architecture
@@ -160,6 +174,10 @@ The primary datastore is PostgreSQL. It runs in three availability zones.
 `MIND_PALACE_INGEST_ROOTS`. A document with no `claims:` block is stored and
 searchable but answers nothing, and comes back named in the ingest output as
 `no_claims_declared`.
+
+**Those `$ ` lines are executed on every push**, from a built wheel, by
+`scripts/cleanroom_quickstart.py` in the "Clean install from the built wheel" job.
+Paraphrase the evidence in them and the job fails.
 
 **[docs/authoring.md](docs/authoring.md) is the reference**: the three shapes, the
 exact-quote rule, and both rejections with their messages.

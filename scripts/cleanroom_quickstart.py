@@ -195,7 +195,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--wheel", required=True, help="path to the built wheel")
     parser.add_argument("--database-url", required=True)
-    parser.add_argument("--keep", action="store_true", help="leave the workdir for inspection")
+    parser.add_argument(
+        "--keep",
+        action="store_true",
+        help="leave the workdir for inspection. WARNING: the workdir holds the "
+        "virtualenv this script built -- about 6 GB -- and nothing removes it "
+        "but you.",
+    )
     parser.add_argument(
         "--bare",
         action="store_true",
@@ -289,8 +295,15 @@ def main() -> int:
         # alembic is declared in requirements.txt but not in the wheel's own
         # dependencies; the README's migrate step needs it, so install it the
         # way the README does.
+        #
+        # `--torch-index` was accepted and then ignored, so a CI run asking for
+        # the CPU wheel got the default CUDA build: ~5.9 GB of nvidia-* packages
+        # for a check that runs on CPU. The other jobs pass the CPU index and
+        # this one did not, which is why its step was slow rather than wrong.
+        index_args = ["--extra-index-url", args.torch_index] if args.torch_index else []
         subprocess.run(
-            [str(python), "-m", "pip", "install", "--quiet", "-r", str(ROOT / "requirements.txt")],
+            [str(python), "-m", "pip", "install", "--quiet", *index_args]
+            + ["-r", str(ROOT / "requirements.txt")],
             capture_output=True,
             text=True,
         )

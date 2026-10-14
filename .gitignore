@@ -147,22 +147,19 @@ monitoring/
 
 # eval/m007/adjudication/*.md -- the M007.1 blind-review protocol.
 #
-# These two files sit beside data that IS tracked (review_set.jsonl, schema.json,
+# Session 10 held these back because tracking them would make
+# `git diff v0.9.0..HEAD -- eval/` non-empty for the first time, and the hard
+# rule that session was working under said frozen files do not change.
+#
+# The owner has since approved tracking them: they are methodology, not
+# measurements, and without them a study that ran is undocumented. They sit
+# beside data that has always been tracked (review_set.jsonl, schema.json,
 # adjudication_template.jsonl, reviewer-materials-manifest.json), they were
-# written for the v0.5.1 milestone, and removing the blanket `*.md` made them
-# visible for the first time.
+# written for the v0.5.1 milestone, and they were invisible only because a
+# blanket `*.md` swallowed them.
 #
-# They are NOT tracked, deliberately. Tracking them would make
-# `git diff v0.9.0..HEAD -- eval/` non-empty for the first time in this
-# repository's history, and this session's hard rule is that that diff stays
-# empty. Expanding a frozen set is the owner's call, not the agent's, even when
-# the addition looks obviously correct.
-#
-# OWNER DECISION PENDING: these are methodology, not measurements, and tracking
-# them would document a study that is otherwise undocumented. One line here
-# reverses it.
-eval/m007/adjudication/REVIEWER_GUIDE.md
-eval/m007/adjudication/instructions.md
+# Both are in docs/performance/frozen-manifest.json with their digests, so
+# "do not modify" is now enforced rather than merely intended.
 
 # The retrieval lab's embedding cache: binary .npy blobs keyed by content
 # hash, several megabytes, and worthless on another machine. 596 of them were

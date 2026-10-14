@@ -145,6 +145,25 @@ monitoring/
 # nothing, and no guard that reads `git ls-files` can cover them.
 /eval/results/
 
+# eval/m007/adjudication/*.md -- the M007.1 blind-review protocol.
+#
+# These two files sit beside data that IS tracked (review_set.jsonl, schema.json,
+# adjudication_template.jsonl, reviewer-materials-manifest.json), they were
+# written for the v0.5.1 milestone, and removing the blanket `*.md` made them
+# visible for the first time.
+#
+# They are NOT tracked, deliberately. Tracking them would make
+# `git diff v0.9.0..HEAD -- eval/` non-empty for the first time in this
+# repository's history, and this session's hard rule is that that diff stays
+# empty. Expanding a frozen set is the owner's call, not the agent's, even when
+# the addition looks obviously correct.
+#
+# OWNER DECISION PENDING: these are methodology, not measurements, and tracking
+# them would document a study that is otherwise undocumented. One line here
+# reverses it.
+eval/m007/adjudication/REVIEWER_GUIDE.md
+eval/m007/adjudication/instructions.md
+
 # The retrieval lab's embedding cache: binary .npy blobs keyed by content
 # hash, several megabytes, and worthless on another machine. 596 of them were
 # committed by accident in 7ac19e6 and are being purged from this branch.

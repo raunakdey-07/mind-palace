@@ -59,6 +59,15 @@ def render_recall(
         lines.append("No memory matched that question.")
         if response.constraints:
             lines.append(f"  {', '.join(response.constraints)}")
+        # A stranger who ingested plain Markdown or a transcript gets here, and
+        # "Nothing was invented" reads as "the document was ignored". It was
+        # not: it was chunked and stored. What it lacks is a `claims:` block,
+        # and that -- not the search -- is why recall is empty. Say which.
+        lines.append(
+            "\nOnly authored claims are answers. A document with no `claims:` block\n"
+            "in its frontmatter is stored and searchable, but contributes nothing\n"
+            "here. See docs/authoring.md to author claims in it."
+        )
         lines.append("\nNothing was invented: Mind Palace records only what was remembered.")
         return "\n".join(lines)
 

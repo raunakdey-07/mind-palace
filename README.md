@@ -110,12 +110,24 @@ cd mind-palace
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
+
+# Three values the compose file requires and refuses to invent. It names each
+# one only after the previous is satisfied, so set all three up front.
+export MIND_PALACE_RUNTIME_PASSWORD=choose-a-local-password
+export MIND_PALACE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
+export MIND_PALACE_INGEST_ROOTS="$PWD"    # directories ingestion may read
+
 docker compose up -d postgresql          # or: podman-compose up -d postgresql
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
 python -m alembic -c migrations/alembic.ini upgrade head
 ```
 
 That is the whole setup. No API key, no account, no LLM, and no model to configure.
+
+`MIND_PALACE_RUNTIME_PASSWORD` and `MIND_PALACE_CURSOR_SECRET` are only read by
+compose; `MIND_PALACE_INGEST_ROOTS` also bounds what a running API will accept,
+which is why the last one is a real setting and not just a compose-time filler.
+The three are development values — they are not secrets worth keeping.
 
 **Expect `requirements.txt` to install about 5.9 GB.** `torch` pulls the CUDA
 runtime with it — `nvidia-cudnn`, `nvidia-cublas`, `cuda-toolkit`, `triton` — and
@@ -787,9 +799,23 @@ The primary datastore is PostgreSQL. It runs in three availability zones.
 mindpalace ingest-repo ./docs
 ```
 
+`ingest-repo` is an HTTP client: unlike `remember` and `recall`, which run
+in-process, it posts to `http://localhost:8000` and needs the API running.
+
+```bash
+python -m uvicorn api.main:app --port 8000 &
+```
+
+The path must be inside `MIND_PALACE_INGEST_ROOTS`, or the API answers 403.
+
 The `claims:` block is the authoring interface: it says what to remember, and the
 evidence quote must appear verbatim in the document. Nothing is inferred, because
 inference is where memory systems quietly start lying about their evidence.
+
+A document with **no** `claims:` block is still stored and searchable, but it
+answers nothing: recall reads authored claims, not prose. Plain Markdown and
+transcripts need claims written for them — [docs/authoring.md](docs/authoring.md)
+is the reference.
 
 ## Retrieval
 

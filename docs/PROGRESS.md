@@ -35,6 +35,182 @@ continues on this branch. No merge was attempted and none will be.
 | 2 correct the record | **NOT DONE** | 2a remove every claim that the held-out hash does not cover `expect_state`; 2b whether the 0-of-202 gold-key gap is the same one-question discrepancy, and a **new** auditable artifact that records gold per question; 2c document the BM25 cost and add the interval rule to the lab protocol; 2d remove `MEMORY_TEST_DATABASE_URL` from product code, owner-approved |
 | 3 finish what is not done | **NOT DONE** | 3a the independent set (repos, converter, generator, freeze, a new evaluation write-up under `docs/evaluation/`, **not scored**); 3b lab arm A on the product path reproducing 194/202 and the 77-question gap per question; 3c the dev-only passage-option measurement and the quote-rule message check |
 
+### 2a — the wrong hash claim, removed
+
+Session 9 asserted that `dataset_hash` does not cover `expect_state`. It does.
+`m0130_heldout.py:485` hashes `asdict(q)` per question and `expect_state` is a
+field of `q`; the frozen artifact's `meta.dataset_hash` matches the tree byte
+for byte. The Session 9 paragraph is now marked wrong in place, with the false
+sentence struck through rather than deleted, so the correction has something to
+correct.
+
+**The true cause, established:** two definitions of "answerable", differing by
+one question.
+
+| | count |
+|---|---:|
+| `expect_state != "ABSENT"` (what `metrics.py` uses) | **141** held-out, **176** dev |
+| `expect_key IS NOT NULL` (what the lab artifact counted) | **140** held-out, **175** dev |
+
+### 2b — YES, the 0-of-202 gold gap is the same one-question discrepancy
+
+| set | qid | text | `expect_state` | gold key |
+|---|---|---|---|---|
+| dev (202) | `rel-cycle` | Which two services depend on each other? | `CURRENT` | **none** |
+| held-out (157) | `ho-rel-cycle` | Name a pair of services that reference each other. | `CURRENT` | **none** |
+
+**Both sets contain the same defective question**, in the `relationship` slice:
+answerable, no gold key, no gold values. That is why 176 − 175 = 1 and
+141 − 140 = 1, and it is one fact rather than two coincidences.
+
+**And it is scored as a success in both.** In `m0115-experiments.json`,
+`rel-cycle` has **no `keys_returned` field at all**, `failure: ""`,
+`fallback_ok: true`, and is inside the **194**. In `m0130-heldout.json`,
+`ho-rel-cycle` has `keys_returned: []` and is inside the **131**.
+
+**So 194/202 includes one question that had nothing to be graded against.**
+Excluding it would make the denominator 201, not 202. That is a statement about
+the figure, and **whether an ungradable question should score as a success is an
+owner decision, not applied here.**
+
+**New artifact written: `docs/performance/m0115-gold-audit.json`** by
+`scripts/benchmark/audit_gold.py`. The frozen artifact is **read and never
+written**. It records, per question: `qid`, `category`, `text`, `expect_state`,
+`expect_key`, `expect_values`, `answerable`, `has_gold`, `gradeable`, and the
+three recorded strategy outcomes. Run output:
+
+```
+questions         : 202
+answerable        : 176
+with a gold key   : 175
+gradeable         : 175
+scored as recorded: {"A_semantic": 178, "B_lexical": 164, "C_fallback": 194}
+answerable with NO gold, yet scored: ['rel-cycle']
+sha256            : 889c035f9af886dc665b771c42912cf4edd9243ad106732089e2d1edefc02567
+```
+
+The frozen artifact records `expect_key` for **0** of 202 rows. This one records
+it for **175**, so 194 is now auditable from a file.
+
+### 2c — the BM25 cost, and what the lab protocol now requires
+
+`docs/performance/retrieval-lab-protocol.md` gains **§9.1**, written because a
+correctness fix moved the metric:
+
+| | before | after |
+|---|---:|---:|
+| correct at 0.30 | 93 | **92** |
+| correct at 85% coverage | 86 | **85** |
+| correct at 70% coverage | 67 | **66** |
+| recall@1 | 0.5284 | **0.5227** |
+| recall@3 | 0.8636 | **0.8807** |
+| MRR | 0.7088 | **0.7038** |
+
+recall@1 fell and recall@3 rose; both moved by **1 question of 176**. The rules
+§9.1 makes binding:
+
+* every arm comparison reports a **Wilson 95% interval or a paired bootstrap**;
+  a bare difference is not a comparison;
+* **a one-question difference at n=202 is not a result** and is inside the
+  interval of a tie-break changing;
+* **a tie-break is part of the method**, not a detail — if it is not fixed in
+  code, two runs of one commit can disagree and that disagreement is
+  indistinguishable from a result;
+* a change that moves the metric is reported **old and new side by side, whatever
+  direction it moves**.
+
+### 2d — the product-code fallback, removed
+
+`api/services/memory_benchmark.py:456` no longer reads `MEMORY_TEST_DATABASE_URL`:
+
+```python
+url = database_url or os.getenv("DATABASE_URL")
+```
+
+**Test changes: NONE.** Not one test needed editing. `tests/test_memory_benchmark.py`
+lines 280, 350, 443, 448, 488, 530 and
+`tests/test_memory_benchmark_interfaces.py:59` already passed `database_url=`
+explicitly, and `grep` for `memory_benchmark_workload(` without `database_url`
+in `tests/` returns nothing.
+
+`tests/test_memory_benchmark.py` + `tests/test_memory_benchmark_interfaces.py`:
+**46 passed** after the removal.
+
+`examples/memory_evaluation_demo.py` was the one caller that relied on the
+fallback; it now passes `database_url=os.getenv("DATABASE_URL")` explicitly. That
+is a product-adjacent file, not a test.
+
+The variable now appears in `api/`, `cli/` and the root modules only inside the
+comment that records why it was removed.
+
+### 3b — the gap, joined. The per-question identity of the 77 is **NOT ESTABLISHED**
+
+`scripts/lab/gap_77.py` joins the two **frozen** artifacts on `qid`. No model,
+no database, no re-run: two recorded results that cannot drift from the runs
+that produced them.
+
+```
+lab  shipped-rank1 @85% : 117/202 correct
+bench C_fallback        : 194/202
+gap                     : 77
+
+gold source: docs/performance/m0115-gold-audit.json (175 of 202 carry a key)
+answerable with NO gold key: 1 -> ['rel-cycle']
+
+per-strategy, over all 202 questions:
+  semantic_only            carried 178   failed  24
+  lexical_only             carried 164   failed  38
+  lexical_then_semantic    carried 194   failed   8
+
+carried ONLY by the lexical path (semantic abstained) : 16
+carried ONLY by the semantic path (lexical abstained) : 30
+category mix of the lexical-only rescues:
+  multi-topic 5, provenance 4, temporal 4, relationship 3
+```
+
+**What that does and does not settle.** It settles that the gap is not one
+mechanism: the two paths carry **46 questions between them that neither alone
+carries** (16 lexical-only, 30 semantic-only), and the fallback rule scores 194
+against 178 and 164 from the same two runs. That is evidence that "add lexical
+fallback" is not a fix that can be assumed to help; it is also evidence that
+**neither path is a superset of the other.**
+
+**It does NOT name the 77.** `retrieval-lab-dev.json` records aggregate counts
+per slice, **not a verdict per question**, so the lab side cannot be joined
+question-by-question from the artifact. Doing so needs the lab arm to retain
+per-question output — a change to **what the lab records**, not to what it
+measures, and therefore a real piece of work that was not started.
+
+A bug found while writing this, worth keeping: the first version read
+`expect_key` off `m0115-experiments.json` and reported **all 202 questions as
+having no gold**. That artifact records the gold for **none** of them — the
+Phase 2b finding — and it is only readable because
+`docs/performance/m0115-gold-audit.json` now exists. The new artifact's first
+consumer is the thing the old artifact made impossible.
+
+### 3a — the independent set: **NOT DONE**
+
+Not started. Three repositories, the converter, the generator, the freeze and
+the write-up are all outstanding. **Nothing was scored**, which was the one
+constraint that had to hold and did.
+
+### 3c — passage option and quote-rule check: **NOT DONE**
+
+Neither was measured this session. The quote-rule messages were improved in
+Session 9 and are pinned by 6 tests in
+`tests/test_claim_rejection_message.py`; the passage-option measurement on the
+dev set is untouched.
+
+### Full-suite result, disposable PostgreSQL 15.4, this session
+
+```
+1643 passed, 2 skipped, 9 warnings in 550.14s (0:09:10)
+```
+
+All four gates green locally: skip gate (2 of 2 allowlisted), doc-path gate,
+frozen-evidence manifest, `check_evidence --strict`. PostgreSQL log open for the
+whole run: **3** FK violations, the same 3 deliberate negative tests.
+
 **Four owner decisions at the gate**: labelled passages for no-claims documents;
 score the independent set once next round; the PyPI name; the tag.
 
@@ -230,16 +406,25 @@ numbers. Yet:
 * `build_questions()` called directly today returns **157** questions, **16**
   of them `ABSENT`.
 
+> **WRONG, AND CORRECTED IN SESSION 10 §2a.** What follows was Session 9's
+> conclusion and it does not survive checking. `dataset_hash` **does** cover
+> `expect_state`. The cause is two definitions of "answerable". The original
+> text is kept so the correction has something to correct.
+
 The committed artifact records an absent-question count the tree cannot produce.
-**Cause not established.** Two consequences, and the second matters more:
+**Cause not established** ~~— it was; see Session 10 §2a~~. Two consequences,
+and the second mattered less than it looked:
 
 1. The committed held-out lab numbers are **not reproducible**, and the
    regenerated ones are not committed either — committing either would be
    picking a side without evidence.
-2. **`dataset_hash` does not cover `expect_state`.** `STATUS.md` uses it as a
+2. ~~**`dataset_hash` does not cover `expect_state`.** `STATUS.md` uses it as a
    provenance anchor for these artifacts and it did not move when the
-   answerable count did. Phase 5 rebuilds this artifact and should also fix what
-   the hash covers.
+   answerable count did.~~ **This is false.** `m0130_heldout.py:485` hashes
+   `asdict(q)` for every question and `expect_state` is a field of `q`. The
+   frozen artifact's hash matches the tree byte for byte. The real cause is
+   that `expect_state != "ABSENT"` gives **141** answerable and
+   `expect_key IS NOT NULL` gives **140**, and they differ by one question.
 
 ### 0d — the corrections to `docs/competitive-landscape.md`, and what is NOT recoverable
 

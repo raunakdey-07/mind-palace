@@ -139,10 +139,51 @@ approximation because the confident-wrong cells here are single-digit counts,
 where the normal interval returns a lower bound below zero and reads as more
 certain than it is.
 
-Paired significance testing across arms is **not** reported: with 202 dev
-questions spread over nine slices, most cells are too small to support it, and
-a p-value computed on a slice of twelve questions would be decoration. The
+### 9.1 A one-question difference at n=202 is noise, and must be reported as one
+
+**Added 2026-10-14, after a change that moved the metric by exactly one.**
+
+A tie-break fix in `arm_bm25` — equal scores now resolve on claim key instead of
+corpus order — moved `bm25` by **one correct answer at every operating point**:
+
+| | before | after |
+|---|---:|---:|
+| correct at 0.30 | 93 | **92** |
+| correct at 85% coverage | 86 | **85** |
+| correct at 70% coverage | 67 | **66** |
+| recall@1 | 0.5284 | **0.5227** |
+| recall@3 | 0.8636 | **0.8807** |
+| MRR | 0.7088 | **0.7038** |
+
+recall@1 fell and recall@3 rose. Both moved by **1 question out of 176**.
+Reading "BM25 got worse" from that is reading noise as signal.
+
+The rule this section exists to enforce:
+
+* **Every arm comparison reports a Wilson 95% interval, or a paired bootstrap
+  over the same questions. A bare difference is not a comparison.**
+* **A difference of one question at n=202 is not a result.** It is inside the
+  interval of "no change", and it is inside the interval of a tie-break
+  changing.
+* **A tie-break is part of the method, not a detail.** If it is not fixed in
+  code, two runs of the same commit can disagree, and a disagreement between
+  runs is indistinguishable from a result. This cost a week of Session 9:
+  rebuilding `retrieval-lab-dev.json` on identical content moved
+  `bm25.risk_coverage` on the `current` slice.
+* **A change that moves the metric is reported with old and new numbers side by
+  side, whatever direction it moves.** The fix above is a correctness
+  improvement and a metric regression, and saying only the first would be
+  dishonest.
+
+### 9.2 Paired significance testing
+
+Paired significance testing across arms is **not** currently reported: with 202
+dev questions spread over nine slices, most cells are too small to support it,
+and a p-value computed on a slice of twelve questions would be decoration. The
 per-slice `n` is given so a reader can judge that for themselves.
+
+§9.1 makes the weaker claim binding in the meantime: an interval or an explicit
+"this is within noise" is required before any arm is described as better.
 
 ## 10. What this lab does not measure
 

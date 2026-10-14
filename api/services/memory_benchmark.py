@@ -453,7 +453,27 @@ async def memory_benchmark_workload(file=DEFAULT_FILE, *, embeddings="fixture", 
         raise ValueError(f"Stage workload exceeds {MAX_VERSIONS} possible versions")
     if embeddings not in {"fixture", "cached"}:
         raise ValueError("embeddings must be fixture or cached")
-    url = database_url or os.getenv("MEMORY_TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    # Only two sources, and one of them is an argument.
+    #
+    # This used to read `MEMORY_TEST_DATABASE_URL` first. That is a test-only
+    # variable, in product code, on the path `mindpalace eval memory` takes --
+    # both `run_memory_benchmark` and `_performance` call this with no
+    # `database_url`, so anything that could set an environment variable for the
+    # process could make the eval create its sandbox schema in a database other
+    # than the one the deployment was configured against. It rolls back, so it
+    # was never a data-loss path, but it could measure the wrong database or fail
+    # with a `UndefinedTable` from a schema that was never migrated.
+    #
+    # It also contradicted `api/services/db.py:50`, which reads only
+    # `DATABASE_URL`. This was the one place in `api/`, `cli/` and the root
+    # modules that preferred the test variable. Removed 2026-10-14.
+    #
+    # Tests that need a different database already pass `database_url=`
+    # explicitly -- `tests/test_memory_benchmark.py` at lines 280, 350, 443, 448,
+    # 488 and 530, and `tests/test_memory_benchmark_interfaces.py:59`. The one
+    # caller that relied on the fallback is `examples/memory_evaluation_demo.py`,
+    # which now passes it through.
+    url = database_url or os.getenv("DATABASE_URL")
     if not url or make_url(url).get_backend_name() != "postgresql":
         raise ValueError("A PostgreSQL DATABASE_URL is required")
     engine = create_async_engine(

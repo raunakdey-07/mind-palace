@@ -143,6 +143,45 @@ def build_id() -> str:
     return _BUILD_HASH
 
 
+def database_id_for(url: str) -> str:
+    """A stable identity for the database a `DATABASE_URL` names.
+
+    The digest covers only the parts that decide *which* database: scheme, host,
+    port, database name and user. The password is deliberately left out -- it is
+    not identity, and a handshake is not the place for it, even one that only
+    reaches a local peer.
+
+    A digest rather than the name, because the answer travels in an error
+    message: naming the database a runtime is attached to is useful, and handing
+    back the name of one the caller did not ask for is not something to do.
+    """
+    import hashlib
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    identity = "|".join(
+        [
+            parts.scheme,
+            parts.hostname or "",
+            str(parts.port or ""),
+            parts.path.lstrip("/"),
+            parts.username or "",
+        ]
+    )
+    return hashlib.sha256(identity.encode()).hexdigest()[:16]
+
+
+def database_id() -> str:
+    """The identity of the database *this process* is attached to.
+
+    The default is imported rather than repeated, so this cannot disagree with
+    `api.services.db` about what an unset `DATABASE_URL` means.
+    """
+    from api.services.db import DATABASE_URL
+
+    return database_id_for(DATABASE_URL)
+
+
 STATES = ("starting", "loading", "ready", "stopping", "failed")
 
 
@@ -257,7 +296,13 @@ async def _call_async(
     path: Path, token: str, payload: dict, timeout: float, connect_timeout: float
 ) -> dict:
     body = json.dumps(
-        {"protocol": PROTOCOL, "build": build_id(), "token": token, **payload}
+        {
+            "protocol": PROTOCOL,
+            "build": build_id(),
+            "database": database_id(),
+            "token": token,
+            **payload,
+        }
     ).encode()
     reader, writer = await _connect(path, connect_timeout)
     try:
@@ -599,6 +644,25 @@ async def _serve_one(
             },
         }
 
+    asked_database = request.get("database")
+    if asked_database and asked_database != database_id():
+        # Same class of refusal as a build mismatch, and the worse of the two:
+        # the runtime holds a pool to whatever DATABASE_URL it started with, so
+        # answering here would answer from an archive the caller did not name --
+        # and would look like a confident, correct, empty answer.
+        return {
+            "ok": False,
+            "error": {
+                "code": "database_mismatch",
+                "message": (
+                    f"the running runtime is attached to database "
+                    f"{database_id()} but this command names {asked_database}. "
+                    f"Run `mindpalace runtime stop` to discard it, or "
+                    f"MIND_PALACE_RUNTIME=0 to bypass it."
+                ),
+            },
+        }
+
     operation = request.get("op")
     if operation == "status":
         return {"ok": True, "result": _describe(runtime)}
@@ -623,6 +687,7 @@ def _describe(runtime: _Runtime) -> dict:
         "detail": runtime.detail,
         "protocol": PROTOCOL,
         "build": build_id(),
+        "database": database_id(),
     }
 
 

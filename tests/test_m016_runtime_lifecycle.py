@@ -61,11 +61,11 @@ def child_env(state: Path, **extra: str) -> dict:
     return env
 
 
-def launch(state: Path) -> subprocess.Popen:
+def launch(state: Path, **extra: str) -> subprocess.Popen:
     return subprocess.Popen(
         [sys.executable, "-m", "mindpalace" "_runtime"],
         cwd=str(ROOT),
-        env=child_env(state),
+        env=child_env(state, **extra),
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -378,6 +378,102 @@ def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
             assert good["result"]["build"] == runtime_module.build_id()
         finally:
             stop(runtime_module, process)
+
+
+def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
+    """A warm runtime must not answer for a database the command did not name.
+
+    The build check above catches code drift. This catches database drift, and it
+    is the same class of failure with a much worse answer: the runtime holds a
+    connection pool to whatever `DATABASE_URL` was when it started, so a command
+    run later against a different database is answered -- confidently, and from
+    the wrong archive. Nothing noticed, because the handshake carried `protocol`,
+    `build` and `token` and none of them says which database this is.
+
+    Reproduced by hand before this test existed: a runtime started against an
+    empty database answered `mindpalace recall` with `NO_RELEVANT_MEMORY` for a
+    claim that was in fact in the database the command named, and the same
+    question answered in-process (`MIND_PALACE_RUNTIME=0`) returned the claim.
+
+    The child is pointed at the maintenance database, which this suite already
+    requires to exist and which is never this one. It needs no schema: a runtime
+    that cannot read anything is not a defect, and identity is decided by
+    configuration rather than by whether the archive has tables.
+    """
+    import session_database
+
+    other_url = _url_for_database(session_database.MAINTENANCE_DB)
+    other_id = _database_id_for(other_url)
+
+    def ask(database_id: str) -> dict:
+        """Ask the socket as a caller attached to `database_id` would."""
+        import asyncio
+
+        async def _ask():
+            return await runtime_module._call_async(
+                runtime_module.socket_path(),
+                runtime_module._read_token(),
+                {
+                    "op": "status",
+                    "protocol": runtime_module.PROTOCOL,
+                    "build": runtime_module.build_id(),
+                    "database": database_id,
+                },
+                10.0,
+                2.0,
+            )
+
+        return asyncio.run(_ask())
+
+    with isolated_state(tmp_path) as (runtime_module, state):
+        process = launch(state, DATABASE_URL=other_url)
+        # Not `wait_until`: that helper reads the status through `runtime_module.call`,
+        # which now sends *this* process's database and is refused by design. Wait as
+        # a caller that agrees with the child.
+        deadline = time.monotonic() + 120.0
+        while time.monotonic() < deadline:
+            try:
+                if ask(other_id).get("result", {}).get("state") == "ready":
+                    break
+            except Exception:  # noqa: BLE001 - not up yet, which is the whole wait
+                pass
+            time.sleep(0.2)
+        else:
+            raise AssertionError("the runtime never reached ready")
+        try:
+            # This process's own database, which is what `runtime_module.call`
+            # sends. The runtime is attached to the other one.
+            assert runtime_module.database_id() != other_id
+
+            reply = runtime_module.call({"op": "status"}, timeout=10.0)
+            assert not reply["ok"], reply
+            assert reply["error"]["code"] == "database_mismatch", reply
+            # The instruction has to be copy-pasteable, not merely present.
+            assert "mindpalace runtime stop" in reply["error"]["message"], reply
+            assert "MIND_PALACE_RUNTIME=0" in reply["error"]["message"], reply
+
+            # A caller that agrees with the runtime is still served, and the answer
+            # names the database, so `mindpalace runtime status` can tell a person
+            # which one is warm.
+            reply = ask(other_id)
+            assert reply["ok"], reply
+            assert reply["result"]["database"] == other_id, reply
+        finally:
+            stop(runtime_module, process)
+
+
+def _url_for_database(name: str) -> str:
+    """This session's `DATABASE_URL` with a different database name on it."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(os.environ["DATABASE_URL"])
+    return urlunsplit((parts.scheme, parts.netloc, f"/{name}", parts.query, parts.fragment))
+
+
+def _database_id_for(url: str) -> str:
+    from api import runtime as runtime_module
+
+    return runtime_module.database_id_for(url)
 
 
 def test_the_build_hash_moves_when_the_code_moves(tmp_path, monkeypatch):

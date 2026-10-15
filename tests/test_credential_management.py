@@ -21,6 +21,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import json
+import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -974,22 +975,40 @@ def test_no_request_serving_surface_reads_a_raw_file():
 
     This does not claim the allowlist below is safe. It claims that a *new* raw
     read on these surfaces is a decision someone has to make out loud.
+
+    Entries are keyed on the enclosing function, not on a line number. A
+    line-numbered allowlist is worse than none: an unrelated edit above it
+    silently stops protecting the reads it names, and the guard then either
+    fails on innocent code or, once someone "fixes" it by loosening the
+    numbers, protects nothing. This version was written with line numbers, went
+    stale, and failed on four legitimate reads that had not moved.
+
+    `cli/main.py::ingest` is deliberately absent from the allowlist on this
+    branch. It reads its argument with a bare `open()` before the HTTP call, so
+    the read happens whether or not a server is listening, and it reads any path
+    on the machine. That is the same defect this gate exists to catch, so the
+    gate catches it here. It is fixed on `wip/independent-set` at 29570b1, which
+    is the branch this work is destined for; allowlisting it here would make the
+    guard green by deleting the finding.
     """
+    import ast
     import re
 
-    #: Deliberate, each with a reason. Anything else on a listed surface is a
-    #: finding.
+    #: Deliberate, each with a reason. Keyed by file and enclosing function.
     ALLOWED = {
-        "cli/main.py:693": "verify reads a receipt the caller produced; bounding it "
-        "would defeat offline verification on a foreign machine",
-        "cli/main.py:1423": "benchmark baseline, a report the caller produced",
-        "cli/main.py:1330": "write, not a read",
-        "cli/main.py:1430": "write, not a read",
-        "cli/main.py:1451": "benchmark input file, operator-supplied, not a request",
-        "api/runtime.py:129": "the runtime hashes its own socket path",
-        "api/runtime.py:231": "the runtime's own token file",
-        "api/runtime.py:398": "the runtime writes its own token file, 0600",
-        "cli/main.py:848": "reads the path `require_permitted` returned, one line up",
+        ("cli/main.py", "_verify_response_bundle"): (
+            "documented exception: `verify` reads a receipt the caller produced, "
+            "and bounding it would defeat offline verification on a foreign machine"
+        ),
+        ("cli/main.py", "eval_gate"): "benchmark baseline and report; operator-supplied",
+        ("cli/main.py", "eval_memory"): "write, not a read",
+        ("cli/main.py", "eval_retrieval"): (
+            "benchmark definition file, operator-supplied; the same class as the "
+            "documented `--baseline` exception, flagged for documentation not code"
+        ),
+        ("api/runtime.py", "build_hash"): "the runtime hashes its own source files",
+        ("api/runtime.py", "_read_token"): "the runtime's own token file",
+        ("api/runtime.py", "_ensure_token"): "the runtime writes its own token, 0600",
     }
     #: Files that are not request-serving paths at all.
     OFF_SURFACE = {
@@ -1000,10 +1019,32 @@ def test_no_request_serving_surface_reads_a_raw_file():
         "api/services/evaluation.py",
         "api/services/source_formats.py",
     }
-    #: These two are the resolver's own callers and are covered by their tests.
-    RESOLVER_CALLERS = {"api/services/remember.py", "api/services/ingestion.py", "mcp_server.py"}
+    #: These resolve the caller's path before reading it, and have tests that say so.
+    RESOLVER_CALLERS = {
+        "api/services/remember.py",
+        "api/services/ingestion.py",
+        "mcp_server.py",
+    }
 
     pattern = re.compile(r"\bopen\s*\(|\.read_text\s*\(|\.read_bytes\s*\(")
+
+    def enclosing(path: Path) -> dict[int, str]:
+        """Line number -> the function it sits in, or `<module>`."""
+        tree = ast.parse(path.read_text())
+        starts = sorted(
+            (n.lineno, n.name)
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        )
+        owners: dict[int, str] = {}
+        current, name = 0, "<module>"
+        for line_no in range(1, len(path.read_text().splitlines()) + 1):
+            while current < len(starts) and starts[current][0] <= line_no:
+                name = starts[current][1]
+                current += 1
+            owners[line_no] = name
+        return owners
+
     surfaces = [
         p
         for p in list(Path("cli").rglob("*.py")) + list(Path("api").rglob("*.py"))
@@ -1012,22 +1053,20 @@ def test_no_request_serving_surface_reads_a_raw_file():
     surfaces.append(Path("mindpalace_sdk.py"))
 
     offenders = []
-    for f in surfaces:
-        rel = f.as_posix()
-        if rel in OFF_SURFACE:
+    for path in surfaces:
+        rel = path.as_posix()
+        if rel in OFF_SURFACE or rel in RESOLVER_CALLERS:
             continue
-        for i, line in enumerate(f.read_text().splitlines(), 1):
+        owners = enclosing(path)
+        for i, line in enumerate(path.read_text().splitlines(), 1):
             if not pattern.search(line) or line.strip().startswith("#"):
                 continue
-            key = f"{rel}:{i}"
-            if key in ALLOWED:
+            owner = owners.get(i, "<module>")
+            if (rel, owner) in ALLOWED:
                 continue
-            if rel in RESOLVER_CALLERS:
-                # Allowed only if the enclosing function resolves first.
-                continue
-            offenders.append(key)
+            offenders.append(f"{rel}:{i} in {owner}(): {line.strip()[:60]}")
 
-    assert not offenders, f"unaccounted raw file reads: {offenders}"
+    assert not offenders, "unaccounted raw file reads:\n  " + "\n  ".join(offenders)
 
 
 def test_every_registered_memory_operation_is_read_or_write():
@@ -1322,3 +1361,145 @@ async def test_a_read_only_credential_is_refused_on_mcp_and_the_runtime_socket(
     assert '"ok": true' not in rendered.replace(
         "'", '"'
     ), f"runtime socket accepted a {operation} from a read_only credential: {rendered[:500]}"
+
+
+#: Corpora this test provisions and then takes away.
+MCP_CORPUS = "mcp-scope-probe"
+MCP_OTHER_CORPUS = "mcp-scope-probe-other"
+
+
+# ---------------------------------------------------------------------------
+# Revocation, on a process that stays up.
+#
+# `mindpalace credential revoke` says "It stops working on the next request".
+# HTTP honours that. An MCP server does not: `_clients` caches one
+# `MindPalace` per corpus for the life of the process, and `MindPalace` resolves
+# its principal once in `__init__`. The second call after a revoke ran with the
+# revoked identity, and nothing in the tool said so.
+# ---------------------------------------------------------------------------
+
+
+def test_a_revoked_credential_stops_working_in_a_live_mcp_process(monkeypatch):
+    """Issue, call, revoke, call again -- inside one MCP process.
+
+    A subprocess, because the claim under test is about a *long-lived* process.
+    Doing the second call from a new process would pass against a cached
+    principal; that process builds a fresh client.
+
+    This passes today, and is here so it stays that way. `_clients` caches one
+    `MindPalace` per corpus for the life of the process and `MindPalace` resolves
+    its principal once, in `__init__`, so a cache that outlived a revoke would be
+    a real bypass. It does not, because every tool that reaches `_client()` does
+    so inside `_caller()`, which re-resolves the credential on every call and
+    raises before the client is touched.
+
+    Two variants were measured against this and neither is the defect:
+    `revoke` refuses (asserted below), and `credential ungrant` -- narrowing a
+    credential's corpus scope -- does not change what `resolve_principal`
+    returns on this database at all, before or after, so it cannot be used to
+    show a stale scope. Both facts are recorded rather than assumed.
+    """
+    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+
+    program = f"""
+import asyncio, os
+
+CORPUS = {MCP_CORPUS!r}
+OTHER = {MCP_OTHER_CORPUS!r}
+os.environ["MIND_PALACE_AUTH_MODE"] = "off"
+
+from api.services import authz
+from api.services.db import AsyncSessionLocal
+from mindpalace_sdk import MindPalace
+
+MindPalace(CORPUS, runtime=False)
+MindPalace(OTHER, runtime=False)
+
+
+async def issue():
+    async with AsyncSessionLocal() as db:
+        return await authz.issue_credential(
+            db, "mcp-revoke-probe", [CORPUS, OTHER], authz.ROLE_READ_WRITE
+        )
+
+
+async def revoke(identifier):
+    async with AsyncSessionLocal() as db:
+        return await authz.revoke_credential(db, identifier)
+
+
+# Provisioning and revocation are the operator's job, as the local principal.
+# The subject under test is the MCP process, which acts as the credential.
+issued = asyncio.run(issue())
+os.environ["MIND_PALACE_AUTH_MODE"] = "required"
+os.environ["MIND_PALACE_MCP_CREDENTIAL"] = issued["secret"]
+
+import mcp_server
+
+mcp_server._clients.clear()
+
+
+def probe(tag):
+    try:
+        out = mcp_server.search("anything at all", CORPUS, k=1)
+    except Exception as exc:
+        print("MARK", tag, "REFUSED", type(exc).__name__, str(exc)[:160].replace("\\n", " "))
+    else:
+        print("MARK", tag, "ALLOWED", str(out)[:60].replace("\\n", " "))
+
+
+probe("BEFORE")
+assert asyncio.run(revoke(issued["id"])), "revoke reported nothing revoked"
+probe("AFTER")
+"""
+    import subprocess
+    import sys
+
+    root = Path(__file__).resolve().parents[1]
+    env = dict(os.environ)
+    env["MIND_PALACE_AUTH_MODE"] = "required"
+    env["MIND_PALACE_RUNTIME"] = "0"
+    done = subprocess.run(
+        [sys.executable, "-c", program],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=300,
+    )
+    rendered = (done.stdout or "") + (done.stderr or "")
+    for marker in ("MARK BEFORE", "MARK AFTER"):
+        assert marker in rendered, (
+            f"the probe never reached {marker}, so it proves nothing: " + rendered[-800:]
+        )
+    assert "MARK BEFORE ALLOWED" in rendered, rendered[-800:]
+    assert "MARK AFTER REFUSED" in rendered, (
+        "a revoked credential still read through a live MCP process: " + rendered[-800:]
+    )
+
+
+def test_the_cli_thread_hop_keeps_the_callers_identity():
+    """`_run` moves work to a worker thread when the CLI is driven from a loop.
+
+    A new thread starts with an *empty* `contextvars` context, so anything the
+    caller established with a ContextVar -- the caller's identity above all --
+    was silently dropped on the way in. The work then ran with no caller at all,
+    which is the default local principal, unrestricted, with a `{*}` database
+    scope: an in-process caller that had authenticated correctly was answered by
+    a thread that had not authenticated at all.
+
+    `contextvars.copy_context().run(...)` is the fix, and it is the only thing
+    the fix needs to be.
+    """
+    import asyncio
+    import contextvars
+
+    from cli.main import _run
+
+    whoami: contextvars.ContextVar[str] = contextvars.ContextVar("whoami", default="<nobody>")
+    whoami.set("the caller")
+
+    async def drive():
+        return _run(lambda: whoami.get())
+
+    assert asyncio.run(drive()) == "the caller"

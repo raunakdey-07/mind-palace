@@ -998,9 +998,9 @@ filesystem from a caller, and whether it goes through that one resolver.
 | `POST /api/ingest/repo` | a directory | yes | yes — `api/routers/ingest.py:76` |
 | `POST /api/ingest/file` | content in the request body, no path | n/a | n/a |
 | `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:108` |
-| SDK `MindPalace.sync(path)` | a directory | yes | yes, via the service |
-| SDK `MindPalace.remember(file=…)` | one file | yes | yes, via the service |
-| MCP `sync(corpus, path)` | a directory | yes | yes, via the service |
+| SDK `MindPalace.sync(path)` | a directory | yes | yes — `api/services/ingestion.py:422` |
+| SDK `MindPalace.remember(file=…)` | one file | yes | yes — `api/services/remember.py:287` |
+| MCP `sync(corpus, path)` | a directory | yes | yes — same `sync_repo` |
 | MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:238` |
 | `mindpalace verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
 | `mindpalace receipt -o <file>` | writes; not a read | n/a | n/a |
@@ -1014,7 +1014,28 @@ Palace, so bounding it to the ingest roots of some other deployment would defeat
 it; a receipt is caller-supplied evidence, not deployment content. A benchmark
 baseline is a report the caller produced.
 
-Two surfaces were found reading without the resolver and fixed: `remember
---file` and `mindpalace ingest`. The `ingest` case is the sharper one — it read
-the file with a bare `open()` *before* its HTTP call, so the read happened
-whether or not a server was listening.
+**Three** surfaces were found reading without the resolver, and all three were
+fixed:
+
+1. `remember --file` — the service read any path.
+2. `mindpalace ingest <path>` — a bare `open()` *before* its HTTP call, so the
+   read happened whether or not a server was listening.
+3. `sync_repo`, reached directly by `MindPalace.sync()` and by the MCP `sync`
+   tool. The CLI and the two routes each checked the path themselves, which is
+   how the audit table above came to list the SDK and MCP rows as "yes, via the
+   service" when the service did not check at all. An independent review found
+   it; the table was wrong, not just incomplete.
+
+Each fix went in at the chokepoint rather than at the callers, because callers
+are where the gaps came from.
+
+## Write operations and the shared core
+
+One table decides which memory operations write:
+`api/services/memory_public.WRITE_OPERATIONS`. The REST adapter and the MCP
+server each carried their own copy of that list and applied it themselves, so
+the SDK and the local runtime — which call the shared core directly — resolved
+every corpus as a reader. A `read_only` credential could therefore create a
+snapshot through the SDK while the identical REST call returned **403 "This
+credential is read-only"**. The shared core now applies the same flag, so the
+answer cannot depend on which door the caller came through.

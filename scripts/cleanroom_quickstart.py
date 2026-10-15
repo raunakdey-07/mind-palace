@@ -68,7 +68,6 @@ README = ROOT / "README.md"
 #: Commands that need a live server, a stopped database, or a deliberately
 #: tampered file. Run them, but do not treat their output as an assertion.
 SKIP_PATTERNS = (
-    "mindpalace-mcp",  # long-lived; covered by the MCP check below
     "with the database stopped",  # prose in a comment
     "tampered-receipt",  # needs a tampered file we do not have here
     "pip install",  # this script IS the install
@@ -343,6 +342,13 @@ def main() -> int:
             # Commands that need a file we did not produce, or that are prose
             # dressed as a prompt, are not part of the runnable quickstart.
             if "receipt.json" in command or "verify" in command:
+                continue
+            # `mindpalace-mcp` bare is long-lived and covered by the MCP check
+            # below. `--help` is not: it prints usage, returns immediately, and
+            # is the one invocation a reader tries when they cannot find the
+            # server. It printed nothing until 2026-10-15, which is exactly the
+            # kind of thing only a test catches.
+            if command.startswith("mindpalace-mcp") and "--help" not in command:
                 continue
             # These two guards used to be `"\\" in command` and `"#" in
             # command`, added to skip the README's one unjoined line

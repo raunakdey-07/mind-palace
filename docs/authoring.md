@@ -291,7 +291,11 @@ ignores `--help`, so probe it with an `initialize` request rather than a flag.
 **Getting a credential.** Mint one with the CLI; the raw `mpk_...` secret is what
 goes in the variable:
 
-```
+```console
+$ mindpalace-mcp --help
+mindpalace-mcp -- Mind Palace over the Model Context Protocol
+...
+
 $ mindpalace credential issue my-agent -c default -r read_write
 $ export MIND_PALACE_MCP_CREDENTIAL=mpk_...
 ```

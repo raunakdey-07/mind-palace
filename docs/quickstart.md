@@ -490,3 +490,28 @@ examples/       runnable examples
 docs/           status, operations, research, release notes
 scripts/        benchmarks, probes, release checks
 ```
+## Connecting an agent over MCP
+
+There is no `mindpalace mcp` command. The server is an executable named
+`mindpalace-mcp`, installed by the `[mcp]` extra, and it speaks JSON-RPC over
+stdin/stdout — a client starts it, you do not type at it. It used to print
+nothing at all for `--help`; it prints usage now.
+
+```console
+$ pip install 'mindpalace-os[mcp]'
+
+$ mindpalace credential issue my-agent -c default -r read_write
+$ export MIND_PALACE_MCP_CREDENTIAL=mpk_...
+
+$ mindpalace-mcp --help
+```
+
+`MIND_PALACE_MCP_CREDENTIAL` takes the raw `mpk_...` secret. Mint one with
+`mindpalace credential issue <name> -c <corpus> -r read_write`; the corpus and
+role must match what the agent will touch. It is an environment variable rather
+than a tool argument on purpose — a caller that could pass its own credential
+would need no authorization at all.
+
+An agent can then write memory with the `memory_remember` tool, whose arguments
+are `statement`, `corpus`, and optionally `key` and `file`
+([authoring.md](authoring.md#memory_remember)).

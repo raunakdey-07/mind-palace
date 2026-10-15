@@ -434,8 +434,62 @@ async def memory_pack(request: MemoryRequest) -> MemoryToolResult:
     return await _execute_memory("pack", request)
 
 
+MCP_USAGE = """\
+mindpalace-mcp -- Mind Palace over the Model Context Protocol
+
+Speaks JSON-RPC 2.0 on stdin/stdout. Start it from an MCP client config, not by
+typing at it: it reads requests from stdin and writes replies to stdout, so a
+terminal invocation reads EOF and exits immediately without printing anything.
+
+Usage:
+  mindpalace-mcp                 serve on stdin/stdout (the normal case)
+  mindpalace-mcp --help          this text
+  mindpalace-mcp --version       print the server version
+
+Environment:
+  MIND_PALACE_MCP_CREDENTIAL  required in `required` auth mode. The raw secret
+      from `mindpalace credential issue <name> -c <corpus> -r read_write`. It
+      must be a credential that can write to the corpus, or `memory_remember`
+      and `sync` are refused. A read-only credential can still use the read
+      tools. This is an environment variable rather than a tool argument on
+      purpose: a caller that could pass its own credential would need no
+      authorization at all.
+  DATABASE_URL                 PostgreSQL with pgvector. Required.
+  MIND_PALACE_INGEST_ROOTS     directories `sync` and `memory_remember(file=)`
+      may read. `none` disables both.
+
+Client configuration (stdio):
+  { "command": "mindpalace-mcp",
+    "env": { "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
+             "MIND_PALACE_MCP_CREDENTIAL": "mpk_...",
+             "MIND_PALACE_INGEST_ROOTS": "/srv/content" } }
+
+To check it is alive without a client:
+  printf '%s\\n' '{"jsonrpc":"2.0","id":1,"method":"initialize",
+    "params":{"protocolVersion":"2024-11-05","capabilities":{},
+              "clientInfo":{"name":"probe","version":"0"}}}' | mindpalace-mcp
+"""
+
+
 def main() -> None:
     import asyncio
+    import sys
+
+    # `--help` before anything else: the server's normal mode consumes stdin, so
+    # a flag has to be handled here or not at all. It used to print nothing, and
+    # a reader who tried it concluded the executable was broken.
+    if "--help" in sys.argv[1:] or "-h" in sys.argv[1:]:
+        sys.stdout.write(MCP_USAGE)
+        return
+    if "--version" in sys.argv[1:]:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            found = version("mindpalace-os")
+        except PackageNotFoundError:
+            found = "unknown (running from a source tree, not an install)"
+        sys.stdout.write(f"mindpalace-mcp {found}\n")
+        return
 
     asyncio.run(mcp.run_stdio_async())
 

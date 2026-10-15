@@ -834,18 +834,27 @@ def ingest(
     """Ingest Markdown file(s) into the knowledge store."""
     import httpx
 
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+
     path = path.rstrip("/")
     url = "http://localhost:8000/api/ingest/file"
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-        resp = httpx.post(url, json={"content": content, "path": path}, timeout=30)
+        # Through the same resolver as `ingest-repo`, `remember --file` and the
+        # two routes. This read happens before the HTTP call, so an unenforced
+        # path here is a local file read whose contents are then posted to a
+        # socket -- the exposure does not wait for the server.
+        resolved = require_permitted(path)
+        content = resolved.read_text(encoding="utf-8")
+        resp = httpx.post(url, json={"content": content, "path": str(resolved)}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         typer.echo(f"[OK] {data.get('message', 'Ingested')}")
     except FileNotFoundError:
         typer.echo(f"[ERROR] File not found: {path}", err=True)
+        raise typer.Exit(code=1)
+    except IngestPathRefused as exc:
+        typer.echo(f"[ERROR] {exc}", err=True)
         raise typer.Exit(code=1)
     except httpx.HTTPError as e:
         typer.echo(f"[ERROR] API error: {e}", err=True)

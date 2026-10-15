@@ -246,7 +246,7 @@ arbitrarily.
 |---|---|---|
 | `MIND_PALACE_AUTH_MODE` | `off` | `required` makes every protected request present a credential. |
 | `MIND_PALACE_DEPLOYMENT` | `local` | `server` refuses to start unless the settings below are right. An unrecognised value is refused. |
-| `MIND_PALACE_INGEST_ROOTS` | unset | `:`-separated directories `ingest/repo` and `sync_repo` may read, or `none` to disable both routes. Required in `server` mode — one of the two. |
+| `MIND_PALACE_INGEST_ROOTS` | unset | `:`-separated directories that every filesystem-ingest surface may read: `ingest/repo`, `sync_repo`, `mindpalace ingest`, and `remember --file` / `memory_remember(file=)`. Or `none` to disable. Required in `server` mode. Full table in [security.md](security.md#every-caller-supplied-file-path). |
 | `MIND_PALACE_ADMIN_DATABASE_URL` | `DATABASE_URL` | The maintenance role, for the administrative CLI commands. |
 | `MIND_PALACE_MAX_INGEST_CHARS` | `4000000` | Largest single document accepted. |
 | `MIND_PALACE_CURSOR_SECRET` | — | HMAC key for feed cursors. One per deployment. |

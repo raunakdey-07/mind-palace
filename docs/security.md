@@ -978,3 +978,43 @@ reinstate it are in [`docs/withdrawn/`](withdrawn/README.md).
 **What this means for you:** do not assume any same-corpus per-user isolation.
 Two principals holding the same corpus hold the same facts. Use a separate corpus
 per confidentiality boundary.
+
+## Every caller-supplied file path
+
+`MIND_PALACE_INGEST_ROOTS` is the deployment policy for filesystem reads. One
+resolver enforces it, `api/services.ingest_paths.require_permitted`, which
+resolves the candidate **before** comparing it, so a symlink that leaves a root
+and a `..` that climbs out of one are both caught by the same check.
+
+A resolver nothing calls is not a control. This is every input that reaches the
+filesystem from a caller, and whether it goes through that one resolver.
+
+| Surface | Reads | Enforced | Through `require_permitted` |
+|---|---|---|---|
+| `mindpalace ingest-repo <path>` | a directory of Markdown | yes | yes — `cli/main.py:875` |
+| `mindpalace ingest <path>` | one file, then POSTs its contents | yes | yes — `cli/main.py:836` |
+| `mindpalace remember --file <path>` | one file, as a statement | yes | yes — `api/services/remember.py:287` |
+| `mindpalace reindex` | no caller path; the corpus's own documents | n/a | n/a |
+| `POST /api/ingest/repo` | a directory | yes | yes — `api/routers/ingest.py:76` |
+| `POST /api/ingest/file` | content in the request body, no path | n/a | n/a |
+| `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:108` |
+| SDK `MindPalace.sync(path)` | a directory | yes | yes, via the service |
+| SDK `MindPalace.remember(file=…)` | one file | yes | yes, via the service |
+| MCP `sync(corpus, path)` | a directory | yes | yes, via the service |
+| MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:238` |
+| `mindpalace verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
+| `mindpalace receipt -o <file>` | writes; not a read | n/a | n/a |
+| benchmark `--baseline <file>` | a previous report, for comparison | **no, deliberately** | n/a |
+| pack import | a pack file in the request body, no path | n/a | n/a |
+| local runtime socket | no caller-supplied path is accepted | n/a | n/a |
+
+The two rows marked *deliberately* are the ones that must stay unbounded.
+`verify` is documented as working on a machine that has never heard of Mind
+Palace, so bounding it to the ingest roots of some other deployment would defeat
+it; a receipt is caller-supplied evidence, not deployment content. A benchmark
+baseline is a report the caller produced.
+
+Two surfaces were found reading without the resolver and fixed: `remember
+--file` and `mindpalace ingest`. The `ingest` case is the sharper one — it read
+the file with a bare `open()` *before* its HTTP call, so the read happened
+whether or not a server was listening.

@@ -22,6 +22,7 @@ on:
       # local memory, which is the thing the other five lines exist to prevent.
       # Removed when the branch merges.
       - wip/boundary-fixes
+      - wip/boundary-fixes-2
   pull_request:
     branches:
       - main

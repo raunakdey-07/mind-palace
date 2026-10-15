@@ -15,6 +15,7 @@ from sqlalchemy import text
 from api.services.corpora import DEFAULT_CORPUS_ID
 from api.services.db import session_scope
 from api.services.embedder import Embedder
+from api.services.ingest_paths import require_permitted
 from api.services.parser import (
     chunk_with_heading_paths,
     extract_sections_with_paths,
@@ -409,9 +410,17 @@ class IngestionService:
 
         Returns a machine-readable sync summary. A failed document never
         leaves a false 'successfully indexed' state.
+
+        `repo_path` is checked against `MIND_PALACE_INGEST_ROOTS` here rather
+        than by each caller. The CLI and the two routes each checked it
+        themselves, which left the SDK's `sync()` and the MCP `sync` tool -- both
+        of which arrive here directly -- reading outside the configured roots.
+        One guard at the chokepoint covers all four surfaces.
         """
         start = time.perf_counter()
-        repo_path = Path(repo_path)
+        # The roots check the callers were doing individually. Returns the
+        # resolved path, so a symlink or a `..` is collapsed before the walk.
+        repo_path = Path(require_permitted(repo_path))
         if not repo_path.is_dir():
             return {"success": False, "message": f"Path not found: {repo_path}"}
 

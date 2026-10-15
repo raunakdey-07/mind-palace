@@ -6,7 +6,9 @@
 
 [Current release: v0.9.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-> **Install `0.9.0`.** `v0.9.1` is prepared but not tagged or published.
+> **The path below installs `0.9.1` from this branch, not `0.9.0` from PyPI.**
+> `v0.9.1` is prepared but not tagged or published. To install the last tagged
+> release instead, clone the `v0.9.0` tag rather than the default branch.
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**
@@ -30,7 +32,7 @@ verify     offline: no database, no model, no network
 
 Expect **5.9 GB and 79–202 s**. `torch` pulls the CUDA runtime; most of it is
 unused without a GPU. Nothing else in the install comes close. To skip it, set
-`MIND_PALACE_LEXICAL=1` before step 4 and no model is ever downloaded — a
+`MIND_PALACE_LEXICAL=1` before the first `mindpalace recall` and no model is ever downloaded — a
 deliberate trade-off, not an equal substitute
 ([runtime.md](docs/runtime.md#model-free-lexical-mode)).
 
@@ -212,8 +214,8 @@ print(f"{memory.claim}  [{memory.status}]")
 - **A `claims:` block is YAML, and YAML is strict.** A backtick, a colon-space or
   a leading `@` in an evidence quote discards the whole block. Quote the value.
   The ingest now says `frontmatter_unparseable` instead of `no_claims_declared`.
-- **An agent can write memory, and that is a risk.** `memory_remember` is the
-  16th MCP tool and the first that writes. Without `file=` the evidence for the
+- **An agent can write memory, and that is a risk.** `memory_remember` is one
+  of 16 MCP tools and the first that writes. Without `file=` the evidence for the
   claim is the statement itself, so it proves what the agent was told and not that
   it is true ([why, and the review it needs](docs/authoring.md#memory_remember)).
 - **The install is 5.9 GB**, and a writer of this size in your terminal is

@@ -283,6 +283,19 @@ It takes no credential. The caller's identity is whatever
 `MIND_PALACE_MCP_CREDENTIAL` resolves to, and that identity needs write access to
 the corpus — a read-only credential is refused.
 
+**Running the server.** There is no `mindpalace mcp` command. The server is an
+executable on the path, `mindpalace-mcp`, installed by the `[mcp]` extra
+(`pip install 'mindpalace-os[mcp]'`). It speaks JSON-RPC over stdin/stdout and
+ignores `--help`, so probe it with an `initialize` request rather than a flag.
+
+**Getting a credential.** Mint one with the CLI; the raw `mpk_...` secret is what
+goes in the variable:
+
+```
+$ mindpalace credential issue my-agent -c default -r read_write
+$ export MIND_PALACE_MCP_CREDENTIAL=mpk_...
+```
+
 **Without `file`, the evidence for the claim is the statement itself.** That is a
 real limitation and worth being plain about: the evidence proves *what you were
 told*, not that it is true. A model that writes `"The production root password is

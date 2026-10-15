@@ -204,6 +204,14 @@ print(f"{memory.claim}  [{memory.status}]")
   provenance, not the product.
 - **It does not authenticate its own history.** A receipt proves internal
   consistency. Trust requires an anchor you pinned yourself, outside this system.
+- **Two files cannot supersede one another.** A key identifies one fact, and the
+  database needs a same-document predecessor to supersede it. Re-ingest the same
+  path, or use `mindpalace remember` with the same `--key`. Two *different* files
+  under one key are recorded as independent claims and recall reports a conflict
+  rather than an answer ([how](docs/authoring.md#how-supersession-works-and-what-two-files-cannot-do)).
+- **A `claims:` block is YAML, and YAML is strict.** A backtick, a colon-space or
+  a leading `@` in an evidence quote discards the whole block. Quote the value.
+  The ingest now says `frontmatter_unparseable` instead of `no_claims_declared`.
 - **An agent can write memory, and that is a risk.** `memory_remember` is the
   16th MCP tool and the first that writes. Without `file=` the evidence for the
   claim is the statement itself, so it proves what the agent was told and not that

@@ -895,8 +895,9 @@ def ingest_repo(
         _fail(exc, verbose)
         return
     typer.echo(
-        f"[OK] sync: +{summary.added} ~{summary.changed} ={summary.unchanged} "
-        f"-{summary.deleted} !{summary.failed}, {summary.chunk_count} chunks"
+        f"[{'OK' if summary.success else 'FAIL'}] sync: +{summary.added} "
+        f"~{summary.changed} ={summary.unchanged} -{summary.deleted} "
+        f"!{summary.failed}, {summary.chunk_count} chunks"
     )
     for error in summary.errors:
         typer.echo(f"  - {error}", err=True)

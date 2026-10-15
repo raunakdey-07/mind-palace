@@ -124,12 +124,22 @@ class IngestionService:
         corpus_id: str,
         owner_principal_id: str | None = None,
     ) -> dict:
-        metadata, body = parse_markdown(content)
+        # Warnings are collected here, not only on the memory path. This is the
+        # path `ingest-repo` takes, and it was the one that reported an
+        # unparseable `claims:` block as `no_claims_declared` -- which reads as
+        # "you wrote no claims" when the truth is "your claims were discarded".
+        # The parser already produced the warning, with a line and a reason code;
+        # it was simply never asked for them.
+        metadata, body, frontmatter_warnings = parse_markdown(content, collect_warnings=True)
         doc_hash = content_hash(body)
 
+        # Every return below carries the warnings, including the two that do no
+        # work. A re-sync of an unchanged broken document must say it is still
+        # broken, or the author sees silence on every run after the first.
         if not body.strip():
             return {
                 "success": True,
+                "warnings": [w.as_dict() for w in frontmatter_warnings],
                 "message": f"Skipped empty document: {path}",
                 "chunk_count": 0,
             }
@@ -137,6 +147,7 @@ class IngestionService:
         if await check_manifest(db, path, doc_hash, corpus_id):
             return {
                 "success": True,
+                "warnings": [w.as_dict() for w in frontmatter_warnings],
                 "message": "Document unchanged (manifest), skipped",
                 "event": "UNCHANGED",
                 "chunk_count": 0,
@@ -193,6 +204,7 @@ class IngestionService:
 
         return {
             "success": True,
+            "warnings": [w.as_dict() for w in frontmatter_warnings],
             "document_id": doc_id,
             "chunk_count": count,
             "message": f"Ingested {count} chunks",

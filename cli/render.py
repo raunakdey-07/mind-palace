@@ -56,6 +56,26 @@ def render_recall(
     conflicts = response.conflicts
 
     if not current:
+        if conflicts:
+            # A conflict is not an absence. Two documents declaring the same key
+            # give exactly this: no current claim, two disagreeing ones. Saying
+            # "nothing matched" sends the reader looking for a missing document
+            # when the documents are both there and disagreeing.
+            lines.append(f"{len(conflicts)} key(s) have sources that disagree:")
+            for conflict in conflicts:
+                claims = getattr(conflict, "claims", []) or []
+                lines.append(f"  {getattr(conflict, 'key', 'unknown')}:")
+                for claim in claims:
+                    lines.append(
+                        f"    - {_short(claim.claim)}  ({getattr(claim, 'path', 'unknown')})"
+                    )
+            lines.append(
+                "\nNo answer is given while sources disagree. Resolve it by "
+                "re-ingesting the newer document as a new version of the same "
+                "path, or by using `mindpalace remember` with the same --key. "
+                "See docs/authoring.md."
+            )
+            return "\n".join(lines)
         lines.append("No memory matched that question.")
         if response.constraints:
             lines.append(f"  {', '.join(response.constraints)}")

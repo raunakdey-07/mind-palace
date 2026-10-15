@@ -181,6 +181,89 @@ partially stored, and a later successful ingest is not affected.
 How to write claims *from* unstructured text. No extractor exists, so there is
 nothing to document yet; `docs/wedge-decision-note.md` argues that building one
 is a later decision, not this one.
+## Quote your evidence: YAML will try to read it
+
+A `claims:` block is YAML. Four characters will silently discard the **entire**
+block — not just the one field — and the document is then stored as text that
+answers nothing.
+
+The four: a **backtick**, a **colon followed by a space**, a **leading `@`**,
+and a **leading `-`/`?`/`:`**. All are ordinary in Markdown prose and all are
+reserved at the start of a YAML plain scalar.
+
+```console
+$ mkdir -p ./quotecheck && printf '%s\n' '---' 'title: Bad quoting' 'claims:' '  - key: a.b' '    value: v' '    claim: c' '    evidence: `get-shit-done-cc` is the sole npm package.' '---' '' '# Bad quoting' '' 'The sole npm package is get-shit-done-cc.' > ./quotecheck/bad.md
+
+$ mindpalace ingest-repo ./quotecheck --corpus quoting
+[FAIL] sync: +1 ~0 =0 -0 !0, 2 chunks
+  - bad.md: frontmatter_unparseable
+```
+
+The fix is to wrap the value in double quotes and escape any double quotes it
+contains. Quoted scalars have none of these restrictions:
+
+```yaml
+    evidence: "The sole npm package is `get-shit-done-cc`."
+```
+
+Those `$ ` lines run on every push. Change the quoting and the job fails.
+
+Since 2026-10-15 the ingest names the file and says `frontmatter_unparseable`
+rather than `no_claims_declared`, which told the author the opposite of the
+truth — that they had written no claims, rather than that their claims had been
+discarded. The message carries a reason code and a line number and never the
+document's content.
+
+## How supersession works, and what two files cannot do
+
+A key identifies **one fact**. There are exactly two ways a fact changes.
+
+**1. A new version of the same document.** Re-ingest the same path with different
+text. The archive keeps both, and `history` shows the chain:
+
+```console
+$ mindpalace history gsd.package_boundary
+2026-10-15 03:53 UTC  recorded  Every Shared Module has exactly one hand-authored source of truth.
+2026-10-15 03:56 UTC  Every Shared Module has exactly one hand-authored source of truth.
+            superseded by  The sole npm package is get-shit-done-cc.
+
+current now: The sole npm package is get-shit-done-cc.
+```
+
+**2. `mindpalace remember` with the same `--key`.** Same chain, same
+`superseded by` line, produced without a document.
+
+**What does not work: two different files declaring the same key.** The database
+needs a same-document predecessor, so two paths under one key are recorded as two
+*independent* claims with nothing superseding either. That is not silent — recall
+reports a conflict and refuses to answer:
+
+```console
+$ mindpalace recall "What is the sole npm package?"
+1 key(s) have sources that disagree:
+  gsd.package_boundary:
+    - The sole npm package is get-shit-done-cc.  (adr-0174.md)
+    - Every Shared Module has exactly one hand-authored source of truth.  (adr-3524.md)
+
+No answer is given while sources disagree.
+```
+
+### The pattern that works for decision records
+
+Architecture decision records are a chain of decisions about one subject, written
+as separate numbered files. **Do not ingest them as documents.** One
+`memory_remember` call per record, in numeric order, with records in a
+supersession chain sharing one key:
+
+| record | key | value |
+|---|---|---|
+| ADR-03524 | `gsd.package_boundary` | dual packages, hard seam |
+| ADR-0174 | `gsd.package_boundary` | single npm package |
+
+Written this way the chain is real, `history` shows the supersession, and recall
+answers from the current value. Written as separate files under one key they
+conflict and recall answers nothing.
+
 ### `memory_remember`
 
 An agent can now call `memory_remember` over MCP. It is the sixteenth tool and the

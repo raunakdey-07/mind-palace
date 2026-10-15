@@ -72,6 +72,7 @@ SKIP_PATTERNS = (
     "with the database stopped",  # prose in a comment
     "tampered-receipt",  # needs a tampered file we do not have here
     "pip install",  # this script IS the install
+    "--corpus quoting",  # docs/authoring.md's backtick example; it must FAIL
 )
 
 

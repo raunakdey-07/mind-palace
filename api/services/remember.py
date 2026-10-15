@@ -272,7 +272,25 @@ def _document_path(file: str) -> str:
 
 
 def _read(file: str) -> str:
-    """Read a local file, refusing anything the archive cannot store as text."""
+    """Read a local file, refusing anything the archive cannot store as text.
+
+    The ingest-root check lives here rather than at each caller because every
+    `file=` caller -- the CLI, `POST /api/memory/remember`, the SDK and the MCP
+    tool -- routes through this one function. Two surfaces enforced
+    MIND_PALACE_INGEST_ROOTS (`/api/ingest/repo` and `/api/corpora/{name}/sync`)
+    and this one did not, so a path the deployment refused came back through the
+    other door. One guard here closes all four.
+    """
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+
+    try:
+        file = str(require_permitted(file))
+    except IngestPathRefused as exc:
+        # Translated rather than re-raised: `remember` raises RememberError, and
+        # a caller catching that one type should not have to know about a second.
+        # The message is `require_permitted`'s, which names no allowed root.
+        raise RememberError(str(exc)) from exc
+
     try:
         content = Path(file).read_text(encoding="utf-8")
     except OSError as exc:

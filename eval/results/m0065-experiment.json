@@ -1,0 +1,3500 @@
+{
+  "summary": {
+    "lexical": {
+      "n": 24,
+      "exact": 15,
+      "recall": {
+        "1": 0.6875,
+        "3": 0.8333333333333334,
+        "5": 0.9583333333333334,
+        "10": 1.0
+      }
+    },
+    "embedding": {
+      "n": 24,
+      "exact": 17,
+      "recall": {
+        "1": 0.8125,
+        "3": 0.9583333333333334,
+        "5": 1.0,
+        "10": 1.0
+      }
+    },
+    "hybrid": {
+      "n": 24,
+      "exact": 9,
+      "recall": {
+        "1": 0.7291666666666666,
+        "3": 0.875,
+        "5": 1.0,
+        "10": 1.0
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "streaming-pilot",
+      "question": "What event transport does Dispatch use in the pilot?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch uses Redis Streams for event streaming.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.1111111111111111
+        }
+      ]
+    },
+    {
+      "id": "streaming-pilot",
+      "question": "What event transport does Dispatch use in the pilot?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch delivers order events at least once.",
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.603371959896541
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.5679340418680843
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.41659639481798344
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.41636106667914624
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.41636106667914624
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.3442835347996615
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.342246892024251
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.33480118302271283
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.2835363275993322
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.2707571931511739
+        }
+      ]
+    },
+    {
+      "id": "streaming-pilot",
+      "question": "What event transport does Dispatch use in the pilot?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch treats retrieved runbook text as untrusted data.",
+        "Dispatch uses Redis Streams for event streaming.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.031754032258064516
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.031754032258064516
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0315136476426799
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.030886196246139225
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.030886196246139225
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.030798389007344232
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.030776515151515152
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.029437229437229435
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.029411764705882353
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.029211087420042643
+        }
+      ]
+    },
+    {
+      "id": "auth-pilot",
+      "question": "How are operator requests authenticated in the pilot?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.25
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.125
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.125
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.125
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.125
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.125
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "auth-pilot",
+      "question": "How are operator requests authenticated in the pilot?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.6290919877458077
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.3569698300861221
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.3569698300861221
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.30462578954503217
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.2578649143003936
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.2231086033262375
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.2118683513785648
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.17734552076121496
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.10981532535388952
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.07592799585804552
+        }
+      ]
+    },
+    {
+      "id": "auth-pilot",
+      "question": "How are operator requests authenticated in the pilot?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch treats retrieved runbook text as untrusted data.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03200204813108039
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03200204813108039
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.031009615384615385
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0304147465437788
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.029877369007803793
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.029857397504456328
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.029857397504456328
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.029418126757516764
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.029211087420042643
+        }
+      ]
+    },
+    {
+      "id": "delivery-pack-8000",
+      "question": "What delivery contract is preserved in an 8000-character memory pack?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "selected": [
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "delivery-pack-8000",
+      "question": "What delivery contract is preserved in an 8000-character memory pack?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "selected": [
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.31014986906141
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.31014986906141
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.2633287333945452
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.23679037997170013
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.19259115221166748
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.15980949353769683
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.15278308286848358
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.12262248647460872
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.08679088273801751
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.0011262611621045986
+        }
+      ]
+    },
+    {
+      "id": "delivery-pack-8000",
+      "question": "What delivery contract is preserved in an 8000-character memory pack?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch treats retrieved runbook text as untrusted data.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0315136476426799
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.03125763125763126
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.030776515151515152
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.03036576949620428
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.030330882352941176
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.03007688828584351
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.028991596638655463
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.02877846790890269
+        }
+      ]
+    },
+    {
+      "id": "delivery-pack-16000",
+      "question": "What delivery contract is preserved in a 16000-character memory pack?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "selected": [
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "delivery-pack-16000",
+      "question": "What delivery contract is preserved in a 16000-character memory pack?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "selected": [],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.29625450811448695
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.29625450811448695
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.24187210326646752
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.24113393041795356
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.17874204467132157
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.16084429496378014
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.15716975799877872
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.15194108559393235
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.08914376038230223
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.01355252180586686
+        }
+      ]
+    },
+    {
+      "id": "delivery-pack-16000",
+      "question": "What delivery contract is preserved in a 16000-character memory pack?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch treats retrieved runbook text as untrusted data.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0315136476426799
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.03125
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.031024531024531024
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.03057889822595705
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.030309988518943745
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.029418126757516764
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.028991596638655463
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.02877846790890269
+        }
+      ]
+    },
+    {
+      "id": "replay-owner-two-sources",
+      "question": "Which two sources independently establish replay recovery ownership?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "selected": [
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.375
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.375
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "replay-owner-two-sources",
+      "question": "Which two sources independently establish replay recovery ownership?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "selected": [
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.7593119502591051
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.7593119502591051
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.23665022877371283
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.21408772645493576
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.16773609583033666
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.15525260819527398
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.12558878812205695
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.12529010754674288
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.12343621098342442
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.1028084508813425
+        }
+      ]
+    },
+    {
+      "id": "replay-owner-two-sources",
+      "question": "Which two sources independently establish replay recovery ownership?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.03055037313432836
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.030536130536130537
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.030117753623188408
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.02946912242686891
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.029418126757516764
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.029411764705882353
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.029236022193768675
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.02857142857142857
+        }
+      ]
+    },
+    {
+      "id": "streaming-cutover",
+      "question": "What event transport does Dispatch use after the cutover?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch uses Kafka for event streaming.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.2222222222222222
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.1111111111111111
+        }
+      ]
+    },
+    {
+      "id": "streaming-cutover",
+      "question": "What event transport does Dispatch use after the cutover?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch delivers order events at least once.",
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.5449062218782506
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.5287175834727262
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.4328169861970294
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.4016495971725244
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.4016495971725244
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.3573360409938397
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.3234374900806213
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.30099151675483277
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.2887354917900638
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.2630087750582966
+        }
+      ]
+    },
+    {
+      "id": "streaming-cutover",
+      "question": "What event transport does Dispatch use after the cutover?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch uses Kafka for event streaming.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0315136476426799
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0315136476426799
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.03028233151183971
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.030117753623188408
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.03009207275993712
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.029418126757516764
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.028991596638655463
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.028790389395194696
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.02797339593114241
+        }
+      ]
+    },
+    {
+      "id": "auth-federated",
+      "question": "How are operator requests authenticated after federation?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.2857142857142857
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.14285714285714285
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "auth-federated",
+      "question": "How are operator requests authenticated after federation?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.6233038713317951
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.3335334662751593
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.3080102686966648
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.3080102686966648
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.22540905750213716
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.22520070873100514
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.22279263077895045
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.19275113529756882
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.1535674667434592
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.1287433774792398
+        }
+      ]
+    },
+    {
+      "id": "auth-federated",
+      "question": "How are operator requests authenticated after federation?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.03252247488101534
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.031746031746031744
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.031009615384615385
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.031009615384615385
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.029631255487269532
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0293236301369863
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.028814262023217248
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.028790389395194696
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.02877846790890269
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.028370221327967807
+        }
+      ]
+    },
+    {
+      "id": "partitions-before-expansion",
+      "question": "How many Kafka orders partitions are configured before expansion?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.3333333333333333
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "partitions-before-expansion",
+      "question": "How many Kafka orders partitions are configured before expansion?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.7778422429410093
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.31926581489719413
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.2667886426701245
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.25533408447748684
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.24184249245117734
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.11585424486958096
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.11585424486958096
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.09281253718991217
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.039550956468316745
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": -0.01656251292240272
+        }
+      ]
+    },
+    {
+      "id": "partitions-before-expansion",
+      "question": "How many Kafka orders partitions are configured before expansion?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch uses Kafka for event streaming.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.03225806451612903
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.030798389007344232
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.030798389007344232
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.03057889822595705
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.030536130536130537
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.029910714285714284
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.029513888888888888
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.029418126757516764
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.028577260665441927
+        }
+      ]
+    },
+    {
+      "id": "streaming-supersession",
+      "question": "Which streaming assertion supersedes the pilot assertion in the same document?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.1111111111111111
+        }
+      ]
+    },
+    {
+      "id": "streaming-supersession",
+      "question": "Which streaming assertion supersedes the pilot assertion in the same document?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.3504899600674651
+        }
+      ]
+    },
+    {
+      "id": "streaming-supersession",
+      "question": "Which streaming assertion supersedes the pilot assertion in the same document?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.03252247488101534
+        }
+      ]
+    },
+    {
+      "id": "auth-supersession",
+      "question": "Which authentication assertion replaces the pilot mechanism under the same key?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.1
+        }
+      ]
+    },
+    {
+      "id": "auth-supersession",
+      "question": "Which authentication assertion replaces the pilot mechanism under the same key?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.39529767532789
+        }
+      ]
+    },
+    {
+      "id": "auth-supersession",
+      "question": "Which authentication assertion replaces the pilot mechanism under the same key?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.03252247488101534
+        }
+      ]
+    },
+    {
+      "id": "partitions-after-expansion",
+      "question": "How many Kafka orders partitions are configured after expansion?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.3333333333333333
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.1111111111111111
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "partitions-after-expansion",
+      "question": "How many Kafka orders partitions are configured after expansion?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.7806629674943318
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.3312531703909544
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.2741381496790647
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.25748247558347026
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.25281532561608
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.1382874626732618
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.1382874626732618
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.10185988078971196
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.04283286535065049
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": -0.00991059851536242
+        }
+      ]
+    },
+    {
+      "id": "partitions-after-expansion",
+      "question": "How many Kafka orders partitions are configured after expansion?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch uses Kafka for event streaming.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.03252247488101534
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.031746031746031744
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.030330882352941176
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.030330882352941176
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.030309988518943745
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.030117753623188408
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.029236022193768675
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.029083245521601686
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.028790389395194696
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.02817460317460317
+        }
+      ]
+    },
+    {
+      "id": "authoritative-storage",
+      "question": "Where are authoritative orders stored, rather than transported?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch stores authoritative order records in PostgreSQL."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions.",
+        "Dispatch stores authoritative order records in PostgreSQL."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.125
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.125
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "authoritative-storage",
+      "question": "Where are authoritative orders stored, rather than transported?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch stores authoritative order records in PostgreSQL."
+      ],
+      "selected": [
+        "Dispatch stores authoritative order records in PostgreSQL."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.6618365712325177
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.4241899016708484
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.33961491884438727
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.33961491884438727
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.32029707160317844
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.27396468400579976
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.249406760906103
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.23260957103980442
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.22562357076209463
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.1389273488319507
+        }
+      ]
+    },
+    {
+      "id": "authoritative-storage",
+      "question": "Where are authoritative orders stored, rather than transported?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch stores authoritative order records in PostgreSQL."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.03252247488101534
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.03177805800756621
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.03021353930031804
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.02919863597612958
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.029083245521601686
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.02900988017658188
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.028594771241830064
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.02857142857142857
+        }
+      ]
+    },
+    {
+      "id": "database-migration-contract",
+      "question": "What strategy keeps database schema rollouts compatible with replay workers?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes."
+      ],
+      "selected": [
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.3
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.1
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.1
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.1
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.1
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "database-migration-contract",
+      "question": "What strategy keeps database schema rollouts compatible with replay workers?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes."
+      ],
+      "selected": [
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.3985076764278975
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.32625746088135155
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.32625746088135155
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.24965992916265517
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.21816216776145075
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.20615967688134218
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.17948229081703435
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.14808760730596135
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.10678383024058692
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.09255714446962651
+        }
+      ]
+    },
+    {
+      "id": "database-migration-contract",
+      "question": "What strategy keeps database schema rollouts compatible with replay workers?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03200204813108039
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03200204813108039
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.0304147465437788
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.029877369007803793
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.029437229437229435
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.0293236301369863
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.02900988017658188
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.028404512489927477
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.027777777777777776
+        }
+      ]
+    },
+    {
+      "id": "streaming-history",
+      "question": "What current and former event transports are in the architecture history?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.18181818181818182
+        }
+      ]
+    },
+    {
+      "id": "streaming-history",
+      "question": "What current and former event transports are in the architecture history?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.3872129902904508
+        }
+      ]
+    },
+    {
+      "id": "streaming-history",
+      "question": "What current and former event transports are in the architecture history?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.03252247488101534
+        }
+      ]
+    },
+    {
+      "id": "auth-history",
+      "question": "What current and former authentication contracts are archived?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.125
+        }
+      ]
+    },
+    {
+      "id": "auth-history",
+      "question": "What current and former authentication contracts are archived?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.2935602837545005
+        }
+      ]
+    },
+    {
+      "id": "auth-history",
+      "question": "What current and former authentication contracts are archived?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.03278688524590164
+        }
+      ]
+    },
+    {
+      "id": "streaming-as-of-pilot",
+      "question": "Viewed after expansion, what streaming fact was current in the pilot?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch uses Redis Streams for event streaming.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "streaming-as-of-pilot",
+      "question": "Viewed after expansion, what streaming fact was current in the pilot?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.33762723555233526
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.18213782637082324
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.18213782637082324
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.17172517799231635
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.12070842461593308
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.10709116013170311
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.09607653130586628
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.09578344341814113
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.08693536649361658
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.019387057858481094
+        }
+      ]
+    },
+    {
+      "id": "streaming-as-of-pilot",
+      "question": "Viewed after expansion, what streaming fact was current in the pilot?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch treats retrieved runbook text as untrusted data.",
+        "Dispatch uses Redis Streams for event streaming.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03225806451612903
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03225806451612903
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.03177805800756621
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.03177805800756621
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.031024531024531024
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.030776515151515152
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.029631255487269532
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.029418126757516764
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.02919863597612958
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.02857142857142857
+        }
+      ]
+    },
+    {
+      "id": "partitions-supersession",
+      "question": "Which Kafka configuration supersedes the cutover partition count?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.25
+        }
+      ]
+    },
+    {
+      "id": "partitions-supersession",
+      "question": "Which Kafka configuration supersedes the cutover partition count?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.7150711944031778
+        }
+      ]
+    },
+    {
+      "id": "partitions-supersession",
+      "question": "Which Kafka configuration supersedes the cutover partition count?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "selected": [
+        "Dispatch configures the Kafka orders topic with 12 partitions."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.03278688524590164
+        }
+      ]
+    },
+    {
+      "id": "hostile-text-is-evidence",
+      "question": "What exact evidence documents the retrieved-content trust boundary?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch treats retrieved runbook text as untrusted data."
+      ],
+      "selected": [
+        "Dispatch treats retrieved runbook text as untrusted data."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.3333333333333333
+        }
+      ]
+    },
+    {
+      "id": "hostile-text-is-evidence",
+      "question": "What exact evidence documents the retrieved-content trust boundary?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch treats retrieved runbook text as untrusted data."
+      ],
+      "selected": [
+        "Dispatch treats retrieved runbook text as untrusted data."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.40070317983888565
+        }
+      ]
+    },
+    {
+      "id": "hostile-text-is-evidence",
+      "question": "What exact evidence documents the retrieved-content trust boundary?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch treats retrieved runbook text as untrusted data."
+      ],
+      "selected": [
+        "Dispatch treats retrieved runbook text as untrusted data."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.03278688524590164
+        }
+      ]
+    },
+    {
+      "id": "auth-as-of-clarification",
+      "question": "What authentication contract was current before federation?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.14285714285714285
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.14285714285714285
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "auth-as-of-clarification",
+      "question": "What authentication contract was current before federation?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.3630740306807845
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.1755577438567655
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.16303888391347157
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.16303888391347157
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.14303486377723573
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.10094312763976249
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.08417272763730756
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0804934276753671
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.07602652837022797
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.06681650023642417
+        }
+      ]
+    },
+    {
+      "id": "auth-as-of-clarification",
+      "question": "What authentication contract was current before federation?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with JWT bearer tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch stores authoritative order records in PostgreSQL.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.03252247488101534
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with JWT bearer tokens.",
+          "score": 0.03252247488101534
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.03057889822595705
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.030303030303030304
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.029850746268656716
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.02919863597612958
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.028577260665441927
+        },
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.028370221327967807
+        }
+      ]
+    },
+    {
+      "id": "auth-after-tombstone",
+      "question": "Which authentication fact is unopposed after the stale runbook is deleted?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.2
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.2
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.2
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.1
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.1
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "auth-after-tombstone",
+      "question": "Which authentication fact is unopposed after the stale runbook is deleted?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.4219358982759209
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.3381533042507503
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.32128326362402926
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.32128326362402926
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.14944705541127207
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.08954869272258217
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.08072259726674921
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.06189132173527397
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.03611424835557719
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.001095429862337595
+        }
+      ]
+    },
+    {
+      "id": "auth-after-tombstone",
+      "question": "Which authentication fact is unopposed after the stale runbook is deleted?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch authenticates operator requests with OIDC access tokens."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens.",
+        "Dispatch configures the Kafka orders topic with 12 partitions.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch treats retrieved runbook text as untrusted data.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.03278688524590164
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03200204813108039
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03200204813108039
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.031054405392392875
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 12 partitions.",
+          "score": 0.029957522915269395
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.028790389395194696
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.02877846790890269
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.02817460317460317
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.0273972602739726
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.02702702702702703
+        }
+      ]
+    },
+    {
+      "id": "partitions-as-of-cutover",
+      "question": "What partition count was current at cutover rather than after expansion?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "selected": [
+        "Dispatch delivers order events at least once."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.09090909090909091
+        },
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.0
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.0
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "partitions-as-of-cutover",
+      "question": "What partition count was current at cutover rather than after expansion?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "selected": [],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.24449504490313906
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.15130773667401368
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.07482738199062967
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.059446829283064925
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.059446829283064925
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.04508468141450815
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.03504311819519321
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.006260875099315175
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": -0.02995537846503637
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": -0.03142553777837988
+        }
+      ]
+    },
+    {
+      "id": "partitions-as-of-cutover",
+      "question": "What partition count was current at cutover rather than after expansion?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch configures the Kafka orders topic with 6 partitions."
+      ],
+      "selected": [
+        "Dispatch authenticates operator requests with OIDC access tokens.",
+        "Dispatch configures the Kafka orders topic with 6 partitions.",
+        "Dispatch delivers order events at least once.",
+        "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+        "Dispatch replay recovery is owned by the Platform team.",
+        "Dispatch uses Kafka for event streaming.",
+        "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+        "The Platform team owns Dispatch replay recovery."
+      ],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch configures the Kafka orders topic with 6 partitions.",
+          "score": 0.03252247488101534
+        },
+        {
+          "claim": "Dispatch replay recovery is owned by the Platform team.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "The Platform team owns Dispatch replay recovery.",
+          "score": 0.03149801587301587
+        },
+        {
+          "claim": "Dispatch migrates PostgreSQL schemas with expand-contract changes.",
+          "score": 0.03128054740957967
+        },
+        {
+          "claim": "Dispatch delivers order events at least once.",
+          "score": 0.03047794966520434
+        },
+        {
+          "claim": "Dispatch writes operator audit events to an append-only PostgreSQL ledger.",
+          "score": 0.029850746268656716
+        },
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.02964426877470356
+        },
+        {
+          "claim": "Dispatch authenticates operator requests with OIDC access tokens.",
+          "score": 0.0293236301369863
+        },
+        {
+          "claim": "Dispatch stores authoritative order records in PostgreSQL.",
+          "score": 0.02919863597612958
+        },
+        {
+          "claim": "Dispatch treats retrieved runbook text as untrusted data.",
+          "score": 0.02857142857142857
+        }
+      ]
+    },
+    {
+      "id": "history-cutoff-before-cutover",
+      "question": "Does history bounded before cutover exclude the future Kafka decision?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "history-cutoff-before-cutover",
+      "question": "Does history bounded before cutover exclude the future Kafka decision?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [],
+      "exact": false,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.1081832367623709
+        }
+      ]
+    },
+    {
+      "id": "history-cutoff-before-cutover",
+      "question": "Does history bounded before cutover exclude the future Kafka decision?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.03278688524590164
+        }
+      ]
+    },
+    {
+      "id": "replay-pilot-not-current",
+      "question": "Does replaying the pilot snapshot retain Redis despite the later Kafka cutover?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.09090909090909091
+        }
+      ]
+    },
+    {
+      "id": "replay-pilot-not-current",
+      "question": "Does replaying the pilot snapshot retain Redis despite the later Kafka cutover?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.37776839108654514
+        }
+      ]
+    },
+    {
+      "id": "replay-pilot-not-current",
+      "question": "Does replaying the pilot snapshot retain Redis despite the later Kafka cutover?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Redis Streams for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Redis Streams for event streaming.",
+          "score": 0.03278688524590164
+        }
+      ]
+    },
+    {
+      "id": "streaming-latest-versus-replay",
+      "question": "What streaming fact is current when the pilot snapshot is replayed?",
+      "strategy": "lexical",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.1
+        }
+      ]
+    },
+    {
+      "id": "streaming-latest-versus-replay",
+      "question": "What streaming fact is current when the pilot snapshot is replayed?",
+      "strategy": "embedding",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.40395877869533614
+        }
+      ]
+    },
+    {
+      "id": "streaming-latest-versus-replay",
+      "question": "What streaming fact is current when the pilot snapshot is replayed?",
+      "strategy": "hybrid",
+      "expected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "selected": [
+        "Dispatch uses Kafka for event streaming."
+      ],
+      "exact": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "10": 1.0
+      },
+      "ranking": [
+        {
+          "claim": "Dispatch uses Kafka for event streaming.",
+          "score": 0.03252247488101534
+        }
+      ]
+    }
+  ],
+  "spec_hash": "2f0eff06ad0ff907607a148bbba59f8676cade73e966a256e1978be94acdff08"
+}

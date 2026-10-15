@@ -50,9 +50,16 @@ async def test_tools_are_async_typed_and_preserve_legacy_tools():
     # answer without knowing the opt-in flag. `memory_query` is the v0.8.0 name
     # for `memory_recall` and is kept so existing agents keep working.
     explained = (*OPERATIONS, "recall", "query", "explain")
-    assert {name for name in tools if name.startswith("memory_")} == {
-        tool_name(operation) for operation in explained
-    }
+    # `memory_remember` is deliberately outside this family: it takes flat
+    # arguments -- statement, corpus, key, file -- rather than a MemoryRequest,
+    # because a write has no query, no budget and no intent. Asserting the whole
+    # `memory_` namespace as this family would fail on it for being different,
+    # which is the wrong reason. It is named explicitly below so that it cannot
+    # be dropped, and so that a seventeenth tool still fails here.
+    flat_writes = {"memory_remember"}
+    family = {name for name in tools if name.startswith("memory_")} - flat_writes
+    assert family == {tool_name(operation) for operation in explained}
+    assert flat_writes <= tools.keys()
     for operation in explained:
         tool = tools[tool_name(operation)]
         assert inspect.iscoroutinefunction(getattr(mcp_server, tool.name))

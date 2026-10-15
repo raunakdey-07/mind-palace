@@ -834,18 +834,27 @@ def ingest(
     """Ingest Markdown file(s) into the knowledge store."""
     import httpx
 
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+
     path = path.rstrip("/")
     url = "http://localhost:8000/api/ingest/file"
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-        resp = httpx.post(url, json={"content": content, "path": path}, timeout=30)
+        # Through the same resolver as `ingest-repo`, `remember --file` and the
+        # two routes. This read happens before the HTTP call, so an unenforced
+        # path here is a local file read whose contents are then posted to a
+        # socket -- the exposure does not wait for the server.
+        resolved = require_permitted(path)
+        content = resolved.read_text(encoding="utf-8")
+        resp = httpx.post(url, json={"content": content, "path": str(resolved)}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         typer.echo(f"[OK] {data.get('message', 'Ingested')}")
     except FileNotFoundError:
         typer.echo(f"[ERROR] File not found: {path}", err=True)
+        raise typer.Exit(code=1)
+    except IngestPathRefused as exc:
+        typer.echo(f"[ERROR] {exc}", err=True)
         raise typer.Exit(code=1)
     except httpx.HTTPError as e:
         typer.echo(f"[ERROR] API error: {e}", err=True)
@@ -855,18 +864,53 @@ def ingest(
 @app.command()
 def ingest_repo(
     path: str = typer.Argument(..., help="Path to the content repository"),
+    corpus: Annotated[str, typer.Option("--corpus", help="Corpus name.")] = DEFAULT_CORPUS,
+    verbose: State = False,
 ) -> None:
-    """Batch ingest all Markdown files from a repository."""
-    import httpx
+    """Batch ingest all Markdown files from a repository.
 
-    url = "http://localhost:8000/api/ingest/repo"
+    Runs in-process, like every other command here. It used to be an HTTP
+    client to a hard-coded http://localhost:8000, which meant the one command
+    the README documents for getting a document in was also the only one that
+    needed a server running, and failed with a bare connection refused when it
+    did not.
+
+    The ingest-root check the route performs is applied here too, so a path
+    outside MIND_PALACE_INGEST_ROOTS is refused identically rather than being
+    quietly allowed by dropping the HTTP hop. `--corpus` is the same option every
+    other write command already carries; the route read it off the request body.
+    """
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+    from mindpalace_sdk import MindPalace
+
     try:
-        resp = httpx.post(url, json={"repo_path": path}, timeout=300)
-        resp.raise_for_status()
-        data = resp.json()
-        typer.echo(f"[OK] {data.get('message', 'Ingested')}")
-    except httpx.HTTPError as e:
-        typer.echo(f"[ERROR] API error: {e}", err=True)
+        resolved = require_permitted(path)
+    except IngestPathRefused as exc:
+        typer.echo(f"[ERROR] {exc}", err=True)
+        raise typer.Exit(code=1)
+
+    # The route answered 400 "Path not found" here. In-process the same condition
+    # reaches the SDK as a short result dict with no count keys, so it would
+    # surface as KeyError('added'). Check it, or this change would trade one
+    # opaque failure for a worse one.
+    if not resolved.is_dir():
+        typer.echo(f"[ERROR] Path not found: {resolved}", err=True)
+        raise typer.Exit(code=1)
+
+    client = MindPalace(_corpus_or_fail(corpus))
+    try:
+        summary = client.sync(str(resolved), delete_removed=False)
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
+        _fail(exc, verbose)
+        return
+    typer.echo(
+        f"[{'OK' if summary.success else 'FAIL'}] sync: +{summary.added} "
+        f"~{summary.changed} ={summary.unchanged} -{summary.deleted} "
+        f"!{summary.failed}, {summary.chunk_count} chunks"
+    )
+    for error in summary.errors:
+        typer.echo(f"  - {error}", err=True)
+    if not summary.success:
         raise typer.Exit(code=1)
 
 

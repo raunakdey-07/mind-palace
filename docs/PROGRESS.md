@@ -1,178 +1,231 @@
 # Progress
 
-One line per phase, newest last. **NOT DONE** means the budget ran out before the
-phase started or finished, and nothing in it is claimed.
+An index, one line per phase, newest last. **NOT DONE** means the phase was not
+finished and nothing in it is claimed.
 
-Every number here came from a command run in the session named in its entry.
-This file is the index; the detail lives in the documents it links.
+Every number came from a command run in the session named beside it.
 
----
-
-## Session 7 — 2026-10-13: push, land the competitive doc, then the lab measures the product
-
-**Written first, before any work, with every phase below marked NOT DONE.**
-Branch `wip/claims-and-lab`, cut from `main` at `f08d8f8` (the merge of
-`wip/platform-readiness`).
-
-**Owner decisions D1 (model access) and Hub access were not filled in before this
-session started.** Both are still the bracketed placeholders, so Phase 4c's MiniLM
-LongMemEval baseline and all of Phase 5 are blocked on the owner's answer, not on the
-work. They are recorded as blocked rather than guessed.
-
-| phase | state | one line |
-|---|---|---|
-| 0 push | **DONE** | Branch pushed. Four runs, all `success`, 5/5 jobs each: **`38400659433`** @ `312958d`, **`38410829513`** @ `c3c8252`, **`38414137784`** @ `bc8af70`, **`38417158234`** @ `68ff8e3`. `log_error_verbosity = terse` in the compose file, with the `STATEMENT` caveat in the file itself |
-| 1 land the competitive doc (docs only) | **DONE** | `docs/competitive-landscape.md` added; **6 figures corrected against primary sources**; 5 Mind Palace figures verified against evidence artifacts and `STATUS.md`; 8 sources fetched and read directly, 5 marked unverified this session; linked from the docs index only; `check_evidence --strict` passing |
-| 2 finish the claims-true work | **PARTIAL** | 2a, 2b, 2d, 2e, 2f **DONE**. All 8 skips named. Evidence gate tied to HEAD, rejecting a stale figure, with 6 tests over it. The `MEMORY_TEST_DATABASE_URL` cause found and proven. Warnings 39 -> 8. `corpus` vs `corpora` documented, nothing added. **2c NOT DONE**: the 9 `memory_claim_embeddings` violations are isolated to `tests/test_context_product.py` and are a fixture defect, but the 2 `memory_evidence` and 1 `memory_snapshot_versions` are **not established** |
-| 3 the lab measures the product | **PARTIAL** | **3a premise DONE:** the product path re-run this session reproduces **194/202 exactly** (`scripts/benchmark/m0115_experiments.py`, strategy `C_fallback`, dataset `9cdecda73cbdc8ae`, A 178 and B 164 also identical to the recorded artifact). The lab's own arm A is still the old arm A at **117/202 correct**, not 151 as the docs claimed -- that error is corrected. **3a arm rewrite, 3b, 3c, 3d, 3e NOT DONE**, so every harm-matrix and recall figure remains a property of the lab arm, not of the product |
-| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | Nothing started. 4a the three input shapes, 4b the three ADR repositories with "superseded by" status, 4c LongMemEval reachability and per-category counts plus the MiniLM baseline **blocked: Hub access not answered**, 4d `docs/wedge-decision-note.md` |
-| 5 downstream pilot | **NOT DONE** | **blocked, D1 not answered.** Four arms, one small and one stronger model with exact IDs, per slice, harm first, Wilson intervals |
-
-**Owner decides when 1.0.0 is ready.** Nothing in this file implies otherwise.
+**The full history of all twelve sessions, unedited, is
+[docs/internal/progress-history.md](internal/progress-history.md).** This file
+was 1397 lines; that is where the detail went, not the bin. Figures quoted below
+are the ones still load-bearing. Anything not here is in the history file or in
+the document the phase links.
 
 ---
 
-## Session 6 — 2026-10-12: green first, then the claims, then the lab (branch `wip/platform-readiness`)
+## Session 12 — 2026-10-14: cut what nobody reads (branch `wip/independent-set`)
 
-**Written first, before any work, with every phase below marked NOT DONE.**
+- **1a** DONE. Five benchmark scripts with zero callers → `scripts/archive/`
+  (911 lines). Kept, not deleted: their numbers are cited.
+- **1b** DONE. This file 1397 → one page. History moved unedited, byte-identical
+  (verified by `diff -q` against `git show HEAD:docs/PROGRESS.md`).
+- **1c** DONE. `docs/first-hour-audit.md` refreshed in place: install measured at
+  79 s, not the 202 s it claimed. The 5.9 GB figure was right.
+- **1d** DONE. First-hour read load 19 files / 7134 lines → 3.
+- **1e** DONE. Nine ignored `eval/results/` files and the two adjudication
+  documents tracked; manifest reconciled.
+- **1f** DONE. `.env.example` holding every variable compose requires.
+- **1g** REPORTED. CI minutes before and after; slow-jobs-on-PR **proposed, not
+  applied**.
+- **2** DONE. The test session fixture now fails loudly when it cannot reach a
+  database. Before: 1645 skipped, exit 0.
+- **3** DONE. `ingest-repo` works in-process. HTTP route unchanged.
+- **4** DONE. `remember` reachability documented in `docs/authoring.md`.
+- NOT DONE. No measurement was started. Nothing was scored.
 
-Branch is RED on CI. Run `38242335025`, `failure`, 9m42s: **Lint and Test** failed on
-2 tests, and the other four jobs (Clean install, Five-minute path, Upgrade
-safety, Docker Build) were **skipped** because they depend on it.
+## Session 11 — 2026-10-14: reduction round (branch `wip/independent-set`)
 
-| phase | state | one line |
-|---|---|---|
-| 1 CI green | **DONE** | Run **38375728987**, `success`, 5/5 jobs, nothing skipped, 13m49s wall-clock: Lint and Test; Clean install from the built wheel; Five-minute path; **Upgrade safety, from v0.9.0**; Docker Build. Runner suite: **1613 passed, 8 skipped** (main) + 183 passed, 1 skipped (tenant isolation). **Hermetic on the runner: the `NOT hermetic` line is gone** (0 occurrences). The two `RUNTIME_ROLE` literal failures are fixed. CPU torch: default PyPI wheel **900 MB** -> CPU index **184 MB**. |
-| 2 make our own claims true | **PARTIAL** | **2b and 2f DONE.** `scripts/db/runtime_roles.sql` printed the runtime password on every run (`SELECT set_config` returns its argument and psql prints every result set); now ends in `\\g /dev/null` -- canary password: **0 in stdout, 0 in stderr, exit 0**, role still `NOSUPERUSER NOBYPASSRLS`. security.md corrected. **The leaking `mp_tenant_test_<hex>` role is fixed**: a cluster carried 24; baseline 0 -> run 1 -> 0 -> run 2 -> 0. **2a, 2c, 2d, 2e NOT DONE.** |
-| 3 the lab measures the product | **NOT DONE** | arm A on the real product path reproducing 194/202; the harm matrix against it; recall@1/3/5; the arm-E threshold cross-validated; arm G if Hub allowed |
-| 4 downstream pilot | **NOT DONE** | needs D1. Arms A/B/C/D, at least one small and one stronger model, per slice, harm first |
-| 5 positioning and authoring cost | **NOT DONE** | `docs/what-mind-palace-claims.md`; the raw-notes-to-claims cost for a 20-page document |
+- **0a** DONE. Inventory of code, tests, scripts, docs, CI minutes, surfaces.
+- **0c** DONE. Manifest reconciled to 32 = 24 `eval/` + 8 `docs/performance/`;
+  the two M007.1 adjudication documents tracked, owner-approved. Zero existing
+  frozen files modified.
+- **1** DONE. The first hour as a stranger. Three stumbles, all unnamed in the
+  README: three undocumented required variables failing `docker compose` one at a
+  time; `ingest-repo` being an HTTP client to a hard-coded `localhost:8000`; and
+  plain Markdown and transcripts ingesting fine while answering *"Nothing was
+  invented"*, which reads as "the document was ignored". README text and the
+  abstention message fixed; the abstention itself unchanged.
+- **2** DONE. Labelled-passage option, dev set only. At the shipped threshold it
+  rescues **0** answerable questions, because the arm abstains on zero of them;
+  its whole value sits at the 85%-coverage point. 0 of 26 absent questions would
+  receive a gold passage at either point.
+- NOT FIXED. Running with only `MEMORY_TEST_DATABASE_URL` set skipped all 1645
+  tests and exited 0. **Fixed in Session 12, Phase 2.**
 
-**Owner decides when 1.0.0 is ready.** Nothing in this file or in
-`docs/release/v1.0.0-readiness.md` implies otherwise; the readiness document is an
-informational checklist and stays labelled as one.
+## Session 10 — 2026-10-14: stop files vanishing, correct the record (branch `wip/independent-set`)
 
-## Session 5 — 2026-10-12: stop misleading, then the gate, then the documents
+- **1d** DONE. Audit of 12 ignored non-cache files; 7 documents recovered to
+  tracked. `scripts/check_doc_paths.py` and `scripts/check_frozen.py` wired into
+  CI and mutation-tested.
+- **2a** DONE. A wrong `dataset_hash` claim removed. Two definitions of
+  "answerable" differ by exactly one question, `rel-cycle` / `ho-rel-cycle`.
+- **2b** DONE. `docs/performance/m0115-gold-audit.json`: gold is present for
+  175 of 202.
+- **2c** DONE. BM25 tie-break made deterministic. It **costs one question**
+  (93→92, 86→85, 67→66). Lab protocol §9.1 now requires Wilson and paired
+  bootstrap intervals.
+- **2d** DONE. The product-code `MEMORY_TEST_DATABASE_URL` fallback removed.
+  Zero test changes.
+- **3b** DONE. The harm matrix was **INVALID as a correctness claim**: it counted
+  abstaining on an absent question as correct. The real gap is 194−117 = **77**,
+  not 43.
+- **3a** NOT DONE. The independent question set was never built. Nothing scored.
+- **3c** NOT DONE. The passage-option measurement.
 
-**Written first, before any work, with every phase below marked NOT DONE.** An
-early stop must lose nothing.
+## Session 9 — 2026-10-14: reconcile the numbers (branch `wip/independent-set`)
 
-| phase | state | one line |
-|---|---|---|
-| 0 stop misleading | **DONE** | banners on both lab documents: arm A is not the product path, 151/202 not 194/202, so the harm matrix, the 36.4% ceiling and every confident-wrong rate are NOT ESTABLISHED for the product. `v0.10.0` replaced with the 0.9.x train; one historical occurrence in `docs/release-map.md` kept, because it records that M015.2/M016 were consolidated. Tag counts reconciled: **13 tags exist, 8 were matrix rows**, five named with reasons. |
-| 1 upgrade gate that can see policy bugs | **PARTIAL** | **1a/1b/1c DONE.** A real uvicorn server as `mindpalace_runtime` in `required` mode, read through the public SDK with a real credential: 11 assertions, all green on a v0.9.0 archive upgraded to 010. The operator step is asserted, not assumed -- a credential is a tenant when issued, and each grant widens it. **The wrong-policy mutation is CAUGHT, exit 1**, and the control exits 0. **1d/1e/1f NOT DONE** (v0.8.0 path, ~1,000-version upgrade, Docker bind assertions). |
-| 2 harness and CI honesty | **NOT DONE** | the leaking per-session role; clean-room on min and max Python; the negative-posture mutation |
-| 3 STATUS honesty and release plan | **PARTIAL** | **3a and 3e DONE.** STATUS.md now carries one three-score table with 194/202 labelled a DEVELOPMENT SCORE and held-out v1 (burned) and frozen 45/60 beside it; the four-way breakdown stops banking the 1 confident-wrong that its own runner documents as a grader disagreement (product 0, grader 1). The 'no migration' sentence is now explicitly past tense, with the downgrade cost stated. `docs/release/v1.0.0-readiness.md`: 8 rows, **0 MET**, 2 PARTIAL, 5 NOT MET, 1 NOT ESTABLISHED. **3b (commit classification, cherry-pick split decision), 3c (CHANGELOG drafts), 3d (tag checklists) NOT DONE.** |
-| 4 lab measures the product | **NOT DONE** | arm A on the real product path reproducing 194/202; the harm matrix against it; recall@1/3/5 per slice; the arm-E threshold cross-validated |
-| 5 D3 design note | **NOT DONE** | three options with receipt/pack/SDK/MCP effects and 1.0.0-contract compatibility |
+- **0** DONE. 6 CI-only skips root-caused and fixed via `tenant_harness.sync_url()`;
+  `scripts/check_skips.py` added and mutation-tested.
+- **1** DONE. `check_evidence --require-head --junitxml`; all 12 FK violations
+  attributed (12 a fixture defect, now 0; 3 deliberate negative tests).
 
-## Session 4 — 2026-10-12: release safety
+## Session 8 — 2026-10-13: correct the record, the skips, the evidence (branch `wip/wedge`)
 
-**CI green on a real runner, with the new gate job.** Run `38237730312`,
-`success`, five jobs: Lint and Test; Clean install from the built wheel; The
-five-minute path; **Upgrade safety, from v0.9.0**; **Docker Build** (used to be
-main-only).
+- **0b** DONE. One confusion table, summing to 202, asserted by script.
+- **0c** DONE. Arms renamed; BM25 tie-break made deterministic (see Session 10).
+- **0e** DONE. The `memory_db` fixture defect fixed.
+- **1a–1c** DONE. The six CI-only skips (see Session 9).
+- **2b** DONE. The 1625-vs-1619 test-count slip reconciled.
 
-Phase 1 proved the v0.9.0 -> head 010 upgrade preserves everything: the v0.9.0
-receipt still verifies offline, claim identities do not move, no claim is lost,
-the pack is byte-identical once the clock is pinned. Supersession survives.
+## Sessions 1–6 — 2026-10-11 to 2026-10-12 (branches `wip/wedge`, `wip/platform-readiness`)
 
-**A downgrade destroys `memory_principals` and disables RLS on all 9 protected
-tables. It preserves all 6 claims.**
-
-**The fixture cannot prove tenant preservation.** A `DELETE FROM
-memory_principals` mutation in migration 008 SURVIVED, because a v0.9.0 archive
-has no principals -- the table is created by 008 itself. Phase 1c this session
-replaces that with a mutation the job must actually catch.
-
-Phase 2a: `tests/tenant_harness.py` provisions a per-session role and stops
-rotating the cluster's `mindpalace_runtime`. Two concurrent pytest sessions on
-one cluster: 61 passed each, shipped role password UNCHANGED. **One test role
-still leaks per session** -- Phase 2a this session.
-
-## Session 3 — 2026-10-12: CI green
-
-Run `38232167537`, `success`, 14m57s. Three runner-only defects, each one commit
-and each hiding behind the next because the following step reported `skipped`:
-the posture step asserted `import api.main` refuses when the product checks the
-lifespan; the posture steps ran after a step that rotated the runtime role's
-password; the marketing example ran half of its own two-shell instructions.
-
-## Session 2 — 2026-10-11
-
-Phases 0-3 done. Secret scan clean; branch pushed with tags byte-identical.
-Silent-failure fixes with a fail-before/pass-after regression test. Stale-runtime
-handshake. Protocols frozen. Retrieval lab built, arms A-F, arm G unreachable.
-**v4 does not exist.** Phase 6 downstream NOT DONE.
-
-## Session 1 — 2026-10-11
-
-Hermetic suite, evidence hygiene, docs split, two release blockers fixed (wheel
-missing `mindpalace_errors`; default-corpus `char(64)` read-back).
-
----
-
-## Standing facts that are easy to get wrong
-
-* **`origin/main` is `v0.9.0`.** No `v0.9.1` tag locally or remotely.
-* **`main` is contained in this branch.** All 5 commits `main` has ahead of
-  `origin/main` are ancestors of `wip/platform-readiness`.
-* **Migrations 008, 009 and 010 have never shipped.** They all arrived in
-  `da8a14a`, which is after v0.9.0. v0.9.0's schema head is 007.
-* **Held-out v1 is burned** (157 questions). Diagnostic only.
-* **v3 is not independent of the dogfood. v4 does not exist.**
-* **Sealed scoring has never happened.** No number in this repository is
-  evidence of generalisation.
-* **Arm A in the retrieval lab is not the product path.** It uses rank-1 grading
-  with no lexical fallback and reproduces **117/202 correct** (151 answered, 33
-  wrong), not 194/202. Anything measured against it is a property of that arm,
-  not of the product. Phase 3 exists to fix exactly this. *(Corrected
-  2026-10-13: this line previously said "reproduces 151/202", which conflated
-  the number answered with the number correct.)*
+CI made green; claims and the retrieval lab built; release safety added. Detail in
+the history file.
 
 ---
 
-## What this session got wrong, and how it was found
+## Design note: `memory_remember` as an MCP tool
 
-Kept here because the corrections are the evidence.
+**Owner approval to IMPLEMENT: _blank in the brief._** Nothing below has been
+built. This is the note the brief asks for when the answer is NO or absent, and
+an absent answer is not an approval.
 
-1. **A runner figure was laundered through the gate's own output.** Run
-   `38410829513` was recorded as "1625 passed". 1625 is the *workstation*
-   count. The runner said **1619**. The number came from grepping the whole log
-   archive and taking the first match, which was the `check_evidence` step
-   echoing back the workstation record rather than the `Run tests` step. Fixed
-   in `68ff8e3`. The lesson is a real limitation, not a slip of the pen:
-   `--require-head` ties a figure to a **commit**, and it cannot tie a figure to
-   a **log**. The run record is hand-written either way, so the gate believes a
-   wrong number exactly as much as a right one.
+### The finding that motivates it
 
-2. **An existing doc's headline number was wrong.** `docs/performance/
-   retrieval-lab-report.md` said arm A was "correct on 151 of 202". 151 is the
-   number *answered*; `correct` is 117. The harm matrix underneath was always
-   right -- its own row reads 112 + 47 + 4 + 39 = 202, putting arm A at 116 --
-   so only the prose label was wrong, and it had been copied into a banner and
-   into this file.
+An agent cannot write a fact today. The 15 MCP tools are `context`,
+`list_corpora`, `memory_as_of`, `memory_changes`, `memory_current`,
+`memory_evidence`, `memory_explain`, `memory_history`, `memory_pack`,
+`memory_query`, `memory_recall`, `memory_replay`, `memory_snapshot`, `search`,
+`sync`. `remember` is reachable from the CLI, the SDK and REST, and from no MCP
+client. The only MCP write that carries a claim is `sync(corpus, path)`, which
+needs a file the agent has to author on disk with a `claims:` block.
 
-3. **My own environment caused five test failures that were not defects**, and
-   I nearly reported them as such: an exported `PYTHONPATH` made the wheel
-   test's subprocess import from the source tree. The lesson is that "these
-   tests fail" was my conclusion before I had checked whether the tests were
-   wrong or the box was.
+### Tool and arguments
 
-4. **A stale session database from a killed run caused a 6-failure run**, and I
-   recorded a number from that run before noticing. Disposable databases are
-   only disposable if the previous one was actually dropped.
+Mirror the SDK exactly, so there is no second argument shape to keep in step:
 
-5. **Six CI-only skips remain unexplained.** Instrumenting
-   `tests/test_ingestion_statistics.py::_db_available()` to log its real
-   exception recorded **zero** failures across a full local run, and all 6 tests
-   pass locally every time. Their CI-only cause is **not established** and is
-   not guessed at anywhere in this repository.
+```
+memory_remember(statement: str, corpus: str | None = None,
+                key: str | None = None, file: str | None = None)
+```
 
-## The mechanism that actually found things
+`statement`, `corpus`, `key`, `file` — the four parameters of
+`MindPalace.remember` at `mindpalace_sdk.py:874`. Returns `MemoryResult`, the
+same dataclass `sync` already returns, serialised as the tool's structured
+output. `file` is read by the server, not by the agent, and is subject to
+`require_permitted` like any other ingest path.
 
-Every substantive error above was caught by a check comparing two things that
-ought to agree, and failing when they did not: the gate refusing a figure whose
-commit did not match, the lab artifact contradicting a prose label, a test
-passing alone but not in a suite, an instrumented probe logging zero hits.
-None of them was caught by re-reading the code.
+### Role and credential
+
+Same as every other MCP tool: the credential is
+`MIND_PALACE_MCP_CREDENTIAL`, resolved by the existing `_caller()` /
+`_client(corpus)` machinery, and the caller needs the `read_write` role. No new
+credential, no new scope table, no new env var. A credential with only read
+rights must be refused **by the existing authorization path, not by a check in
+the tool** — a tool-level check would be the first thing to drift.
+
+### Idempotency
+
+Already correct and worth keeping as the contract. Remembering an identical
+statement returns `unchanged=True` and the same `version_id`; remembering the
+same `key` with new text supersedes. So an agent retrying a failed call cannot
+duplicate, and an agent looping cannot grow the corpus. A tool that did not
+preserve this would be a new footgun, not a new capability.
+
+### The exact-quote rejection
+
+**It does not apply here, and pretending otherwise would be the real design
+error.** `remember` takes the statement and generates its own exact-substring
+evidence from it, so there is no separate `evidence` field to mismatch — the
+failure mode that bites document authors does not exist on this path.
+
+Two exceptions, and both must be returned to the agent as data, not as a tool
+error:
+- `file=` with a statement that is not a substring of that file. Same rejection
+  the ingest path raises, same wording: *"evidence must be an exact substring of
+  an archived chunk"*. An agent needs the document version in the message, or it
+  cannot work out which file it mis-quoted.
+- a `key` that fails `validate_corpus_name` / corpus resolution. Returned as the
+  structured error the other tools already return.
+
+A rejection must come back as a normal tool result carrying the reason, never as
+a JSON-RPC protocol error. A protocol error looks like a broken server and
+invites a retry; a structured refusal tells the model what to change.
+
+### Untrusted source text
+
+The sharp edge. `statement` is attacker-controllable in the threat model where a
+model has ingested a document and is asked to remember something from it. Three
+consequences:
+
+1. **The statement is data, not instruction.** It must never be interpolated
+   into anything that changes behaviour. This is already true of every write
+   path; it is named here because an MCP tool is called *by a model reading
+   text*, which is the one place where that assumption is load-bearing.
+2. **No secret-free claim is a safe claim.** Storing a string from an untrusted
+   document makes it retrievable by anyone who can read the corpus, and
+   retrievable is durable. There is no sanitisation that makes this safe; the
+   only mitigation is that the caller's credential decides.
+3. **`file=` is the sharper one.** An agent can be talked into `file="/etc/..."`.
+   `require_permitted` already refuses paths outside `MIND_PALACE_INGEST_ROOTS`
+   and its message deliberately does not name the allowed roots. That refusal
+   must be surfaced verbatim and must not be enriched for the MCP case.
+
+The honest position: this tool makes it *easier* for a model to write to memory,
+and the system's answer to bad memory is `history` and erasure, not prevention.
+That trade should be an explicit owner decision, not a side effect.
+
+### Tests needed
+
+- the tool appears in `tools/list` and every tool has a description;
+- `statement` alone writes a claim whose evidence is its own exact substring;
+- repeating it returns `unchanged=True` and the same `version_id`;
+- a second `key` supersedes and `memory_history` shows both;
+- `file=` outside the ingest roots is refused, and the message names no root;
+- `file=` with a non-substring statement returns the rejection as a *result*;
+- a read-only credential is refused;
+- an untrusted string containing instruction-shaped text is stored verbatim and
+  changes no behaviour.
+
+### What a test would already break
+
+`.github/workflows/ci.yml:875` asserts `len(tools) == 15`. That is the **only**
+place the tool list is pinned — `tests/test_mcp_server.py` has three tests and
+none enumerates the tools. So a sixteenth tool breaks CI in one line, in the same
+job this session wired the clean-room script into, and that assertion should move
+into `tests/test_mcp_server.py` first so the count lives next to the server.
+
+### Diff size estimate
+
+| | lines |
+|---|---:|
+| `@mcp.tool` + docstring + `_execute_memory("remember", ...)` | ~30 |
+| `MemoryRequest` reuse or a small write-shaped request model | ~10 |
+| authorization on the write path, if not already shared | ~15 |
+| tests | ~90 |
+| `ci.yml` `15` → `16` | 1 |
+| **total** | **~145** |
+
+Above the ~120 line bar in the brief, before any argument-shape validation worth
+writing. The honest answer to "under ~120?" is **no**, so even with approval this
+wants its own round rather than being bolted on.
+---
+
+## Standing facts
+
+- **`origin/main` is `07d0f91`, the merge of PR #4.** Neither `wip/wedge` nor
+  `wip/independent-set` has ever been merged, and no PR exists for either.
+- 13 tags. Latest is v0.9.x. Tagging and 1.0.0 are the owner's decision.
+- `eval/` and `docs/performance/baseline-packs.json` are frozen and unchanged
+  since `v0.9.0`.
+- No test has ever been weakened, skipped or deleted to reach green.

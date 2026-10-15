@@ -68,7 +68,7 @@ reproduces the constraint in Python and fails with the same
 
 | Step | Time | Notes |
 |---|---:|---|
-| `python -m venv` + `pip install -r requirements.txt` | **202 s** | produces a **5.9 GB** venv — see stumble 1 |
+| `python -m venv` + `pip install -r requirements.txt` | **202 s** cold, **79 s** warm pip cache | both produce a **5.9 GB** venv — see stumble 1 |
 | `pip install -e .` | 5 s | |
 | `alembic upgrade head` | 1 s | provisions pgvector, pgcrypto and pg_trgm itself |
 | `mindpalace init` | <1 s | |
@@ -77,8 +77,16 @@ reproduces the constraint in Python and fails with the same
 | second `recall` | 0.93 s | |
 | `explain`, warm | 0.96 s | |
 
-**From `pip install` to first correct recall: about 221 s**, of which 202 s is the
-dependency install. **After the dependency install is cached, about 19 s.**
+**From `pip install` to first correct recall: about 221 s** cold, **about 98 s** with
+pip's HTTP cache already warm. The dependency install is the whole difference:
+202 s of the 221, or 79 s of the 98. **After the dependency install is cached,
+about 19 s.**
+
+Re-measured 2026-10-14 (Session 12) in a clean clone on this workstation, same
+command, default index, Python 3.14.8: **79 s, exit 0, 5.9 GB**, `torch
+2.14.1+cu130`. The 79 s run had a warm pip HTTP cache; the 202 s run did not. The
+**5.9 GB figure is unchanged and is the part a developer's disk notices.** Treat
+202 s as the cold number and 79 s as the floor, not as a correction of it.
 
 The README says "roughly 30 seconds" for the model download. Measured here at
 13 s on a warm network; the README's figure is not wrong, but it is the only
@@ -86,6 +94,33 @@ number in the install section that is not a rounding of something measured on
 this machine.
 
 ## Stumbles, ranked by how likely a new developer is to stop here
+
+Re-walked literally on 2026-10-14 (Session 12). The two blockers above were fixed
+and did not reproduce. **Three new failures did**, all unnamed in the README, and
+all three are now fixed in README text and, for the third, in the abstention
+message:
+
+1. **`docker compose up -d postgresql` failed three times**, one undocumented
+   required variable per failure: `MIND_PALACE_RUNTIME_PASSWORD`, then
+   `MIND_PALACE_INGEST_ROOTS`, then `MIND_PALACE_CURSOR_SECRET`. It is the third
+   command in the README, directly under the words *"That is the whole setup."*
+   Ranked first: it fails in one second and says nothing about where to put the
+   value.
+2. **`mindpalace ingest-repo ./docs` answered `[Errno 111] Connection refused`.**
+   It is an HTTP client to a hard-coded `http://localhost:8000`, while every other
+   command runs in-process. Then a 403 unless the path is inside
+   `MIND_PALACE_INGEST_ROOTS`. This is the only documented way to ingest a
+   document.
+3. **Plain Markdown and a conversation transcript ingest successfully and answer
+   nothing**, with *"Nothing was invented: Mind Palace records only what was
+   remembered."* Both files *were* stored — 3 documents, 4 chunks. What they lack
+   is a `claims:` block, and that, not the search, is why recall is empty. The
+   message read as "the document was ignored".
+
+The original two below are kept as written: they are the record of what was true
+then.
+
+### 1. `requirements.txt` installs 5.9 GB, most of it CUDA
 
 ### 1. `requirements.txt` installs 5.9 GB, most of it CUDA
 

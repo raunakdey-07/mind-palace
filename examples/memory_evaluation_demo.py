@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from api.models.memory import MemoryRequest, MemoryResponse
@@ -61,7 +62,12 @@ async def walk_workload() -> None:
     print("Dispatch A–G | real authored fixture | PostgreSQL, always rolled back")
     print("Artificial deterministic fixture embeddings; NOT retrieval-quality evidence.")
     print("No model download, LLM call, persistent corpus, or report file.\n")
-    async with memory_benchmark_workload(SPEC, embeddings="fixture") as workload:
+    # Passed explicitly, not left to an environment fallback: this used to rely on
+    # `MEMORY_TEST_DATABASE_URL`, which is a test-only variable read by product
+    # code. `DATABASE_URL` is what the deployment is configured against.
+    async with memory_benchmark_workload(
+        SPEC, embeddings="fixture", database_url=os.getenv("DATABASE_URL")
+    ) as workload:
         require([s["id"] for s in workload.spec["stages"]] == list("ABCDEFG"), "Expected A–G")
         require(len(workload.spec["queries"]) == 39, "Expected 39 authored queries")
         captured_bytes, captured_normalized, responses = {}, {}, {}

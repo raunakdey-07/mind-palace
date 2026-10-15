@@ -94,6 +94,14 @@ helm/
 !/docs/research/**
 !/docs/operations/
 !/docs/operations/**
+# docs/PROGRESS.md was 1397 lines and is now an index. The full text of all
+# prior sessions moved here, unedited, rather than being cut. Tracked so the
+# citations from docs/performance/retrieval-lab-report.md resolve on a clone.
+!/docs/internal/
+!/docs/internal/**
+# The first of the three first-hour documents: README -> quickstart -> authoring.
+# Commands only, no prose, and it runs.
+!/docs/quickstart.md
 # Material that was built, proved, and then deliberately withdrawn. It is part of
 # the project's record: without it the next person re-derives the same findings
 # and the same 42501. Not runnable from here -- it lives outside tests/ on purpose.
@@ -109,62 +117,64 @@ helm/
 !/docs/performance/**
 monitoring/
 
-# Keep project documentation; ignore stray personal notes
-*.md
-!README.md
-!NOTICE.md
-!docs/feed.md
-!docs/runtime.md
-!docs/deployment.md
-!docs/security.md
-!docs/when-to-use.md
-!docs/first-hour-audit.md
-!/docs/PROGRESS.md
-!/docs/gate/
-!/docs/PROGRESS.md
-!/docs/gate/**
-!docs/deletion-and-erasure.md
-!docs/errors.md
-!docs/providers.md
-!docs/competitive-landscape.md
-!docs/performance-resource-authorization.md
-!docs/platform-readiness-design.md
-!docs/withdrawn/
-!docs/withdrawn/**
-!docs/STATUS.md
-!docs/architecture/
-!docs/architecture/**
-!docs/competitive/
-!docs/competitive/**
-!docs/product/
-!docs/product/**
-!docs/research/
-!docs/research/**
-!docs/operations/
-!docs/operations/**
-!docs/m009/
-!docs/m009/**
-!docs/performance/
-!docs/performance/**
-!content_eval/*.md
-!eval/EVALUATION.md
-!examples/MEMORY.md
-!examples/MEMORY_API.md
-!docs/evaluation/m007-memory-decision-dataset.md
-!docs/evaluation/m007-memory-decision-engine.md
-!docs/evaluation/m007-jev-decision-study.md
-!docs/evaluation/m00675-reproducibility.md
-!examples/evolving-project/**/*.md
-!examples/WHY_MEMORY.md
-!examples/evaluation/**/*.md
-!examples/evaluation/**/data/
-# The decision log is the example's input, not prose about the example. Without this
-# negation the blanket `*.md` rule above silently drops it, and a fresh clone gets an
-# example that raises SystemExit on its first line.
+# ---------------------------------------------------------------------------
+# Markdown. Session 10.
+#
+# This used to be `*.md` plus a hand-maintained list of exceptions, and the list
+# was the failure. Four documents -- docs/wedge-decision-note.md,
+# docs/release/tag-checklist.md, docs/release/v1.0.0-readiness.md and
+# docs/evaluation/m007-jev-decision-layer-spike.md -- were written, reported as
+# deliverables, and never committed. docs/PROGRESS.md quoted one of them for
+# three sessions. A new document was silently dropped nine times before anyone
+# noticed, because nothing failed.
+#
+# The rule now is the opposite: **tracked by default**, with the ignored set
+# written as explicit, named paths. A new .md file is committed unless somebody
+# deliberately decided otherwise, which is the only direction that fails safe.
+#
+# scripts/check_doc_paths.py fails the build if a claim-bearing document names a
+# path git does not track, and fails again if an ignored Markdown file appears
+# under docs/ or eval/ with no rule saying it should be.
+# ---------------------------------------------------------------------------
+
+# Explicit scratch. The ONLY Markdown this project deliberately does not ship:
+# personal notes, half-written plans, and session handoffs for finished work.
+# Anything a future session would need to act on belongs in docs/.
+/scratch/
+
+# The decision log is the example's input, not prose about the example. Without
+# the negation the example raises SystemExit on its first line in a fresh clone.
 !examples/project-log/**/*.md
-!docs/evaluation/m006.md
-!docs/evaluation/m0065.md
-/eval/results/
+
+# eval/results was deliberately untracked: nine frozen artifacts there are cited
+# by name from tracked documents, so a clone could not resolve those citations,
+# and no guard reading `git ls-files` could cover them.
+#
+# The owner has approved tracking them. They are measurements, and unlike the
+# rest of the benchmark output they are the ones the documentation depends on --
+# docs/evaluation/m006.md and m00675-reproducibility.md name all nine by path.
+# With them tracked, `scripts/check_frozen.py` enforces their SHA-256, which is
+# the thing a git-diff-over-ignored-files could never do.
+#
+# See docs/internal/progress-history.md Session 10 section 1d for the original
+# reasoning.
+!/eval/results/
+
+# eval/m007/adjudication/*.md -- the M007.1 blind-review protocol.
+#
+# Session 10 held these back because tracking them would make
+# `git diff v0.9.0..HEAD -- eval/` non-empty for the first time, and the hard
+# rule that session was working under said frozen files do not change.
+#
+# The owner has since approved tracking them: they are methodology, not
+# measurements, and without them a study that ran is undocumented. They sit
+# beside data that has always been tracked (review_set.jsonl, schema.json,
+# adjudication_template.jsonl, reviewer-materials-manifest.json), they were
+# written for the v0.5.1 milestone, and they were invisible only because a
+# blanket `*.md` swallowed them.
+#
+# Both are in docs/performance/frozen-manifest.json with their digests, so
+# "do not modify" is now enforced rather than merely intended.
 
 # The retrieval lab's embedding cache: binary .npy blobs keyed by content
 # hash, several megabytes, and worthless on another machine. 596 of them were

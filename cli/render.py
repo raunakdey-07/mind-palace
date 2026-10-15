@@ -56,9 +56,38 @@ def render_recall(
     conflicts = response.conflicts
 
     if not current:
+        if conflicts:
+            # A conflict is not an absence. Two documents declaring the same key
+            # give exactly this: no current claim, two disagreeing ones. Saying
+            # "nothing matched" sends the reader looking for a missing document
+            # when the documents are both there and disagreeing.
+            lines.append(f"{len(conflicts)} key(s) have sources that disagree:")
+            for conflict in conflicts:
+                claims = getattr(conflict, "claims", []) or []
+                lines.append(f"  {getattr(conflict, 'key', 'unknown')}:")
+                for claim in claims:
+                    lines.append(
+                        f"    - {_short(claim.claim)}  ({getattr(claim, 'path', 'unknown')})"
+                    )
+            lines.append(
+                "\nNo answer is given while sources disagree. Resolve it by "
+                "re-ingesting the newer document as a new version of the same "
+                "path, or by using `mindpalace remember` with the same --key. "
+                "See docs/authoring.md."
+            )
+            return "\n".join(lines)
         lines.append("No memory matched that question.")
         if response.constraints:
             lines.append(f"  {', '.join(response.constraints)}")
+        # A stranger who ingested plain Markdown or a transcript gets here, and
+        # "Nothing was invented" reads as "the document was ignored". It was
+        # not: it was chunked and stored. What it lacks is a `claims:` block,
+        # and that -- not the search -- is why recall is empty. Say which.
+        lines.append(
+            "\nOnly authored claims are answers. A document with no `claims:` block\n"
+            "in its frontmatter is stored and searchable, but contributes nothing\n"
+            "here. See docs/authoring.md to author claims in it."
+        )
         lines.append("\nNothing was invented: Mind Palace records only what was remembered.")
         return "\n".join(lines)
 

@@ -5,11 +5,19 @@
 > **Arm A in this lab is not the product path.** It ranks with the shipped
 > relevance scorer but grades at **rank 1** and has **no lexical fallback**. The
 > product's own benchmark, using its own grader and its documented
-> lexical-then-semantic fallback, reports **194/202**. This lab's arm A reports
-> **151/202**.
+> lexical-then-semantic fallback, reports **194/202**. This lab's arm `shipped-rank1` reports
+> **117/202 correct** (151 answered, 33 of them wrong, 1 of them on an absent
+> question).
+>
+> **The gap between 194 and 117 is 77 questions. It is not explained here.**
+> Session 5 answered a version of this question against a false premise -- it
+> wrote the gap as 43 -- and the explanation was dropped with it. Explaining the
+> real gap is Phase 5a's job, because Phase 5a is what re-runs arm `shipped-rank1` through the
+> product path with the benchmark's own grader. Anything said before that would
+> be a guess.
 >
 > So every figure below -- the harm matrix, the **36.4% ceiling**, every
-> confident-wrong rate, every recall@k -- was measured **against arm A, not
+> confident-wrong rate, every recall@k -- was measured **against arm `shipped-rank1`, not
 > against Mind Palace**. They are properties of that arm under that grader.
 >
 > **They are NOT ESTABLISHED for the product.**

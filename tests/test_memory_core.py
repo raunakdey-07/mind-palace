@@ -170,10 +170,34 @@ async def memory_db():
     engine = create_async_engine(url, poolclass=NullPool, connect_args={"timeout": 10})
     schema = "memory_test_" + uuid4().hex
     corpora = [hashlib.sha256(uuid4().bytes).hexdigest() for _ in range(2)]
-    migration_path = Path(__file__).parents[1] / "migrations/versions/004_memory.py"
-    spec = importlib.util.spec_from_file_location("memory_migration", migration_path)
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
+
+    def load(relative: str):
+        path = Path(__file__).parents[1] / relative
+        spec = importlib.util.spec_from_file_location(Path(relative).stem, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    migration = load("migrations/versions/004_memory.py")
+    # `007_claim_embedding_cache` is applied in this schema too, and it is here
+    # for a reason that took four sessions and a PostgreSQL log to find.
+    #
+    # This fixture sets `search_path TO "<schema>", public"`. It applies `004`
+    # only, and `004` does not create `memory_claim_embeddings` -- grep: zero
+    # occurrences in that file. So the name resolved through `search_path` to
+    # `public`, where the session database really does have it, while
+    # `memory_claims` resolved to the per-test schema. The product's
+    # `INSERT INTO memory_claim_embeddings` therefore wrote to `public`, whose
+    # `FOREIGN KEY ... REFERENCES memory_claims` pointed at `public.memory_claims`,
+    # which has no such claim: one FK violation per test that runs the query
+    # path, swallowed by the best-effort cache write.
+    #
+    # Nine of them, one per test in `tests/test_context_product.py`, reproduced
+    # against a disposable PostgreSQL on 2026-10-14. Creating the table here
+    # makes both relations resolve into the per-test schema, so the FK's
+    # referenced rows are the rows the test just wrote -- which is what
+    # production looks like, where there is one schema.
+    cache_migration = load("migrations/versions/007_claim_embedding_cache.py")
     try:
         async with engine.connect() as conn:
             transaction = await conn.begin()
@@ -204,6 +228,7 @@ async def memory_db():
                 def upgrade(sync_conn):
                     with Operations.context(MigrationContext.configure(sync_conn)):
                         migration.upgrade()
+                        cache_migration.upgrade()
                     # `011` adds resource ownership and the application writes
                     # that column on every archive row. This fixture deliberately
                     # stops at `004` -- it hand-builds `corpora`, `documents` and

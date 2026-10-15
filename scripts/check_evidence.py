@@ -27,6 +27,7 @@ import os
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -210,8 +211,39 @@ def _tracked_set() -> set[str]:
     return {str((ROOT / t).resolve()) for t in out}
 
 
+def junit_counts(path: Path) -> dict[str, str] | None:
+    """``{passed, skipped, failed, collected}`` read from a pytest junitxml.
+
+    This is the one input to this gate that a person cannot write by hand,
+    because a person cannot put a `<testcase>` in a file. Everything else the
+    gate reads -- `RUN_RECORD`, the documents themselves -- is prose, and prose
+    is exactly what went wrong.
+    """
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError):
+        return None
+    suites = list(root.iter("testsuite")) if root.tag == "testsuites" else [root]
+    if not suites:
+        return None
+    total = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+    for suite in suites:
+        for key in total:
+            total[key] += int(suite.get(key, 0) or 0)
+    passed = total["tests"] - total["failures"] - total["errors"] - total["skipped"]
+    return {
+        "passed": str(passed),
+        "failed": str(total["failures"] + total["errors"]),
+        "skipped": str(total["skipped"]),
+        "collected": str(total["tests"]),
+    }
+
+
 def check_test_counts(
-    text_by_doc: dict[str, str], head: str | None, require_head: bool = False
+    text_by_doc: dict[str, str],
+    head: str | None,
+    require_head: bool = False,
+    recorded: dict[str, dict] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Every "N passed" a document states must match a recorded run, and -- under
     ``require_head`` -- that run must be the one for this commit.
@@ -223,6 +255,13 @@ def check_test_counts(
 
     If no run has ever been recorded the check says so rather than passing
     quietly -- silence in that state is how an unmeasured figure survives.
+
+    ``recorded`` replaces `RUN_RECORD` as the source for figures that carry **no
+    `as of` label**, and only for those. A labelled figure is a claim about a
+    named commit, and `RUN_RECORD` is the record of which commits really ran;
+    substituting the current junit for it would make `24 passed (as of fd53840)`
+    fail because today's run did not produce 24. That is how this was wrong the
+    first time, and the gate caught it on its own first CI run.
 
     ## Why "some run" is not enough
 
@@ -248,9 +287,17 @@ def check_test_counts(
     """
     problems: list[str] = []
     notes: list[str] = []
-    recorded = _recorded_run_counts()
-    seen = sorted({int(entry["passed"]) for entry in recorded.values()})
-    strict_commits = {str(entry.get("commit", ""))[:7] for entry in recorded.values()}
+    junit_runs = _recorded_run_counts() if recorded is None else recorded
+    all_runs = recorded is None or json.dumps(recorded, sort_keys=True) == json.dumps(
+        _recorded_run_counts(), sort_keys=True
+    )
+    source = junit_runs if all_runs else _recorded_run_counts()
+    if not all_runs:
+        notes.append(
+            f"  --  runner mode: unlabelled figures are checked against this run; "
+            f"figures labelled 'as of <commit>' are checked against {RUN_RECORD}"
+        )
+    seen = sorted({int(entry["passed"]) for entry in source.values()})
 
     for doc, text in text_by_doc.items():
         stated = {
@@ -265,7 +312,7 @@ def check_test_counts(
         }
         if not stated:
             continue
-        if not recorded:
+        if not source and not junit_runs:
             problems.append(
                 f"{doc}: states {'/'.join(str(n) for n in sorted(stated))} passed but "
                 f"{RUN_RECORD} records no run. Record one with scripts/record_test_run.py, "
@@ -274,22 +321,28 @@ def check_test_counts(
             continue
         for count in sorted(stated):
             label = stated[count]
-            matching = sorted(run_id for run_id, e in recorded.items() if int(e["passed"]) == count)
+            # A labelled figure is a claim about a named commit, so it is checked
+            # against RUN_RECORD even in runner mode. An unlabelled one is a
+            # claim about THIS tree, so in runner mode it is checked against the
+            # junitxml and against nothing else.
+            pool = source if (label or all_runs) else junit_runs
+            matching = sorted(run_id for run_id, e in pool.items() if int(e["passed"]) == count)
             if not matching:
                 problems.append(
-                    f"{doc}: claims {count} passed; no run in {RUN_RECORD} produced that "
+                    f"{doc}: claims {count} passed; no run produced that "
                     f"(recorded counts: {', '.join(str(n) for n in seen)})"
                 )
                 continue
-            commits = sorted({str(recorded[m].get("commit", ""))[:7] for m in matching})
+            commits = sorted({str(pool[m].get("commit", ""))[:7] for m in matching})
             if require_head and head:
                 if label:
                     # An explicit label is only honest if that commit really ran.
-                    if label[:7] not in strict_commits:
+                    label_commits = {str(e.get("commit", ""))[:7] for e in source.values()}
+                    if label[:7] not in label_commits:
                         problems.append(
                             f"{doc}: claims {count} passed as of {label[:7]}, but no run "
                             f"in {RUN_RECORD} was recorded at that commit "
-                            f"(runs exist at: {', '.join(sorted(strict_commits))})"
+                            f"(runs exist at: {', '.join(sorted(label_commits))})"
                         )
                     else:
                         notes.append(
@@ -313,7 +366,7 @@ def check_test_counts(
             else:
                 notes.append(f"  ok  {doc}: {count} passed matches run(s) {', '.join(matching)}")
 
-    if head and not any(head[:7] in run_id for run_id in recorded):
+    if head and not any(head[:7] in run_id for run_id in source):
         notes.append(
             f"  --  no run recorded for HEAD {head[:7]}; counts were checked against "
             f"earlier runs"
@@ -401,6 +454,18 @@ def main() -> int:
         help="an 'N passed' figure must be backed by a run of THIS commit, or be "
         "labelled 'N passed (as of <commit>)' naming a commit that really ran",
     )
+    parser.add_argument(
+        "--junitxml",
+        type=Path,
+        help="a pytest junitxml from the run happening right now. When given, the "
+        "run's own counts become the only accepted source for an unlabelled "
+        "'N passed' figure, and RUN_RECORD is not consulted for it.",
+    )
+    parser.add_argument(
+        "--expect-sha",
+        default=os.getenv("GITHUB_SHA"),
+        help="the commit this run is supposed to describe; defaults to $GITHUB_SHA",
+    )
     args = parser.parse_args()
 
     problems: list[str] = []
@@ -462,13 +527,51 @@ def main() -> int:
         ).stdout.strip()
     except (subprocess.SubprocessError, OSError):
         pass
-    count_problems, count_notes = check_test_counts(text_by_doc, head, args.require_head)
+
+    # The runner mode. Without this the gate's numbers come from RUN_RECORD, and
+    # RUN_RECORD is written by a person. Session 7 recorded 1625 for a run whose
+    # own log said 1619, because the figure was read out of a log archive by
+    # hand; `--require-head` could not catch it, and the limit written down at
+    # the time was "--require-head ties a figure to a COMMIT, not to a LOG".
+    # That limit is why this exists.
+    junit_recorded: dict[str, dict] | None = None
+    if args.junitxml:
+        counts = junit_counts(args.junitxml)
+        if counts is None:
+            problems.append(f"--junitxml {args.junitxml} is not a readable junitxml")
+        else:
+            if args.expect_sha and head and args.expect_sha != head:
+                problems.append(
+                    f"this run describes {args.expect_sha[:7]} but the checkout is "
+                    f"{head[:7]}: the junitxml and the tree are not the same commit"
+                )
+            if not head:
+                problems.append("cannot read HEAD, so a junitxml cannot be tied to a commit")
+            elif head:
+                junit_recorded = {
+                    f"{head[:7]}: this run's junitxml {args.junitxml}": {
+                        "commit": head,
+                        "label": f"the run that produced {args.junitxml}",
+                        "note": "counts read from the junitxml the runner just wrote",
+                        **counts,
+                    }
+                }
+                notes.append(
+                    f"  --  runner mode: {args.junitxml} says {counts['passed']} passed, "
+                    f"{counts['skipped']} skipped, {counts['collected']} collected, at "
+                    f"{head[:7]}"
+                )
+
+    count_problems, count_notes = check_test_counts(
+        text_by_doc, head, args.require_head, junit_recorded
+    )
     problems.extend(count_problems)
     notes.extend(count_notes)
 
-    integrity_problems, integrity_notes = check_run_integrity(head)
-    problems.extend(integrity_problems)
-    notes.extend(integrity_notes)
+    if junit_recorded is None:
+        integrity_problems, integrity_notes = check_run_integrity(head)
+        problems.extend(integrity_problems)
+        notes.extend(integrity_notes)
 
     link_problems, link_notes = check_markdown_links()
     problems.extend(link_problems)

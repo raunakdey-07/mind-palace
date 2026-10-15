@@ -6,6 +6,40 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+> ### Upgrade notes — read before upgrading
+>
+> **Schema.** `alembic upgrade head` moves `007` to `010`. Three migrations have
+> never shipped in a tag; all three are new since `v0.9.0`.
+>
+> | migration | what it adds | reversibility |
+> |---|---|---|
+> | `008_tenant_scoped_access` | service credentials and row-level security on the protected tables | `downgrade` refuses while more than one evidence row per claim exists |
+> | `009_permission_granularity_and_erasure` | per-claim/per-corpus permissions and corpus erasure | reversible; `docs/security.md` names the tables that keep their rows |
+> | `010_bind_unrestricted_scope` | binds the `{*}` tenant sentinel to a role that already reads every row | reversible |
+>
+> **Server mode needs a grant step.** The `server` profile requires
+> `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_DEPLOYMENT=server`,
+> `MIND_PALACE_INGEST_ROOTS`, and a database role that is **not** a superuser
+> and does **not** hold `BYPASSRLS`. `scripts/db/runtime_roles.sql` creates that
+> role and is **idempotent** — running it twice is safe and a second run with a
+> new password rotates it. Startup refuses, in the lifespan, before the process
+> accepts a request, and `/health/ready` reports the same verdict as `503`.
+>
+> **A downgrade destroys data.** Downgrading to `007` **drops
+> `memory_principals`** and **disables row-level security on all 9 protected
+> tables**. It **preserves all 6 claims**. Take a backup before you try it. The
+> upgrade path itself preserves everything: a `v0.9.0` archive upgraded to `010`
+> keeps every claim identity, every receipt still verifies offline, and the
+> Memory Pack is byte-identical once the clock is pinned.
+>
+> **There are no tenants to preserve.** Nothing has been released, so an upgrade
+> from `v0.9.0` has no user data behind it. This is the cheapest release this
+> project will ever have and it is also the only release where that is true.
+>
+> **Sealed scoring has never happened.** No number in this repository is
+> evidence of generalisation. Held-out v1 is burned, the dev set has been looked
+> at, and there is no independent question set.
+
 A security change, and a change to one documented claim. No memory semantics,
 temporal behaviour, evidence rule, supersession behaviour, receipt schema or
 Memory Pack version changed, and no benchmark input was touched.

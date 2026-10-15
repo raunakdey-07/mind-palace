@@ -60,6 +60,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
@@ -67,30 +68,97 @@ README = ROOT / "README.md"
 #: Commands that need a live server, a stopped database, or a deliberately
 #: tampered file. Run them, but do not treat their output as an assertion.
 SKIP_PATTERNS = (
-    "mindpalace-mcp",  # long-lived; covered by the MCP check below
     "with the database stopped",  # prose in a comment
     "tampered-receipt",  # needs a tampered file we do not have here
     "pip install",  # this script IS the install
+    "--corpus quoting",  # docs/authoring.md's backtick example; it must FAIL
 )
 
 
+#: The documents whose ``$ `` lines are commands a reader is told to type. The
+#: authoring guide is second because its examples are the ones most likely to rot
+#: silently: a wrong claim field still "runs", it just stores nothing.
+COMMAND_DOCS = (README, ROOT / "docs" / "authoring.md")
+
+
 def readme_commands() -> list[str]:
-    """Commands the README tells a reader to type, extracted not retyped."""
+    """Commands the documented path tells a reader to type, extracted not retyped."""
     out: list[str] = []
-    for _lang, block in re.findall(r"```(console|bash)\n(.*?)```", README.read_text(), re.S):
-        for line in block.splitlines():
-            line = line.strip()
-            if line.startswith("$ "):
-                command = line[2:].split("   #")[0].strip()
+    for doc in COMMAND_DOCS:
+        if not doc.exists():
+            continue
+        for _lang, block in re.findall(r"```(console|bash)\n(.*?)```", doc.read_text(), re.S):
+            for command in _dollar_lines(block):
                 if not any(p in command for p in SKIP_PATTERNS):
                     out.append(command)
     return out
 
 
+def _own_database(base_url: str, name: str) -> str:
+    """Create a disposable database called ``name`` and return its URL.
+
+    Dropped by the caller's ``finally``. Refuses rather than reusing: a run
+    against an existing database is not a clean-room run.
+    """
+    import psycopg2
+
+    # No `with` here. CREATE/DROP DATABASE cannot run inside a transaction
+    # block, and psycopg2's connection context manager commits on exit, which
+    # re-opens one after the statement has already run. Autocommit, execute,
+    # close by hand.
+    conn = psycopg2.connect(_maintenance_url(base_url), connect_timeout=10)
+    try:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+            cur.execute(f'CREATE DATABASE "{name}"')
+    finally:
+        conn.close()
+    return re.sub(r"/[^/?]+(\?|$)", rf"/{name}\1", base_url)
+
+
+def _maintenance_url(base_url: str) -> str:
+    """The same server, pointed at the maintenance database."""
+    return re.sub(r"/[^/?]+(\?|$)", r"/postgres\1", base_url)
+
+
+def _dollar_lines(block: str) -> list[str]:
+    """The ``$ `` lines of a fence, with shell continuations joined.
+
+    A trailing backslash is part of the command, not of the fence. Left alone
+    the extractor emitted `mindpalace recall "..." \\` as one command, which the
+    shell runs with an unterminated quote -- and it passed, because the job that
+    would have caught it was never wired to this script.
+    """
+    commands: list[str] = []
+    pending = ""
+    for line in block.splitlines():
+        line = line.strip()
+        if pending:
+            pending = f"{pending} {line}".strip()
+            if not pending.endswith("\\"):
+                commands.append(pending)
+                pending = ""
+            continue
+        if not line.startswith("$ "):
+            continue
+        command = line[2:].split("   #")[0].strip()
+        if command.endswith("\\"):
+            pending = command[:-1].strip()
+            continue
+        commands.append(command)
+    if pending:
+        commands.append(pending)
+    return commands
+
+
 def readme_python_snippet() -> str:
     """The first ```python block that constructs a client, verbatim."""
     for block in re.findall(r"```python\n(.*?)```", README.read_text(), re.S):
-        if "MindPalace()" in block:
+        # `MindPalace(` rather than `MindPalace()`: the assertion is that the
+        # README contains a snippet constructing a client, not that it names
+        # one with no arguments. A named corpus is the documented form.
+        if "MindPalace(" in block:
             return block
     raise SystemExit("cleanroom: no SDK snippet found in README.md")
 
@@ -127,7 +195,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--wheel", required=True, help="path to the built wheel")
     parser.add_argument("--database-url", required=True)
-    parser.add_argument("--keep", action="store_true", help="leave the workdir for inspection")
+    parser.add_argument(
+        "--keep",
+        action="store_true",
+        help="leave the workdir for inspection. WARNING: the workdir holds the "
+        "virtualenv this script built -- about 6 GB -- and nothing removes it "
+        "but you.",
+    )
     parser.add_argument(
         "--bare",
         action="store_true",
@@ -169,8 +243,25 @@ def main() -> int:
     # whole point of this script is to not allow that.
     assert ROOT not in work.parents and work != ROOT
 
-    runner = Runner(work, args.database_url)
+    # Its own database, which is what this module's docstring has always claimed
+    # and never did. Against a shared one the run is not repeatable: `remember`
+    # with `--key` supersedes, so a second run flips the datastore back to
+    # PostgreSQL and the MCP assertion at the end -- which wants the
+    # superseding value -- fails on every other run depending on parity. That
+    # is not a flaky assertion, it is a shared database.
+    session_url = _own_database(args.database_url, work.name.replace("-", "_"))
+    session_db = urlparse(session_url).path.lstrip("/")
+
+    runner = Runner(work, session_url)
     checks: list[tuple[str, bool, str]] = []
+
+    # The MCP check at the end runs `mindpalace-mcp`, and that console script
+    # only exists with the `[mcp]` extra. The script installed the bare wheel and
+    # then ran it anyway, so the last check could never pass -- which is very
+    # likely why this file had no caller. The bare path must stay bare: not
+    # shipping `mcp` by default is a claim the release makes, and asserting it
+    # needs an install without the extra.
+    wheel_spec = str(wheel) if args.bare else f"{wheel}[mcp]"
 
     try:
         venv = (work / "venv").resolve()
@@ -194,7 +285,7 @@ def main() -> int:
 
         print("== install the built wheel ==")
         result = subprocess.run(
-            [str(python), "-m", "pip", "install", "--quiet", str(wheel)],
+            [str(python), "-m", "pip", "install", "--quiet", wheel_spec],
             capture_output=True,
             text=True,
         )
@@ -204,8 +295,15 @@ def main() -> int:
         # alembic is declared in requirements.txt but not in the wheel's own
         # dependencies; the README's migrate step needs it, so install it the
         # way the README does.
+        #
+        # `--torch-index` was accepted and then ignored, so a CI run asking for
+        # the CPU wheel got the default CUDA build: ~5.9 GB of nvidia-* packages
+        # for a check that runs on CPU. The other jobs pass the CPU index and
+        # this one did not, which is why its step was slow rather than wrong.
+        index_args = ["--extra-index-url", args.torch_index] if args.torch_index else []
         subprocess.run(
-            [str(python), "-m", "pip", "install", "--quiet", "-r", str(ROOT / "requirements.txt")],
+            [str(python), "-m", "pip", "install", "--quiet", *index_args]
+            + ["-r", str(ROOT / "requirements.txt")],
             capture_output=True,
             text=True,
         )
@@ -245,7 +343,24 @@ def main() -> int:
             # dressed as a prompt, are not part of the runnable quickstart.
             if "receipt.json" in command or "verify" in command:
                 continue
-            if command.endswith("...") or "\\" in command or "#" in command:
+            # `mindpalace-mcp` bare is long-lived and covered by the MCP check
+            # below. `--help` is not: it prints usage, returns immediately, and
+            # is the one invocation a reader tries when they cannot find the
+            # server. It printed nothing until 2026-10-15, which is exactly the
+            # kind of thing only a test catches.
+            if command.startswith("mindpalace-mcp") and "--help" not in command:
+                continue
+            # These two guards used to be `"\\" in command` and `"#" in
+            # command`, added to skip the README's one unjoined line
+            # continuation. Continuations are joined properly now, so the first
+            # has no job; and a `#` inside a quoted argument is an ordinary
+            # character, so the second dropped the authoring example, which
+            # writes its document with `printf` and a markdown heading. Between
+            # them they silently skipped three of eighteen commands, and a guard
+            # that hides a real command is worse than no guard at all. Trailing
+            # `...` is the only shape still worth refusing: it is prose dressed
+            # as a prompt.
+            if command.endswith("..."):
                 continue
             step += 1
             label = f"README cmd {step}: {command[:56]}"
@@ -300,7 +415,8 @@ def main() -> int:
         print("== MCP, documented argument shape ==")
         mcp = """
 import json, os, subprocess, sys
-proc = subprocess.Popen(["mindpalace-mcp"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+server = os.path.join(os.path.dirname(sys.executable), "mindpalace-mcp")
+proc = subprocess.Popen([server], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL, text=True, env=dict(os.environ), bufsize=1)
 def send(o):
     proc.stdin.write(json.dumps(o) + "\\n"); proc.stdin.flush()
@@ -309,33 +425,77 @@ send({"jsonrpc": "2.0", "id": 1, "method": "initialize",
                  "clientInfo": {"name": "cleanroom", "version": "0"}}})
 proc.stdout.readline()
 send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+
+def rpc(req_id, name, arguments):
+    # One tool call, and the text it answered with.
+    send({"jsonrpc": "2.0", "id": req_id, "method": "tools/call",
+          "params": {"name": name, "arguments": arguments}})
+    for _ in range(60):
+        line = proc.stdout.readline()
+        if not line:
+            raise SystemExit(f"server closed stdout answering {name}")
+        msg = json.loads(line)
+        if msg.get("id") == req_id:
+            content = (msg.get("result") or {}).get("content", [])
+            return content[0].get("text", "") if content else ""
+    raise SystemExit(f"no reply to {name}")
+
+def current(text):
+    # The claim the response reports as CURRENT, or "".
+    try:
+        return json.loads(text)["current_memories"][0]["claim"]
+    except Exception:
+        return ""
+
+def fail(what, got):
+    proc.kill()
+    print(f"!! {what}: {got}", file=sys.stderr)
+    sys.exit(3)
+
+# memory_remember: the one MCP tool that writes memory.
+MCP_KEY = "mcp.datastore"
+first = json.loads(rpc(2, "memory_remember",
+                       {"statement": "The support rota runs weekly.",
+                        "corpus": "default", "key": MCP_KEY}))
+if first.get("event") != "NEW":
+    fail("a new memory_remember should report NEW", first)
+
+# Idempotent: the identical call again must not write a second version.
+again = json.loads(rpc(3, "memory_remember",
+                       {"statement": "The support rota runs weekly.",
+                        "corpus": "default", "key": MCP_KEY}))
+if again.get("event") != "UNCHANGED" or again.get("version_id") != first.get("version_id"):
+    fail("an identical memory_remember must be idempotent", again)
+
+# It comes back through recall.
+ROTA_Q = "How often does the support rota run?"
+if "weekly" not in current(rpc(4, "memory_recall",
+                               {"request": {"corpus": "default", "query": ROTA_Q}})):
+    fail("memory_recall did not return what memory_remember wrote", "")
+
+# A changed value on the same key supersedes the old one.
+rpc(5, "memory_remember",
+    {"statement": "The support rota now runs fortnightly.",
+     "corpus": "default", "key": MCP_KEY})
+if "fortnightly" not in current(rpc(6, "memory_recall",
+                                    {"request": {"corpus": "default", "query": ROTA_Q}})):
+    fail("a changed value did not supersede the old one", "")
+
+# And the README's own supersession is still what recall reports.
 QUERY = "What datastore does production use?"
-send({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-      "params": {"name": "memory_recall",
-                 "arguments": {"request": {"corpus": "default", "query": QUERY}}}})
-for _ in range(40):
-    line = proc.stdout.readline()
-    if not line:
-        break
-    msg = json.loads(line)
-    if msg.get("id") == 2:
-        content = (msg.get("result") or {}).get("content", [])
-        text = content[0].get("text", "") if content else ""
-        proc.kill()
-        # The README supersedes its own earlier fact: step 7 remembers that the
-        # datastore is now CockroachDB, so by the time this runs the correct
-        # answer is CockroachDB, not the PostgreSQL asserted earlier. Asserting
-        # the *superseded* value here would have failed the job for being right.
-        sys.exit(0 if "CockroachDB" in text else 3)
+if "CockroachDB" not in current(rpc(7, "memory_recall",
+                                    {"request": {"corpus": "default", "query": QUERY}})):
+    fail("the README supersession is no longer current", "")
+
 proc.kill()
-sys.exit(4)
+sys.exit(0)
 """
         result = runner.python(mcp, label="mcp")
         checks.append(
             (
-                "MCP memory_recall with the documented shape",
+                "MCP memory_remember writes, is idempotent, supersedes, and is recalled",
                 result.returncode == 0,
-                "returned no current datastore",
+                (result.stderr or "")[:300],
             )
         )
 
@@ -343,6 +503,19 @@ sys.exit(4)
         print(f"\nFAIL: {exc}", file=sys.stderr)
         return 1
     finally:
+        try:
+            import psycopg2
+
+            drop = psycopg2.connect(_maintenance_url(args.database_url), connect_timeout=10)
+            try:
+                drop.autocommit = True
+                with drop.cursor() as cur:
+                    cur.execute(f'DROP DATABASE IF EXISTS "{session_db}" WITH (FORCE)')
+            finally:
+                drop.close()
+            print(f"   dropped database {session_db}")
+        except Exception as exc:  # noqa: BLE001 - teardown must not mask results
+            print(f"\n   could not drop {session_db}: {exc}", file=sys.stderr)
         if args.keep:
             print(f"\nworkdir kept at {work}")
 

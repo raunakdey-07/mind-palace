@@ -13,6 +13,10 @@ on:
       # Same reason as the line above: this branch's green must be a runner's
       # green, not a laptop's. Removed when the branch merges.
       - wip/claims-and-lab
+      # Same reason as the line above: this branch's green must be a runner's
+      # green, not a laptop's. Removed when the branch merges.
+      - wip/wedge
+      - wip/independent-set
   pull_request:
     branches:
       - main
@@ -75,6 +79,38 @@ jobs:
         run: |
           python -c "import api, cli; print('imports ok')"
 
+      # What the runner actually resolved, for the packages whose version has
+      # changed behaviour rather than merely changed.
+      #
+      # `requirements.txt` pins almost nothing, so the runner resolves whatever
+      # PyPI serves today and a developer's machine resolves whatever it
+      # installed months ago. Six tests in tests/test_ingestion_statistics.py
+      # skipped on every runner for four sessions because SQLAlchemy 2.1 changed
+      # which driver a bare `postgresql://` selects, and nothing on the runner
+      # said so. `log_error_verbosity = terse` hid the rest.
+      #
+      # This prints them; it asserts nothing. A line that fails the build
+      # because a dependency moved is a build that fails for a reason nobody
+      # chose, and the fix for that is a constraint file, not a louder CI.
+      - name: Record what the runner resolved
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          names = [
+              "SQLAlchemy", "asyncpg", "psycopg2-binary", "alembic", "pgvector",
+              "fastapi", "starlette", "pydantic", "httpx", "typer",
+              "sentence-transformers", "torch", "transformers", "numpy",
+              "sentencepiece",
+          ]
+          for name in names:
+              try:
+                  print(f"{name}=={version(name)}")
+              except Exception:
+                  print(f"{name}: NOT INSTALLED")
+          import sys
+          print(f"python=={sys.version.split()[0]}")
+          PY
+
       - name: Verify milestone and release metadata
         run: |
           python scripts/release/check_versioning.py
@@ -82,6 +118,29 @@ jobs:
       - name: Verify documented claims point at real evidence
         run: |
           python scripts/check_evidence.py --strict
+
+      # Every path README.md, CHANGELOG.md, STATUS.md, PROGRESS.md and the
+      # release map name must exist in `git ls-files`.
+      #
+      # `check_evidence.py` scans STATUS.md and README.md for markdown *links*
+      # and could not catch what this catches, for two reasons: the documents
+      # that lost files are named in backticks in prose, so there is no link to
+      # resolve, and seven of them were dropped by a blanket `*.md` in
+      # .gitignore that `git add` never reported.
+      #
+      # It also fails when an ignored Markdown file appears under docs/ or
+      # eval/ with no rule saying it should be there. A new document must be
+      # committed or deliberately ignored; being forgotten is no longer a
+      # silent option.
+      - name: Every path these documents name is tracked by git
+        run: python scripts/check_doc_paths.py
+
+      # The frozen-evidence manifest. A git diff over `eval/` and
+      # `docs/performance/` proves a tracked file did not move -- it proves
+      # nothing at all about an ignored one, and several frozen artifacts are
+      # ignored. This hashes the bytes.
+      - name: The frozen evidence has not moved
+        run: python scripts/check_frozen.py
 
       - name: Apply database migrations
         run: |
@@ -270,13 +329,55 @@ jobs:
       # "8 skipped" and nothing else, which is how six of them stayed
       # unexplained: a skip count is a number nobody can act on, and a silent
       # skip looks exactly like a passing test in the summary line.
+      #
+      # `--junitxml` is what makes the evidence step below possible at all. The
+      # counts it carries are the only numbers in this chain a person cannot
+      # write by hand, so they are the only ones worth gating on. It goes to
+      # /tmp, not into the tree: `docs/performance/evidence/pytest-head.xml` is
+      # a tracked artifact that a workstation run overwrites, and a runner
+      # overwriting it would put a runner's numbers in a commit that never
+      # produced them.
       - name: Run tests
         env:
           MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
-          pytest -q -rs
+          pytest -q -rs --junitxml=/tmp/pytest-main.xml
+
+      # A skip is invisible in a green build. Six tests skipped on every runner
+      # for four sessions while carrying the reason "no reachable DATABASE_URL",
+      # which was false: the database was reachable, and SQLAlchemy 2.1 had
+      # resolved bare `postgresql://` to a driver this project does not install.
+      # `-rs` printed the reason every run and nobody acted on it, because a
+      # printed reason is not a gate.
+      #
+      # Two skips are allowlisted, both opt-in for a real reason and both run
+      # deliberately in their own steps below.
+      - name: Every skip is accounted for
+        run: python scripts/check_skips.py --junit /tmp/pytest-main.xml
+
+      - name: Upload the junitxml
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-junitxml
+          path: /tmp/pytest-main.xml
+          retention-days: 90
+
+      # The skip gate reads the junitxml, but the *count* gate below reads
+      # `RUN_RECORD`, which a person writes. This step runs the count gate
+      # against the junitxml this job just produced, in this same job, so a
+      # figure in STATUS.md must match a run that happened at this commit -- and
+      # that commit is `$GITHUB_SHA`, checked against the checkout so a
+      # mismatched merge ref fails loudly instead of quietly.
+      #
+      # Session 7 recorded 1625 for a runner whose log said 1619. The gate could
+      # not catch it: `--require-head` ties a figure to a commit, and the record
+      # was hand-written at the right commit. This is the step that ties the
+      # figure to the run.
+      - name: The documented counts match THIS run
+        run: |
+          python scripts/check_evidence.py --require-head --junitxml /tmp/pytest-main.xml
 
       # Tenant isolation, as a separate step so a leak cannot hide inside a green
       # run: it needs the pinned models off, the runtime role present, and a
@@ -771,7 +872,7 @@ jobs:
           assert init["serverInfo"]["name"] == "mind-palace", init
           tools = replies[2]["result"]["tools"]
           names = sorted(tool["name"] for tool in tools)
-          assert len(tools) == 15, names
+          assert len(tools) == 16, names
           for required in ("memory_recall", "memory_explain", "memory_evidence",
                            "memory_replay", "memory_pack"):
               assert required in names, f"{required} missing from tools/list"
@@ -780,6 +881,39 @@ jobs:
           print(f"the [mcp] extra serves a real MCP session: protocol "
                 f"{init['protocolVersion']}, {len(names)} tools, all documented")
           PY
+
+      # The steps above are retyped. A retyped quickstart drifts, and then it
+      # tests what the author remembers rather than what a reader would run --
+      # which is why scripts/cleanroom_quickstart.py existed with no caller.
+      #
+      # This runs the `$ ` lines extracted from README.md and docs/authoring.md,
+      # verbatim, against a wheel installed outside the source tree, in a
+      # workdir that is not the repository. It is the same job, not a new one:
+      # it reuses the wheel and the Postgres service this job already built.
+      #
+      # No HF_HUB_OFFLINE here. `ingest-repo` embeds, and without the weights it
+      # fails with a bare OSError -- which is what the first two attempts at this
+      # step did. Every other job provisions the weights before running anything
+      # semantic; this job had not, because nothing in it had needed them until
+      # now.
+      - name: The documented commands run from the built wheel
+        env:
+          # This job sets DATABASE_URL per-step, and the other steps here set it
+          # to an unreachable server on purpose. So it is named here, against the
+          # job's own service, rather than assumed present.
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+        run: |
+          wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
+          # The script creates its own database, so it needs psycopg2. That is a
+          # declared dependency under the `migrations` extra, not a core one, so
+          # neither the runner's python nor the bare wheelenv has it. Installing
+          # the extra into the venv this job already built is smaller than adding
+          # a dependency or a new venv.
+          /tmp/wheelenv/bin/pip install --quiet "${wheel}[migrations]"
+          /tmp/wheelenv/bin/python scripts/cleanroom_quickstart.py \
+            --wheel "$wheel" \
+            --database-url "$DATABASE_URL" \
+            --torch-index https://download.pytorch.org/whl/cpu
 
   # Upgrade safety. Every other job measures the code as it is now; this one
   # measures code that no longer exists meeting code that does.

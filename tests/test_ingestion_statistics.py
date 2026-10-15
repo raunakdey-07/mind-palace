@@ -54,6 +54,7 @@ from sqlalchemy.pool import NullPool
 
 from api.services import ingestion
 from api.services.ingestion import STATISTICS_REFRESH_MINIMUM, IngestionService
+from tenant_harness import sync_url
 
 #: Claims, evidence rows, chunks, versions and documents: one of each per file.
 BULK_CLAIMS = 1000
@@ -106,20 +107,49 @@ def source(i: int) -> str:
     )
 
 
-def _db_available() -> bool:
-    url = os.getenv("DATABASE_URL", "")
-    if not url:
-        return False
+def _db_problem() -> str | None:
+    """Why this session cannot reach PostgreSQL, or ``None`` if it can.
+
+    The reason is returned instead of logged so the skip message says what
+    actually went wrong. A bare "no reachable DATABASE_URL" is what hid six
+    skips across four sessions: the database was up and reachable the whole
+    time, and the skip said otherwise. Proven on 2026-10-13 -- the same
+    six tests, the same reachable database, the only difference being the
+    SQLAlchemy version:
+
+        SQLAlchemy 2.0.46, bare postgresql://  -> psycopg2  -> 6 passed
+        SQLAlchemy 2.1.4, bare postgresql://  -> psycopg   -> 6 skipped
+
+    2.1 moved the bare ``postgresql://`` default to psycopg (v3), and this
+    project installs ``psycopg2-binary``. ``create_engine`` then raises
+    ``ModuleNotFoundError``, which the old body swallowed into ``False``.
+
+    The driver is pinned through ``tenant_harness.sync_url`` rather than a
+    fourth copy of the rewrite: ``tests/session_database.py`` and
+    ``tests/tenant_harness.py`` each carry this list, and a list of three that
+    one file has to remember is how the same bug comes back.
+    """
+    if not os.getenv("DATABASE_URL", ""):
+        return "DATABASE_URL is not set"
     try:
-        engine = sa.create_engine(url.replace("postgresql+psycopg://", "postgresql+psycopg2://"))
+        engine = sa.create_engine(sync_url())
         with engine.connect():
             engine.dispose()
-        return True
-    except Exception:
-        return False
+        return None
+    except Exception as exc:  # noqa: BLE001 - the message is the whole point
+        return f"{type(exc).__name__}: {exc}".splitlines()[0]
 
 
-requires_db = pytest.mark.skipif(not _db_available(), reason="no reachable DATABASE_URL")
+def _db_available() -> bool:
+    return _db_problem() is None
+
+
+requires_db = pytest.mark.skipif(
+    not _db_available(),
+    # `reason` is fixed by the decorator, so the real cause goes in the name of
+    # the skip guard below; this string is what an unexpected skip gate reads.
+    reason=f"no usable database ({_db_problem()})",
+)
 
 
 def _migrate(sync_conn):

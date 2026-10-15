@@ -152,6 +152,133 @@ def sync(corpus: str, path: str) -> str:
     return json.dumps(summary.__dict__, indent=2)
 
 
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        openWorldHint=False,
+    ),
+)
+def memory_remember(
+    statement: str,
+    corpus: str,
+    key: str | None = None,
+    file: str | None = None,
+) -> CallToolResult:
+    """Record one statement as authoritative memory, with exact-substring evidence.
+
+    The arguments mirror the SDK's `remember(statement, corpus=, key=, file=)`
+    and the call goes through that same function, so an agent and a script cannot
+    write memory differently.
+
+    Without `file`, the evidence for the claim is the statement itself: it proves
+    what you were told, not that it is true. With `file`, the statement must
+    appear verbatim in that file, and the file must be inside
+    MIND_PALACE_INGEST_ROOTS.
+
+    Idempotent: submitting an identical statement again returns the same
+    version_id with event UNCHANGED. Submitting the same `key` with new text
+    supersedes the previous value.
+
+    Takes no credential. The caller's identity is the one
+    MIND_PALACE_MCP_CREDENTIAL resolves to, and that identity needs write access
+    to the corpus.
+    """
+    from api.services.authz import AuthorizationError
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+    from api.services.remember import RememberError
+    from mindpalace_sdk import MemoryClientError
+
+    try:
+        resolved = _checked_file(statement, file, require_permitted)
+    except IngestPathRefused as exc:
+        return _refusal("ingest_path_refused", str(exc))
+    except RememberError as exc:
+        return _refusal("invalid_evidence", str(exc))
+
+    try:
+        # `_caller()` resolves the credential on entry, so the authorization
+        # failure happens there and not inside the write. The whole block is
+        # inside the try for that reason.
+        with _caller():
+            written = _client(corpus).remember(statement, corpus=corpus, key=key, file=resolved)
+    except AuthorizationError as exc:
+        # Caught like `_execute_memory` catches it. Anything else escapes as a
+        # generic ToolError, which an agent reads as a broken server and answers
+        # by retrying -- the opposite of what a refusal should do.
+        return _refusal("forbidden", str(exc))
+    except RuntimeError as exc:
+        # `_caller()` resolves the credential on entry and wraps anything that
+        # goes wrong as RuntimeError, keeping the real error as __cause__. Unwrap
+        # only an authorization failure and let the rest through unchanged:
+        # a blanket RuntimeError catch here would turn a bug into a refusal.
+        if isinstance(exc.__cause__, AuthorizationError):
+            return _refusal("forbidden", str(exc.__cause__))
+        raise
+    except RememberError as exc:
+        return _refusal("invalid_evidence", str(exc))
+    except MemoryClientError as exc:
+        return _refusal(getattr(exc, "code", "remember_failed"), str(exc))
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(_result_dict(written), indent=2))]
+    )
+
+
+def _checked_file(statement: str, file: str | None, require_permitted) -> str | None:
+    """Resolve `file` against the ingest roots and the exact-quote rule.
+
+    Returns the resolved path, or None when there is no file to check. Raises
+    rather than returning a reason: the caller builds the taxonomy entry, and the
+    reason must not name the allowed roots.
+    """
+    from api.services.remember import RememberError
+
+    if file is None:
+        return None
+    resolved = require_permitted(file)
+    # `remember(file=...)` on its own treats the file as the statement. When a
+    # statement is also supplied, the two are separate things and the claim's
+    # evidence has to be found in the document -- otherwise the caller is asking
+    # for a quote the file does not contain.
+    if statement:
+        try:
+            content = resolved.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            raise RememberError(f"cannot read the file given to memory_remember: {exc}") from exc
+        if statement not in content:
+            raise RememberError(
+                "statement is not an exact substring of the file given to "
+                "memory_remember. Copy the sentence out of the file character for "
+                "character -- paraphrasing, re-wrapping, smart quotes and em dashes "
+                "are all rejected."
+            )
+    return str(resolved)
+
+
+def _refusal(code: str, message: str) -> CallToolResult:
+    """A refusal the agent can read and act on, not a transport error.
+
+    The text carries the reason and never the statement: this runs on a path an
+    attacker can influence, and an error message is the easiest place for memory
+    content to leak back into a transcript.
+    """
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps({"code": code, "message": message}))],
+        isError=True,
+    )
+
+
+def _result_dict(written) -> dict:
+    return {
+        "corpus": written.corpus,
+        "version_id": written.version_id,
+        "event": written.event,
+        "path": written.path,
+        "key": written.key,
+        "unchanged": written.unchanged,
+    }
+
+
 @mcp.tool()
 def list_corpora() -> str:
     """List available corpora with document counts."""
@@ -307,8 +434,62 @@ async def memory_pack(request: MemoryRequest) -> MemoryToolResult:
     return await _execute_memory("pack", request)
 
 
+MCP_USAGE = """\
+mindpalace-mcp -- Mind Palace over the Model Context Protocol
+
+Speaks JSON-RPC 2.0 on stdin/stdout. Start it from an MCP client config, not by
+typing at it: it reads requests from stdin and writes replies to stdout, so a
+terminal invocation reads EOF and exits immediately without printing anything.
+
+Usage:
+  mindpalace-mcp                 serve on stdin/stdout (the normal case)
+  mindpalace-mcp --help          this text
+  mindpalace-mcp --version       print the server version
+
+Environment:
+  MIND_PALACE_MCP_CREDENTIAL  required in `required` auth mode. The raw secret
+      from `mindpalace credential issue <name> -c <corpus> -r read_write`. It
+      must be a credential that can write to the corpus, or `memory_remember`
+      and `sync` are refused. A read-only credential can still use the read
+      tools. This is an environment variable rather than a tool argument on
+      purpose: a caller that could pass its own credential would need no
+      authorization at all.
+  DATABASE_URL                 PostgreSQL with pgvector. Required.
+  MIND_PALACE_INGEST_ROOTS     directories `sync` and `memory_remember(file=)`
+      may read. `none` disables both.
+
+Client configuration (stdio):
+  { "command": "mindpalace-mcp",
+    "env": { "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
+             "MIND_PALACE_MCP_CREDENTIAL": "mpk_...",
+             "MIND_PALACE_INGEST_ROOTS": "/srv/content" } }
+
+To check it is alive without a client:
+  printf '%s\\n' '{"jsonrpc":"2.0","id":1,"method":"initialize",
+    "params":{"protocolVersion":"2024-11-05","capabilities":{},
+              "clientInfo":{"name":"probe","version":"0"}}}' | mindpalace-mcp
+"""
+
+
 def main() -> None:
     import asyncio
+    import sys
+
+    # `--help` before anything else: the server's normal mode consumes stdin, so
+    # a flag has to be handled here or not at all. It used to print nothing, and
+    # a reader who tried it concluded the executable was broken.
+    if "--help" in sys.argv[1:] or "-h" in sys.argv[1:]:
+        sys.stdout.write(MCP_USAGE)
+        return
+    if "--version" in sys.argv[1:]:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            found = version("mindpalace-os")
+        except PackageNotFoundError:
+            found = "unknown (running from a source tree, not an install)"
+        sys.stdout.write(f"mindpalace-mcp {found}\n")
+        return
 
     asyncio.run(mcp.run_stdio_async())
 

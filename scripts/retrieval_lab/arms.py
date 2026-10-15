@@ -124,11 +124,52 @@ class _Index:
 
 
 # --------------------------------------------------------------------------- #
-# Arm A -- the shipped scorer
+# Arm names
+# --------------------------------------------------------------------------- #
+
+#: The lab's arms, named for what they do.
+#:
+#: They used to be `A` through `G`, and that was a mistake this module has now
+#: paid for twice. `docs/performance/retrieval-lab-report.md` and the benchmark
+#: in `scripts/benchmark/m0115_experiments.py` both had an "A": lab arm A was
+#: the shipped scorer ranked at rank 1, benchmark strategy `A_semantic` was
+#: semantic-always. Both were quoted next to each other, in the same
+#: conversations, for sessions. A reader cannot resolve "arm A" without knowing
+#: which document is being read, and one of those documents is the one that
+#: reports the number.
+#:
+#: So the lab's arms are named. A bare letter in this repository now means the
+#: benchmark strategy and nothing else, because the benchmark's keys are frozen
+#: evidence cited by `check_evidence` and renaming them would edit a recorded
+#: measurement to fix a naming problem.
+ARMS: tuple[str, ...] = (
+    "shipped-rank1",
+    "bm25",
+    "semantic",
+    "rrf",
+    "fusion-rerank",
+    "passage",
+    "bge-small",
+)
+
+#: What each one is, for a table of contents and for error messages.
+ARM_MEANING: dict[str, str] = {
+    "shipped-rank1": "the shipped relevance scorer, graded at rank 1, no lexical fallback",
+    "bm25": "lexical only, real term frequency",
+    "semantic": "dense only, the same shipped gate",
+    "rrf": "reciprocal-rank fusion of the two above",
+    "fusion-rerank": "fusion plus the shipped cross-encoder, the best MRR in the lab",
+    "passage": "indexes passages, so body text can answer",
+    "bge-small": "a 33M embedder instead of the shipped 22.7M one; unreachable offline",
+}
+
+
+# --------------------------------------------------------------------------- #
+# arm `shipped-rank1` -- the shipped scorer
 # --------------------------------------------------------------------------- #
 
 
-def arm_a(index: _Index, question: Question, corpus: Corpus) -> Run:
+def arm_shipped_rank1(index: _Index, question: Question, corpus: Corpus) -> Run:
     """`memory_relevance.relevance`, unwrapped.
 
     The product groups accepted claims by authored key, keeps the best score per
@@ -164,7 +205,7 @@ def arm_a(index: _Index, question: Question, corpus: Corpus) -> Run:
 
 
 # --------------------------------------------------------------------------- #
-# Arm B -- BM25 only
+# arm `bm25` -- lexical only
 # --------------------------------------------------------------------------- #
 
 
@@ -220,7 +261,7 @@ class _BM25:
         return out
 
 
-def arm_b(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
+def arm_bm25(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
     topics = index.topic_texts(question)
     best: dict[str, float] = {}
     for topic in topics:
@@ -230,16 +271,29 @@ def arm_b(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run
         scores = bm25.score(query_terms)
         for position, claim in enumerate(index.claims):
             best[claim.key] = max(best.get(claim.key, -1.0), scores[position])
-    ordered = sorted(best.items(), key=lambda kv: -kv[1])
+    # Ties break on the claim id, never on insertion order.
+    #
+    # `sorted` is stable, so without this the order of equal-scoring keys is the
+    # order `index.claims` was built in -- which is the order the corpus loader
+    # produced, which is the order files were enumerated. Two runs on the same
+    # content could then rank differently, and a risk-coverage point would move
+    # for a reason that has nothing to do with retrieval.
+    #
+    # This was measured, not theorised. Rebuilding `retrieval-lab-dev.json` on
+    # 2026-10-14 reproduced every arm exactly except `bm25.risk_coverage` on the
+    # `current` slice, where the 9th and 10th operating points swapped:
+    # `accuracy 0.6296 -> 0.6071` and back. Same corpus, same queries, same
+    # scores -- different tie order. That is a bug, not a result.
+    ordered = sorted(best.items(), key=lambda kv: (-kv[1], kv[0]))
     return _finish(question, corpus, index, [k for k, _ in ordered], [v for _, v in ordered])
 
 
 # --------------------------------------------------------------------------- #
-# Arm C -- semantic only
+# arm `semantic` -- dense only
 # --------------------------------------------------------------------------- #
 
 
-def arm_c(index: _Index, question: Question, corpus: Corpus) -> Run:
+def arm_semantic(index: _Index, question: Question, corpus: Corpus) -> Run:
     topics = index.topic_texts(question)
     topic_vectors = embed(topics, index.model)
     best: dict[str, float] = {}
@@ -252,13 +306,13 @@ def arm_c(index: _Index, question: Question, corpus: Corpus) -> Run:
 
 
 # --------------------------------------------------------------------------- #
-# Arm D -- reciprocal rank fusion of B and C
+# arm `rrf` -- reciprocal-rank fusion of `bm25` and `semantic`
 # --------------------------------------------------------------------------- #
 
 
-def arm_d(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
-    lexical = arm_b(index, question, corpus, bm25)
-    semantic = arm_c(index, question, corpus)
+def arm_rrf(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
+    lexical = arm_bm25(index, question, corpus, bm25)
+    semantic = arm_semantic(index, question, corpus)
     fused: dict[str, float] = {}
     for ranked in (lexical.keys, semantic.keys):
         for position, key in enumerate(ranked):
@@ -268,7 +322,7 @@ def arm_d(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run
 
 
 # --------------------------------------------------------------------------- #
-# Arm E -- D plus the cross-encoder
+# arm `fusion-rerank` -- `rrf` plus the cross-encoder
 # --------------------------------------------------------------------------- #
 
 
@@ -279,8 +333,8 @@ def arm_d(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run
 RERANK_DEPTH = 50
 
 
-def arm_e(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
-    fused = arm_d(index, question, corpus, bm25)
+def arm_fusion_rerank(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
+    fused = arm_rrf(index, question, corpus, bm25)
     head = fused.keys[:RERANK_DEPTH]
     if not head:
         return fused
@@ -296,11 +350,11 @@ def arm_e(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run
 
 
 # --------------------------------------------------------------------------- #
-# Arm F -- passage index, projected back to claims
+# arm `passage` -- passage index, projected back to claims
 # --------------------------------------------------------------------------- #
 
 
-def arm_f(index: _Index, question: Question, corpus: Corpus) -> Run:
+def arm_passage(index: _Index, question: Question, corpus: Corpus) -> Run:
     """Rank passages, then report the claim each passage carries.
 
     Authority is preserved by construction: the score returned for a key is the
@@ -381,18 +435,18 @@ def _finish(
 
 
 # --------------------------------------------------------------------------- #
-# Arm G -- the same pipeline, a stronger small embedder
+# arm `bge-small` -- the same pipeline, a stronger small embedder
 # --------------------------------------------------------------------------- #
 
 
-def arm_g_available() -> tuple[bool, str]:
+def arm_bge_small_available() -> tuple[bool, str]:
     """Can the reference embedder be loaded here? Recorded, never assumed."""
     from .embeddings import STRONGER_EMBEDDER, model_available
 
     return model_available(STRONGER_EMBEDDER)
 
 
-def arm_g(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
+def arm_bge_small(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run:
     """Arm C's ranking with a different encoder.
 
     The point is attribution, not a better number. If this arm is much worse
@@ -406,4 +460,4 @@ def arm_g(index: _Index, question: Question, corpus: Corpus, bm25: _BM25) -> Run
             "arm G needs an index built with the reference embedder; "
             "pass --embedder to build one"
         )
-    return arm_c(index, question, corpus)
+    return arm_semantic(index, question, corpus)

@@ -93,6 +93,22 @@
       "seconds": 510.9,
       "skipped": "2"
     },
+    "880cffd: full suite, workstation, disposable PG 15.4 at 15440, Session 10": {
+      "collected": "1645",
+      "commit": "880cffd0048400f036c2f3b5059c677f75fb27b5",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, workstation, disposable PG 15.4 at 15440, Session 10",
+      "note": "Session 10. Two new CI gates: check_doc_paths.py (every path a claim-bearing document names must be in git ls-files) and check_frozen.py (SHA-256 manifest of 32 frozen files), both mutation-tested. MEMORY_TEST_DATABASE_URL removed from product code with zero test changes. New gold-audit artifact records expect_key for 175 of 202 rows; the frozen one records 0.",
+      "passed": "1643",
+      "seconds": 550.14,
+      "skipped": "2"
+    },
     "9aec524: full suite, after the retrieval lab and the packaging fix": {
       "collected": "1621",
       "commit": "9aec524cab48671709c5b00765eac632fd824868",
@@ -104,6 +120,22 @@
       "seconds": 553.7,
       "skipped": "2"
     },
+    "9ef20a8: full suite, workstation, disposable PG 15.4 at 15440, Session 9": {
+      "collected": "1639",
+      "commit": "9ef20a8d65ec1070d88b012b1d0478c3878b5a0e",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, workstation, disposable PG 15.4 at 15440, Session 9",
+      "note": "1637 = 1631 at d1a4612 + 6 new tests in tests/test_claim_rejection_message.py. Phase 0e: tests/test_memory_core.py::memory_db now applies migration 007 in the per-test schema, so memory_claim_embeddings no longer resolves into public through search_path. Full-suite PostgreSQL log: memory_claim_embeddings FK violations 12 -> 0; the 2 memory_evidence and 1 memory_snapshot_versions violations remain and are the deliberate negative tests at tests/test_memory_multiple_evidence.py:200 and :204 and tests/test_memory_core.py:472.",
+      "passed": "1637",
+      "seconds": 568.94,
+      "skipped": "2"
+    },
     "a51607c: full suite, run 1, hermetic session database": {
       "commit": "a51607cf2431235004bc157e3b5e0530fb83737a",
       "failed": "0",
@@ -112,6 +144,22 @@
       "passed": "1600",
       "seconds": 550.3,
       "skipped": "1"
+    },
+    "d1a4612: full suite, workstation, disposable PG 15.4 at 15434, Session 8": {
+      "collected": "1639",
+      "commit": "d1a461230a47db2b236c85f0af449792605f54de",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite, workstation, disposable PG 15.4 at 15434, Session 8",
+      "note": "The six tests/test_ingestion_statistics.py tests that skipped on every runner for four sessions now pass: SQLAlchemy 2.1 resolves a bare postgresql:// to psycopg (v3), which this project does not install, and _db_available() swallowed the ModuleNotFoundError. 1637 = 1625 + those 6 + 12 new tests in tests/test_skip_gate_and_runner_evidence.py. The 2 remaining skips are the two allowlisted opt-in ones.",
+      "passed": "1637",
+      "seconds": 1387.91,
+      "skipped": "2"
     },
     "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
       "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",

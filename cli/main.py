@@ -77,6 +77,7 @@ def _run(call, *args, **kwargs):
     except RuntimeError:
         return call(*args, **kwargs)
 
+    import contextvars
     import threading
 
     from api.services.db import async_engine
@@ -98,7 +99,12 @@ def _run(call, *args, **kwargs):
             except (RuntimeError, OSError):
                 pass
 
-    thread = threading.Thread(target=worker)
+    # A thread starts with an empty `contextvars` context, so the worker's call
+    # saw no caller at all -- which for `principal_scope` means the default local
+    # principal: unrestricted, with a `{*}` database scope. An in-process caller
+    # that had authenticated correctly was answered by a thread that had not
+    # authenticated at all. Copying the context is the whole fix.
+    thread = threading.Thread(target=contextvars.copy_context().run, args=(worker,))
     thread.start()
     thread.join()
     result = outcome[0] if outcome else None

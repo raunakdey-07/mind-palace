@@ -266,6 +266,12 @@ class MemoryClient:
             # A runtime that answered is authoritative about failure: re-raise its
             # error rather than silently producing a different answer in-process.
             error = reply.get("error") or {}
+            if error.get("code") == "database_mismatch":
+                # The runtime is attached to another database, so it can only
+                # answer from the wrong archive. Discard it and answer here; the
+                # next command gets a runtime pointed at this database.
+                _discard_stale_runtime()
+                return None
             raise MemoryClientError(
                 error.get("code", "error"),
                 error.get("message", "memory runtime failed"),
@@ -448,11 +454,11 @@ class MemoryClient:
             return None
         if not reply.get("ok"):
             error = reply.get("error") or {}
-            if error.get("code") == "build_mismatch":
-                # The runtime is running code this process is not. It must not
-                # answer. Discard it and do the work here, so the first command
-                # after an edit is correct rather than merely fast, and the second
-                # gets a runtime that matches.
+            if error.get("code") in ("build_mismatch", "database_mismatch"):
+                # The runtime is running code this process is not, or is attached
+                # to another database. It must not answer. Discard it and do the
+                # work here, so the first command after an edit is correct rather
+                # than merely fast, and the second gets a runtime that matches.
                 _discard_stale_runtime()
                 return None
             raise MemoryClientError(

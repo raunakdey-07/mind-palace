@@ -1039,3 +1039,33 @@ every corpus as a reader. A `read_only` credential could therefore create a
 snapshot through the SDK while the identical REST call returned **403 "This
 credential is read-only"**. The shared core now applies the same flag, so the
 answer cannot depend on which door the caller came through.
+
+## Recorded, not fixed
+
+Three findings that are real and are not exploitable today. Each is written down
+because a finding nobody can reproduce is a rumour, and a rumour that turns out
+to be load-bearing later is the expensive case.
+
+**`delete_corpus` resolves its corpus with `write=False`.** Every other write
+path passes `write=True` so a `read_only` credential is refused. This one does
+not, and would hand the same class of answer the shared core used to. It is not
+reachable: `manage_corpus` is in `authz.PERMISSIONS` for `corpus_admin` and
+`principal_admin` only, so `read_only` and `read_write` are refused before the
+resolution is used. If `delete_corpus` ever moves behind a weaker role, the
+inconsistency becomes a bypass the day it does — hence written down here and not
+fixed, since a fix would be a permission the read roles still do not have.
+
+**`mindpalace eval retrieval --file` is unconfined.** It reads the benchmark
+file with a bare `open()`, outside `MIND_PALACE_INGEST_ROOTS`. It is an operator
+command that takes an operator-supplied benchmark definition, in the same class
+as the documented `--baseline` exception above, and it reads no corpus content.
+Bounded, it would break the documented way to point the evaluator at a
+benchmark set kept outside the deployment.
+
+**A warm local runtime did not know which database it was attached to.** The
+handshake carried `protocol`, `build` and `token`; nothing said which
+`DATABASE_URL` the running process was holding a pool to, so a command run later
+against a different database was answered — confidently, from the wrong archive.
+Fixed: the handshake now carries a digest of scheme, host, port, database and
+user (never the password), and a runtime that disagrees is discarded and
+replaced, exactly as one built from stale code already was.

@@ -340,6 +340,12 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
     return result
 
 
+#: Operations that write. Must agree with `api.routers.memory.WRITE_OPERATIONS`
+#: and `mcp_server.WRITE_OPERATIONS`; three lists is already too many, so this is
+#: the one the shared core uses.
+WRITE_OPERATIONS = frozenset({"snapshot"})
+
+
 async def execute_in_session(db, operation: str, request: MemoryRequest, vectorized: bool = False):
     """Execute in caller's transaction (also used by integration tests).
 
@@ -347,7 +353,12 @@ async def execute_in_session(db, operation: str, request: MemoryRequest, vectori
     Reads load one coherent MVCC view. Snapshot creation uses the writer lock.
     """
     _validate(operation, request)
-    corpus = await get_corpus_by_name(db, request.corpus)
+    # `write=True` for write operations. The REST and MCP adapters each applied
+    # this themselves, so the SDK and the local runtime -- which arrive here
+    # directly -- resolved every corpus as a reader. A `read_only` credential
+    # could therefore create a snapshot through the SDK while the identical REST
+    # call returned 403.
+    corpus = await get_corpus_by_name(db, request.corpus, write=operation in WRITE_OPERATIONS)
     if corpus is None:
         raise MemoryError("corpus_not_found", "Corpus not found", 404)
     if operation == "query":

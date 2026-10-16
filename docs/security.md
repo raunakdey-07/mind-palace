@@ -998,9 +998,9 @@ filesystem from a caller, and whether it goes through that one resolver.
 | `POST /api/ingest/repo` | a directory | yes | yes — `api/routers/ingest.py:76` |
 | `POST /api/ingest/file` | content in the request body, no path | n/a | n/a |
 | `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:108` |
-| SDK `MindPalace.sync(path)` | a directory | yes | yes, via the service |
-| SDK `MindPalace.remember(file=…)` | one file | yes | yes, via the service |
-| MCP `sync(corpus, path)` | a directory | yes | yes, via the service |
+| SDK `MindPalace.sync(path)` | a directory | yes | yes — `api/services/ingestion.py:422` |
+| SDK `MindPalace.remember(file=…)` | one file | yes | yes — `api/services/remember.py:287` |
+| MCP `sync(corpus, path)` | a directory | yes | yes — same `sync_repo` |
 | MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:238` |
 | `mindpalace verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
 | `mindpalace receipt -o <file>` | writes; not a read | n/a | n/a |
@@ -1014,7 +1014,58 @@ Palace, so bounding it to the ingest roots of some other deployment would defeat
 it; a receipt is caller-supplied evidence, not deployment content. A benchmark
 baseline is a report the caller produced.
 
-Two surfaces were found reading without the resolver and fixed: `remember
---file` and `mindpalace ingest`. The `ingest` case is the sharper one — it read
-the file with a bare `open()` *before* its HTTP call, so the read happened
-whether or not a server was listening.
+**Three** surfaces were found reading without the resolver, and all three were
+fixed:
+
+1. `remember --file` — the service read any path.
+2. `mindpalace ingest <path>` — a bare `open()` *before* its HTTP call, so the
+   read happened whether or not a server was listening.
+3. `sync_repo`, reached directly by `MindPalace.sync()` and by the MCP `sync`
+   tool. The CLI and the two routes each checked the path themselves, which is
+   how the audit table above came to list the SDK and MCP rows as "yes, via the
+   service" when the service did not check at all. An independent review found
+   it; the table was wrong, not just incomplete.
+
+Each fix went in at the chokepoint rather than at the callers, because callers
+are where the gaps came from.
+
+## Write operations and the shared core
+
+One table decides which memory operations write:
+`api/services/memory_public.WRITE_OPERATIONS`. The REST adapter and the MCP
+server each carried their own copy of that list and applied it themselves, so
+the SDK and the local runtime — which call the shared core directly — resolved
+every corpus as a reader. A `read_only` credential could therefore create a
+snapshot through the SDK while the identical REST call returned **403 "This
+credential is read-only"**. The shared core now applies the same flag, so the
+answer cannot depend on which door the caller came through.
+
+## Recorded, not fixed
+
+Three findings that are real and are not exploitable today. Each is written down
+because a finding nobody can reproduce is a rumour, and a rumour that turns out
+to be load-bearing later is the expensive case.
+
+**`delete_corpus` resolves its corpus with `write=False`.** Every other write
+path passes `write=True` so a `read_only` credential is refused. This one does
+not, and would hand the same class of answer the shared core used to. It is not
+reachable: `manage_corpus` is in `authz.PERMISSIONS` for `corpus_admin` and
+`principal_admin` only, so `read_only` and `read_write` are refused before the
+resolution is used. If `delete_corpus` ever moves behind a weaker role, the
+inconsistency becomes a bypass the day it does — hence written down here and not
+fixed, since a fix would be a permission the read roles still do not have.
+
+**`mindpalace eval retrieval --file` is unconfined.** It reads the benchmark
+file with a bare `open()`, outside `MIND_PALACE_INGEST_ROOTS`. It is an operator
+command that takes an operator-supplied benchmark definition, in the same class
+as the documented `--baseline` exception above, and it reads no corpus content.
+Bounded, it would break the documented way to point the evaluator at a
+benchmark set kept outside the deployment.
+
+**A warm local runtime did not know which database it was attached to.** The
+handshake carried `protocol`, `build` and `token`; nothing said which
+`DATABASE_URL` the running process was holding a pool to, so a command run later
+against a different database was answered — confidently, from the wrong archive.
+Fixed: the handshake now carries a digest of scheme, host, port, database and
+user (never the password), and a runtime that disagrees is discarded and
+replaced, exactly as one built from stale code already was.

@@ -17,6 +17,12 @@ on:
       # green, not a laptop's. Removed when the branch merges.
       - wip/wedge
       - wip/independent-set
+      # Same reason as the line above. A push trigger, not a gate: no step is
+      # added and none is removed. Without it this branch's green would be a
+      # local memory, which is the thing the other five lines exist to prevent.
+      # Removed when the branch merges.
+      - wip/boundary-fixes
+      - wip/boundary-fixes-2
   pull_request:
     branches:
       - main

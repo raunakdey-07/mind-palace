@@ -4,7 +4,12 @@ uvicorn>=0.27.0
 sqlalchemy[asyncio]>=2.0.0
 psycopg2-binary>=2.9.0
 pgvector>=0.3.0
-sentence-transformers>=2.5.0
+# The ONNX embedding stack, matching the default install in pyproject.toml.
+# `sentence-transformers` is the `[torch]` extra and is not needed here: the
+# onnxruntime backend runs the same published weights. See api/services/embedder.py.
+onnxruntime>=1.17.0
+tokenizers>=0.15.0
+huggingface-hub>=0.23.0
 pydantic>=2.0.0
 python-frontmatter>=1.1.0
 langchain-text-splitters>=1.0.0

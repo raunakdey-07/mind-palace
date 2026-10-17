@@ -1012,6 +1012,19 @@ def test_no_request_serving_surface_reads_a_raw_file():
         ("api/runtime.py", "build_hash"): "the runtime hashes its own source files",
         ("api/runtime.py", "_read_token"): "the runtime's own token file",
         ("api/runtime.py", "_ensure_token"): "the runtime writes its own token, 0600",
+        ("api/services/query_log.py", "record"): (
+            "appends to the operator's own query log, at the path "
+            "MIND_PALACE_QUERY_LOG names. Not caller input, and append-only, so "
+            "there is nothing here for a request to disclose"
+        ),
+        ("api/services/query_log.py", "feedback"): (
+            "reads and appends the same operator-configured query log, to grade a "
+            "call the caller names by query_id. Same reason as `record`"
+        ),
+        ("cli/main.py", "feedback_summary"): (
+            "reads the same operator-configured query log, with no path argument "
+            "on the command line at all"
+        ),
     }
     #: Files that are not request-serving paths at all.
     OFF_SURFACE = {

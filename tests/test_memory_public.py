@@ -95,7 +95,11 @@ def assert_grounded(response):
 
 
 def canonical(response):
-    # Independent byte/character accounting, not just the production length helper.
+    # Independent byte/character accounting, not just the production length
+    # helper. `model_dump` rather than `public_dict`, because the digest is what
+    # this measures: the retrieval diagnostics are deliberately outside it, so
+    # counting them here would make a confident answer and an ambiguous one with
+    # the same claims cost different amounts of budget.
     encoded = json.dumps(
         response.model_dump(mode="json"),
         sort_keys=True,
@@ -104,7 +108,17 @@ def canonical(response):
         allow_nan=False,
     )
     assert response.canonical_json() == encoded
-    assert MemoryResponse.model_validate_json(encoded) == response
+    # The digest round-trips to the same *answer*, and the wire round-trips to the
+    # same object. Two assertions because they are two different claims: the first
+    # is that nothing is lost from the digest, the second that the diagnostics
+    # survive a serialization without becoming part of it.
+    digest_back = MemoryResponse.model_validate_json(encoded)
+    assert digest_back.canonical_json() == encoded
+    assert digest_back.current_memories == response.current_memories
+    assert (
+        MemoryResponse.model_validate_json(json.dumps(response.public_dict(), sort_keys=True))
+        == response
+    )
     return encoded
 
 
@@ -639,13 +653,20 @@ async def test_real_rest_sdk_mcp_cli_consistency(public_db, interfaces, operatio
         f"/api/memory/{operation}", json=request.model_dump(mode="json")
     )
     assert rest.status_code == 200, rest.text
-    assert rest.json() == expected.model_dump(mode="json")
+    # `public_dict`, not `model_dump`: the wire carries the retrieval diagnostics
+    # and the digest does not, so a surface that dropped them would look identical
+    # on both counts here unless it is compared against the right one.
+    assert rest.json() == expected.public_dict()
     tool = await interfaces.mcp.call_tool(
         "memory_" + operation.replace("-", "_"), {"request": request.model_dump(mode="json")}
     )
     assert not tool.is_error
-    assert tool.structured_content == expected.model_dump(mode="json")
-    assert json.loads(tool.content[0].text) == tool.structured_content
+    assert tool.structured_content == expected.public_dict()
+    # The text block an agent reads is the same payload, not the digest. An agent
+    # working from `content` rather than `structuredContent` is the common case for
+    # a client that does not read structured output, and it needs the candidates
+    # for exactly the same reason.
+    assert json.loads(tool.content[0].text) == expected.public_dict()
     sdk = await interfaces.sdk(operation, request)
     assert canonical(sdk) == canonical(expected)
     cli = await interfaces.cli(operation, request)

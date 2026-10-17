@@ -305,8 +305,16 @@ async def test_generation_route_wiring_not_quality(workload_file, postgres_url, 
 
 
 def test_cached_embedder_requests_local_files_only(monkeypatch):
+    """The benchmark must not reach the network on either backend.
+
+    `MEMORY_EMBEDDER=torch` is pinned so the fake below is the one that is
+    constructed. What is asserted is the promise, and the promise has to hold
+    whichever backend is installed -- which is the reason `CachedEmbedder` now goes
+    through the shared loader instead of building `SentenceTransformer` itself.
+    """
     from api.services.memory_benchmark import CachedEmbedder
 
+    monkeypatch.setenv("MEMORY_EMBEDDER", "torch")
     seen = []
 
     class LocalModel:
@@ -319,6 +327,17 @@ def test_cached_embedder_requests_local_files_only(monkeypatch):
     monkeypatch.setattr("sentence_transformers.SentenceTransformer", LocalModel)
     assert CachedEmbedder().dimension == 384
     assert seen == [{"local_files_only": True}]
+
+
+def test_the_no_network_promise_reaches_whichever_backend_is_installed(monkeypatch):
+    """Not a repeat of the test above: it checks the argument, this checks the plumbing."""
+    from api.services import embedder as module
+
+    seen = {}
+    monkeypatch.setattr(module, "_OnnxBackend", lambda name, **kw: seen.update(onnx=kw) or object())
+    monkeypatch.setattr(module, "backend_name", lambda: "onnx")
+    module.load_backend("all-MiniLM-L6-v2", local_files_only=True)
+    assert seen["onnx"] == {"local_files_only": True}
 
 
 def test_latency_quantiles_require_twenty_samples():
@@ -425,7 +444,12 @@ async def test_real_benchmark_reports_failures_not_fake_wins(workload_file, post
         for t in report["environment"]["latency_by_operation"].values()
     )
     assert all(r["baseline"]["generation"]["status"] == "NOT RUN" for r in report["queries"])
-    assert rows["initial"]["natural_language"]["current_exact_set"]["passed"] is False
+    # "Which database?" now resolves. It used to match nothing at all, because the
+    # question word `which` was required of every claim, and this test asserted
+    # that broken state as if it were correct. Interrogatives are stopwords now, so
+    # the diagnostic answers the question and scores exactly.
+    assert rows["initial"]["natural_language"]["current_exact_set"]["passed"] is True
+    assert rows["initial"]["natural_language"]["current_claims"] == ["The database is Redis."]
     second = await run_memory_benchmark(workload_file, repetitions=1)
     json.dumps(report, allow_nan=False)
     assert {k: v for k, v in report.items() if k != "environment"} == {

@@ -38,6 +38,8 @@ from itertools import combinations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.services import similarity
+
 
 class ClaimValidationError(ValueError):
     """Validation failure with identifiers, without exposing source content in logs."""
@@ -63,6 +65,17 @@ def _json_value(value):
     raise ValueError("metadata must contain JSON-compatible YAML values (or dates)")
 
 
+def _vector_literal(values) -> str:
+    """pgvector's text literal for a float list.
+
+    `repr`, not `str`: `str(1e-05)` is `1e-05`, which PostgreSQL reads as a
+    numeric literal rather than a `double precision` one, and the cast of the
+    whole vector then fails. Every other value in a 384-dimension vector is
+    unaffected either way.
+    """
+    return "[" + ",".join(repr(float(x)) for x in values) + "]"
+
+
 def _canonical(value) -> str:
     return json.dumps(_json_value(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -74,11 +87,12 @@ def _hash(*parts) -> str:
 def memory_document_id(corpus_id: str, path: str) -> str:
     """Stable SHA-256(corpus_id + ':' + path), including across deletion/restore.
 
-    `corpus_id` is stripped first, and that is load-bearing rather than tidy. The
-    column is `CHAR(64)`, and PostgreSQL blank-pads a shorter value on the way in
-    and strips the padding on a cast to text. So the id that reaches this function
-    is 64 characters wide even when the id itself is 63 -- which is exactly the
-    case for the default corpus, whose id is 56 zeroes followed by "default".
+    `corpus_id` is stripped first, and that step decides whether this function
+    agrees with the rows already in the table. The column is `CHAR(64)`, and
+    PostgreSQL blank-pads a shorter value on the way in and strips the padding on a
+    cast to text. So the id that reaches this function is 64 characters wide even
+    when the id itself is 63 -- which is exactly the case for the default corpus,
+    whose id is 56 zeroes followed by "default".
 
     The database says so itself. `memory_documents_check` is
 
@@ -306,6 +320,480 @@ async def _insert_version(
     return dict(result.mappings().one())
 
 
+#: How many nearest cached vectors `_nearest_active_claims` fetches.
+#:
+#: A *result* count, not a candidate pool. HNSW returns the true nearest N across
+#: the whole corpus, so a claim outside the N is genuinely further away rather
+#: than excluded for being old. The earlier `ACTIVE_CLAIM_SCAN_LIMIT` was the
+#: other thing: a slice of the corpus by observation time, with the rest
+#: unsearched and nothing in the receipt saying so.
+#:
+#: Larger than the five finally reported, because active-ness is applied after the
+#: neighbour search. A corpus where the nearest vectors are mostly superseded
+#: claims would otherwise return a short list from a correct search.
+NEIGHBOUR_FETCH = 40
+
+
+#: The nearest-neighbour half, on its own, so a plan can be read for it.
+#:
+#: Split out from `NEAREST_ACTIVE_SQL` because the thing that has to use the HNSW
+#: index is exactly this subquery. The active-ness joins around it can be a
+#: nested loop without making the neighbour search sequential, and a test that
+#: cannot `EXPLAIN` this part cannot say the index is used at all.
+NEIGHBOUR_SQL = """
+            SELECT claim_id, 1 - (embedding <=> CAST(:q AS vector)) AS similarity
+            FROM memory_claim_embeddings
+            WHERE corpus_id = :c
+              AND embedding_model = :model
+              AND embedding_dimension = :dim
+              AND embedding IS NOT NULL
+            ORDER BY embedding <=> CAST(:q AS vector)
+            LIMIT :fetch
+"""
+
+NEAREST_ACTIVE_SQL = (
+    """
+        WITH latest AS MATERIALIZED (
+            SELECT memory_document_id, max(version_number) AS version_number
+            FROM memory_versions
+            WHERE corpus_id = :c
+            GROUP BY memory_document_id
+        ),
+        retired AS MATERIALIZED (
+            SELECT supersedes_id FROM memory_claims
+            WHERE corpus_id = :c AND supersedes_id IS NOT NULL
+        )
+        SELECT c.id, c.key, c.claim, c.memory_document_id, c.version_id,
+               v.observed_at, n.similarity, e.representation_hash, d.path
+        FROM (
+    """
+    + NEIGHBOUR_SQL
+    + """
+        ) n
+        JOIN memory_claims c ON c.corpus_id = :c AND c.id = n.claim_id
+        JOIN memory_claim_embeddings e ON e.corpus_id = :c AND e.claim_id = c.id
+        JOIN memory_versions v ON v.corpus_id = c.corpus_id AND v.id = c.version_id
+        JOIN memory_documents d ON d.corpus_id = v.corpus_id AND d.id = v.memory_document_id
+        JOIN latest l ON l.memory_document_id = c.memory_document_id
+                      AND l.version_number = v.version_number
+        WHERE v.event <> 'DELETED'
+          AND NOT EXISTS (SELECT 1 FROM retired r WHERE r.supersedes_id = c.id)
+          AND (CAST(:doc AS char(64)) IS NULL OR c.memory_document_id <> :doc)
+        ORDER BY n.similarity DESC, c.id
+        LIMIT :limit
+"""
+)
+
+
+async def _nearest_active_claims(
+    db,
+    corpus_id: str,
+    vector,
+    *,
+    model: str,
+    dimension: int,
+    limit: int = 5,
+    exclude_document=None,
+):
+    """The active claims whose cached vectors are nearest to `vector`.
+
+    Returns `[{claim_id, key, claim, memory_document_id, version_id, observed_at,
+    similarity, representation_hash, path}]`, most similar first.
+
+    Two properties are worth stating, because the alternative was wrong in a way
+    nothing reported.
+
+    **It searches the whole corpus.** The `LIMIT` bounds how many come back, not
+    which rows were considered. The previous implementation read the most recent
+    200 active claims and tokenised them, so a fact written 3,800 claims ago was
+    invisible and the receipt did not say so.
+
+    **A stale vector cannot be served as a fact.** `representation_hash` travels
+    out with every row so the caller can compare it against the hash of the text
+    it would embed now, exactly as `load_cached` does. A claim whose cached text
+    has changed is dropped by the caller, not trusted here.
+
+    The active-ness test runs after the neighbour search rather than inside it,
+    because folding it into the ordered subquery stops PostgreSQL choosing the
+    index scan. That is why `NEIGHBOUR_FETCH` exceeds the reported count, and it
+    is why `NEAREST_ACTIVE_SQL` is a module constant: a plan that cannot be read
+    without calling the function cannot be `EXPLAIN`ed.
+    """
+    rows = (
+        await db.execute(
+            text(NEAREST_ACTIVE_SQL),
+            {
+                "c": corpus_id,
+                "q": _vector_literal(vector),
+                "model": model,
+                "dim": dimension,
+                "fetch": int(NEIGHBOUR_FETCH),
+                "limit": int(limit),
+                "doc": exclude_document,
+            },
+        )
+    ).all()
+    return [
+        {
+            "id": row[0],
+            "key": row[1],
+            "claim": row[2],
+            "memory_document_id": row[3],
+            "version_id": row[4],
+            "observed_at": row[5],
+            "similarity": float(row[6]),
+            "representation_hash": row[7],
+            "path": row[8],
+        }
+        for row in rows
+    ]
+
+
+async def _active_claims(
+    db,
+    corpus_id: str,
+    *,
+    key: str | None = None,
+    exclude_document=None,
+    limit: int | None = None,
+):
+    """Claims the corpus currently holds as fact, newest observation first.
+
+    A claim is active when nothing supersedes it, its version is the latest one
+    for its document, and that version is not a tombstone. Those three
+    conditions are what `_query_result` calls CURRENT, and this is the same
+    question asked in SQL so a write can ask it without loading the archive.
+
+    `exclude_document` is the document being written. A claim in it is either the
+    claim's own predecessor -- which `record_version` already handles -- or a
+    claim this same write is about to supersede.
+
+    `limit=None`, which is the default: an unbounded read of a specific set of
+    claims. This is the *complete* answer to "which claims are live", and a caller
+    that is looking for a near-duplicate must not be handed a slice of it.
+    `_nearest_active_claims` is the bounded alternative, and it is bounded by
+    similarity rather than by age.
+
+    The latest-version test is a grouped join rather than a correlated subquery
+    per claim, and both CTEs are `MATERIALIZED` because PostgreSQL inlines a
+    single-reference CTE and re-executes it per outer row -- which turns the
+    grouped join back into the per-claim subquery it replaced. Measured on 180
+    claims: 43 ms inlined on the first call, and `MATERIALIZED` is what makes the
+    plan a single pass. This is the same cliff `memory_relevance` and
+    `_load` document, in a different query.
+    """
+    sql = """
+        WITH latest AS MATERIALIZED (
+            SELECT memory_document_id, max(version_number) AS version_number
+            FROM memory_versions
+            WHERE corpus_id = :c
+            GROUP BY memory_document_id
+        ),
+        retired AS MATERIALIZED (
+            SELECT supersedes_id FROM memory_claims
+            WHERE corpus_id = :c AND supersedes_id IS NOT NULL
+        )
+        SELECT c.id, c.key, c.claim, c.memory_document_id, c.version_id, v.observed_at
+        FROM memory_claims c
+        JOIN memory_versions v ON v.corpus_id = c.corpus_id AND v.id = c.version_id
+        JOIN latest l ON l.memory_document_id = c.memory_document_id
+                      AND l.version_number = v.version_number
+        WHERE c.corpus_id = :c
+          AND (CAST(:key AS text) IS NULL OR c.key = :key)
+          AND (CAST(:doc AS char(64)) IS NULL OR c.memory_document_id <> :doc)
+          AND v.event <> 'DELETED'
+          AND NOT EXISTS (SELECT 1 FROM retired r WHERE r.supersedes_id = c.id)
+        ORDER BY v.observed_at DESC, c.id
+    """
+    # Inlined, not bound. A LIMIT parameter makes this a prepared statement, and
+    # asyncpg's prepare threshold is where the generic-plan cliff lives; the value
+    # comes from this module's own constants, never from a caller.
+    bounded = f"\n        LIMIT {int(limit)}" if limit else ""
+    rows = (
+        await db.execute(text(sql + bounded), {"c": corpus_id, "key": key, "doc": exclude_document})
+    ).all()
+    return [
+        {
+            "id": row[0],
+            "key": row[1],
+            "claim": row[2],
+            "memory_document_id": row[3],
+            "version_id": row[4],
+            "observed_at": row[5],
+        }
+        for row in rows
+    ]
+
+
+async def _resolve_claim_id(db, corpus_id: str, identity: str, given: str) -> str:
+    """Expand a full claim id, a unique prefix of one, or a phrase to the full id.
+
+    A prefix is accepted because that is what the CLI prints. It prints 12 of 64
+    characters because a 64-character id on every answer is unreadable, and then
+    the command that tells you to use that id rejects it. Matching what the user
+    can see is the difference between a documented workflow and a broken one.
+
+    A phrase is accepted for the same reason one level up: the caller who wants to
+    retire the "primary datastore" claim usually has that phrase in front of them
+    and the 64-character id is on a different screen. The forms do not overlap --
+    claim ids are lowercase hex, so anything containing a space, a `.` or a letter
+    outside `a-f` is a phrase and is matched as one.
+
+    Both are refused rather than guessed at when more than one claim matches. The
+    whole cost model here is that a supersession landing on the wrong claim moves a
+    live fact into history, and picking the first of two candidates is exactly
+    that mistake.
+    """
+    if len(given) == 64 and all(c in "0123456789abcdef" for c in given.casefold()):
+        return given
+    candidates = await _active_claims(db, corpus_id, exclude_document=identity, limit=None)
+    hex_like = bool(given) and all(c in "0123456789abcdef" for c in given.casefold())
+    matches = [c for c in candidates if c["id"].startswith(given.casefold())] if hex_like else []
+    if not matches and not hex_like:
+        matches = _phrase_matches(given, candidates)
+    if not matches:
+        raise ValueError(
+            f"supersedes_claim_id {given!r} matches no active claim in this corpus, as an "
+            "id prefix or as text. A superseded, deleted or other-corpus claim cannot be "
+            "superseded again."
+        )
+    if len(matches) > 1:
+        raise ValueError(
+            f"supersedes_claim_id {given!r} matches {len(matches)} active claims "
+            f"({', '.join(c['id'][:16] for c in matches[:3])}); use more of the id"
+            + ("" if hex_like else ". Retire the one you meant by its id, which `recall` prints.")
+        )
+    return matches[0]["id"]
+
+
+def _phrase_matches(given: str, candidates: list[dict], threshold: float = 0.60) -> list[dict]:
+    """Active claims the phrase might name, by the measure in `api/services/similarity`.
+
+    The same measure `remember.related_active` uses, for the same reason: it needs
+    no model, so `remember` does not have to pay a model load to resolve a reference
+    the caller wrote in plain English. Sharing the function is also what stops the
+    two from drifting: a phrase that resolves to forty claims in one path and two in
+    the other would be a bug report nobody could reproduce.
+
+    Refusing on more than one match is the point. A phrase matching forty claims
+    matches none of them usefully, and the caller is better served by the error
+    naming forty ids than by the archive picking one.
+    """
+    from api.services.similarity import document_frequencies, terms, weighted_overlap
+
+    words = terms(given)
+    if not words or not candidates:
+        return []
+    frequencies = document_frequencies(terms(c["claim"]) for c in candidates)
+    total = len(candidates)
+    return [
+        claim
+        for claim in candidates
+        if weighted_overlap(words, terms(claim["claim"]), frequencies, total) >= threshold
+    ]
+
+
+async def _targets_for_reference(db, corpus_id: str, identity: str, reference: str) -> list[dict]:
+    """The active claims a supersession reference names, or none with a reason.
+
+    A reference is a document path or a claim key, and it may be either in full or
+    as the part of the path that distinguishes it. `adr/0001-use-pg15.md`,
+    `0001-use-pg15.md` and `examples/adr/0001-use-pg15.md` all name one document,
+    because an author writes the shortest thing that identifies it and the archive
+    is the only party that knows the corpus layout.
+
+    Matching is exact first and then by unique path suffix. "Unique" is doing real
+    work: two documents called `0001.md` in different directories are an ambiguous
+    reference, and an ambiguous reference that resolves anyway is a supersession
+    landing on the wrong decision.
+    """
+    from api.services.markdown_claims import looks_like_path
+
+    candidates = await _active_claims(db, corpus_id, exclude_document=identity, limit=None)
+    if not looks_like_path(reference):
+        by_key = [c for c in candidates if c["key"] == reference]
+        if not by_key:
+            raise ValueError(
+                f"supersedes reference {reference!r} matches no active claim key in this "
+                "corpus. Write the key exactly as it appears in the archive, or the path "
+                "of the document that holds the claim."
+            )
+        if len(by_key) > 1:
+            raise ValueError(
+                f"supersedes reference {reference!r} matches {len(by_key)} active claims; "
+                f"the ids are {', '.join(c['id'][:16] for c in by_key[:3])}. Name one."
+            )
+        return by_key
+
+    needle = reference.replace("\\", "/").casefold().lstrip("./")
+    rows = (
+        await db.execute(
+            text("""
+                SELECT d.id, d.path
+                FROM memory_documents d
+                WHERE d.corpus_id = :c
+                  AND d.path ILIKE :suffix
+                ORDER BY d.path
+                """),
+            {"c": corpus_id, "suffix": f"%/{needle}"},
+        )
+    ).all()
+    if not rows:
+        rows = (
+            await db.execute(
+                text(
+                    "SELECT d.id, d.path FROM memory_documents d "
+                    "WHERE d.corpus_id = :c AND lower(d.path) = :exact"
+                ),
+                {"c": corpus_id, "exact": needle},
+            )
+        ).all()
+    if not rows:
+        raise ValueError(
+            f"supersedes reference {reference!r} matches no document in this corpus. "
+            "Ingest the superseded document first; supersession cannot retire a claim "
+            "this archive has never seen."
+        )
+    if len(rows) > 1:
+        raise ValueError(
+            f"supersedes reference {reference!r} matches {len(rows)} documents "
+            f"({', '.join(row[1] for row in rows[:3])}). Write more of the path."
+        )
+    document = rows[0][0]
+    return [c for c in candidates if c["memory_document_id"] == document]
+
+
+async def _declared_supersessions(
+    db, corpus_id: str, identity: str, references: list[str], claims: list[dict]
+) -> dict[str, tuple[str, str]]:
+    """Pair this version's claims with the ones a document says it replaces.
+
+    A reference names a set of live claims -- one document's worth, or one key's.
+    Each has to be paired with a claim in the version being written, because that
+    is what the supersession edge points *from*, and an edge has to point at
+    something. Pairing, in order:
+
+    1. **Same key.** A rewritten ADR keeps its section headings, so the positional
+       keys line up and the match is exact rather than inferred.
+    2. **Same position, when the remaining counts are equal.** The remaining
+       unmatched claims are paired in claim order. Equal counts mean the two
+       documents have the same shape, which is what "this replaces that" means for
+       a document that was edited rather than rewritten.
+    3. **Refused.** Unequal counts and no shared key means the reference names
+       claims this document says nothing about. Retiring them anyway would move
+       live facts into history on the strength of a guess, and the guess would be
+       invisible afterwards. The error names the ids so `--supersedes` can be used
+       for exactly the claims the author meant.
+    """
+    keys = [claim["key"] for claim in claims]
+    pairs: dict[str, tuple[str, str]] = {}
+    targets: list[dict] = []
+    for reference in references:
+        for target in await _targets_for_reference(db, corpus_id, identity, reference):
+            if target["id"] not in {t["id"] for t in targets}:
+                targets.append(target)
+
+    unmatched_keys = list(keys)
+    for target in targets:
+        if target["key"] in unmatched_keys:
+            pairs[target["key"]] = (target["id"], "explicit_claim_id")
+            unmatched_keys.remove(target["key"])
+
+    if targets and unmatched_keys:
+        remaining = [t for t in targets if t["key"] not in pairs]
+        if len(remaining) == len(unmatched_keys):
+            for key, target in zip(unmatched_keys, remaining):
+                pairs[key] = (target["id"], "explicit_claim_id")
+        else:
+            orphans = [t["id"] for t in remaining]
+            raise ValueError(
+                f"this document supersedes {len(targets)} claim(s) but authors "
+                f"{len(keys)} claim(s), and {len(remaining)} of the superseded claims share "
+                f"no key with any of them. Refusing to pair by guesswork. Retire the "
+                f"remainder explicitly with --supersedes: {', '.join(o[:16] for o in orphans[:4])}."
+            )
+    return pairs
+
+
+async def _cross_document_targets(
+    db,
+    corpus_id: str,
+    identity: str,
+    claims: list[dict],
+    supersedes_claim_id: str | None,
+    topic_key: str | None,
+) -> dict[str, tuple[str, str]]:
+    """Map each authored claim key to the `(claim_id, basis)` it retires elsewhere.
+
+    Returns an empty mapping when neither argument was given, so the ordinary
+    rewrite path costs one branch and no query.
+
+    Both arguments are refused rather than guessed at when they do not resolve to
+    exactly one target. A supersession that lands on the wrong claim is worse
+    than one that does not land: it moves a live fact into `historical` and the
+    reader is told it is old. An `ad-002.md` that retires `adr-001.md` must say
+    which claim, or say a key that resolves to exactly one live claim.
+    """
+    if not supersedes_claim_id and not topic_key:
+        return {}
+    keys = {claim["key"] for claim in claims}
+    if topic_key and topic_key not in keys:
+        raise ValueError(
+            f"topic_key {topic_key!r} is not one of this version's claim keys; "
+            "superseding a key would record a claim about something the new "
+            "document does not say"
+        )
+
+    if supersedes_claim_id:
+        # Unbounded: a named target must be found or reported missing, never
+        # missed because a newer claim pushed it past a scan limit.
+        wanted = await _resolve_claim_id(db, corpus_id, identity, supersedes_claim_id)
+        candidates = await _active_claims(db, corpus_id, exclude_document=identity, limit=None)
+        targets = [c for c in candidates if c["id"] == wanted]
+        if not targets:
+            raise ValueError(
+                f"supersedes_claim_id {supersedes_claim_id!r} is not an active claim "
+                "in this corpus. A superseded, deleted or other-corpus claim cannot "
+                "be superseded again."
+            )
+        target = targets[0]
+        # Exactly one claim in this version may take the target. Naming a claim is
+        # specific enough on its own -- which is the point, since a claim read out
+        # of plain Markdown carries a positional key that a newer document has no
+        # way to reproduce. More than one candidate means the caller named a key,
+        # not a claim, and the archive will not guess which.
+        matching = [key for key in keys if key == target["key"]]
+        if matching:
+            return {matching[0]: (target["id"], "explicit_claim_id")}
+        if len(keys) == 1:
+            return {next(iter(keys)): (target["id"], "explicit_claim_id")}
+        raise ValueError(
+            f"this version authors {len(keys)} claims ({sorted(keys)}), so "
+            f"supersedes_claim_id {supersedes_claim_id!r} cannot say which one replaces "
+            f"{target['id']!r} on key {target['key']!r}. Use topic_key to retire by "
+            "key, or write one claim."
+        )
+
+    candidates = await _active_claims(
+        db, corpus_id, key=topic_key, exclude_document=identity, limit=None
+    )
+    if not candidates:
+        return {}
+    if len(candidates) > 1:
+        # Refuse rather than pick. Retiring the newest of three live claims leaves
+        # two disagreeing ones and makes the archive look like it resolved
+        # something it did not. The caller can name the claim instead.
+        raise ValueError(
+            f"topic_key {topic_key!r} has {len(candidates)} active claims across "
+            "documents; topic_key would retire one arbitrarily. Pass "
+            "supersedes_claim_id with the id of the one to replace."
+        )
+    # Most recently observed wins. An older live claim under the same key stays
+    # CURRENT and is reported as a conflict, which is the honest state: two
+    # documents really do disagree until one of them is retired too.
+    return {topic_key: (candidates[0]["id"], "topic_key")}
+
+
 async def record_version(
     db: AsyncSession,
     corpus_id: str,
@@ -315,12 +803,25 @@ async def record_version(
     metadata: dict,
     chunks: list[dict],
     owner_principal_id: str | None = None,
+    supersedes_claim_id: str | None = None,
+    topic_key: str | None = None,
+    supersedes_refs: list[str] | None = None,
 ) -> dict:
     """Archive NEW/MODIFIED/RESTORED or return the existing version with skipped=True.
 
     Change detection includes raw content and all normalized metadata, not live
     IDs or rechunking. IDs derive from identity + predecessor + event + payload.
     Evidence is validated even on an unchanged call. No commit; propagate errors.
+
+    `supersedes_claim_id` retires a named claim in this corpus, whatever document
+    it lives in. `topic_key` retires whatever is currently active under that key.
+    `supersedes_refs` carries the references a Markdown document wrote about
+    itself, so `adr-0002` replacing `adr-0001` links itself without anybody
+    copying an id out of the database. It is consulted only when neither of the
+    other two was given.
+    Both are refused rather than guessed at when they do not resolve to exactly one
+    target, because a supersession that lands on the wrong claim is worse than one
+    that does not land at all -- it marks a live fact as history.
 
     `owner_principal_id` is inert while resource-level authorization is
     withdrawn. It is kept on the signature so the callers, the CLI, and
@@ -376,12 +877,28 @@ async def record_version(
             and all(k.startswith("text:") for k in previous_claims)
             and claims[0]["key"].startswith("text:")
         )
+    cross_document = await _cross_document_targets(
+        db, corpus_id, identity, claims, supersedes_claim_id, topic_key
+    )
+    if not cross_document and supersedes_refs:
+        # Nothing explicit was passed, so the document itself is the instruction.
+        # An explicit `--supersedes` outranks it: the caller named a claim, and a
+        # declaration in the file is not a reason to overrule them.
+        cross_document = await _declared_supersessions(
+            db, corpus_id, identity, supersedes_refs, claims
+        )
     for claim in claims:
         supersedes = previous_claims.get(claim["key"])
         basis = "same_document_key" if supersedes else None
         if single_replacement:
             supersedes = next(iter(previous_claims.values()))
             basis = "single_claim_replacement"
+        # An explicit target outranks whatever this document's own history
+        # offered. The author named the claim being retired, and the fact that
+        # the previous version happened to use the same key is not a reason to
+        # ignore them.
+        if claim["key"] in cross_document:
+            supersedes, basis = cross_document[claim["key"]]
         claim_id = _hash("claim", version["id"], claim["key"])
         await db.execute(
             text("""
@@ -526,6 +1043,18 @@ async def changes(db: AsyncSession, corpus_id: str, path: str | None = None) -> 
     ]
 
 
+#: How close a claim has to be to stand in for a query that matched nothing, and how
+#: wide a band around the best score still counts as "the same subject".
+#:
+#: 0.30 is the relevance floor the rest of the product uses, so a relaxed anchor is
+#: never something the query path would have refused outright. 0.10 is the same
+#: near-tie margin `memory_relevance` uses for `ambiguous`. Both are here to bound
+#: a fallback, not to tune it: the fallback runs only when strict matching found
+#: nothing, and it is better to name one subject than to report no history at all.
+ANCHOR_FLOOR = 0.30
+ANCHOR_BAND = 0.10
+
+
 def _query_result(versions, query_text, valid_at=None):
     latest = {}
     for version in versions:
@@ -551,10 +1080,22 @@ def _query_result(versions, query_text, valid_at=None):
             }
             for item in version["evidence"]
         )
-    tokens = set(re.findall(r"\w+", query_text.casefold()))
+    # Interrogatives and function words are not part of what a claim is about, so
+    # they cannot be required of it. `mindpalace history "What is the primary
+    # datastore?"` and `mindpalace history "primary datastore"` now reach the same
+    # claims, which is what an MCP agent will send; only this normalisation stands
+    # between them. An empty result means an empty query, which returns everything,
+    # as it always has.
+    # Interrogatives and function words are not part of what a claim is about, so
+    # they cannot be required of it. `mindpalace history "What is the primary
+    # datastore?"` and `mindpalace history "primary datastore"` now reach the same
+    # claims, which is what an MCP agent sends; only this normalisation stands
+    # between them. A query with no content words left is an empty query, which
+    # returns everything, as it always has.
+    content = similarity.terms(query_text)
 
-    def matches(claim):
-        haystack = set(
+    def haystack(claim):
+        return frozenset(
             re.findall(
                 r"\w+",
                 (
@@ -568,7 +1109,30 @@ def _query_result(versions, query_text, valid_at=None):
                 ).casefold(),
             )
         )
-        return not tokens or tokens <= haystack
+
+    # Second pass, used only when the first matched nothing at all. A question can
+    # still miss a subject whose name the query paraphrases -- "how did the cache
+    # policy change" against a claim that says "shared cache" -- and the honest
+    # answer there is the tightest cluster of claims about it, not an empty
+    # timeline. Scoped to the best scorers and never used to remove a claim, so a
+    # query that already matched keeps exactly the answer it had.
+    #
+    # Plain overlap, not the weighted measure the conflict hint uses. This asks
+    # whether the claim is about the query at all; that one asks which of several
+    # candidates is closest. A query word appearing in no claim is weak evidence
+    # here, where inverse document frequency makes it the strongest signal there
+    # is. `similarity.overlap` documents the split.
+    relaxed: frozenset[str] = frozenset()
+    if content and not any(content <= haystack(claim) for claim in claims):
+        scored = [(similarity.overlap(content, similarity.terms(c["claim"])), c) for c in claims]
+        best = max((score for score, _c in scored), default=0.0)
+        if best >= ANCHOR_FLOOR:
+            relaxed = frozenset(c["id"] for score, c in scored if best - score <= ANCHOR_BAND)
+
+    def matches(claim):
+        if not content:
+            return True
+        return content <= haystack(claim) or claim["id"] in relaxed
 
     superseded_ids = {claim["supersedes_id"] for claim in claims if claim["supersedes_id"]}
     at = _timestamp(valid_at) if valid_at is not None else datetime.now(timezone.utc)
@@ -608,9 +1172,30 @@ def _query_result(versions, query_text, valid_at=None):
                     }
                 )
     superseded_ids = {claim["supersedes_id"] for claim in claims if claim["supersedes_id"]}
+    # A claim that one of *this query's* matches replaced is history for this query,
+    # whether or not its own text matches. The edge is the archive's own record that
+    # the claim used to be the answer, and it is the only thing tying two differently
+    # worded decisions together: "What is the primary datastore?" matches
+    # "PostgreSQL 16 with three replicas" but not "PostgreSQL 15 with three replicas",
+    # so requiring a text match on the older claim made `history` report that the
+    # decision was never replaced. Scoped to matched claims so an unrelated
+    # supersession elsewhere in the corpus cannot drag itself into this answer.
+    replaced_by_match = {
+        claim["supersedes_id"] for claim in claims if claim["supersedes_id"] and matches(claim)
+    }
     current = [claim for claim in active if matches(claim) and claim["status"] == "CURRENT"]
+    # A superseded claim is historical even when the version holding it is still
+    # the latest one for its document. That is what cross-document supersession
+    # produces: `adr-002.md` retires a claim in `adr-001.md`, and `adr-001.md` has
+    # not changed, so its version stays current while the claim inside it does not.
+    # Keying history on the version alone made such a claim appear in no bucket at
+    # all -- not current, not historical, not uncertain -- and every read of the
+    # corpus that mentioned it raised KeyError.
     historical = [
-        claim for claim in claims if claim["version_id"] not in current_ids and matches(claim)
+        claim
+        for claim in claims
+        if (matches(claim) or claim["id"] in replaced_by_match)
+        and (claim["status"] == "SUPERSEDED" or claim["version_id"] not in current_ids)
     ]
     uncertain = [claim for claim in claims if claim["status"] == "UNCERTAIN" and matches(claim)]
     returned_ids = {claim["id"] for claim in current + historical + uncertain}
@@ -621,6 +1206,12 @@ def _query_result(versions, query_text, valid_at=None):
         "historical_memories": historical,
         "superseded_memories": [claim for claim in historical if claim["id"] in superseded_ids],
         "conflicts": conflicts,
+        # Every claim in the load, status-annotated, whether or not a bucket
+        # claimed it. `project` builds `Claim` objects from this rather than from
+        # the buckets above, because `changes` walks version contents and a claim
+        # in no bucket -- which is what a cross-document supersession leaves
+        # behind -- would then be unrepresentable.
+        "all_claims": claims,
         "evidence": [item for item in evidence_rows if item["claim_id"] in returned_ids],
     }
 

@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
-from api.models.memory import MemoryRequest, MemoryResponse
+from api.models.memory import MemoryRequest, MemoryWire
 
 # --- Ingestion ---
 
@@ -439,7 +439,12 @@ class MemoryAskResponse(StructuredResponse):
     """Answer plus the exact canonical pack used for evidence attribution."""
 
     mode: Literal["memory"] = "memory"
-    memory: MemoryResponse
+    # `MemoryWire`, not `MemoryResponse`: FastAPI serializes a response model
+    # through `model_dump`, and that omits the retrieval diagnostics so the receipt
+    # digest stays a property of the answer rather than of the ranking. A caller of
+    # this route that saw only rank 1 could not tell a confident answer from a
+    # near-tie. The pack itself is unchanged and still hashed by `canonical_json`.
+    memory: MemoryWire
 
 
 # --- Legacy (for backward compatibility) ---

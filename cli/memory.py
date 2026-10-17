@@ -8,8 +8,24 @@ from __future__ import annotations
 from typing import Annotated
 
 import typer
+from typing import TYPE_CHECKING
 
-from mindpalace_sdk import MemoryClientError, MindPalace
+# `mindpalace_sdk` reaches httpx, asyncio and yaml, which measured 28 ms of the
+# ~400 ms `mindpalace --help` on this machine -- and `memory` is a subcommand
+# that `--help` never runs. So it is imported inside the functions that use it,
+# and named here for a type checker only.
+#
+# Not a module-level `__getattr__`: PEP 562 covers attribute access on the module
+# object, and a global name inside a function in this module is looked up in the
+# module's `__dict__` and then builtins, without consulting it. Every command here
+# would raise NameError the first time it caught an exception. That failure is
+# invisible until an error occurs, which is the worst time to find it.
+if TYPE_CHECKING:  # pragma: no cover - names the lazy imports for a checker
+    import mindpalace_sdk
+
+    MemoryClientError = mindpalace_sdk.MemoryClientError
+    MindPalace = mindpalace_sdk.MindPalace
+
 
 app = typer.Typer(
     name="memory",
@@ -29,6 +45,8 @@ DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 
 
 def _dispatch(method: str, corpus: str, query: str, base_url: str, **fields) -> None:
+    from mindpalace_sdk import MemoryClientError, MindPalace
+
     try:
         memory = MindPalace(base_url=base_url).memory
         response = getattr(memory, method)(corpus=corpus, query=query, **fields)
@@ -124,6 +142,8 @@ def feed(
     base_url: BaseURL = DEFAULT_BASE_URL,
 ) -> None:
     """Consume the durable corpus-scoped change feed."""
+    from mindpalace_sdk import MemoryClientError, MindPalace
+
     try:
         response = MindPalace(base_url=base_url).memory.feed(
             corpus=corpus, page_size=page_size, cursor=cursor

@@ -34,6 +34,43 @@ abstention, receipt digest and Memory Pack digest. That is
 MCP is unchanged and correctly so: an MCP server is a long-lived process that pays
 the import once.
 
+## The ONNX backend
+
+ONNX Runtime is the default. `onnxruntime`, `tokenizers` and `huggingface-hub` are
+declared dependencies, and `sentence-transformers` is the `[torch]` extra.
+
+The runtime amortises the model load across commands. The backend removes it: the
+same published MiniLM weights run under onnxruntime with no torch in the process.
+Measured on this machine, one-shot, `MIND_PALACE_RUNTIME=0`:
+
+| | `sentence-transformers` | onnxruntime |
+|---|---|---|
+| `import` | 6.15 s | 0.40 s |
+| model + first encode | 4.69 s | 1.00 s |
+| `mindpalace recall` | 7.63 s | 1.42 s |
+| `mindpalace receipt -o receipt.json` | 7.57 s | 1.19 s |
+| `mindpalace ingest-repo` | 7.77 s | 1.35 s |
+| install size | 5.1 GB | 90 MB |
+
+`mindpalace --help` is 0.25 s either way; it never loads a model.
+
+The two backends are interchangeable, which is what makes this safe. The archive
+stores vectors and records the model name and dimension, never the backend, so a
+corpus written under one is read by the other. Measured over claim text, a query,
+a key, a path, SQL, an empty string, 2,000 characters, non-ASCII and a truncation
+boundary: **minimum cosine 0.99999833**, maximum absolute difference 3.45e-04.
+`api/services/embedder.py` documents it and
+`tests/test_embedder_backend_equivalence.py` asserts it per text, because a cosine
+of 0.98 would pass any check that only confirmed the vectors are vectors, and
+would silently re-rank every corpus in the field.
+
+`MEMORY_EMBEDDER=torch` forces the old path, which is how the two are compared on a
+machine that has both. Without `onnxruntime` installed, the fallback is what you
+get and nothing about the product changes except latency.
+
+The runtime still earns its keep on the parts ONNX does not address: the
+connection pool, and paying the session build once instead of once per command.
+
 ### Commands
 
 ```console
@@ -246,21 +283,24 @@ reads opts in and knows exactly what they are getting.
 
 ### The model dependency itself
 
-`sentence-transformers` remains a declared dependency, so `pip install mindpalace-os`
-keeps ranking semantically by default. That was a deliberate decision not to move it
-into an optional extra: doing so would mean an existing user upgrading a plain install
-silently lost semantic ranking — a surprising behaviour change for the majority case.
+`pip install mindpalace-os` installs onnxruntime, tokenizers and huggingface-hub,
+which is what the default read path uses. `sentence-transformers` is the `[torch]`
+extra. It was a declared dependency until this change, on the grounds that moving it
+would make an existing user's plain install silently lose semantic ranking. The
+measurement above is why that reasoning no longer holds: the fallback produces the
+same vectors to a cosine of 0.99999833, so switching does not change any ranking,
+and the install drops from gigabytes to megabytes.
 
-What the dependency actually costs, measured on this machine:
+What each stack costs, measured on this machine:
 
 | | installed size |
 |---|---:|
 | the Mind Palace wheel | **227 KB** (was 425 KB until `v0.9.1`, which stopped shipping `scripts/`) |
-| `mindpalace-os` installed | 2.1 MB |
+| `mindpalace-os` installed, ONNX backend | **211 MB** |
 | `sentence-transformers` + `torch` + `transformers` + numpy/scipy/scikit-learn | **1,347 MB** |
 | cached `all-MiniLM-L6-v2` weights | 88 MB |
 
-The product is about 2 MB and the model stack is about 1.35 GB — a ratio of roughly
+The product is about 2 MB and the torch stack is about 1.35 GB — a ratio of roughly
 670 to 1. That is the whole reason a model-free mode is worth having, and also the
 reason it is opt-in: semantic ranking is the better default, and most users should
 have it without asking.
@@ -271,3 +311,49 @@ blocks `torch`, `transformers` and `sentence_transformers` at the import hook an
 checks that `--help`, `init`, `recall` and `explain` all still work. So the light path
 is real today, and revisiting the dependency model later would be a packaging change
 rather than a code change.
+
+## The query log
+
+Every `recall` and `remember` appends one JSON object to
+`~/.mind-palace/logs/queries.jsonl`: timestamp, operation, the query,
+`match_status`, the top three scores, the claim ids returned, and latency. Writes
+one line per call, keyed by a `query_id` that both the response and the log carry.
+
+**On by default on a local connection, off on a scoped one.** A tenant-scoped
+connection is a server deployment, and logging there is somebody's retention
+policy to set. `MIND_PALACE_QUERY_LOG=0` turns it off everywhere;
+`MIND_PALACE_QUERY_LOG=/path/to/file.jsonl` moves it; `MIND_PALACE_DATA_DIR`
+moves the directory it lives in.
+
+**No memory content is recorded.** Not the claim text, not the source path, not
+the corpus. The claim ids are 64 hex characters that carry nothing on their own,
+and a log sitting in the same home directory as the database it describes is
+exactly where content ends up by accident.
+
+Grade a call with the `query_id` a response reported:
+
+```console
+$ mindpalace feedback b062424783ba --verdict wrong --note "meant the cache"
+recorded 'wrong' against the query of 2026-10-16T19:56:52+00:00
+
+$ mindpalace feedback-summary
+log:  /home/you/.mind-palace/logs/queries.jsonl
+calls: 214    graded: 37
+
+  abstained_wrongly    4
+  right               26
+  wrong                7
+
+by match_status:
+  ambiguous     9 graded,    3 not right
+  confident    28 graded,    8 not right
+```
+
+The breakdown by `match_status` is the part worth reading. If `ambiguous` answers
+are graded about as often wrong as `confident` ones, the near-tie signal is
+carrying no information and the margin threshold is wrong. If they are graded worse
+which is the expectation. Then the shortlist beside an ambiguous answer is doing
+work that a single top score could not.
+
+Writing a row never fails a query. A full disk costs some telemetry and nothing
+else.

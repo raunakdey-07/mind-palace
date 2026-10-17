@@ -38,9 +38,47 @@ def _time_line(response: MemoryResponse) -> str:
 
 
 def _source_line(response: MemoryResponse, claim) -> str:
-    """Where the answer came from, in the vocabulary of a document, not a table."""
+    """Where the answer came from, and the id that names it.
+
+    The claim id is on every answer, not only on ambiguous ones. It is what
+    `mindpalace remember --supersedes` takes, and `--json` prints the canonical
+    form, which deliberately excludes the retrieval diagnostics -- so without it
+    here there is no way for a CLI user to get a claim id at all.
+    """
     path = claim.path or "unknown"
-    return f"{path} @ {claim.version_id[:12]}"
+    return f"{path} @ {claim.version_id[:12]} (claim {claim.id[:12]})"
+
+
+def _confidence_line(response: MemoryResponse) -> list[str]:
+    """How far the ranking can be acted on, and what to read if it cannot.
+
+    A single top hit is the whole answer as far as the response is concerned, and
+    that is not enough to act on. Rank 1 is wrong for 58 of the 175 answerable dev
+    questions, and nothing in a lone score says so, so the confidence and the
+    shortlist behind it are part of the answer rather than a debug aid.
+    """
+    lines: list[str] = []
+    if response.match_status == "ambiguous":
+        lines.append("")
+        lines.append(
+            "Two or more claims score almost the same, so the top one is not safe to "
+            "act on alone. Check the quote that matches your case:"
+        )
+        for candidate in response.candidates:
+            mark = " " if candidate.status == "CURRENT" else "?"
+            # The claim id is here so `--supersedes` can name it without a JSON
+            # detour, which is the whole point of printing a shortlist.
+            ids = " ".join(c[:12] for c in candidate.claim_ids)
+            lines.append(f"  {mark} {candidate.score:.3f}  {_short(candidate.quotes[0], 72)}")
+            lines.append(f"      {candidate.path} ({candidate.status.lower()}) claim {ids}")
+        lines.append(
+            "\nRead the source for the one you meant, or retire the wrong one with\n"
+            'mindpalace remember "<new fact>" --supersedes <claim-id>'
+        )
+    elif response.match_margin is not None:
+        lines.append("")
+        lines.append(f"clear answer (margin {response.match_margin:.3f})")
+    return lines
 
 
 def render_recall(
@@ -79,14 +117,15 @@ def render_recall(
         lines.append("No memory matched that question.")
         if response.constraints:
             lines.append(f"  {', '.join(response.constraints)}")
-        # A stranger who ingested plain Markdown or a transcript gets here, and
-        # "Nothing was invented" reads as "the document was ignored". It was
-        # not: it was chunked and stored. What it lacks is a `claims:` block,
-        # and that -- not the search -- is why recall is empty. Say which.
+        # Prose with nothing claim-shaped in it is archived and searchable but
+        # contributes no memory, and an abstention has to say which of the two it
+        # is. "Nothing matched" alone sends the reader looking for a retrieval
+        # fault when the document simply states nothing assertable.
         lines.append(
-            "\nOnly authored claims are answers. A document with no `claims:` block\n"
-            "in its frontmatter is stored and searchable, but contributes nothing\n"
-            "here. See docs/authoring.md to author claims in it."
+            "\nA document becomes memory from its headings, list items and\n"
+            "`Key: Value` lines, or from an authored `claims:` block. A file\n"
+            "with prose and no such lines contributes nothing here. See\n"
+            "docs/authoring.md for both forms."
         )
         lines.append("\nNothing was invented: Mind Palace records only what was remembered.")
         return "\n".join(lines)
@@ -96,6 +135,8 @@ def render_recall(
         lines.append(f"{prefix}{claim.claim}")
         lines.append(f"   source: {_source_line(response, claim)}")
         lines.append(f"   time:   {_time_line(response)}")
+
+    lines.extend(_confidence_line(response))
 
     if historical:
         lines.append("")
@@ -267,13 +308,15 @@ def render_history(response: MemoryResponse) -> str:
 
 
 def render_remember(result: dict, *, corpus: str) -> str:
-    """Confirm what was written, and be explicit when nothing was written."""
+    """Confirm what was written, be explicit when nothing was, and name near-misses."""
     event = result.get("event", "NEW")
     if event == "UNCHANGED":
-        return (
-            "Already remembered. Nothing changed, so no new version was recorded.\n"
-            f"  version: {result.get('version_id', '')[:12]}\n"
-            f"  corpus:  {corpus}"
+        return "\n".join(
+            [
+                "Already remembered. Nothing changed, so no new version was recorded.",
+                f"  version: {result.get('version_id', '')[:12]}",
+                f"  corpus:  {corpus}",
+            ]
         )
     lines = [
         "Remembered.",
@@ -281,4 +324,17 @@ def render_remember(result: dict, *, corpus: str) -> str:
         f"  corpus:  {corpus}",
         f"  path:    {result.get('path', '')}",
     ]
-    return "\n".join(line for line in lines if not line.endswith(":"))
+    related = result.get("related_active_claims") or []
+    if related:
+        # The archive cannot tell whether one of these contradicts the new claim or
+        # should have been replaced by it. Saying so is more useful than picking.
+        lines.append("")
+        lines.append(f"{len(related)} live claim(s) already read like this one:")
+        for item in related:
+            lines.append(f"  {item['score']:.2f}  {_short(item['claim'], 88)}")
+            lines.append(f"      claim {item['claim_id'][:12]} on key {item['key']}")
+        lines.append(
+            "\nIf one of them is now wrong, record the replacement with "
+            "`--supersedes <claim-id>`."
+        )
+    return "\n".join(lines)

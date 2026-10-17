@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 import mcp_server
 from api.main import app
-from api.models.memory import Evidence, MemoryRequest, MemoryResponse
+from api.models.memory import Evidence, MemoryRequest, MemoryResponse, MemoryWire
 from api.routers import query as ask_router
 from cli.memory import app as memory_app
 from mindpalace_sdk import MemoryClientError, MindPalace
@@ -78,7 +78,7 @@ async def test_rest_query_dispatch(client, service, selectors):
     body = {"query": QUESTION, "corpus": "docs", **selectors}
     response = await client.post("/api/memory/query", json=body)
     assert response.status_code == 200
-    assert response.json() == service.execute.return_value.model_dump(mode="json")
+    assert response.json() == service.execute.return_value.public_dict()
     service.execute.assert_awaited_once_with("query", MemoryRequest(**body))
 
 
@@ -99,14 +99,18 @@ async def test_query_schemas_are_shared():
     assert route["requestBody"]["content"]["application/json"]["schema"] == {
         "$ref": "#/components/schemas/MemoryRequest"
     }
+    # `MemoryWire`, which is `MemoryResponse` plus the retrieval diagnostics.
+    # One schema across REST and MCP, so an agent reading either sees the same
+    # response contract; `MemoryResponse` alone would advertise a response with no
+    # `match_status` and no `candidates`, which is not what either surface sends.
     assert route["responses"]["200"]["content"]["application/json"]["schema"] == {
-        "$ref": "#/components/schemas/MemoryResponse"
+        "$ref": "#/components/schemas/MemoryWire"
     }
     tools = {tool.name: tool for tool in await mcp_server.mcp.list_tools()}
     tool = tools["memory_recall"]
     assert tool.input_schema["required"] == ["request"]
     assert tool.input_schema["$defs"]["MemoryRequest"] == MemoryRequest.model_json_schema()
-    assert tool.output_schema == MemoryResponse.model_json_schema()
+    assert tool.output_schema == MemoryWire.model_json_schema()
     assert tool.annotations.read_only_hint is True
     assert tool.annotations.destructive_hint is False
     assert tool.annotations.open_world_hint is False
@@ -119,8 +123,14 @@ async def test_mcp_query_dispatch(service, monkeypatch):
     result = await mcp_server.mcp.call_tool("memory_recall", {"request": body})
     service.execute.assert_awaited_once_with("query", MemoryRequest(**body))
     assert not result.is_error
-    assert result.structured_content == service.execute.return_value.model_dump(mode="json")
-    assert result.content[0].text == service.execute.return_value.canonical_json()
+    # `public_dict`, not `model_dump`: an agent reads the structured block, and it
+    # has to carry `match_status` and `candidates` for the agent to tell a
+    # confident answer from a near-tie.
+    assert result.structured_content == service.execute.return_value.public_dict()
+    # The text block is the same payload as the structured block, not the digest:
+    # a client that parses `content` and ignores `structuredContent` still has to
+    # see `match_status` and `candidates`.
+    assert json.loads(result.content[0].text) == service.execute.return_value.public_dict()
 
 
 @pytest.mark.parametrize(
@@ -240,7 +250,9 @@ async def test_only_opt_in_ask_dispatches_query(client, service, monkeypatch, pa
     service.execute.assert_awaited_once_with(
         "query", MemoryRequest(query=QUESTION, corpus="docs", **SELECTORS)
     )
-    assert response.json()["memory"] == service.execute.return_value.model_dump(mode="json")
+    # `public_dict`: this route's response model carries the retrieval
+    # diagnostics, which `model_dump` omits from the digest.
+    assert response.json()["memory"] == service.execute.return_value.public_dict()
     if with_evidence:
         assert service.execute.return_value.canonical_json() in generate.await_args.args[0]
         assert response.json()["sources"] == ["deployment.md"]

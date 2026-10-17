@@ -64,6 +64,39 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
     ),
 }
 
+#: Skips that are correct only where `sentence-transformers` is absent, which is
+#: the job whose dependency set is the project's default.
+#:
+#: `sentence-transformers` is the `[torch]` extra. The main CI job installs the
+#: default set, so it has no torch and the torch-only tests skip there. That is the
+#: intended consequence of the default, not a defect, and this list records which
+#: tests it covers -- keyed on name and reason, like ALLOWLIST above.
+#:
+#: It is scoped to one job on purpose. `embedding-backends` installs `[torch]`
+#: precisely so those tests run, so a skip there means the extra stopped being
+#: installed or the test stopped running, and the job must fail. That job passes
+#: `--forbid-skips`, which tolerates none.
+BACKEND_ABSENT: dict[str, str] = {
+    "test_each_text_is_the_same_vector_under_both_backends": "embedding-backends CI job",
+    "test_both_backends_produce_the_same_number_of_vectors": "embedding-backends CI job",
+    "test_both_backends_produce_the_same_dimension": "embedding-backends CI job",
+    "test_both_vectors_are_unit_length": "embedding-backends CI job",
+    "test_the_batch_is_not_silently_reordered": "embedding-backends CI job",
+    "test_cached_embedder_requests_local_files_only": "[torch] extra is not installed",
+    "test_rerank_scores_are_logits_can_be_negative": "[torch] extra",
+}
+
+
+def base_name(name: str) -> str:
+    """The test's own name, with any parametrization suffix removed.
+
+    junit records `test_foo[0]` .. `test_foo[11]` as twelve separate entries. An
+    allowlist keyed on those exact strings would need sixteen lines for one test
+    and would break the moment a parameter was added, so the suffix comes off
+    first and the lookup is on the function.
+    """
+    return name.split("[", 1)[0]
+
 
 def skipped_cases(junit: Path) -> list[tuple[str, str, str]]:
     """(classname, name, reason) for every skipped testcase in a junitxml."""
@@ -86,7 +119,22 @@ def skipped_cases(junit: Path) -> list[tuple[str, str, str]]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--junit", required=True, type=Path)
+    parser.add_argument(
+        "--default-dependency",
+        action="store_true",
+        help="also allow the skips that are correct only where the [torch] extra "
+        "is absent, which is the job that installs the default dependency set",
+    )
+    parser.add_argument(
+        "--forbid-skips",
+        action="store_true",
+        help="fail on any skip at all, for a job that is supposed to run everything",
+    )
     args = parser.parse_args()
+
+    if args.default_dependency and args.forbid_skips:
+        print("::error::--default-dependency and --forbid-skips contradict each other")
+        return 2
 
     if not args.junit.exists():
         print(f"::error::no junitxml at {args.junit}")
@@ -97,17 +145,35 @@ def main() -> int:
     allowed: list[str] = []
 
     for classname, name, reason in cases:
-        entry = ALLOWLIST.get(name)
-        if entry is None:
+        if args.forbid_skips:
             unexpected.append((classname, name, reason))
-        elif entry[0] not in reason:
-            # The opt-in variable has to still be the stated reason. A test can
-            # keep its name and start skipping for something else entirely.
-            unexpected.append((classname, name, reason))
-        else:
-            allowed.append(f"{name} (opt-in via {entry[0]})")
+            continue
+        key = base_name(name)
+        entry = ALLOWLIST.get(key)
+        if entry is not None:
+            if entry[0] not in reason:
+                # The opt-in variable has to still be the stated reason. A test can
+                # keep its name and start skipping for something else entirely.
+                unexpected.append((classname, name, reason))
+            else:
+                allowed.append(f"{name} (opt-in via {entry[0]})")
+            continue
+        if args.default_dependency and key in BACKEND_ABSENT:
+            fragment = BACKEND_ABSENT[key]
+            if fragment in reason:
+                allowed.append(f"{name} (default dependency set: {fragment})")
+            else:
+                # Same name, different reason: the extra went away for some other
+                # reason, and that is the thing worth stopping for.
+                unexpected.append((classname, name, reason))
+            continue
+        unexpected.append((classname, name, reason))
 
     print(f"skipped tests read from {args.junit}: {len(cases)}")
+    scope = "default dependency set" if args.default_dependency else "base allowlist"
+    if args.forbid_skips:
+        scope = "no skips permitted"
+    print(f"scope: {scope}")
     for line in sorted(allowed):
         print(f"  ok  allowlisted: {line}")
 
@@ -129,5 +195,120 @@ def main() -> int:
     return 0
 
 
+def _self_test() -> int:
+    """The gate, checked against the gate.
+
+    `--forbid-skips` exists to make the embedding-backends job fail if torch stops
+    being installed there. That only works if it is true, and the only honest way
+    to know is to run it over a junit that records a skip and watch it fail. Run
+    without arguments:
+
+        python scripts/check_skips.py --self-test
+    """
+    import io
+    import tempfile
+
+    def check(label: str, xml: str, argv: list[str], want: int) -> list[str]:
+        path = Path(tempfile.mkdtemp()) / "junit.xml"
+        path.write_text(xml, encoding="utf-8")
+        saved, sys.argv = sys.argv, ["check_skips", "--junit", str(path), *argv]
+        buf, real = io.StringIO(), sys.stdout
+        sys.stdout = buf
+        try:
+            got = main()
+        finally:
+            sys.stdout = real
+            sys.argv = saved
+        ok = got == want
+        print(f"  {'ok  ' if ok else 'FAIL'} {label}: exit {got}, expected {want}")
+        if not ok:
+            print(buf.getvalue())
+        return [line for line in buf.getvalue().splitlines() if line.strip()]
+
+    def junit(*cases: tuple[str, str]) -> str:
+        body = "".join(
+            f'<testcase classname="t" name="{n}"><skipped message="{r}"/></testcase>'
+            for n, r in cases
+        )
+        return f'<?xml version="1.0"?><testsuites><testsuite>{body}</testsuite></testsuites>'
+
+    torch_absent = junit(
+        (
+            "test_both_vectors_are_unit_length",
+            "comparing the two backends needs both; the embedding-backends CI job has them",
+        ),
+        (
+            "test_cached_embedder_requests_local_files_only",
+            "the [torch] extra is not installed; the ONNX backend has its own tests",
+        ),
+        (
+            "test_rerank_scores_are_logits_can_be_negative",
+            "reranking needs the [torch] extra; the default install does not have it",
+        ),
+    )
+    opt_in = junit(
+        ("test_migrations_apply_downgrade_and_reapply", "needs MIND_PALACE_MIGRATION_ROUNDTRIP"),
+    )
+
+    print("check_skips self-test")
+    problems = 0
+    # 1. The torch-dependent skips are fine in the default-dependency job.
+    problems += (
+        0
+        if check(
+            "torch skips allowed where the default is installed",
+            torch_absent,
+            ["--default-dependency"],
+            0,
+        )
+        else 1
+    )
+    # 2. The mutation: the same skips must FAIL the job that has torch, which is
+    #    what makes this gate able to notice the extra stopping being installed.
+    problems += (
+        0
+        if check(
+            "torch skips refused where [torch] is installed", torch_absent, ["--forbid-skips"], 1
+        )
+        else 1
+    )
+    problems += (
+        0 if check("torch skips refused under the base allowlist", torch_absent, [], 1) else 1
+    )
+    # 3. Zero skips must pass under --forbid-skips: the job is not merely
+    #    configured to tolerate nothing, it has to be able to prove it.
+    problems += 0 if check("no skips passes --forbid-skips", junit(), ["--forbid-skips"], 0) else 1
+    # 4. The pre-existing opt-in behaviour is untouched.
+    problems += 0 if check("opt-in skip still allowed", opt_in, [], 0) else 1
+    # 5. A test keeping its name but changing its reason is still a problem.
+    problems += (
+        0
+        if check(
+            "wrong reason for a known name is refused",
+            junit(("test_migrations_apply_downgrade_and_reapply", "no database")),
+            [],
+            1,
+        )
+        else 1
+    )
+    # 6. The two flags together are contradictory rather than silently lenient.
+    problems += (
+        0
+        if check(
+            "contradictory flags rejected",
+            torch_absent,
+            ["--default-dependency", "--forbid-skips"],
+            2,
+        )
+        else 1
+    )
+
+    print(f"\n{6 - problems}/{6} self-tests passed")
+    return 1 if problems else 0
+
+
 if __name__ == "__main__":
+    if "--self-test" in sys.argv:
+        sys.argv.remove("--self-test")
+        sys.exit(_self_test())
     sys.exit(main())

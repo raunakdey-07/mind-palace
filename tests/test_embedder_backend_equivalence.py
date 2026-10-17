@@ -9,6 +9,11 @@ under the other.
 A cosine of 0.98 would pass a smoke test and silently re-rank every corpus in the
 field. So this asserts the number, and `api/services/embedder.py` documents the
 measured one.
+
+This is the only file in the suite that needs both backends, which is why CI runs
+it in its own job. The tests that build a real torch model sit behind a fixture that
+skips when `[torch]` is absent, so the main job still verifies the six tests in here
+that are about the default backend.
 """
 
 import os
@@ -64,6 +69,17 @@ def _onnx_vectors():
 
 @pytest.fixture(scope="module")
 def vectors():
+    # On the fixture rather than at module scope, and deliberately. A module-level
+    # `importorskip` takes the whole file with it -- 22 tests, six of which are
+    # about the default backend and run perfectly well without torch -- and junit
+    # records it as one entry called `collection skipped` with no reason, which is
+    # no use to `scripts/check_skips.py`. On the fixture, every test that genuinely
+    # needs a live torch model is named and carries the reason, and the rest of the
+    # file is verified in both jobs rather than only the one with [torch].
+    pytest.importorskip(
+        "sentence_transformers",
+        reason="comparing the two backends needs both; the embedding-backends CI job has them",
+    )
     return _torch_vectors(), _onnx_vectors()
 
 

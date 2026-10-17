@@ -34,7 +34,7 @@ For wiring Mind Palace into a coding agent so it tracks your project's decisions
 runbooks. These commands run in CI against a built wheel (`scripts/cleanroom_quickstart.py`).
 
 ```bash
-# The default install is ONNX, not torch: cold `recall` 1.4 s, install 90 MB.
+# The default install is ONNX, not torch: cold `recall` 1.4 s, install 216 MB.
 git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
 python -m venv .venv && . .venv/bin/activate && pip install -e '.[cli,mcp]'
 export MIND_PALACE_RUNTIME_PASSWORD=choose-a-local-password
@@ -71,6 +71,16 @@ The first `recall` builds an ONNX session: about 1.4 s, then 0.3 s. A background
 runtime holds it and the connection pool warm after that;
 `mindpalace runtime status` says whether one is up. `MIND_PALACE_RUNTIME=0` turns
 it off, and `MIND_PALACE_LEXICAL=1` turns the model off entirely.
+
+`pip install -e '.[cli,mcp]'` resolves 79 distributions totalling 216 MB, of which
+the three embedding packages are 79 MB. `sentence-transformers` and torch are the
+`[torch]` extra and add about 1.35 GB. The extra is not needed for recall, and the
+two backends return the same vectors -- measured minimum cosine 0.99999833 -- so it
+buys a different import time and nothing else. The one thing that does need it is
+`rerank=true` on the REST search endpoint, which asks for the cross-encoder
+reranker; on the default stack that raises, because returning unreranked results
+under a rerank request would be a lie. `mindpalace search` and every other command
+leave it off.
 
 Your agent gets the same commands over MCP, with the same `match_status` and
 `candidates` on the answer and the same `supersedes_claim_id` on the write, which
@@ -169,9 +179,11 @@ print(f"{memory.claim}  [{memory.status}]")
   of 16 MCP tools and the first that writes. Without `file=` the evidence for the
   claim is the statement itself, so it proves what the agent was told and not that
   it is true ([why, and the review it needs](docs/authoring.md#memory_remember)).
-- **The install is 5.9 GB**, and a writer of this size in your terminal is
-  unfashionable. `MIND_PALACE_LEXICAL=1` removes the model and most of the
-  weight, and costs you meaning-based matching.
+- **The install is 216 MB, not gigabytes**, unless you ask. Every latency and size
+  figure recorded up to v0.9.1 measured a `sentence-transformers` import, because
+  that was the default then; those figures describe the opt-in `[torch]` stack, not
+  what you get now. See [the install](#quickstart) for both sizes and what the extra
+  is for.
 - **`--as-of` queries need a timestamp you actually wrote at.** Memory is stamped
   when it is recorded, so a time-travel query dated before the write returns
   nothing. There is no backdating.

@@ -169,13 +169,42 @@ def test_lexical_mode_does_not_import_the_model_stack(corpus):
 
 
 def test_lexical_mode_is_faster_because_of_that(corpus):
-    """The speed claim, measured in the same process shape on the same corpus."""
+    """The speed claim, measured in the same process shape on the same corpus.
+
+    The bound is 1.33x and it used to be 2x, and the reason matters: the whole
+    difference between the two modes is the one-time model load, so the ceiling on
+    the win is whatever building a session costs. Measured on the default backend:
+
+        this machine    semantic 1.71s, lexical 0.65s   2.61x
+        GitHub runner   semantic 0.83s, lexical 0.46s   1.80x
+
+    The 2x figure was calibrated against a `sentence-transformers` import, which
+    cost about six seconds and made any ratio look generous. The default install
+    runs onnxruntime, where the session builds in roughly 0.4 s, so the maximum
+    available win is now about half a second and a ratio near two is the *expected*
+    result rather than a regression. 1.33x is far enough above 1.0 to catch
+    something having started to load the model anyway.
+
+    The claim that matters -- that lexical mode imports no model at all -- is
+    asserted exactly, and machine-independently, by
+    `test_lexical_mode_does_not_import_the_model_stack` above. This test only
+    checks that the saving is real and not measurement noise.
+    """
     _, semantic = _child(["recall", ANSWERABLE, "--corpus", corpus], lexical=False)
     _, lexical = _child(["recall", ANSWERABLE, "--corpus", corpus], lexical=True)
-    assert lexical["elapsed"] < semantic["elapsed"] / 2, (
+    # Always printed, not only on failure. A bound that gates a claim is worth
+    # seeing while it holds; pytest captures stdout unless -s, so CI runs this
+    # file separately with -s to put the numbers in the log.
+    print(
+        f"\nlexical-mode timing: semantic {semantic['elapsed']:.2f}s, "
+        f"lexical {lexical['elapsed']:.2f}s, ratio "
+        f"{semantic['elapsed'] / lexical['elapsed']:.2f}x (bound: above 1.33x)"
+    )
+    assert lexical["elapsed"] < semantic["elapsed"] * 0.75, (
         f"lexical {lexical['elapsed']:.2f}s vs semantic {semantic['elapsed']:.2f}s -- "
-        "the win comes entirely from not importing the model stack, so a small gap "
-        "means something is still loading it"
+        "the difference between the two modes is the model load, so lexical should "
+        "be clearly faster. If the gap has closed, something in the lexical path is "
+        "building a session anyway; the import table in the sibling test says which"
     )
 
 

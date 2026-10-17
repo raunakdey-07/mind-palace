@@ -4,7 +4,7 @@ Commands only. Each one is the command, not a description of it. The README
 explains why; this is for the person who already read it and wants the list.
 
 ```bash
-# 1. Install. Expect about 211 MB; onnxruntime is the default backend.
+# 1. Install. Expect about 216 MB; onnxruntime is the default backend.
 git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
@@ -80,7 +80,7 @@ Moved out of README.md on 2026-10-14 when it was cut from 883 lines to about
 200. Every `$ ` line above is extracted and run against a built wheel by
 scripts/cleanroom_quickstart.py, in the "Clean install from the built wheel" CI job.
 
-`requirements.txt` installs the onnxruntime backend and takes about 211 MB. Adding
+`requirements.txt` installs the onnxruntime backend and takes about 216 MB. Adding
 the `[torch]` extra makes it roughly 1.35 GB instead, to load the same weights
 through sentence-transformers; see [the runtime](../docs/runtime.md#the-onnx-backend)
 for why the default is the smaller one. To download no model weights at all, set

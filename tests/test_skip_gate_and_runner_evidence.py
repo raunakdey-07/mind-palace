@@ -156,6 +156,191 @@ def test_an_allowlisted_name_that_skips_for_another_reason_is_rejected(tmp_path,
     assert module.main() == 1
 
 
+# ------------------------------------------------- skips that depend on the backend
+
+
+#: The skips the default dependency set causes, with the reasons the tests carry.
+#: Named here as well as in the gate so that a rename in either place is a failure
+#: rather than a silently widened allowlist.
+BACKEND_ABSENT_CASES = [
+    (
+        "tests.test_embedder_backend_equivalence",
+        "test_each_text_is_the_same_vector_under_both_backends",
+        "comparing the two backends needs both; the embedding-backends CI job has them",
+    ),
+    (
+        "tests.test_embedder_backend_equivalence",
+        "test_both_backends_produce_the_same_number_of_vectors",
+        "comparing the two backends needs both; the embedding-backends CI job has them",
+    ),
+    (
+        "tests.test_embedder_backend_equivalence",
+        "test_both_backends_produce_the_same_dimension",
+        "comparing the two backends needs both; the embedding-backends CI job has them",
+    ),
+    (
+        "tests.test_embedder_backend_equivalence",
+        "test_both_vectors_are_unit_length",
+        "comparing the two backends needs both; the embedding-backends CI job has them",
+    ),
+    (
+        "tests.test_embedder_backend_equivalence",
+        "test_the_batch_is_not_silently_reordered",
+        "comparing the two backends needs both; the embedding-backends CI job has them",
+    ),
+    (
+        "tests.test_memory_benchmark",
+        "test_cached_embedder_requests_local_files_only",
+        "the [torch] extra is not installed; the ONNX backend has its own tests",
+    ),
+    (
+        "tests.test_search_semantics",
+        "test_rerank_scores_are_logits_can_be_negative",
+        "reranking needs the [torch] extra; the default install does not have it",
+    ),
+]
+
+
+def test_backend_absent_is_exactly_the_seven_skips_the_default_causes():
+    """If this ever grows, somebody has to write down why, here."""
+    module = _check_skips()
+    assert set(module.BACKEND_ABSENT) == {name for _, name, _ in BACKEND_ABSENT_CASES}
+    for _classname, name, reason in BACKEND_ABSENT_CASES:
+        fragment = module.BACKEND_ABSENT[name]
+        assert fragment in reason, (
+            f"{name} is allowlisted on the fragment {fragment!r}, which its own "
+            f"reason {reason!r} does not contain -- the gate would reject it"
+        )
+
+
+def test_the_default_dependency_job_allows_the_torch_skips(tmp_path, monkeypatch):
+    module = _check_skips()
+    junit = _junit(tmp_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
+    _run(monkeypatch, module.main, "--junit", str(junit), "--default-dependency")
+    assert module.main() == 0
+
+
+def test_the_same_skips_are_refused_without_the_flag(tmp_path, monkeypatch, capsys):
+    """The scoping is the whole point: these are only correct in one job.
+
+    Under the base allowlist they are refused, which is what the
+    `embedding-backends` job would see if it did not pass `--forbid-skips`.
+    """
+    module = _check_skips()
+    junit = _junit(tmp_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
+    _run(monkeypatch, module.main, "--junit", str(junit))
+    assert module.main() == 1
+    assert "test_both_vectors_are_unit_length" in capsys.readouterr().out
+
+
+def test_forbid_skips_fails_on_any_skip(tmp_path, monkeypatch, capsys):
+    """The mutation the embedding-backends job relies on.
+
+    If `[torch]` stopped being installed there, `importorskip` would turn the five
+    backend-equivalence tests into five skips, the job would still be green, and
+    the one property the archive depends on -- that the two backends are
+    interchangeable -- would stop being verified anywhere. This is what catches it.
+    """
+    module = _check_skips()
+    junit = _junit(
+        tmp_path,
+        [
+            (
+                "tests.test_embedder_backend_equivalence",
+                "test_both_vectors_are_unit_length",
+                "skipped",
+                "needs torch",
+            )
+        ],
+    )
+    _run(monkeypatch, module.main, "--junit", str(junit), "--forbid-skips")
+    assert module.main() == 1
+    assert "test_both_vectors_are_unit_length" in capsys.readouterr().out
+
+
+def test_forbid_skips_passes_when_nothing_skipped(tmp_path, monkeypatch):
+    """Otherwise `--forbid-skips` would be untestable: a gate that always fails
+    would satisfy the mutation above without checking anything."""
+    module = _check_skips()
+    junit = _junit(tmp_path, [("tests.test_embedder", "test_backend_is_preferred", "passed", "")])
+    _run(monkeypatch, module.main, "--junit", str(junit), "--forbid-skips")
+    assert module.main() == 0
+
+
+def test_forbid_skips_also_refuses_the_two_opt_in_skips(tmp_path, monkeypatch):
+    """Zero means zero, including the ones that are otherwise allowlisted."""
+    module = _check_skips()
+    junit = _junit(
+        tmp_path,
+        [
+            (
+                "tests.test_migrations",
+                "test_migrations_apply_downgrade_and_reapply",
+                "skipped",
+                "set MIND_PALACE_MIGRATION_ROUNDTRIP=1",
+            )
+        ],
+    )
+    _run(monkeypatch, module.main, "--junit", str(junit), "--forbid-skips")
+    assert module.main() == 1
+
+
+def test_a_backend_absent_name_skipping_for_another_reason_is_refused(tmp_path, monkeypatch):
+    """Same rule as the base allowlist, and it matters more here.
+
+    These entries exist because the dependency is absent. A test that keeps its
+    name and starts skipping because the database went away is a different
+    failure and must not pass on the old entry.
+    """
+    module = _check_skips()
+    junit = _junit(
+        tmp_path,
+        [
+            (
+                "tests.test_search_semantics",
+                "test_rerank_scores_are_logits_can_be_negative",
+                "skipped",
+                "no reachable DATABASE_URL",
+            )
+        ],
+    )
+    _run(monkeypatch, module.main, "--junit", str(junit), "--default-dependency")
+    assert module.main() == 1
+
+
+def test_the_two_flags_together_are_refused_rather_than_being_lenient(tmp_path, monkeypatch):
+    """Allowing the torch skips and forbidding all skips cannot both be asked for."""
+    module = _check_skips()
+    junit = _junit(tmp_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
+    _run(
+        monkeypatch,
+        module.main,
+        "--junit",
+        str(junit),
+        "--default-dependency",
+        "--forbid-skips",
+    )
+    assert module.main() == 2
+
+
+def test_the_gate_checks_itself():
+    """`scripts/check_skips.py --self-test`, as a test.
+
+    The self-test is how the flags are demonstrated without a CI run to point at,
+    and CI does not run it on every push. This does.
+    """
+    import subprocess
+
+    done = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "check_skips.py"), "--self-test"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "self-tests passed" in done.stdout, done.stdout
+
+
 def test_the_six_ingestion_statistics_skips_are_caught(tmp_path, monkeypatch):
     """The actual regression, not a hypothetical one.
 

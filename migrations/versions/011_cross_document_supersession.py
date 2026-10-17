@@ -36,6 +36,7 @@ The CHECK is dropped and recreated rather than altered, because the column was
 created with an unnamed constraint and there is nothing to alter.
 """
 
+import sqlalchemy
 from alembic import op
 
 revision = "011_cross_document_supersession"
@@ -120,11 +121,21 @@ def downgrade() -> None:
     op.execute(_TRIGGER)
     # A cross-document edge cannot be represented under the `004` rule, so the
     # downgrade says which rows would be lost instead of silently deleting them.
-    count = op.get_bind().execute(
-        "SELECT count(*) FROM memory_claims WHERE supersession_basis = ANY(ARRAY["
-        + ",".join(f"'{b}'" for b in _CROSS_DOCUMENT)
-        + "])"
-    ).scalar_one()
+    # `sa.text()`, not a bare string. Every other statement here goes through
+    # `op.execute`, which wraps one for you; `op.get_bind().execute()` is plain
+    # SQLAlchemy and raises ObjectNotExecutableError on a str. Only the opt-in
+    # round-trip step runs a downgrade, which is why this survived a full suite.
+    count = (
+        op.get_bind()
+        .execute(
+            sqlalchemy.text(
+                "SELECT count(*) FROM memory_claims WHERE supersession_basis = ANY(ARRAY["
+                + ",".join(f"'{b}'" for b in _CROSS_DOCUMENT)
+                + "])"
+            )
+        )
+        .scalar_one()
+    )
     if count:
         raise RuntimeError(
             f"{count} claim(s) supersede across documents; the previous trigger refuses "

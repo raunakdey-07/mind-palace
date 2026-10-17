@@ -138,6 +138,21 @@
       "seconds": 510.9,
       "skipped": "2"
     },
+    "74a6141: full suite: after purging dead evidence dumps too": {
+      "collected": "1832",
+      "commit": "74a61414b2bed3e6132aa5b28b53001ef19d6ade",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: after purging dead evidence dumps too",
+      "passed": "1830",
+      "seconds": 584.98,
+      "skipped": "2"
+    },
     "880cffd: full suite, workstation, disposable PG 15.4 at 15440, Session 10": {
       "collected": "1645",
       "commit": "880cffd0048400f036c2f3b5059c677f75fb27b5",

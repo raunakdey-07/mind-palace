@@ -1,6 +1,36 @@
 {
   "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
   "runs": {
+    "13bf26b: full suite: job-scoped skip gate, torch-dependent tests moved to the job that has torch": {
+      "collected": "1832",
+      "commit": "13bf26bfe8c1efa2b1c0dbdbc66088e050b96f1e",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: job-scoped skip gate, torch-dependent tests moved to the job that has torch",
+      "passed": "1830",
+      "seconds": 722.99,
+      "skipped": "2"
+    },
+    "171f330: full suite: ONNX default, idf similarity, natural-language history, MCP client docs": {
+      "collected": "1823",
+      "commit": "171f3305487a3d4c5040c9112e1a30f6b9d6b1be",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: ONNX default, idf similarity, natural-language history, MCP client docs",
+      "passed": "1821",
+      "seconds": 585.51,
+      "skipped": "2"
+    },
     "3108404: full suite, run A (trust round)": {
       "collected": "1621",
       "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",

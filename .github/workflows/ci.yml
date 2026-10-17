@@ -26,6 +26,10 @@ on:
   pull_request:
     branches:
       - main
+  # So a measurement that depends on the runner can be repeated on the runner.
+  # Several figures in the docs are about what a runner does rather than what a
+  # workstation does, and the only way to check one is to have a runner do it again.
+  workflow_dispatch:
 
 jobs:
   tests:
@@ -62,24 +66,17 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      # The CPU index, because the runner has no GPU and the default PyPI torch
-      # wheel is the CUDA build.
-      #
-      # Measured this session, torch 2.9.1 cp311 linux x86_64:
-      #   default PyPI wheel   900 MB, and it depends on the nvidia-* tree
-      #   CPU index wheel      184 MB
-      # The 716 MB is the wheel alone; the nvidia wheels it drags in are larger
-      # again. Nothing in this suite uses CUDA, so the runner was downloading a
-      # GPU stack it could never execute -- which is also why `cache: pip` had
-      # little to save on a cold key and why a dependency bump re-downloaded
-      # gigabytes for no behavioural change.
+      # No CPU index and no torch. The default install is the ONNX stack, so the
+      # runner downloads 90 MB of onnxruntime instead of a 184 MB CPU-index torch
+      # wheel plus the nvidia tree it depends on. Nothing in this suite uses CUDA,
+      # and nothing in it needs torch either: the backend equivalence test lives in
+      # its own job below, because that test is the only thing here that does.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
-            -r requirements.txt
+          python -m pip install -r requirements.txt
           python -m pip install --no-deps -e .
-          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+          python -c "import onnxruntime; print('onnxruntime', onnxruntime.__version__)"
 
       - name: Verify package imports
         run: |
@@ -360,8 +357,26 @@ jobs:
       #
       # Two skips are allowlisted, both opt-in for a real reason and both run
       # deliberately in their own steps below.
+      # `--default-dependency` because this job installs the default dependency set
+      # and not the [torch] extra, so the torch-only tests skip here by design. Those
+      # names are in BACKEND_ABSENT; the embedding-backends job tolerates no skips.
       - name: Every skip is accounted for
-        run: python scripts/check_skips.py --junit /tmp/pytest-main.xml
+        run: python scripts/check_skips.py --junit /tmp/pytest-main.xml --default-dependency
+
+      # The lexical-mode speedup is a claim about the model load, so its size depends on
+      # the runner. The test prints both numbers; `pytest -q -rs` above captures them,
+      # so this runs the same two tests with -s to put the measurement in the log
+      # where it can be read and compared run to run. The gate that matters is the
+      # import-table assertion in test_lexical_mode_does_not_import_the_model_stack,
+      # which is machine-independent; this only says how big the saving was here.
+      - name: Measure the lexical-mode speedup on this runner
+        env:
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          pytest -q -s tests/test_m016_lexical_mode.py \
+            -k "is_faster or does_not_import_the_model_stack"
 
       - name: Upload the junitxml
         uses: actions/upload-artifact@v4
@@ -478,6 +493,95 @@ jobs:
             exit 1
           fi
           python examples/marketing-campaign-memory/demo.py
+
+  # The two embedding backends have to stay interchangeable, because the archive
+  # stores vectors and records only the model name and the dimension. If they drift
+  # apart, every corpus written under one backend is silently mis-ranked by the
+  # other. That claim is asserted in tests/test_embedder_backend_equivalence.py,
+  # which needs both, so it gets both -- here, and only here, so the default
+  # install and the main suite stay on the 90 MB stack.
+  embedding-backends:
+    name: Embedding backends stay interchangeable
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # The CPU index, because the runner has no GPU and the default PyPI torch
+      # wheel is the CUDA build. Measured torch 2.9.1 cp311 linux x86_64: 900 MB
+      # from PyPI against 184 MB from the CPU index, and the nvidia tree the PyPI
+      # wheel depends on is larger again.
+      # `migrations` because conftest builds a throwaway database per run and
+      # needs psycopg2 to create it; without it every test here skips and the run
+      # exits 4 having proved nothing.
+      - name: Install both backends
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -e '.[torch,dev,migrations]'
+          python -m pip install pgvector
+          python -c "import torch, onnxruntime; print('torch', torch.__version__, '| onnxruntime', onnxruntime.__version__)"
+
+      - name: Apply database migrations
+        run: python -m alembic -c migrations/alembic.ini -x script_location=migrations upgrade head
+
+      - name: The two backends produce the same vector
+        run: |
+          export HF_HUB_OFFLINE=0
+          python -m pytest -q -rs -p no:randomly \
+            --junitxml=/tmp/pytest-backends.xml \
+            tests/test_embedder_backend_equivalence.py \
+            tests/test_embedder.py
+
+      # The other two tests that need the [torch] extra. They are here because the
+      # main job does not install torch and skips them, so without this line they
+      # would run nowhere at all -- which is the failure mode of adding a skip
+      # without also naming the job that runs the test. Both files are listed whole
+      # rather than by test id so that a new torch-dependent test in either one is
+      # covered by this job automatically instead of quietly becoming dead.
+      - name: The torch-dependent tests that skip in the main job
+        run: |
+          export HF_HUB_OFFLINE=0
+          python -m pytest -q -rs -p no:randomly \
+            --junitxml=/tmp/pytest-torch.xml \
+            tests/test_search_semantics.py \
+            tests/test_memory_benchmark.py
+
+      # The mutation test, as a gate. This job installs [torch] precisely so the
+      # backend-equivalence tests run rather than skip. `--forbid-skips` is what
+      # makes that checkable: if torch stopped being installed here the tests would
+      # skip, the job would still be green, and the one property the archive depends
+      # on -- that the two backends are interchangeable -- would stop being verified
+      # anywhere at all.
+      - name: Nothing skipped, because torch is installed here
+        run: |
+          python scripts/check_skips.py --junit /tmp/pytest-backends.xml --forbid-skips
+          python scripts/check_skips.py --junit /tmp/pytest-torch.xml --forbid-skips
 
   five-minute-path:
     name: The five-minute path, from a clean checkout
@@ -711,7 +815,15 @@ jobs:
         working-directory: /tmp
         run: |
           python -m venv /tmp/wheelenv
-          /tmp/wheelenv/bin/pip install $GITHUB_WORKSPACE/dist/*.whl
+          wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
+          /tmp/wheelenv/bin/pip install "$wheel"
+          # Bare, with no extra. `mindpalace` is an unconditional [project.scripts]
+          # entry point, so a bare install has to be able to run it -- which is why
+          # typer is a core dependency rather than the [cli] extra. This assertion
+          # is what caught that, and it only worked by accident before: typer used
+          # to arrive transitively via transformers <- sentence-transformers, and
+          # removing that default dependency removed the transit. Do not add an
+          # extra here to make this pass; fix the dependency instead.
           /tmp/wheelenv/bin/mindpalace --help > /dev/null
           /tmp/wheelenv/bin/mindpalace-proof --help > /dev/null
           # The CLI starts the runtime as `python -m mindpalace_runtime`. If that

@@ -345,11 +345,16 @@ async def live_schema(monkeypatch):
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
 
-            async def ingest_file(self, content, path=None, corpus_id=None):
+            async def ingest_file(self, content, path=None, corpus_id=None, **supersession):
                 # Entering the session owns the transaction, exactly as the real
-                # `session_scope` + `db.begin()` pair does.
+                # `session_scope` + `db.begin()` pair does. The supersession
+                # arguments are forwarded rather than dropped: this fixture exists
+                # to run the real ingestion, and dropping them here would let a
+                # signature change pass every test in this file unnoticed.
                 async with AsyncSession(scoped, expire_on_commit=False) as session:
-                    return await self._ingest_content(session, content, path, corpus_id)
+                    return await self._ingest_content(
+                        session, content, path, corpus_id, **supersession
+                    )
 
         monkeypatch.setattr(remember_service, "IngestionService", SchemaScoped)
         yield SimpleNamespace(engine=scoped, corpus=corpus, schema=schema)

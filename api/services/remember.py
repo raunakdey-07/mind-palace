@@ -29,6 +29,7 @@ from api.services.corpora import (
     validate_corpus_name,
 )
 from api.services.ingestion import IngestionService
+from api.services import similarity
 
 #: Where simple memories live. A reserved prefix, so a remembered fact is never
 #: confused with a synced source document, and never collides with one.
@@ -48,8 +49,196 @@ _SLUG_UNSAFE = re.compile(r"[^a-z0-9._-]+")
 _SLUG_LENGTH = 48
 
 
+#: Cosine at or above which a cached vector counts as "the same fact". 0.86 is a
+#: paraphrase with the same subject and no new content, which is what a
+#: contradiction usually looks like when both sides were written deliberately.
+CONFLICT_VECTOR_THRESHOLD = 0.86
+
+#: Weighted overlap at or above which a stored claim is worth showing back to the
+#: writer. 0.60 on the idf measure in `api/services/similarity`, which is the same
+#: 0.60 the raw measure used: dropping the boilerplate shrank what fires, not where
+#: the line sits. Measured over 2,000 claims from twelve templates, raw overlap
+#: fires on 166 per query and the weighted measure on 105, and both find the
+#: query's own claim on 40 of 40 samples. See that module for the table and for why
+#: raising the threshold instead is the wrong repair.
+CONFLICT_HINT_THRESHOLD = 0.60
+
+#: How many near-duplicates a write reports. Three is enough to recognise a
+#: decision that already exists and is enough to see a cluster around one topic.
+CONFLICT_HINT_LIMIT = 3
+
+
 class RememberError(ValueError):
     """A remembered statement that cannot become a memory."""
+
+
+def _threshold() -> float:
+    import os
+
+    try:
+        value = float(os.getenv("MEMORY_CONFLICT_HINT", CONFLICT_HINT_THRESHOLD))
+    except ValueError:
+        return CONFLICT_HINT_THRESHOLD
+    return value if 0.0 <= value <= 1.0 else CONFLICT_HINT_THRESHOLD
+
+
+def _vector_threshold() -> float:
+    import os
+
+    try:
+        value = float(os.getenv("MEMORY_CONFLICT_VECTOR", CONFLICT_VECTOR_THRESHOLD))
+    except ValueError:
+        return CONFLICT_VECTOR_THRESHOLD
+    return value if 0.0 <= value <= 1.0 else CONFLICT_VECTOR_THRESHOLD
+
+
+def _hint_row(claim, score, channel) -> dict:
+    return {
+        "claim_id": claim["id"],
+        "key": claim["key"],
+        "claim": claim["claim"],
+        "version_id": claim["version_id"],
+        "score": round(score, 4),
+        "channel": channel,
+        "hint": f"Possible supersession or conflict with claim {claim['id']}",
+    }
+
+
+async def related_active(
+    statement: str, corpus_id: str, *, exclude_ids: set[str] | None = None
+) -> list[dict]:
+    """Live claims that say roughly what `statement` says, for the writer to judge.
+
+    The archive cannot tell whether a new claim contradicts, duplicates or
+    supersedes an existing one, because "roughly the same" is not a rule it can
+    apply. What it can do is say which live claims are close enough that the
+    author should look, so an agent writing over MCP can link or retire them in
+    the same turn instead of leaving two contradictory answers in the corpus.
+
+    Two channels. The vector one answers whenever it can; the lexical one is the
+    fallback for when it cannot, and every row says which one produced it.
+
+    **Vector**, over an HNSW index of every cached claim vector. A full-corpus
+    nearest-neighbour lookup, so nothing is excluded for being old, and it is the
+    only channel that finds a contradiction phrased differently: "the datastore is
+    PostgreSQL" and "the datastore is Postgres 15" share three tokens and are the
+    same claim. It runs only when an embedding model is already resident in this
+    process, because a first memory must not pay for a five-second import.
+
+    **Lexical**, over every active claim, unbounded. It is the fallback rather than
+    a co-equal channel because of what it does on a corpus where claims share
+    vocabulary. Measured over 2,000 synthetic claims that differ only in a serial
+    number, a 0.60 token-overlap threshold fired on **168 of 2,000** claims for any
+    given query, and the nearest-neighbour search returned **2.95** well-separated
+    matches. Reporting three of 168 is noise presented as a conflict; the vector
+    channel is both cheaper (a 3.8 ms index scan against a 9.5 ms full scan in
+    Python) and more precise.
+
+    So lexical runs only when there is nothing to run: no resident model, or no
+    cached vector for anything in this corpus. That is also the case where it is
+    the only evidence there is, so the hint is present exactly when the alternative
+    is absent, rather than absent exactly when it is most needed.
+
+    Never raises. The write it annotates has already succeeded, and failing it now
+    would turn a hint into a gate.
+    """
+    from api.services import memory
+
+    words = similarity.terms(statement)
+    if not words:
+        return []
+    from api.services.db import session_scope
+
+    try:
+        async with session_scope() as db:
+            found = await _vector_channel(memory, db, statement, corpus_id, exclude_ids)
+            if found:
+                return _rank(found)
+            active = await memory._active_claims(db, corpus_id, limit=None)
+    except Exception:  # noqa: BLE001 - a hint must never fail the write it annotates
+        return []
+
+    threshold = _threshold()
+    # Weighted against the whole live set, so a word every claim carries stops
+    # counting as evidence that any one of them is about this statement.
+    frequencies = similarity.document_frequencies(similarity.terms(c["claim"]) for c in active)
+    total = len(active)
+    for claim in active:
+        # A claim the caller already named is settled. Suggesting it back would be
+        # telling them to do the thing they just did.
+        if exclude_ids and claim["id"] in exclude_ids:
+            continue
+        overlap = similarity.weighted_overlap(
+            words, similarity.terms(claim["claim"]), frequencies, total
+        )
+        if overlap >= threshold:
+            found[claim["id"]] = _hint_row(claim, overlap, "lexical")
+    return _rank(found)
+
+
+def _rank(found: dict[str, dict]) -> list[dict]:
+    ordered = sorted(found.values(), key=lambda item: (-item["score"], item["claim_id"]))
+    return ordered[:CONFLICT_HINT_LIMIT]
+
+
+async def _vector_channel(memory, db, statement, corpus_id, exclude_ids) -> dict[str, dict]:
+    """The cached-vector half of the hint, or nothing when no embedder is available.
+
+    Gated on `Embedder.loaded`, not merely on the class existing. `remember`
+    deliberately does not load the model: importing `sentence_transformers` costs
+    about five seconds and a first memory on a fresh machine would otherwise cost a
+    model download as well. So the vector channel runs when something else in this
+    process already paid for the load -- the runtime, a `recall`, an ingest -- and
+    is skipped otherwise. That is the same rule the write path already follows for
+    the document itself.
+
+    Every row it produces carries `channel: "vector"` so a caller can tell which
+    half answered. An embedder that fails to load is a missing channel, not a
+    failed write.
+    """
+    from api.services.claim_embeddings import representation_hash, representation_of
+    from api.services.embedder import Embedder
+
+    embedder = Embedder()
+    if not embedder.loaded:
+        return {}
+    try:
+        # The same representation shape `representation` builds for a claim, so the
+        # query vector lands in the same space as the cached claim vectors.
+        vector = embedder.embed([representation_of(statement, "", "")])[0]
+        rows = await memory._nearest_active_claims(
+            db,
+            corpus_id,
+            vector,
+            model=embedder.model_name,
+            dimension=embedder.dimension,
+            limit=CONFLICT_HINT_LIMIT,
+        )
+    except Exception:  # noqa: BLE001 - see the docstring; a channel, not a gate
+        return {}
+
+    threshold = _vector_threshold()
+    out: dict[str, dict] = {}
+    for row in rows:
+        if exclude_ids and row["id"] in exclude_ids:
+            continue
+        if row["similarity"] < threshold:
+            continue
+        # The cached vector is only good for the text it was made from. Recomputing
+        # the hash from the row's own current fields is the same check
+        # `load_cached` does, and it is why a claim edited since its last
+        # embedding cannot be reported with a score computed from the old text.
+        current = representation_hash(representation_of(row["claim"], row["key"], row["path"]))
+        if current != row["representation_hash"]:
+            continue
+        claim = {
+            "id": row["id"],
+            "key": row["key"],
+            "claim": row["claim"],
+            "version_id": row["version_id"],
+        }
+        out[row["id"]] = _hint_row(claim, row["similarity"], "vector")
+    return out
 
 
 def normalise(statement: str) -> str:
@@ -208,6 +397,8 @@ async def remember(
     corpus_id: str | None = None,
     key: str | None = None,
     file: str | None = None,
+    supersedes_claim_id: str | None = None,
+    topic_key: str | None = None,
 ) -> dict:
     """Record one statement as authoritative memory. Returns the write result.
 
@@ -217,25 +408,64 @@ async def remember(
     `file` reads the statement from a Markdown file instead of an argument. A file
     that already carries authored `claims:` is archived under its own path with
     those claims intact, so importing a structured document never discards richer
-    memory the author wrote down. A file without claims is treated as a statement.
+    memory the author wrote down. A file with neither an authored block nor any
+    structure to read -- a single paragraph -- is treated as a statement.
+
+    `supersedes_claim_id` names a claim in this corpus that the new one replaces,
+    wherever it lives. `topic_key` supersedes whatever is currently active under
+    that key instead, which is how `adr-002.md` retires `adr-001.md` without
+    either file being edited.
 
     `corpus_id` lets a caller that already resolved the corpus skip the lookup.
     """
     from api.services import telemetry
 
+    # One recorder, so every surface that calls `remember` is logged without each
+    # of them remembering to. See `api/services/query_log.py` for what is kept.
+    from api.services.query_log import Call
+
+    call = Call("remember", statement or "", corpus=corpus)
     with telemetry.span("memory.remember", corpus=corpus, from_file=file is not None):
         corpus_id = await ensure_corpus(corpus, corpus_id)
 
         if file is not None:
-            from api.services.parser import parse_markdown
+            from api.services.markdown_claims import extract
+            from api.services.parser import (
+                chunk_with_heading_paths,
+                extract_sections_with_paths,
+                parse_markdown,
+            )
 
             content = _read(file)
-            metadata, _ = parse_markdown(content)
+            metadata, body, problems = parse_markdown(content, path=file, collect_warnings=True)
             document_path = _document_path(file)
             if "claims" in metadata:
                 # An authored document: keep every claim it declares, under a
                 # project-relative path so the stored identity does not carry the
                 # absolute layout of the machine that happened to import it.
+                return await _write(content, document_path, corpus_id, key=None)
+            structural, _warnings = (
+                extract(
+                    body,
+                    [
+                        {**chunk, "order_index": index}
+                        for index, chunk in enumerate(
+                            chunk_with_heading_paths(extract_sections_with_paths(body))
+                        )
+                    ],
+                    path=document_path,
+                )
+                # Never on a document whose frontmatter did not parse: `parse_markdown`
+                # returns the whole raw file as the body in that case, so reading
+                # structure out of it builds claims from the discarded block.
+                if not problems
+                else ([], [])
+            )
+            if structural:
+                # An ADR, a runbook, a DECISIONS.md. Its decisions are in its
+                # structure, so it is archived as a document with those claims
+                # rather than collapsed into one statement that says nothing the
+                # file did not already say in more detail.
                 return await _write(content, document_path, corpus_id, key=None)
             statement = content
 
@@ -247,9 +477,29 @@ async def remember(
 
         statement = validate_statement(statement)
         resolved_key, path = resolve(statement, key)
-        return await _write(
-            render_statement(statement, resolved_key), path, corpus_id, resolved_key
+        # Read the archive BEFORE the write, not after. Afterwards the claim just
+        # written is itself active and is always its own nearest neighbour, which
+        # is a hint about nothing.
+        related = await related_active(
+            statement, corpus_id, exclude_ids={supersedes_claim_id} if supersedes_claim_id else None
         )
+        written = await _write(
+            render_statement(statement, resolved_key),
+            path,
+            corpus_id,
+            resolved_key,
+            supersedes_claim_id=supersedes_claim_id,
+            topic_key=topic_key or key,
+        )
+        if related:
+            written["related_active_claims"] = related
+        call.log(
+            match_status="confident",
+            returned_claim_ids=[],
+            note=f"event={written.get('event')}",
+        )
+        written["query_id"] = call.query_id
+        return written
 
 
 def _document_path(file: str) -> str:
@@ -305,7 +555,15 @@ def _read(file: str) -> str:
     return content
 
 
-async def _write(content: str, path: str, corpus_id: str, key: str | None) -> dict:
+async def _write(
+    content: str,
+    path: str,
+    corpus_id: str,
+    key: str | None,
+    *,
+    supersedes_claim_id: str | None = None,
+    topic_key: str | None = None,
+) -> dict:
     """Hand one rendered document to the ingestion service, with its identity.
 
     `require_embeddings=False`: a first memory must not depend on a model
@@ -313,6 +571,10 @@ async def _write(content: str, path: str, corpus_id: str, key: str | None) -> di
     either way, and `mindpalace reindex` fills the vectors in later.
     """
     written = await IngestionService(memory_enabled=True, require_embeddings=False).ingest_file(
-        content=content, path=path, corpus_id=corpus_id
+        content=content,
+        path=path,
+        corpus_id=corpus_id,
+        supersedes_claim_id=supersedes_claim_id,
+        topic_key=topic_key,
     )
     return {"key": key, "path": path, **written}

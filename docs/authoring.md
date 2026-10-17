@@ -178,9 +178,59 @@ partially stored, and a later successful ingest is not affected.
 
 ## What this document does not tell you
 
-How to write claims *from* unstructured text. No extractor exists, so there is
-nothing to document yet; `docs/wedge-decision-note.md` argues that building one
-is a later decision, not this one.
+How to write claims *from* unstructured text. `docs/wedge-decision-note.md` argues
+that a structural extractor was a later decision; one now exists and is described
+under "Plain Markdown" below.
+
+## Plain Markdown needs no `claims:` block
+
+A document with no authored block is read for structure, with no model and no
+inference. A heading path scopes what follows it, and the claims under it are:
+
+- list items: `- `, `* `, `+ `
+- numbered entries: `1.`
+- `Key: Value` lines: `Status: Accepted`, `Superseded-by: ADR-003`
+
+Each becomes one claim whose evidence is the line, quoted back from the archived
+chunk, with real character offsets. Nothing is summarised, reworded or merged.
+
+```markdown
+# ADR 001: primary datastore
+
+- The primary datastore is PostgreSQL 15.
+- Writes go through the repository layer.
+
+## Status
+
+Status: Accepted
+```
+
+**Not extracted:** fenced and indented code, tables, HTML comments, link reference
+definitions, horizontal rules, block quotes, and a document's own `# title`. A
+code block holds example commands, which are not decisions.
+
+**Identity is positional.** A claim's key is `md:<heading path>:<ordinal>`, the
+ordinal counting the extracted claims under that heading path. Editing a bullet
+supersedes it in place, because the key does not move when the text does. A
+key derived from the text would change on every edit and leave the old claim
+un-superseded, joined by a second claim under a second key. Inserting a bullet
+renumbers the ones after it, so those supersede each other; that is honest, since
+the document did change under them.
+
+**An authored `claims:` block wins outright.** The reader does not run on a
+document that has one. An author's key is a decision, and the tool does not
+produce a second opinion beside it.
+
+**A line that cannot be quoted is dropped and named.** When a chunk boundary falls
+inside a line, the claim is not stored with evidence nobody can verify; the ingest
+reports `claim_extraction_no_quote` with the line number and no content.
+
+**A document whose frontmatter did not parse is read as no claims at all**, and
+reports `frontmatter_unparseable`. That is deliberate. When frontmatter fails to
+parse there is no way to tell where the block was supposed to end, so the parser
+hands back the whole file, block included, as the body. Reading structure out of
+that would build claims from the very `claims:` block that was just discarded.
+
 ## Quote your evidence: YAML will try to read it
 
 A `claims:` block is YAML. Four characters will silently discard the **entire**
@@ -214,9 +264,9 @@ truth — that they had written no claims, rather than that their claims had bee
 discarded. The message carries a reason code and a line number and never the
 document's content.
 
-## How supersession works, and what two files cannot do
+## How supersession works
 
-A key identifies **one fact**. There are exactly two ways a fact changes.
+A key identifies **one fact**. There are three ways a fact changes.
 
 **1. A new version of the same document.** Re-ingest the same path with different
 text. The archive keeps both, and `history` shows the chain:
@@ -233,10 +283,131 @@ current now: The sole npm package is get-shit-done-cc.
 **2. `mindpalace remember` with the same `--key`.** Same chain, same
 `superseded by` line, produced without a document.
 
-**What does not work: two different files declaring the same key.** The database
-needs a same-document predecessor, so two paths under one key are recorded as two
-*independent* claims with nothing superseding either. That is not silent — recall
-reports a conflict and refuses to answer:
+**3. `--supersedes <claim-id>` or `--topic-key <key>`, across files.** These retire
+a claim in a *different* document, which is the case a new ADR needs:
+
+```console
+$ mindpalace remember "The primary datastore is PostgreSQL 16." \
+    --corpus project --key architecture.datastore --topic-key architecture.datastore
+Remembered.
+  version: fbf3ef524536 (new)
+  corpus:  project
+  path:    memory/text-77760dda7e82.md
+
+1 live claim(s) already read like this one:
+  0.75  The primary datastore is PostgreSQL 15.
+      claim 10864d5681f2 on key md:adr-001-primary-datastore-3a0fe8be:0
+```
+
+The trailing block is the near-miss hint, described under `memory_remember` below.
+The retired claim is the one it names.
+
+`recall` prints the claim id on every answer, so it is also where you find the id to
+retire. Naming one is the other form, and it is the form to reach for when the claim
+you want retired was written without a key:
+
+```
+mindpalace remember "The primary datastore is PostgreSQL 16." \
+    --corpus project --supersedes 10864d5681f2
+```
+
+That block is not a `$ ` line, so the clean room does not run it, and the reason is
+the same as for the phrase below: an id is worth nothing until it names a claim in
+*your* archive. Any fixed one in this file would be stale the moment the corpus
+changed, and `scripts/cleanroom_quickstart.py` runs every `$ ` line on this page
+against an empty database, where a fixed id is guaranteed to name nothing and the
+command fails. The runnable form above is the one that works without knowing an id
+in advance.
+
+`--topic-key` retires whatever is live under a key without naming one; it
+must be a key the new write authors, and it is refused when two documents hold a
+live claim under it, because retiring one of two would leave a disagreement and
+look resolved.
+
+Either argument takes a **prefix** of a claim id, which is the 12 characters
+`recall` prints. A prefix matching more than one claim is refused rather than
+resolved to the first.
+
+`--supersedes` also takes a **phrase from the claim's own text**, for when you have
+the sentence in front of you and the id on another screen:
+
+```
+mindpalace remember "The primary datastore is PostgreSQL 16." \
+    --corpus project --supersedes "primary datastore is PostgreSQL 15"
+```
+
+That block is not a `$ ` line, so the clean room does not run it, and the reason is
+worth knowing rather than working around. A phrase is matched on content words, so
+it cannot separate two claims that differ only in a version number — which is
+exactly the case this section is about. Both of these describe the datastore, so
+either phrase clears the threshold against both:
+
+```
+supersedes_claim_id 'primary datastore is PostgreSQL 15' matches 2 active claims
+(cd16caa552bd6a0c, f4eaa44120c20d41); use more of the id.
+```
+
+Adding the version does not help, because the version is the only term that
+differs and it carries too little of the sentence's weight. When two live claims
+read alike, the id is the only form that can name one of them, and `recall` prints
+it on every answer. `--topic-key`, above, is the form to reach for when the write
+has a key.
+
+A 64-character lowercase-hex string is used as an id. A shorter hex string is a
+prefix. Anything else is a phrase, matched on content words at the same 0.60
+threshold the near-miss hint uses. A phrase matching two live claims is refused
+and the error names their ids.
+
+Both arguments are refused rather than guessed at when they do not resolve to exactly
+one target. A supersession that lands on the wrong claim moves a live fact into
+history, which is worse than one that does not land.
+
+### Letting the document say it itself
+
+A numbered decision record already knows what it replaced. Say so, and
+`ingest-repo` links the two documents without anybody looking up an id:
+
+```markdown
+---
+title: "ADR 0002: Use PostgreSQL 16 for the primary datastore"
+supersedes: 0001-use-postgres15.md
+---
+
+# ADR 0002: Use PostgreSQL 16 for the primary datastore
+
+## Decision
+
+- The primary datastore is PostgreSQL 16 with three replicas.
+```
+
+`supersedes:` in frontmatter, or a `Supersedes:` line in the body, and a
+`superseded-by:` line for the forward direction. The reference is read **exactly as
+written**: it is a document path, or a claim key, and nothing is inferred from it.
+`Supersedes: 0002` does not mean "whatever file has 0002 in the name" — resolving
+that would retire whichever decision happened to sort first.
+
+The path may be abbreviated to the part that identifies it, so
+`0001-use-postgres15.md` and `examples/adr/0001-use-postgres15.md` both name one
+document. Two documents matching the reference is an error, not a coin flip.
+
+`Superseded-by: none` is how most ADR templates say "not yet replaced", and `none`,
+`n/a`, `tbd` and `-` are read that way rather than as filenames.
+
+A declaration line is not a claim. `Supersedes: adr-001.md` says something about
+the document, so recall will not hand it back as a decision.
+
+Pairing: a target claim is retired by the new claim with the same key. Failing
+that, if the same number of claims remain on both sides, they pair in order —
+which is what "this record replaces that one" means for a document that was edited
+rather than rewritten. If the counts do not agree and no keys match, the write is
+refused and the error names the ids to pass `--supersedes`, because pairing
+unequal lists by guesswork moves live facts into history on a coin flip.
+
+An explicit `--supersedes` or `--topic-key` outranks the declaration: a caller who
+named a claim is not overruled by a line in the file.
+
+**Where two documents disagree and neither is retired**, recall reports the
+disagreement rather than picking one:
 
 ```console
 $ mindpalace recall "What is the sole npm package?"
@@ -251,18 +422,9 @@ No answer is given while sources disagree.
 ### The pattern that works for decision records
 
 Architecture decision records are a chain of decisions about one subject, written
-as separate numbered files. **Do not ingest them as documents.** One
-`memory_remember` call per record, in numeric order, with records in a
-supersession chain sharing one key:
-
-| record | key | value |
-|---|---|---|
-| ADR-03524 | `gsd.package_boundary` | dual packages, hard seam |
-| ADR-0174 | `gsd.package_boundary` | single npm package |
-
-Written this way the chain is real, `history` shows the supersession, and recall
-answers from the current value. Written as separate files under one key they
-conflict and recall answers nothing.
+as separate numbered files. Ingest them as documents, where the structural reader
+gives each record its own claims, and retire the old one with `--supersedes` or
+`--topic-key`.
 
 ### `memory_remember`
 
@@ -271,13 +433,46 @@ first one that writes memory:
 
 ```
 memory_remember(statement: str, corpus: str, key: str | None = None,
-                file: str | None = None)
+                file: str | None = None,
+                supersedes_claim_id: str | None = None,
+                topic_key: str | None = None)
 ```
 
 The arguments and the code path are the SDK's `remember()`, so an agent and a
 script cannot write memory differently. Idempotent: the identical call again
 returns the same `version_id` and `event: UNCHANGED`. A changed value on the same
-`key` supersedes the old one.
+`key` supersedes the old one, and `supersedes_claim_id` / `topic_key` do the same
+across files.
+
+**The receipt names near-misses.** When a write lands close to claims the corpus
+already holds, the result carries `related_active_claims`:
+
+```json
+{
+  "corpus": "project",
+  "version_id": "d76cccde8d83",
+  "event": "NEW",
+  "path": "memory/text-4c1e2b8a9f03.md",
+  "related_active_claims": [
+    {
+      "claim_id": "471df2dd20ed...",
+      "key": "md:adr-002-move-the-primary-datastore-a9daa0f1:0",
+      "score": 1.0,
+      "hint": "Possible supersession or conflict with claim 471df2dd20ed..."
+    }
+  ],
+  "query_id": "b062424783ba"
+}
+```
+
+The archive cannot tell a supersession from a contradiction, so it says which live
+claims read like this one and lets the caller decide in the same turn. It is
+lexical rather than semantic because `remember` deliberately runs without the
+embedding model; a hint that needed a five-second model load would not appear on
+the first write, which is where it is most useful.
+
+`query_id` is the handle for `mindpalace feedback <query_id> --verdict right|wrong`.
+See [runtime.md](runtime.md#the-query-log).
 
 It takes no credential. The caller's identity is whatever
 `MIND_PALACE_MCP_CREDENTIAL` resolves to, and that identity needs write access to
@@ -353,14 +548,16 @@ inferred: if the two ever differ, the ingest is rejected and the document is
 stored but answers nothing. An agent that generates a claim and its document
 separately will produce an almost-substring and hit exactly that.
 
-The abstention, which is what a document with no `claims:` block gives:
+The abstention, which is what a document whose prose has no list items, numbered
+entries or `Key: Value` lines gives:
 
 ```console
 $ mindpalace recall "What is our incident response SLA?" --corpus agentdemo
 No memory matched that question.
   NO_RELEVANT_MEMORY
 
-Only authored claims are answers. A document with no `claims:` block
-in its frontmatter is stored and searchable, but contributes nothing
-here. See docs/authoring.md to author claims in it.
+A document becomes memory from its headings, list items and
+`Key: Value` lines, or from an authored `claims:` block. A file
+with prose and no such lines contributes nothing here. See
+docs/authoring.md for both forms.
 ```

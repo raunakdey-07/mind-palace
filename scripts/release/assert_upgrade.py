@@ -118,7 +118,7 @@ def main() -> int:
         f"{old_claims['corpora']} -> {new_claims['corpora']}",
     )
 
-    # 4. The authoritative digest is unchanged -- with `valid_at` pinned.
+    # 4. The authoritative digest -- with `valid_at` pinned.
     #
     # `state.valid_at` is "now", so two exports seconds apart legitimately differ,
     # and the pack's canonical bytes include it. Comparing raw digests would
@@ -126,26 +126,60 @@ def main() -> int:
     # determinism test pins it for the same reason
     # (tests/test_m016_json_contract.py:211), so the assertion here has to as
     # well, or it is measuring the clock rather than the archive.
-    #
-    # Everything else is compared as-is. A migration that changed a claim's text,
-    # its validity or its evidence span survives the pin and fails the check.
     PINNED = "2026-01-01T00:00:00+00:00"
     old_pinned = _pin(json.loads((before / "pack.json").read_text()), PINNED)
     new_pinned = _pin(json.loads((after / "pack.json").read_text()), PINNED)
-    differing = sorted(
-        k for k in set(old_pinned) | set(new_pinned) if old_pinned.get(k) != new_pinned.get(k)
-    )
+
+    # The two packs are no longer asserted equal, and that is a deliberate change
+    # to this gate rather than a loosening. `2d58a76597613c6d` was v0.9.0's output
+    # for this question, and it was an *empty* pack: zero current, zero historical,
+    # zero evidence, zero sources. A claim that had been superseded appeared in no
+    # bucket, so a question naming the old wording matched nothing at all.
+    # Cross-claim supersession projection fixed exactly that, so HEAD's pack has
+    # content where v0.9.0's had none -- and re-pinning the old digest would mean
+    # re-introducing the bug it records.
+    #
+    # The digest cannot be replaced by a literal either. Claim ids and
+    # `observed_at` are wall-clock values from when the fixture was written, so two
+    # runs of this script over equivalent archives produce different digests:
+    # measured `528d07fcd04c63df` and `714538acde5679f4` for the same code and the
+    # same schema. So what replaces the equality check is an assertion about the
+    # content, which is what a reader of a pack actually needs.
+    current = [c.get("claim", "") for c in new_pinned.get("current_memories") or []]
+    historical = [c.get("claim", "") for c in new_pinned.get("historical_memories") or []]
     check(
-        "pack bytes identical once the clock is pinned",
-        old_pinned == new_pinned,
-        f"differs in {differing}",
+        "the pack answers with a lineage rather than an empty set",
+        len(current) == 1
+        and len(historical) == 1
+        and "CockroachDB" in current[0]
+        and "PostgreSQL" in historical[0]
+        and current[0] != historical[0],
+        f"current={current} historical={historical}",
     )
     old_digest = _digest(old_pinned)
     new_digest = _digest(new_pinned)
+    differing = sorted(
+        k for k in set(old_pinned) | set(new_pinned) if old_pinned.get(k) != new_pinned.get(k)
+    )
+
+    def _paths(pack: dict, key: str) -> set[str]:
+        # `evidence` and `sources` are lists of dicts, so this compares the paths
+        # they cite rather than the records themselves; the claim-level content is
+        # what the lineage assertion above is for.
+        return {row.get("path", "") for row in pack.get(key) or []}
+
+    lost_evidence = _paths(old_pinned, "evidence") - _paths(new_pinned, "evidence")
+    lost_sources = _paths(old_pinned, "sources") - _paths(new_pinned, "sources")
     check(
-        "pinned authoritative digest unchanged",
-        old_digest == new_digest,
-        f"{old_digest[:16]} -> {new_digest[:16]}",
+        "the pack gained content and lost none",
+        not lost_evidence and not lost_sources,
+        f"lost evidence={sorted(lost_evidence)} lost sources={sorted(lost_sources)}; "
+        f"keys differing={differing}",
+    )
+    notes.append(
+        f"pack digest moved with the projection fix: {old_digest[:16]} -> {new_digest[:16]}. "
+        "Both are wall-clock values over the same schema and are not reproducible "
+        "across runs, which is why the content is asserted and the digest is not."
     )
     notes.append(
         "the recorded digest moves with the clock by design; both sides are "

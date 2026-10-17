@@ -1,4 +1,14 @@
-"""Reranker service: wraps sentence-transformers CrossEncoder for reranking."""
+"""Reranker service: wraps sentence-transformers CrossEncoder for reranking.
+
+`sentence-transformers` is the `[torch]` extra, not a default dependency, so the
+import is allowed to fail here. Binding it at module level meant that moving it to
+an extra broke every `import api.services.reranker`, including the import inside
+`retrieval`'s own rerank branch and the CI step that provisions the model --
+failures with nothing to do with reranking. `embedder.py` resolves its backend the
+same way: present or not, decided when it is asked for rather than at import.
+
+The name is still bound at module scope, because that is what tests patch.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +16,10 @@ import os
 import threading
 from typing import Any, ClassVar, Self
 
-from sentence_transformers import CrossEncoder
+try:
+    from sentence_transformers import CrossEncoder
+except ImportError:  # the [torch] extra is not installed
+    CrossEncoder = None
 
 
 class Reranker:
@@ -30,6 +43,11 @@ class Reranker:
         if self._model is None:
             with self._model_lock:
                 if self._model is None:
+                    if CrossEncoder is None:
+                        raise ImportError(
+                            "reranking needs the [torch] extra; "
+                            "pip install 'mindpalace-os[torch]'"
+                        )
                     self._model = CrossEncoder(self.model_name)
         return self._model
 

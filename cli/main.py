@@ -281,6 +281,10 @@ def init(
     typer.echo('  mindpalace remember "Production uses PostgreSQL."')
     typer.echo("\nThen ask about it:\n")
     typer.echo('  mindpalace recall "What database does production use?"')
+    typer.echo(
+        "\nAlready have Markdown? Point it at the directory:\n"
+        "  mindpalace ingest-repo ./docs/adr"
+    )
 
 
 @app.command()
@@ -299,6 +303,28 @@ def remember(
             ),
         ),
     ] = None,
+    supersedes: Annotated[
+        str | None,
+        typer.Option(
+            "--supersedes",
+            metavar="CLAIM_ID_OR_PHRASE",
+            help=(
+                "Retire this claim, in any document. A claim id, any unique prefix "
+                "of one as `recall` prints it, or a phrase from the claim's own "
+                "text. Refused unless exactly one active claim matches."
+            ),
+        ),
+    ] = None,
+    topic_key: Annotated[
+        str | None,
+        typer.Option(
+            "--topic-key",
+            help=(
+                "Retire whatever is currently active under this key, even from another "
+                "file. Defaults to --key when that is given."
+            ),
+        ),
+    ] = None,
     corpus: Annotated[str, typer.Option("--corpus", help="Corpus name.")] = DEFAULT_CORPUS,
     base_url: BaseURL = None,
     json_out: Annotated[
@@ -310,6 +336,9 @@ def remember(
 
     Remembering the same fact twice changes nothing. Remembering the same key with
     new text supersedes the old value, which is what `history` then shows.
+
+    `--supersedes` and `--topic-key` extend that across files, so a decision in
+    adr-002.md can retire what adr-001.md said without either being edited.
     """
     from cli.render import render_remember
 
@@ -319,7 +348,15 @@ def remember(
     # import it. `--file` is a local read and stays here whatever else is happening.
     client = _client(base_url)
     try:
-        result = _run(client.memory.remember, statement, corpus=corpus, key=key, file=file)
+        result = _run(
+            client.memory.remember,
+            statement,
+            corpus=corpus,
+            key=key,
+            file=file,
+            supersedes_claim_id=supersedes,
+            topic_key=topic_key,
+        )
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         _fail(exc, verbose)
         return
@@ -335,11 +372,128 @@ def remember(
                 "event": result.event,
                 "version_id": result.version_id,
                 "path": result.path,
+                "related_active_claims": result.related_active_claims,
             },
             corpus=corpus,
         )
     )
     _warm_runtime()
+
+
+@app.command()
+def feedback(
+    query_id: Annotated[str, typer.Argument(help="The query_id a recall or remember reported.")],
+    verdict: Annotated[
+        str,
+        typer.Option(
+            "--verdict",
+            help=(
+                "right        the answer was what you needed\n"
+                "wrong        an answer came back and it was not right\n"
+                "abstained_wrongly  nothing came back and something should have"
+            ),
+        ),
+    ] = "right",
+    note: Annotated[str | None, typer.Option("--note", help="Why, in your own words.")] = None,
+) -> None:
+    """Grade one logged call. Appends to the log; changes nothing else.
+
+    The log records what was asked and what the ranking produced. This records
+    whether that was the right answer, which is the only thing a benchmark cannot
+    supply: a grader knows what the system said, not what you needed.
+
+    Over a couple of weeks of real use those verdicts are a graded sample of how
+    the thing actually performs. Two weeks from now, `mindpalace feedback-summary`
+    reads them back.
+    """
+    from api.services.query_log import feedback as grade
+
+    try:
+        row = grade(query_id, verdict, note or "")
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
+    if row is None:
+        typer.echo(
+            f"No logged call has query_id {query_id!r}.\n"
+            "Check the id a recall or remember reported, and that MIND_PALACE_QUERY_LOG "
+            "was on when it ran.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    typer.echo(f"recorded '{verdict}' against the {row['operation']} of {row['timestamp']}")
+
+
+@app.command()
+def feedback_summary(
+    since: Annotated[
+        str | None, typer.Option("--since", help="ISO date; only grade rows after it.")
+    ] = None,
+) -> None:
+    """Read back the verdicts recorded so far.
+
+    Counts by verdict and by `match_status`, because the question that matters is
+    not "how often is it wrong" but "does an `ambiguous` answer get graded worse
+    than a `confident` one" -- which is the only evidence that the near-tie signal
+    carries information a single top score did not.
+    """
+    import json as json_module
+    from datetime import datetime as _datetime
+
+    from api.services.query_log import default_path
+
+    path = default_path()
+    if not path.exists():
+        typer.echo(f"No query log at {path}. Nothing to summarise.")
+        return
+    cutoff = None
+    if since:
+        try:
+            cutoff = _datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError as exc:
+            typer.echo(f"--since wants an ISO date, e.g. 2026-01-15: {exc}", err=True)
+            raise typer.Exit(code=2) from exc
+
+    calls: dict[str, dict] = {}
+    graded: list[dict] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            row = json_module.loads(line)
+        except ValueError:
+            continue
+        if cutoff and row.get("timestamp", "") < cutoff.isoformat():
+            continue
+        if row.get("kind") == "feedback":
+            graded.append(row)
+        elif row.get("query_id"):
+            calls[row["query_id"]] = row
+
+    typer.echo(f"log:  {path}")
+    typer.echo(f"calls: {len(calls)}    graded: {len(graded)}")
+    if not graded:
+        typer.echo(
+            "\nNo verdicts yet. Grade one with: mindpalace feedback <query_id> --verdict right"
+        )
+        return
+
+    by_verdict: dict[str, int] = {}
+    by_status: dict[str, dict[str, int]] = {}
+    for row in graded:
+        verdict = row.get("verdict", "?")
+        by_verdict[verdict] = by_verdict.get(verdict, 0) + 1
+        status = (calls.get(row["query_id"], {}) or {}).get("match_status", "unknown")
+        by_status.setdefault(status, {}).setdefault(verdict, 0)
+        by_status[status][verdict] += 1
+
+    typer.echo("")
+    for verdict, count in sorted(by_verdict.items()):
+        typer.echo(f"  {verdict:<20} {count}")
+    typer.echo("\nby match_status:")
+    for status in sorted(by_status):
+        counts = by_status[status]
+        total = sum(counts.values())
+        wrong = counts.get("wrong", 0) + counts.get("abstained_wrongly", 0)
+        typer.echo(f"  {status:<12} {total:>4} graded, {wrong:>4} not right")
 
 
 @app.command()

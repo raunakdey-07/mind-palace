@@ -128,6 +128,140 @@ def interpret(request: MemoryRequest) -> QueryIntent:
     return QueryIntent(name, cutoff)
 
 
+def adjudicate(
+    full: MemoryResponse,
+    result: MemoryResponse,
+    scored: dict[str, float],
+    policy,
+    *,
+    dated: bool = False,
+) -> None:
+    """Say how far the ranking can be trusted, and carry the near-misses with it.
+
+    A response that returns only its top hit cannot be acted on when that hit is
+    wrong, and it cannot be detected as wrong either. On the 175 answerable dev
+    questions, rank 1 is right for 116 and wrong for 59, and the median
+    `score_1 - score_2` of a wrong rank 1 is 0.046 against 0.095 for a right one --
+    overlapping distributions, so no single score separates them.
+
+    So the answer carries its own confidence and the three best claims behind it,
+    each with the exact quote that backs it. `ambiguous` is not a refusal: it says
+    the ranking cannot choose on its own, and hands over what it would need to.
+
+    Three states, in the order they are decided:
+
+    `abstained`   nothing cleared the floor. Nothing to adjudicate, so nothing is
+                  listed. An abstention that advertised sixty weak candidates
+                  would be describing the corpus, not the answer.
+    `ambiguous`   rank 1 is near the floor, or a competitor carrying a *different*
+                  value came within the margin of it.
+    `confident`   otherwise.
+
+    The second ambiguous condition compares canonical values, not claim ids. Two
+    claims holding the same value are interchangeable, so a near-tie between them
+    needs no adjudication and does not earn the warning.
+
+    `dated` says the question names a time. It switches off the one thing this
+    function knows that the scorer does not: with no time constraint in the
+    question, a claim scoped to an interval is not the standing answer. See
+    `memory_relevance.authority_order` for what that is worth, and for why it is
+    the only such rule that measured better than doing nothing.
+    """
+    from api.models.memory import Candidate
+    from api.services.memory_relevance import (
+        CANDIDATE_FLOOR,
+        CANDIDATE_LIMIT,
+        authority_order,
+        margin_threshold,
+        near_floor,
+    )
+    from api.services.memory_public import _claims
+
+    result.match_status = "abstained"
+    result.match_margin = None
+    result.candidates = []
+    if not scored or not _claims(result):
+        return
+
+    from api.services.memory import _canonical
+
+    ranked = sorted(scored.items(), key=lambda item: (-item[1], item[0]))
+    # Only claims the response can actually vouch for. A candidate the caller
+    # cannot check the source of is worse than no candidate.
+    shortlist = ranked[:CANDIDATE_LIMIT]
+    live = {key: [c for c in _claims(result) if c.key == key] for key, _score in shortlist}
+    # A key with no claim in the response cannot be shown to the caller, so it is
+    # not a competitor they can adjudicate against and the margin must not be
+    # quoted against it. `vouchable` is the shortlist the response can back up.
+    vouchable = [entry for entry in shortlist if live.get(entry[0])]
+    if not vouchable:
+        return
+    # Which one the caller reads first, and which pair the margin describes, are
+    # two different questions. `authority_order` may put a lower-scoring claim
+    # first, so the margin below is taken from the score order of `vouchable`,
+    # never from the order the candidates are listed in. A near-tie that has been
+    # re-ordered by scope is still a near-tie, and reporting it as `confident`
+    # would launder the scorer's uncertainty into a confident-sounding number.
+    listed = authority_order(vouchable, live, dated=dated, band=margin_threshold())
+    quotes = {e.id: e.text for e in full.evidence}
+    candidates: list[Candidate] = []
+    for key, score in listed:
+        claims = live.get(key) or []
+        if not claims:
+            continue
+        seen: list[str] = []
+        for claim in sorted(claims, key=lambda c: c.id):
+            for eid in claim.evidence_ids:
+                text = quotes.get(eid)
+                if text and text not in seen:
+                    seen.append(text)
+        candidates.append(
+            Candidate(
+                key=key,
+                # Six places, because a cosine printed at full precision implies
+                # a discrimination the scorer does not have.
+                score=round(float(score), 6),
+                status=claims[0].status,
+                value=claims[0].value,
+                claim_ids=sorted(c.id for c in claims),
+                version_ids=sorted({c.version_id for c in claims}),
+                path=claims[0].path,
+                quotes=seen[:3],
+            )
+        )
+    if not candidates:
+        return
+    result.candidates = candidates
+
+    # The margin describes the shortlist that was returned, not the whole ranking.
+    # A key the caller cannot see is not a competitor it can adjudicate against,
+    # and a margin quoted against one would describe a decision nobody is offered.
+    best = vouchable[0][1]
+    second = vouchable[1][1] if len(vouchable) > 1 else 0.0
+    margin = best - second
+    result.match_margin = round(margin, 6)
+
+    if best < CANDIDATE_FLOOR:
+        # Nothing this far above nothing is a near-tie. Reporting one would be
+        # noise dressed as caution.
+        result.match_status = "confident"
+        return
+    if best < max(policy.minimum, 0.0) + near_floor():
+        # Weak in absolute terms, whatever beat it.
+        result.match_status = "ambiguous"
+        return
+    if margin < margin_threshold():
+        top_value = _canonical(candidates[0].value)
+        for candidate in candidates[1:]:
+            # Two claims holding the same value are interchangeable, so a near-tie
+            # between them needs no adjudication and does not earn the warning.
+            if _canonical(candidate.value) == top_value:
+                continue
+            result.match_status = "ambiguous"
+            return
+    result.match_status = "confident"
+
+
 def select(
     full: MemoryResponse,
     request: MemoryRequest,
@@ -150,12 +284,13 @@ def select(
     claims = {c.id: c for c in _claims(full)}
     from api.services.memory_relevance import RelevancePolicy, relevance
 
-    key_scores, _, _ = relevance(
+    policy = policy or RelevancePolicy.configured()
+    key_scores, _, counters = relevance(
         full,
         request,
         intent.name,
         embedder,
-        policy or RelevancePolicy.configured(),
+        policy,
         lexical=lexical,
         claim_vectors=claim_vectors,
         vectorized=vectorized,
@@ -167,6 +302,24 @@ def select(
         for c in claims.values()
         if c.key in keys and (not request.path or c.path == request.path)
     }
+    if intent.name in {"historical", "change", "provenance"}:
+        # Follow the supersession edges backwards. A claim read out of plain
+        # Markdown carries a positional key derived from its own heading path, so
+        # the claim it replaced almost always sits under a *different* key and was
+        # never going to be selected on its own. Without this, `adr-002` superseding
+        # `adr-001` retires the older decision correctly and then hides it: `history`
+        # reports nothing, and the reader cannot see that anything was replaced.
+        #
+        # Only edges leaving a claim that was itself selected. Following every edge in
+        # the corpus would drag unrelated history into any answer that mentioned the
+        # word "database".
+        selected |= {
+            claim.supersedes_id
+            for claim in claims.values()
+            if claim.key in keys
+            and claim.supersedes_id
+            and (not request.path or claim.path == request.path)
+        }
     result = MemoryResponse(query=request.query, corpus=full.corpus, state=full.state)
     fields = ["current_memories"]
     if intent.name in {"historical", "change", "provenance"}:
@@ -197,6 +350,14 @@ def select(
     _attach(result, {e.id: e for e in full.evidence})
     if not _claims(result):
         result.constraints = ["NO_RELEVANT_MEMORY"]
+    else:
+        adjudicate(
+            full,
+            result,
+            counters.get("scored") or {},
+            policy,
+            dated=intent.as_of is not None or request.as_of is not None,
+        )
     return result
 
 

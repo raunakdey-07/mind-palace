@@ -47,7 +47,7 @@ from typing import Annotated
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
-from api.models.memory import MemoryRequest, MemoryResponse
+from api.models.memory import MemoryRequest, MemoryWire
 from mindpalace_sdk import MindPalace
 
 mcp = MCPServer("mind-palace")
@@ -164,6 +164,8 @@ def memory_remember(
     corpus: str,
     key: str | None = None,
     file: str | None = None,
+    supersedes_claim_id: str | None = None,
+    topic_key: str | None = None,
 ) -> CallToolResult:
     """Record one statement as authoritative memory, with exact-substring evidence.
 
@@ -179,6 +181,21 @@ def memory_remember(
     Idempotent: submitting an identical statement again returns the same
     version_id with event UNCHANGED. Submitting the same `key` with new text
     supersedes the previous value.
+
+    `supersedes_claim_id` retires one claim, wherever it lives: the full id, any
+    unique prefix of it as `memory_recall` prints it, or a phrase from the claim's
+    own text. A 64-character lowercase-hex string is an id, a shorter hex string is
+    a prefix, and anything else is a phrase matched on content words -- so the
+    agent holding "the primary datastore is PostgreSQL 15" does not have to copy an
+    id out of a previous result. `topic_key` retires whatever is currently active
+    under that key, so ADR-002 can replace ADR-001 without either file being
+    edited. Either argument is refused, not guessed at, when it does not resolve to
+    exactly one live claim, and a phrase that matches two is refused with their
+    ids in the message.
+
+    When the result carries `related_active_claims`, the corpus already holds
+    claims that read like this one. It does not know whether they contradict,
+    duplicate or should be replaced: pass `supersedes_claim_id` to settle it.
 
     Takes no credential. The caller's identity is the one
     MIND_PALACE_MCP_CREDENTIAL resolves to, and that identity needs write access
@@ -201,7 +218,14 @@ def memory_remember(
         # failure happens there and not inside the write. The whole block is
         # inside the try for that reason.
         with _caller():
-            written = _client(corpus).remember(statement, corpus=corpus, key=key, file=resolved)
+            written = _client(corpus).remember(
+                statement,
+                corpus=corpus,
+                key=key,
+                file=resolved,
+                supersedes_claim_id=supersedes_claim_id,
+                topic_key=topic_key,
+            )
     except AuthorizationError as exc:
         # Caught like `_execute_memory` catches it. Anything else escapes as a
         # generic ToolError, which an agent reads as a broken server and answers
@@ -269,7 +293,7 @@ def _refusal(code: str, message: str) -> CallToolResult:
 
 
 def _result_dict(written) -> dict:
-    return {
+    result = {
         "corpus": written.corpus,
         "version_id": written.version_id,
         "event": written.event,
@@ -277,6 +301,15 @@ def _result_dict(written) -> dict:
         "key": written.key,
         "unchanged": written.unchanged,
     }
+    # Only when there is something to say. An always-present empty list reads as
+    # "there were candidates and none matched", which is a different claim.
+    if written.related_active_claims:
+        result["related_active_claims"] = written.related_active_claims
+    # An agent can grade its own call, which is the only way to find out whether
+    # `ambiguous` was useful rather than decorative.
+    if written.query_id:
+        result["query_id"] = written.query_id
+    return result
 
 
 @mcp.tool()
@@ -297,7 +330,13 @@ def list_corpora() -> str:
 
 
 # Advertise the central response schema while allowing MCP-native error results.
-MemoryToolResult = Annotated[CallToolResult, MemoryResponse]
+#
+# `MemoryWire`, the same shape REST declares, so an agent reading the OpenAPI or
+# the tool schema sees one response contract across both surfaces. It differs from
+# `MemoryResponse` only in carrying the retrieval diagnostics, which `model_dump`
+# omits from the digest -- and `structuredContent` is built from `public_dict`,
+# which restores them.
+MemoryToolResult = Annotated[CallToolResult, MemoryWire]
 _READ_MEMORY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 
 
@@ -325,9 +364,13 @@ async def _execute_memory(operation: str, request: MemoryRequest) -> CallToolRes
             content=[TextContent(type="text", text=json.dumps({"detail": detail}))],
             structuredContent={"detail": detail},
         )
-    payload = response.model_dump(mode="json")
+    # `public_dict`, not `model_dump`: the digest omits the retrieval diagnostics on
+    # purpose, and both blocks here are what an agent reads. A client that ignores
+    # `structuredContent` and parses the text -- which is most of them -- would
+    # otherwise see rank 1 with nothing saying it was a near-tie.
+    payload = response.public_dict()
     return CallToolResult(
-        content=[TextContent(type="text", text=response.canonical_json())],
+        content=[TextContent(type="text", text=json.dumps(payload, indent=2))],
         structuredContent=payload,
     )
 

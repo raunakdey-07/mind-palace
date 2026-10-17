@@ -4,7 +4,7 @@ Commands only. Each one is the command, not a description of it. The README
 explains why; this is for the person who already read it and wants the list.
 
 ```bash
-# 1. Install. Expect 5.9 GB and 79-202 s; torch pulls the CUDA runtime.
+# 1. Install. Expect about 216 MB; onnxruntime is the default backend.
 git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
@@ -62,9 +62,10 @@ Both commands run in-process. Nothing needs a server started.
 
 ## When it answers nothing
 
-A document with no `claims:` block is stored and searchable but answers nothing:
-recall reads authored claims, not prose. Ingest one and it comes back named in the
-output as `no_claims_declared`. `evidence` must appear verbatim in the document —
+A document becomes memory from its headings, list items and `Key: Value` lines, or
+from an authored `claims:` block. Prose with none of those is stored and searchable
+but answers nothing, and comes back named in the output as `no_claims_declared`. An
+authored `evidence:` quote must appear verbatim in the document.
 [authoring.md](authoring.md) has the rejection messages and what causes each one.
 
 ## What to read next
@@ -79,11 +80,12 @@ Moved out of README.md on 2026-10-14 when it was cut from 883 lines to about
 200. Every `$ ` line above is extracted and run against a built wheel by
 scripts/cleanroom_quickstart.py, in the "Clean install from the built wheel" CI job.
 
-requirements.txt` took 202 s and produced a 5.9 GB virtualenv. Nothing else in the
-install comes close. If you would rather not download it, set
-`MIND_PALACE_LEXICAL=1` from the start: the product then never imports `torch`,
-`transformers` or `sentence_transformers`, at the cost of needing shared
-vocabulary between question and record — see
+`requirements.txt` installs the onnxruntime backend and takes about 216 MB. Adding
+the `[torch]` extra makes it roughly 1.35 GB instead, to load the same weights
+through sentence-transformers; see [the runtime](../docs/runtime.md#the-onnx-backend)
+for why the default is the smaller one. To download no model weights at all, set
+`MIND_PALACE_LEXICAL=1` from the start: the product then never imports a model, at
+the cost of needing shared vocabulary between question and record, which is
 [model-free mode](../docs/runtime.md#model-free-lexical-mode).
 
 One thing does arrive on its own: the first `recall` downloads the embedding model
@@ -325,7 +327,9 @@ $ mindpalace-mcp
 
 An agent asks `memory_recall` for an answer and `memory_explain` when it wants to
 know why the answer is trustworthy. Both return the same authoritative memory the
-CLI and the SDK do, with the same receipt.
+CLI and the SDK do, with the same receipt. OpenCode, Zed and Claude Code each take
+a different shape of the same block; [connecting an agent](mcp.md) has all three,
+what comes back, and the two argument mistakes that cost a debugging session.
 
 The arguments are one object deep, and **both** `request` and `request.corpus` are
 required. This is the shape that works, and the shape an agent will get wrong if

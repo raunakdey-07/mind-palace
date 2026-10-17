@@ -77,11 +77,14 @@ works. Asking for the reasoning behind it, phrased indirectly, does not.
 
 ### Latency depends on a model you did not choose
 
-The first `recall` downloads an embedding model (about 90 MB) and takes roughly
-6 seconds; afterwards the warm runtime brings it to 0.63 s. `MIND_PALACE_LEXICAL=1`
-removes the model entirely, at the cost of needing shared vocabulary between
-question and record. You cannot have both the semantic rung and a zero-install
-first run.
+The first `recall` downloads an embedding model (about 90 MB) and builds an ONNX
+session, which takes roughly 1.4 seconds; afterwards the warm runtime brings it to
+about 0.3 s. `MIND_PALACE_LEXICAL=1` removes the model entirely, at the cost of
+needing shared vocabulary between question and record.
+
+The 6-second first recall in older notes was the `sentence-transformers` import, and
+that is now the `[torch]` extra. If you install it you get those timings back, and
+nothing else changes: the two backends produce the same vectors.
 
 ### Not a security product
 

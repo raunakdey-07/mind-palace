@@ -125,13 +125,18 @@ one command per process:
 | `mindpalace receipt` | 6.21 s | 0.62 s |
 | SDK `recall`, `runtime=True` | 5.11 s | **0.51 s** |
 
+Measured on the `sentence-transformers` backend, which was the default through
+v0.9.1 and is now the `[torch]` extra.
+
 The cause was not retrieval. 89% of a one-shot recall was importing the embedding
 stack and loading a model for 61 ms of memory work.
 
 **An explicit model-free mode.** `MIND_PALACE_LEXICAL=1` reads through the lexical
 relevance rung that already existed as the no-model degradation: **0.63 s** instead
 of **6.17 s**, with `torch`, `transformers` and `sentence_transformers` never
-imported at all. It is documented as a deliberate trade-off, not a substitute — see
+imported at all. The lexical figure is the same whichever backend is installed;
+the 6.17 s is not, and on the default ONNX backend a cold `recall` is 1.42 s. It is
+documented as a deliberate trade-off, not a substitute — see
 [operations](runtime.md#model-free-lexical-mode).
 
 **Verifiable memory, carried forward.** Receipts, offline verification, exact-substring

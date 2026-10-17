@@ -38,7 +38,14 @@ pytestmark = pytest.mark.skipif(
     reason="needs a real PostgreSQL to read real memory",
 )
 
-HEAVY = ("torch", "transformers", "sentence_transformers")
+#: What counts as "the model stack" in `sys.modules`.
+#:
+#: Both embedding backends, not one. `onnxruntime` is here because it is the
+#: default wherever it is installed, and a semantic path that loaded nothing at all
+#: would make the lexical comparison below meaningless -- which is exactly what the
+#: sanity assertion is for. The load-bearing half of the check is that lexical mode
+#: imports none of them.
+HEAVY = ("torch", "transformers", "sentence_transformers", "onnxruntime")
 
 #: The corpus, and the question pair that separates the two modes.
 FACTS = {
@@ -162,13 +169,46 @@ def test_lexical_mode_does_not_import_the_model_stack(corpus):
 
 
 def test_lexical_mode_is_faster_because_of_that(corpus):
-    """The speed claim, measured in the same process shape on the same corpus."""
+    """The speed claim, measured in the same process shape on the same corpus.
+
+    The bound is 1.33x and it used to be 2x, and the reason matters: the whole
+    difference between the two modes is the one-time model load, so the ceiling on
+    the win is whatever building a session costs. Measured on the default backend:
+
+        this machine   semantic 1.71s, lexical 0.65s   2.61x
+        runner, run 1  semantic 0.90s, lexical 0.49s   1.81x
+        runner, run 2  semantic 0.85s, lexical 0.47s   1.82x
+        runner, run 3  semantic 0.64s, lexical 0.39s   1.63x
+        runner, PR run semantic 0.87s, lexical 0.50s   1.76x
+
+    The 2x figure was calibrated against a `sentence-transformers` import, which
+    cost about six seconds and made any ratio look generous. The default install
+    runs onnxruntime, where the session builds in roughly 0.4 s, so the maximum
+    available win is now about half a second and a ratio near two is the *expected*
+    result rather than a regression. The bound is 1.33x because the worst of four
+    runner observations is 1.63x, which leaves room for a slower shared runner
+    without leaving room for the model to start loading.
+
+    The claim that matters -- that lexical mode imports no model at all -- is
+    asserted exactly, and machine-independently, by
+    `test_lexical_mode_does_not_import_the_model_stack` above. This test only
+    checks that the saving is real and not measurement noise.
+    """
     _, semantic = _child(["recall", ANSWERABLE, "--corpus", corpus], lexical=False)
     _, lexical = _child(["recall", ANSWERABLE, "--corpus", corpus], lexical=True)
-    assert lexical["elapsed"] < semantic["elapsed"] / 2, (
+    # Always printed, not only on failure. A bound that gates a claim is worth
+    # seeing while it holds; pytest captures stdout unless -s, so CI runs this
+    # file separately with -s to put the numbers in the log.
+    print(
+        f"\nlexical-mode timing: semantic {semantic['elapsed']:.2f}s, "
+        f"lexical {lexical['elapsed']:.2f}s, ratio "
+        f"{semantic['elapsed'] / lexical['elapsed']:.2f}x (bound: above 1.33x)"
+    )
+    assert lexical["elapsed"] < semantic["elapsed"] * 0.75, (
         f"lexical {lexical['elapsed']:.2f}s vs semantic {semantic['elapsed']:.2f}s -- "
-        "the win comes entirely from not importing the model stack, so a small gap "
-        "means something is still loading it"
+        "the difference between the two modes is the model load, so lexical should "
+        "be clearly faster. If the gap has closed, something in the lexical path is "
+        "building a session anyway; the import table in the sibling test says which"
     )
 
 

@@ -28,134 +28,100 @@ verify     offline: no database, no model, no network
 
 ---
 
-## The five-minute path
+## Quickstart
 
-Expect **5.9 GB and 79–202 s**. `torch` pulls the CUDA runtime; most of it is
-unused without a GPU. Nothing else in the install comes close. To skip it, set
-`MIND_PALACE_LEXICAL=1` before the first `mindpalace recall` and no model is ever downloaded — a
-deliberate trade-off, not an equal substitute
-([runtime.md](docs/runtime.md#model-free-lexical-mode)).
+For wiring Mind Palace into a coding agent so it tracks your project's decisions and
+runbooks. These commands run in CI against a built wheel (`scripts/cleanroom_quickstart.py`).
 
 ```bash
+# The default install is ONNX, not torch: cold `recall` 1.4 s, install 216 MB.
 git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
-
-# Three values compose will not invent. It names only the first missing one per
-# run, so setting two leaves you one failure away from reading the wrong thing.
-# .env.example holds all of them with what each is for.
+python -m venv .venv && . .venv/bin/activate && pip install -e '.[cli,mcp]'
 export MIND_PALACE_RUNTIME_PASSWORD=choose-a-local-password
 export MIND_PALACE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
 export MIND_PALACE_INGEST_ROOTS="$PWD"
 docker compose up -d postgresql
-
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
 python -m alembic -c migrations/alembic.ini upgrade head
-```
-
-No API key, no account, no LLM. The first `recall` downloads the embedding model
-once, about 90 MB, then works offline.
-
-## First command
-
-```console
 $ mindpalace init
-Mind Palace is ready.
-  corpus: default
 
-$ mindpalace remember "Production uses PostgreSQL." --key datastore
-Remembered.
-  version: 5aae989d3134 (new)
-  corpus:  default
-  path:    memory/datastore-aa7e5b234e1d.md
+# Ingest a plain ADR. No frontmatter, no `claims:` block: headings, list items and
+# `Key: Value` lines become claims, each quoted from the file it came from.
+# docs/adr/001-datastore.md is the worked example; point this at your own.
+$ mindpalace ingest-repo ./docs/adr --corpus project
 
-$ mindpalace recall "What database does production use?"
-Production uses PostgreSQL.
-   source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
-   time:   true as of 2026-10-14 00:00 UTC
+# Recall. An ambiguous answer prints the claims it could not separate, with ids.
+$ mindpalace recall "What is the primary datastore?" --corpus project
 
-Ask for the basis with: mindpalace explain "<question>"
-```
+# Record what replaces it. `--topic-key` retires what is live under that key, across
+# files: the new statement is a different document from the old one.
+$ mindpalace remember "The primary datastore is PostgreSQL 16." \
+  --corpus project --key architecture.datastore --topic-key architecture.datastore
 
-`--key` is how you say two statements are about the same fact. Remembering the
-same key with new text **supersedes** the old value, which is what makes "what
-changed" answerable. Omit it and each statement is its own memory:
+# What is true now, and what it displaced.
+$ mindpalace recall "What is the primary datastore?" --corpus project
+$ mindpalace history "" --corpus project
 
-```console
-$ mindpalace remember "The datastore is now distributed CockroachDB." --key datastore
-Remembered.
-  version: 062167c43040 (modified)
-  corpus:  default
-  path:    memory/datastore-aa7e5b234e1d.md
-
-$ mindpalace history datastore
-current now: The datastore is now distributed CockroachDB.
-```
-
-`history` shows the chain, oldest first, and `explain` gives the exact characters
-that support a claim. There is no `--as-of` example here on purpose: memory is
-stamped when it is recorded, so a time-travel query dated before the write
-returns nothing, and a worked example would have to invent a timestamp.
-
-Commands are fast from the second one onwards — a background runtime keeps the
-model warm, and `recall` drops from 6.2 s to 0.63 s. If one feels slow,
-`mindpalace runtime status` says whether a runtime is running and whether its
-model is loaded. `MIND_PALACE_RUNTIME=0` turns it off everywhere.
-
-Export what you were told, and verify it somewhere else:
-
-```console
-$ mindpalace receipt "What database does production use?" -o receipt.json
-VERIFICATION
-  receipt available: yes (1 receipt(s))
-  authoritative digest: 2c3077bd8d76627348c569dc5bd2227a08696b0aa54bf3f733f71f5abd3b1aa8
-  export and verify offline with:
-    mindpalace receipt "What database does production use?" -o receipt.json
-    mindpalace verify receipt.json
-  Authenticity is not established without a trust anchor you pinned yourself.
-
+# Verify the answer offline: no database, no model, no network.
+$ mindpalace receipt "What is the primary datastore?" --corpus project -o receipt.json
 $ mindpalace verify receipt.json
-VERIFIED
-  receipts checked: 1
 ```
 
-`verify` needs no database, no model and no network. It proves the answer was not
-altered on the way out; it does **not** prove the original source was true.
+The first `recall` builds an ONNX session: about 1.4 s, then 0.3 s. A background
+runtime holds it and the connection pool warm after that;
+`mindpalace runtime status` says whether one is up. `MIND_PALACE_RUNTIME=0` turns
+it off, and `MIND_PALACE_LEXICAL=1` turns the model off entirely.
 
-A question the corpus does not hold gets a refusal, not a guess:
+`pip install -e '.[cli,mcp]'` resolves 79 distributions totalling 216 MB, of which
+the three embedding packages are 79 MB. `sentence-transformers` and torch are the
+`[torch]` extra and add about 1.35 GB. The extra is not needed for recall, and the
+two backends return the same vectors -- measured minimum cosine 0.99999833 -- so it
+buys a different import time and nothing else. The one thing that does need it is
+`rerank=true` on the REST search endpoint, which asks for the cross-encoder
+reranker; on the default stack that raises, because returning unreranked results
+under a rerank request would be a lie. `mindpalace search` and every other command
+leave it off.
 
-```console
-$ mindpalace recall "What is our incident response SLA?"
-No memory matched that question.
-  NO_RELEVANT_MEMORY
+Your agent gets the same commands over MCP, with the same `match_status` and
+`candidates` on the answer and the same `supersedes_claim_id` on the write, which
+takes an id prefix or a phrase from the claim's own text. A document can say so
+itself: `supersedes: 0001.md` in its frontmatter. Point the client at
+`mindpalace-mcp` with `DATABASE_URL` and `MIND_PALACE_INGEST_ROOTS` set; the JSON
+for OpenCode, Zed and Claude Code is in [connecting an agent](docs/mcp.md).
 
-Only authored claims are answers. A document with no `claims:` block
-in its frontmatter is stored and searchable, but contributes nothing
-here. See docs/authoring.md to author claims in it.
+`recall` and `remember` also report a `query_id`. Grade a wrong answer; it appends
+to `~/.mind-palace/logs/queries.jsonl` and changes nothing else.
+
+```bash
+mindpalace feedback <query_id> --verdict wrong --note "meant the cache"
+mindpalace feedback-summary
 ```
 
 ## Documents and claims
 
-`remember` is for facts you have in hand. A directory of Markdown you already
-have goes through `mindpalace ingest-repo ./docs`, and the `claims:` block in its
-frontmatter is the authoring interface: it says what to remember, and the
-evidence quote must appear **verbatim** in the body. Nothing is inferred, because
-inference is where memory systems quietly start lying about their evidence.
+`remember` is for facts you have in hand. A directory of Markdown you already have
+goes through `mindpalace ingest-repo ./docs`, and there are two ways for a document
+to become memory.
 
-```console
-$ mkdir -p ./docs && printf '%s\n' '---' 'title: Deployment architecture' 'claims:' '  - key: architecture.datastore' '    value: PostgreSQL' '    claim: The primary datastore is PostgreSQL.' '    evidence: The primary datastore is PostgreSQL.' '---' '' '# Deployment architecture' '' 'The primary datastore is PostgreSQL. It runs in three availability zones.' > ./docs/deployment.md
+**Plain Markdown needs no annotation.** A heading path scopes what follows it, and
+the claims under it are its list items, its numbered entries and its `Key: Value`
+lines. Every one is quoted back from the file it came from, so the evidence is the
+document's own bytes:
 
-$ mindpalace ingest-repo ./docs --corpus readmedemo
-[OK] sync: +1 ~0 =0 -0 !0, 1 chunks
+```markdown
+# ADR 001: primary datastore
 
-$ mindpalace recall "What is the primary datastore?" --corpus readmedemo
-The primary datastore is PostgreSQL.
-   source: deployment.md @ 178141e34f2d
-   time:   true as of 2026-10-14 06:54 UTC
+- The primary datastore is PostgreSQL 15.
+- Writes go through the repository layer.
+
+## Status
+
+Status: Accepted
 ```
 
-The file that wrote is this, and it is what the author types:
+**A `claims:` block is the authoring interface** when you want to name the keys
+yourself. It says what to remember, and the evidence quote must appear **verbatim**
+in the body:
 
 ```markdown
 ---
@@ -172,17 +138,13 @@ claims:
 The primary datastore is PostgreSQL. It runs in three availability zones.
 ```
 
-`ingest-repo` runs in-process; no server needs starting. The path must be inside
-`MIND_PALACE_INGEST_ROOTS`. A document with no `claims:` block is stored and
-searchable but answers nothing, and comes back named in the ingest output as
-`no_claims_declared`.
+A `claims:` block wins outright: if a document has one, the structural reader does
+not run on it. An author's key is a decision, and the tool does not second-guess it.
 
-**Those `$ ` lines are executed on every push**, from a built wheel, by
-`scripts/cleanroom_quickstart.py` in the "Clean install from the built wheel" job.
-Paraphrase the evidence in them and the job fails.
-
-**[docs/authoring.md](docs/authoring.md) is the reference**: the three shapes, the
-exact-quote rule, and both rejections with their messages.
+What is extracted is never inferred. Nothing is summarised, reworded or merged; a
+claim is a line that was in the file, and its evidence is a character range of the
+archived chunk. See [docs/authoring.md](docs/authoring.md) for the exact-quote rule
+and both rejections with their messages.
 
 From Python, with no server and no subprocess:
 
@@ -199,18 +161,17 @@ print(f"{memory.claim}  [{memory.status}]")
 
 - **It does not decide what is true.** It records what was written, attributed.
   Correctness of the original source is never established — only its provenance.
-- **It does not infer claims from prose.** A document with no `claims:` block
-  answers nothing. That is the central design choice, and it is a limitation too:
-  getting a document to answer means writing claims for it.
+- **It does not infer claims from prose.** A claim is always a line that was in a
+  document or a statement you were told, quoted back. What the structural reader
+  extracts, it does not write.
 - **It is not a vector store.** Retrieval is one stage of a pipeline that ends in
   provenance, not the product.
 - **It does not authenticate its own history.** A receipt proves internal
   consistency. Trust requires an anchor you pinned yourself, outside this system.
-- **Two files cannot supersede one another.** A key identifies one fact, and the
-  database needs a same-document predecessor to supersede it. Re-ingest the same
-  path, or use `mindpalace remember` with the same `--key`. Two *different* files
-  under one key are recorded as independent claims and recall reports a conflict
-  rather than an answer ([how](docs/authoring.md#how-supersession-works-and-what-two-files-cannot-do)).
+- **A supersession retires one claim.** `--supersedes` names it, or `--topic-key`
+  retires whatever is live under that key, and either works across files. Where two
+  documents disagree under one key and neither is retired, recall reports the
+  disagreement rather than picking one.
 - **A `claims:` block is YAML, and YAML is strict.** A backtick, a colon-space or
   a leading `@` in an evidence quote discards the whole block. Quote the value.
   The ingest now says `frontmatter_unparseable` instead of `no_claims_declared`.
@@ -218,9 +179,11 @@ print(f"{memory.claim}  [{memory.status}]")
   of 16 MCP tools and the first that writes. Without `file=` the evidence for the
   claim is the statement itself, so it proves what the agent was told and not that
   it is true ([why, and the review it needs](docs/authoring.md#memory_remember)).
-- **The install is 5.9 GB**, and a writer of this size in your terminal is
-  unfashionable. `MIND_PALACE_LEXICAL=1` removes the model and most of the
-  weight, and costs you meaning-based matching.
+- **The install is 216 MB, not gigabytes**, unless you ask. Every latency and size
+  figure recorded up to v0.9.1 measured a `sentence-transformers` import, because
+  that was the default then; those figures describe the opt-in `[torch]` stack, not
+  what you get now. See [the install](#quickstart) for both sizes and what the extra
+  is for.
 - **`--as-of` queries need a timestamp you actually wrote at.** Memory is stamped
   when it is recorded, so a time-travel query dated before the write returns
   nothing. There is no backdating.
@@ -277,8 +240,8 @@ Three documents, and then stop.
 ## Contributing
 
 ```bash
-python -m venv .venv && . .venv/bin/activate && pip install -r requirements-dev.txt
-pre-commit install
+python -m venv .venv && . .venv/bin/activate
+pip install -e '.[cli,mcp,dev]'
 pytest -q
 ```
 

@@ -126,7 +126,9 @@ in the upgrade notes and is not yet written down anywhere an operator would
 find it.
 
 **The runtime changed no memory semantics.** `mindpalace recall`, `explain` and
-`receipt` went from about 6.2 s to about 0.63 s, and everything they return is
+`receipt` went from about 6.2 s to about 0.63 s — figures measured on the
+`sentence-transformers` backend, which was the default at v0.9.1 and is now the
+`[torch]` extra — and everything they return is
 byte-identical to the in-process path — same claim identities, evidence, temporal
 state, conflicts, abstention, receipt digest and Memory Pack digest, across ordinary,
 weakly related, absent, temporal, conflict and multi-topic queries. That is
@@ -148,9 +150,11 @@ Five behaviour changes, all deliberate and measured:
   those boundaries costs latency and nothing else.
 - **Model-free reading is available on purpose.** `MIND_PALACE_LEXICAL=1` takes the
   lexical rung that already existed as the no-model degradation: 0.63 s instead of
-  6.17 s, with the model stack never imported. It selects different keys on
-  vocabulary-poor questions, by design, and is documented as a trade-off rather than a
-  substitute. See [operations](runtime.md#model-free-lexical-mode).
+  6.17 s, with the model stack never imported. Both figures are from the
+  `sentence-transformers` backend, which was the default at v0.9.0 and is now the
+  `[torch]` extra; the lexical number is the same on either. It selects different keys
+  on vocabulary-poor questions, by design, and is documented as a trade-off rather
+  than a substitute. See [operations](runtime.md#model-free-lexical-mode).
 - **One failure, one exception class.** The in-process SDK path raised the service's
   own `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`. All
   three now raise `MemoryClientError`, with the same code, message and status. A genuine

@@ -115,7 +115,16 @@ def main() -> None:
     # product and then keeping it. The README has to open on the commands, and the
     # release map has to say what they are, or the release documents a capability
     # nobody can find.
-    require(readme, r"^## The five-minute path$", "README opens on the five-minute path")
+    #
+    # The heading was "The five-minute path" until the Quickstart was rewritten
+    # for one concrete reader -- a developer wiring this into their coding agent.
+    # What the check is for is unchanged: the README must open on runnable
+    # commands, not on a description of the product.
+    require(
+        readme,
+        r"^## Quickstart$",
+        "README opens on the Quickstart",
+    )
     require(readme, r"mindpalace remember", "README shows the documented command")
     require(readme, r"mindpalace verify", "README shows offline verification")
     require(release_map, r"\| M015\.2\b.*\| `v0\.9\.0` \|", "M015.2 release mapping")

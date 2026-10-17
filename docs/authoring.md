@@ -288,7 +288,7 @@ a claim in a *different* document, which is the case a new ADR needs:
 
 ```console
 $ mindpalace remember "The primary datastore is PostgreSQL 16." \
-    --corpus project --supersedes 9f2c1a4b7e30
+    --corpus project --key architecture.datastore --topic-key architecture.datastore
 Remembered.
   version: fbf3ef524536 (new)
   corpus:  project
@@ -303,7 +303,23 @@ The trailing block is the near-miss hint, described under `memory_remember` belo
 The retired claim is the one it names.
 
 `recall` prints the claim id on every answer, so it is also where you find the id to
-retire. `--topic-key` retires whatever is live under a key without naming one; it
+retire. Naming one is the other form, and it is the form to reach for when the claim
+you want retired was written without a key:
+
+```
+mindpalace remember "The primary datastore is PostgreSQL 16." \
+    --corpus project --supersedes 10864d5681f2
+```
+
+That block is not a `$ ` line, so the clean room does not run it, and the reason is
+the same as for the phrase below: an id is worth nothing until it names a claim in
+*your* archive. Any fixed one in this file would be stale the moment the corpus
+changed, and `scripts/cleanroom_quickstart.py` runs every `$ ` line on this page
+against an empty database, where a fixed id is guaranteed to name nothing and the
+command fails. The runnable form above is the one that works without knowing an id
+in advance.
+
+`--topic-key` retires whatever is live under a key without naming one; it
 must be a key the new write authors, and it is refused when two documents hold a
 live claim under it, because retiring one of two would leave a disagreement and
 look resolved.
@@ -315,10 +331,27 @@ resolved to the first.
 `--supersedes` also takes a **phrase from the claim's own text**, for when you have
 the sentence in front of you and the id on another screen:
 
-```console
-$ mindpalace remember "The primary datastore is PostgreSQL 16." \
-    --corpus project --supersedes "primary datastore is PostgreSQL"
 ```
+mindpalace remember "The primary datastore is PostgreSQL 16." \
+    --corpus project --supersedes "primary datastore is PostgreSQL 15"
+```
+
+That block is not a `$ ` line, so the clean room does not run it, and the reason is
+worth knowing rather than working around. A phrase is matched on content words, so
+it cannot separate two claims that differ only in a version number — which is
+exactly the case this section is about. Both of these describe the datastore, so
+either phrase clears the threshold against both:
+
+```
+supersedes_claim_id 'primary datastore is PostgreSQL 15' matches 2 active claims
+(cd16caa552bd6a0c, f4eaa44120c20d41); use more of the id.
+```
+
+Adding the version does not help, because the version is the only term that
+differs and it carries too little of the sentence's weight. When two live claims
+read alike, the id is the only form that can name one of them, and `recall` prints
+it on every answer. `--topic-key`, above, is the form to reach for when the write
+has a key.
 
 A 64-character lowercase-hex string is used as an id. A shorter hex string is a
 prefix. Anything else is a phrase, matched on content words at the same 0.60

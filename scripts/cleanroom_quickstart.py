@@ -243,6 +243,19 @@ def main() -> int:
     # whole point of this script is to not allow that.
     assert ROOT not in work.parents and work != ROOT
 
+    # The quickstart tells a reader who has just cloned the repository to ingest
+    # `./docs/adr`, so that path is part of the documented starting state and the
+    # clean room has to have it. Copying the directory in -- and nothing else -- is
+    # what makes this run equivalent to a fresh clone without letting an import
+    # resolve from the source tree, which is why the working directory stays outside
+    # the repository.
+    adr_source = ROOT / "docs" / "adr"
+    if adr_source.is_dir():
+        shutil.copytree(adr_source, work / "docs" / "adr")
+    else:  # pragma: no cover - a clone without the worked example is a broken clone
+        print(f"!! {adr_source} is missing; the README quickstart cannot run", file=sys.stderr)
+        return 1
+
     # Its own database, which is what this module's docstring has always claimed
     # and never did. Against a shared one the run is not repeatable: `remember`
     # with `--key` supersedes, so a second run flips the datastore back to
@@ -385,8 +398,19 @@ def main() -> int:
                 checks.append(("explain shows an evidence span", ok, result.stdout.strip()[:160]))
 
         print("== receipt verifies offline ==")
+        # The question and the corpus are the ones the README's own receipt command
+        # uses, because that is what this job exists to attest. It used to ask
+        # 'What datastore does production use?' against the default corpus, which
+        # worked only while the README told readers to `remember` into `default`;
+        # when the quickstart moved to `--corpus project` the default corpus stopped
+        # being populated and this step began failing with "nothing matched that
+        # question" -- the corpus was empty, and abstaining was the correct answer.
+        #
+        # It is not extracted from the README because SKIP_PATTERNS excludes
+        # receipt commands, so this line is the single place it is written.
         result = runner.sh(
-            "mindpalace receipt 'What datastore does production use?' -o receipt.json",
+            'mindpalace receipt "What is the primary datastore?" '
+            "--corpus project -o receipt.json",
             label="receipt",
         )
         bad = {**runner.env, "DATABASE_URL": "postgresql://nobody:nobody@127.0.0.1:1/nothing"}
@@ -481,11 +505,21 @@ if "fortnightly" not in current(rpc(6, "memory_recall",
                                     {"request": {"corpus": "default", "query": ROTA_Q}})):
     fail("a changed value did not supersede the old one", "")
 
-# And the README's own supersession is still what recall reports.
+# And a supersession made elsewhere in the corpus is what recall reports. The
+# snippet creates it rather than relying on the README's commands to have done so:
+# the quickstart now documents an ADR path into `project` and nothing writes to
+# `default`, so a check that assumed otherwise was asserting against an empty
+# corpus and failing for a reason that had nothing to do with MCP.
+rpc(7, "memory_remember",
+    {"statement": "The datastore is distributed PostgreSQL.",
+     "corpus": "default", "key": "datastore"})
+rpc(8, "memory_remember",
+    {"statement": "The datastore is now distributed CockroachDB.",
+     "corpus": "default", "key": "datastore"})
 QUERY = "What datastore does production use?"
-if "CockroachDB" not in current(rpc(7, "memory_recall",
+if "CockroachDB" not in current(rpc(9, "memory_recall",
                                     {"request": {"corpus": "default", "query": QUERY}})):
-    fail("the README supersession is no longer current", "")
+    fail("a supersession recorded earlier is no longer what recall reports", "")
 
 proc.kill()
 sys.exit(0)

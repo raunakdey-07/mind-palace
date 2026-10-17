@@ -43,28 +43,28 @@ export MIND_PALACE_INGEST_ROOTS="$PWD"
 docker compose up -d postgresql
 export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
 python -m alembic -c migrations/alembic.ini upgrade head
-mindpalace init
+$ mindpalace init
 
 # Ingest a plain ADR. No frontmatter, no `claims:` block: headings, list items and
 # `Key: Value` lines become claims, each quoted from the file it came from.
 # docs/adr/001-datastore.md is the worked example; point this at your own.
-mindpalace ingest-repo ./docs/adr --corpus project
+$ mindpalace ingest-repo ./docs/adr --corpus project
 
 # Recall. An ambiguous answer prints the claims it could not separate, with ids.
-mindpalace recall "What is the primary datastore?" --corpus project
+$ mindpalace recall "What is the primary datastore?" --corpus project
 
 # Record what replaces it. `--topic-key` retires what is live under that key, across
 # files: the new statement is a different document from the old one.
-mindpalace remember "The primary datastore is PostgreSQL 16." \
+$ mindpalace remember "The primary datastore is PostgreSQL 16." \
   --corpus project --key architecture.datastore --topic-key architecture.datastore
 
 # What is true now, and what it displaced.
-mindpalace recall "What is the primary datastore?" --corpus project
-mindpalace history "" --corpus project
+$ mindpalace recall "What is the primary datastore?" --corpus project
+$ mindpalace history "" --corpus project
 
 # Verify the answer offline: no database, no model, no network.
-mindpalace receipt "What is the primary datastore?" --corpus project -o receipt.json
-mindpalace verify receipt.json
+$ mindpalace receipt "What is the primary datastore?" --corpus project -o receipt.json
+$ mindpalace verify receipt.json
 ```
 
 The first `recall` builds an ONNX session: about 1.4 s, then 0.3 s. A background

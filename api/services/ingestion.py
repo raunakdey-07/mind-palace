@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import heapq
 import logging
 import time
 from pathlib import Path
@@ -46,6 +47,89 @@ def _sync_error(path: str, exc: Exception) -> str:
     """Return a bounded, non-sensitive sync failure description."""
     reason = getattr(exc, "reason", None) or type(exc).__name__
     return f"{path}: {reason}"
+
+
+def _reference_targets(rels: list[str], reference: str) -> str | None:
+    """The file a path-shaped supersession reference names, or None if it names none.
+
+    The matching rules are `_targets_for_reference`'s: exact first, then a unique
+    path suffix, because an author writes the shortest thing that identifies a
+    document. `0001-use-pg15.md` and `examples/adr/0001-use-pg15.md` are one
+    document, and two files called `0001.md` in different directories are an
+    ambiguous reference rather than a match.
+
+    A claim key is not a path, so it cannot be resolved from filenames here. The
+    document holding a claim is not knowable before the documents are read, which
+    is why ordering covers references and leaves keys to the per-document path.
+    """
+    from api.services.markdown_claims import looks_like_path
+
+    if not looks_like_path(reference):
+        return None
+    needle = reference.replace("\\", "/").casefold().lstrip("./")
+    for rel in rels:
+        if rel.casefold() == needle:
+            return rel
+    suffixed = [rel for rel in rels if rel.casefold().endswith(f"/{needle}")]
+    return suffixed[0] if len(suffixed) == 1 else None
+
+
+def _supersession_order(repo_path: Path, md_files: list[Path]) -> list[str]:
+    """Order `md_files` so every referenced document is ingested before the one naming it.
+
+    Returns relative paths in a new order, every input included exactly once.
+
+    Sorting alone gets this wrong often enough to matter. A superseder sorts ahead
+    of its target whenever the shorter name sorts first, because `-` is below `r`,
+    so `ad-002.md` precedes `adr/0001.md`. Ingesting the superseder first leaves
+    its reference pointing at a document the archive has not seen, and the
+    supersession silently does not happen -- or, before the archive learned to
+    report that, aborts the whole sync.
+
+    That is an accident of `strcmp`, not a mistake by the author, so the archive
+    fixes the order rather than asking anyone to rename a file to suit it. Both
+    directions are ordered the same way: a document that *names* another is
+    ingested after the one it names, because a reference resolves against what is
+    already there.
+
+    A cycle -- A supersedes B while B supersedes A -- leaves both in their sorted
+    positions rather than dropping either. The per-document path then reports each
+    unresolved reference, which is the honest description of what happened.
+    """
+    rels = [str(md_file.relative_to(repo_path)) for md_file in md_files]
+    by_rel = {str(md_file.relative_to(repo_path)): md_file for md_file in md_files}
+
+    # referenced -> referencing, so a Kahn pass emits the referenced document first.
+    successors: dict[str, set[str]] = {rel: set() for rel in rels}
+    indegree: dict[str, int] = {rel: 0 for rel in rels}
+    for rel in rels:
+        try:
+            metadata, body = parse_markdown(by_rel[rel].read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            # Unreadable here and unreadable below; the loop records the failure
+            # for this path, and a file with no visible body declares nothing.
+            continue
+        supersedes, superseded_by = markdown_claims.supersession_references(metadata, body)
+        for reference in (*supersedes, *superseded_by):
+            target = _reference_targets(rels, reference)
+            if target is None or target == rel or rel in successors[target]:
+                continue
+            successors[target].add(rel)
+            indegree[rel] += 1
+
+    ready = [rel for rel in rels if indegree[rel] == 0]
+    heapq.heapify(ready)
+    ordered: list[str] = []
+    while ready:
+        rel = heapq.heappop(ready)
+        ordered.append(rel)
+        for follower in successors[rel]:
+            indegree[follower] -= 1
+            if indegree[follower] == 0:
+                heapq.heappush(ready, follower)
+    # Whatever a cycle left behind, in the order it came in.
+    ordered.extend(sorted(set(rels) - set(ordered)))
+    return ordered
 
 
 class IngestionService:
@@ -395,9 +479,29 @@ class IngestionService:
         # than during a read, so a query never writes and a read path that
         # cannot write still answers correctly, just more slowly.
         await self._cache_claim_vectors(db, corpus_id, [version["id"]])
+        # A supersession reference that resolved to nothing is reported here
+        # rather than raised, so the document lands with the claims it does state
+        # and the edge that did not happen is on the record. Same dict shape as
+        # every other ingestion warning, so one reader handles them all. The
+        # reference goes in `field` because it is an identifier -- a path or a
+        # claim key -- and without it the warning cannot be acted on.
+        report = [w.as_dict() for w in frontmatter_warnings]
+        for unresolved in version.get("supersession_unresolved") or []:
+            logging.getLogger(__name__).warning(
+                "supersession_unresolved",
+                extra={"corpus_id": corpus_id, "path": path, "reference": unresolved.reference},
+            )
+            report.append(
+                {
+                    "code": "supersession_unresolved",
+                    "path": path,
+                    "line": None,
+                    "field": unresolved.reference,
+                }
+            )
         return {
             "success": True,
-            "warnings": [w.as_dict() for w in frontmatter_warnings],
+            "warnings": report,
             "document_id": doc_id,
             "chunk_count": count,
             "claim_count": len(claims),
@@ -533,11 +637,10 @@ class IngestionService:
         md_files = sorted(repo_path.rglob("*.md"))
         source_paths: set[str] = set()
 
-        for md_file in md_files:
-            rel_path = str(md_file.relative_to(repo_path))
+        for rel_path in _supersession_order(repo_path, md_files):
             source_paths.add(rel_path)
             try:
-                content = md_file.read_text(encoding="utf-8")
+                content = (repo_path / rel_path).read_text(encoding="utf-8")
                 async with session_scope() as db:
                     known = await self._path_known(db, corpus_id, rel_path)
 

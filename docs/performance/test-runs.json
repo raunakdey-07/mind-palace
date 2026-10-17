@@ -169,6 +169,21 @@
       "seconds": 550.14,
       "skipped": "2"
     },
+    "9403d55: full suite: after anchoring supersession declarations and fixing chunk boundaries": {
+      "collected": "1873",
+      "commit": "9403d559e1755ee9a5084211f165f1bfcefbf48d",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: after anchoring supersession declarations and fixing chunk boundaries",
+      "passed": "1871",
+      "seconds": 752.37,
+      "skipped": "2"
+    },
     "9aec524: full suite, after the retrieval lab and the packaging fix": {
       "collected": "1621",
       "commit": "9aec524cab48671709c5b00765eac632fd824868",

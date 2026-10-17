@@ -221,15 +221,25 @@ the document did change under them.
 document that has one. An author's key is a decision, and the tool does not
 produce a second opinion beside it.
 
-**A line that cannot be quoted is dropped and named.** When a chunk boundary falls
-inside a line, the claim is not stored with evidence nobody can verify; the ingest
-reports `claim_extraction_no_quote` with the line number and no content.
+**A line that cannot be quoted is dropped and named.** A chunk holds whole lines
+where it can, so this is now rare; it happens when a single line is longer than the
+chunk window and has to be split. The claim is not stored with evidence nobody can
+verify; the ingest reports `claim_extraction_no_quote` with the line number and no
+content.
 
 **A document whose frontmatter did not parse is read as no claims at all**, and
 reports `frontmatter_unparseable`. That is deliberate. When frontmatter fails to
 parse there is no way to tell where the block was supposed to end, so the parser
 hands back the whole file, block included, as the body. Reading structure out of
 that would build claims from the very `claims:` block that was just discarded.
+
+**A supersession reference to a document that is not there is a warning.** The
+document lands with the claims it does state, and the ingest reports
+`supersession_unresolved` naming the reference. This is the normal state of a
+repository partway through a migration, so refusing the whole document over it
+would throw away the readable part over an edge that cannot be drawn yet. An
+*ambiguous* reference — two documents the name could mean — is refused instead,
+because retiring either on a coin flip would put a live fact into history.
 
 ## Quote your evidence: YAML will try to read it
 
@@ -392,6 +402,16 @@ document. Two documents matching the reference is an error, not a coin flip.
 
 `Superseded-by: none` is how most ADR templates say "not yet replaced", and `none`,
 `n/a`, `tbd` and `-` are read that way rather than as filenames.
+
+The directive has to start the line, after any indentation and an optional `-`,
+`*` or `+` list marker, and may be bold. A mention in running prose is not a
+declaration — including one inside backticks, which is how this paragraph would
+otherwise read as four supersessions of files that do not exist. In frontmatter
+there is no anchoring to get wrong; the key is the key.
+
+`ingest-repo` orders the files by their declarations rather than by name, so
+`ad-002.md` is read after `adr/0001.md` even though it sorts first. You do not have
+to rename anything to suit the sort.
 
 A declaration line is not a claim. `Supersedes: adr-001.md` says something about
 the document, so recall will not hand it back as a decision.

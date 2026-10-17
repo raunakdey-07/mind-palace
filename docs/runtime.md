@@ -31,6 +31,11 @@ abstention, receipt digest and Memory Pack digest. That is
 | `mindpalace receipt` | 6.21 s | 0.62 s |
 | SDK `recall`, `runtime=True` | 5.11 s | 0.51 s |
 
+Measured on the `sentence-transformers` backend, which was the default through
+v0.9.1 and is now the `[torch]` extra. On the default ONNX backend the same
+before/after gap starts from 1.42 s rather than 6.17 s, so the absolute saving is
+smaller and the reason is different: there is far less import to amortise.
+
 MCP is unchanged and correctly so: an MCP server is a long-lived process that pays
 the import once.
 
@@ -50,7 +55,13 @@ Measured on this machine, one-shot, `MIND_PALACE_RUNTIME=0`:
 | `mindpalace recall` | 7.63 s | 1.42 s |
 | `mindpalace receipt -o receipt.json` | 7.57 s | 1.19 s |
 | `mindpalace ingest-repo` | 7.77 s | 1.35 s |
-| install size | 5.1 GB | 90 MB |
+| the embedding stack, installed | 5.1 GB | 90 MB |
+
+The last row is the stack each column names and nothing else: `onnxruntime`,
+`tokenizers` and `huggingface-hub` against `sentence-transformers`, `torch`,
+`transformers` and the numeric stack. The whole default install is larger, because
+FastAPI, SQLAlchemy, asyncpg and `mcp`'s tree come too — 216 MB across 79
+distributions for `pip install -e '.[cli,mcp]'`, measured.
 
 `mindpalace --help` is 0.25 s either way; it never loads a model.
 
@@ -185,16 +196,27 @@ In-process, cold process, runtime disabled, same corpus:
 | `history` | 0.81 s | 0.63 s |
 | `torch` / `transformers` / `sentence_transformers` imported | yes | **none** |
 
+The semantic column is the `[torch]` extra, measured as it stood at v0.9.1 when it
+was the default. It is not what a default install does now: onnxruntime builds the
+same session in about 0.4 s, so a cold `recall` is 1.42 s rather than 6.17 s. The
+lexical column is unaffected by that and is the same number either way.
+
 The speed comes entirely from not importing the model stack: `import torch` is
 1.68 s, `import transformers` 1.20 s, and `sentence_transformers` adds 2.66 s on top
 of those. `tests/test_m016_lexical_mode.py` asserts both halves — that the imports do
 not happen, and that the command is measurably faster because of it — so the mode
 cannot quietly become a slower way of doing the same thing.
 
+The bound on that second half was 2x when this was written and is 1.33x now,
+because the saving is the model load and the default load is about 0.4 s rather
+than six. Measured on the default backend: 1.71 s against 0.65 s here, and 0.83 s
+against 0.46 s on a GitHub runner. The import-table half is the one that gates.
+
 ### What it is good for
 
-- A lightweight or offline machine where a 1.35 GB model install and a 6 s first
-  recall are not acceptable.
+- A machine that will not take a model at all. The default install is 216 MB and a
+  cold recall is about 1.4 s, so this is a narrower case than it was at v0.9.1,
+  when a 1.35 GB install and a 6 s first recall were the price of ranking.
 - A container with no GPU and no outbound network.
 - A CI job that needs authoritative memory but not semantic ranking.
 - Anyone who wants predictable, explainable token-overlap ranking and can live with
@@ -296,7 +318,7 @@ What each stack costs, measured on this machine:
 | | installed size |
 |---|---:|
 | the Mind Palace wheel | **227 KB** (was 425 KB until `v0.9.1`, which stopped shipping `scripts/`) |
-| `mindpalace-os` installed, ONNX backend | **211 MB** |
+| `pip install -e '.[cli,mcp]'`, ONNX backend, 79 distributions | **216 MB** |
 | `sentence-transformers` + `torch` + `transformers` + numpy/scipy/scikit-learn | **1,347 MB** |
 | cached `all-MiniLM-L6-v2` weights | 88 MB |
 

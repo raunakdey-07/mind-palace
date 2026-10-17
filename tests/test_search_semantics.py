@@ -14,6 +14,7 @@ live database. They encode contracts discovered during the Phase A audit:
 
 from __future__ import annotations
 
+import importlib.util
 import os
 
 import pytest
@@ -221,6 +222,10 @@ async def test_vector_scores_descending_and_bounded(embedder):
 
 
 @requires_db
+@pytest.mark.skipif(
+    importlib.util.find_spec("sentence_transformers") is None,
+    reason="reranking needs the [torch] extra; the default install does not have it",
+)
 async def test_rerank_scores_are_logits_can_be_negative(embedder):
     async with __import__("api.services.db", fromlist=["session_scope"]).session_scope() as db:
         svc = RetrievalService(db)

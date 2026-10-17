@@ -33,10 +33,25 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0.0",
     "pyyaml>=6.0",
     "langchain-text-splitters>=1.0.0",
+    # Typer is core because `mindpalace` is an unconditional console script in
+    # [project.scripts], and a conditional entry point is not something setuptools
+    # can express. Declared as an extra, a bare `pip install mindpalace-os` created
+    # a `mindpalace` executable that died with ModuleNotFoundError on `import typer`
+    # -- and the wheel job never caught it, because `transformers` depends on typer
+    # and `transformers` used to arrive with `sentence-transformers`. Removing that
+    # default dependency removed the accidental transit and exposed it.
+    #
+    # `rich` is not listed: typer requires it, and nothing here imports it directly.
+    # A direct dependency you do not import is a version constraint you have to keep
+    # true by hand.
+    "typer>=0.9.0",
 ]
 
 [project.optional-dependencies]
-cli = ["typer>=0.9.0"]
+# Empty, and kept because the README, the quickstart and every operator's notes say
+# `pip install -e '.[cli,mcp]'`. Removing it would break those install lines to save
+# four characters. `[cli]` now means "the CLI, which you already have".
+cli = []
 mcp = ["mcp>=1.2.0"]
 migrations = [
     "alembic>=1.13.0",

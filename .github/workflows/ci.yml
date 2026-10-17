@@ -815,7 +815,15 @@ jobs:
         working-directory: /tmp
         run: |
           python -m venv /tmp/wheelenv
-          /tmp/wheelenv/bin/pip install $GITHUB_WORKSPACE/dist/*.whl
+          wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
+          /tmp/wheelenv/bin/pip install "$wheel"
+          # Bare, with no extra. `mindpalace` is an unconditional [project.scripts]
+          # entry point, so a bare install has to be able to run it -- which is why
+          # typer is a core dependency rather than the [cli] extra. This assertion
+          # is what caught that, and it only worked by accident before: typer used
+          # to arrive transitively via transformers <- sentence-transformers, and
+          # removing that default dependency removed the transit. Do not add an
+          # extra here to make this pass; fix the dependency instead.
           /tmp/wheelenv/bin/mindpalace --help > /dev/null
           /tmp/wheelenv/bin/mindpalace-proof --help > /dev/null
           # The CLI starts the runtime as `python -m mindpalace_runtime`. If that

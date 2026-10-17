@@ -460,7 +460,12 @@ async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:
     # runtime all reach this function, so instrumenting it here is what makes the
     # log a property of the product rather than of whichever adapter remembered
     # to call something.
-    call = Call("query", request.query, corpus=request.corpus)
+    #
+    # The operation is the one the caller asked for, not a constant. Hardcoding
+    # "query" filed a `history` read under `query`, so two weeks of feedback
+    # could not tell the operations apart and a verdict on a history question
+    # landed against a row that looked like a ranked recall.
+    call = Call(operation, request.query, corpus=request.corpus)
     with telemetry.span(
         f"memory.{operation}",
         corpus=request.corpus,
@@ -486,10 +491,38 @@ async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:
             active.set_attribute("result.chars", len(result.canonical_json()))
             active.set_attribute("result.receipt", result.receipt is not None)
             active.set_attribute("duration_ms", (time.perf_counter() - started) * 1000)
-    call.log(
-        match_status=result.match_status,
-        match_margin=result.match_margin,
-        top_scores=[c.score for c in result.candidates],
-        returned_claim_ids=[c.claim_ids[0] for c in result.candidates if c.claim_ids],
-    )
+    call.log(**_logged_outcome(result))
     return result
+
+
+def _logged_outcome(result) -> dict:
+    """What the flight recorder should say about one read.
+
+    `candidates`, `match_status` and `match_margin` are the ranking signal, and
+    only the ranked `query` path produces them. `history`, `changes`, `pack` and
+    `replay` return a timeline and have no ranking to report, so reading them off
+    a response that never set them logged a successful history read as an
+    abstention: `match_status: "abstained"` and `returned_claim_ids: []` beside a
+    claim, a `NEW` event and thirteen evidence items. Grading is by `query_id`, so
+    that row would have taken a verdict filed against a failed recall.
+
+    So the claim ids come from the response itself when there is no ranking to
+    read, and `abstained` means what it says: nothing came back. A non-ranked read
+    that returned claims is recorded `confident`, which is the only other value
+    the schema allows that is not a claim about a ranking that was never computed.
+    """
+    claims = [
+        *(result.current_memories or []),
+        *(result.historical_memories or []),
+        *(result.uncertain_memories or []),
+    ]
+    ranked = [c.claim_ids[0] for c in (result.candidates or []) if c.claim_ids]
+    status = result.match_status
+    if status == "abstained" and (claims or result.changes):
+        status = "confident"
+    return {
+        "match_status": status,
+        "match_margin": result.match_margin,
+        "top_scores": [c.score for c in (result.candidates or [])],
+        "returned_claim_ids": ranked or [c.id for c in claims],
+    }

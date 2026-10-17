@@ -151,6 +151,72 @@ def _announce_databases(base_url: str, session_url: str) -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
+def session_recorder_isolation(tmp_path_factory):
+    """Point the flight recorder at a scratch file for the whole session.
+
+    The recorder is on by default for a loopback connection, which is exactly what
+    the test session's database is. So every product call the suite made appended
+    a row to the developer's real `~/.mind-palace/logs/queries.jsonl`: 32,738 rows
+    of fake product facts -- battery runtimes, mesh bands, campaign targets -- in
+    the file whose entire purpose is grading two weeks of actual usage.
+
+    The test suite exercises the recorder through the product's own path, so it
+    cannot simply be switched off; `test_query_log.py` sets the variable itself,
+    and it is the one place that should decide where rows go. A session-scoped
+    default that every test inherits and the few that care about override.
+
+    Applied by mutating `os.environ` rather than through `monkeypatch`, because
+    `monkeypatch` is function-scoped and this is not. The previous value is put
+    back so running pytest from inside another pytest is not surprising.
+
+    The teardown check is what makes this hold. Setting the variable covers every
+    subprocess that inherits the environment; the handful that hand-build their
+    own `env=` dict -- `test_m015_golden_path.py` runs the documented CLI sequence
+    that way, on purpose -- do not, and each one has to pass `recorder_path()`
+    explicitly. A new one that forgets would put invented rows back into the user's
+    log and nothing else would notice, so the count is compared on the way out and
+    the suite fails naming the file.
+    """
+    home = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    before = _row_count(home)
+    scratch = tmp_path_factory.mktemp("flight-recorder") / "queries.jsonl"
+    previous = os.environ.get("MIND_PALACE_QUERY_LOG")
+    os.environ["MIND_PALACE_QUERY_LOG"] = str(scratch)
+    yield scratch
+    if previous is None:
+        os.environ.pop("MIND_PALACE_QUERY_LOG", None)
+    else:
+        os.environ["MIND_PALACE_QUERY_LOG"] = previous
+    after = _row_count(home)
+    assert after == before, (
+        f"the test suite added {after - before} row(s) to {home}. A subprocess "
+        "built its own `env=` dict and did not pass MIND_PALACE_QUERY_LOG; "
+        "request the `recorder_path` fixture and pass it in that dict."
+    )
+
+
+def _row_count(path: Path) -> int:
+    """Lines in a JSONL log, or 0 when it does not exist."""
+    return len(path.read_text().splitlines()) if path.exists() else 0
+
+
+@pytest.fixture(scope="session")
+def recorder_path():
+    """The session's scratch log path, for a subprocess that inherits nothing.
+
+    A hand-built `env=` dict does not inherit `MIND_PALACE_QUERY_LOG`, so a CLI
+    subprocess started that way resolves the recorder's default and writes into
+    the developer's home directory. Request this and pass the value as
+    `"MIND_PALACE_QUERY_LOG": recorder_path` in that dict.
+
+    A fixture rather than a module-level function because the session fixture that
+    sets the variable must be the single source of the path; a function here would
+    read the environment at call time and be right only by accident.
+    """
+    return os.environ.get("MIND_PALACE_QUERY_LOG", "0")
+
+
+@pytest.fixture(scope="session", autouse=True)
 def session_runtime_role():
     """Provision the least-privileged role once per session, then remove it.
 

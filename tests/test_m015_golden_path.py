@@ -943,7 +943,7 @@ print("authenticity:", "established" if trust["authenticated"] else "not establi
 """
 
 
-def _verify_offline(receipt: Path, *extra: str) -> subprocess.CompletedProcess:
+def _verify_offline(receipt: Path, recorder_path: str, *extra: str) -> subprocess.CompletedProcess:
     """Verify with no database at all, which is what verification must allow."""
     return subprocess.run(
         [sys.executable, "-m", "cli.main", "verify", str(receipt), *extra],
@@ -955,12 +955,19 @@ def _verify_offline(receipt: Path, *extra: str) -> subprocess.CompletedProcess:
             # No DATABASE_URL, and a deliberately unreachable one.
             "DATABASE_URL": "postgresql://nobody@127.0.0.1:1/nothing",
             "PYTHONPATH": str(ROOT),
+            # Hand-built, so it inherits nothing -- including the flight
+            # recorder's path. Without this the recorder falls back to
+            # ~/.mind-palace/logs/queries.jsonl and writes the suite's rows into
+            # the file a two-week grading log is meant to live in.
+            "MIND_PALACE_QUERY_LOG": recorder_path,
         },
         timeout=120,
     )
 
 
-async def test_verify_reports_each_property_and_stops_short_of_truth(store, surfaces, tmp_path):
+async def test_verify_reports_each_property_and_stops_short_of_truth(
+    store, surfaces, tmp_path, recorder_path
+):
     """`VERIFIED` must never read as "this fact is correct"."""
     from memory_receipt import verify_response_receipt
 
@@ -981,7 +988,7 @@ async def test_verify_reports_each_property_and_stops_short_of_truth(store, surf
         encoding="utf-8",
     )
 
-    verified = _verify_offline(path)
+    verified = _verify_offline(path, recorder_path)
     assert verified.returncode == 0, verified.stderr
     output = verified.stdout
     assert "VERIFIED" in output
@@ -997,7 +1004,7 @@ async def test_verify_reports_each_property_and_stops_short_of_truth(store, surf
     assert result.corpus == store.name
 
 
-async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path):
+async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path, recorder_path):
     """Tampering must be caught, named, and say how to recover."""
 
     await remember("The API version is v1.", key="api.version")
@@ -1009,13 +1016,15 @@ async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path):
     honest = {"response": explained.model_dump(mode="json"), "receipt": explained.receipt}
     path = tmp_path / "receipt.json"
     path.write_text(json.dumps(honest, sort_keys=True), encoding="utf-8")
-    assert _verify_offline(path).returncode == 0, "the untampered receipt must verify"
+    assert (
+        _verify_offline(path, recorder_path).returncode == 0
+    ), "the untampered receipt must verify"
 
     # The digest is rewritten to claim an artifact that does not exist.
     tampered = json.loads(path.read_text(encoding="utf-8"))
     tampered["receipt"]["memory_pack_digest"] = "0" * 64
     path.write_text(json.dumps(tampered), encoding="utf-8")
-    rejected = _verify_offline(path)
+    rejected = _verify_offline(path, recorder_path)
     assert rejected.returncode == 1, rejected.stdout
     assert "REJECTED" in rejected.stdout
     assert "digest" in rejected.stdout
@@ -1027,22 +1036,22 @@ async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path):
     forged["receipt"]["memory_pack_digest"] = honest["receipt"]["memory_pack_digest"]
     forged["response"]["current_memories"][0]["claim"] = "The API version is v99."
     path.write_text(json.dumps(forged), encoding="utf-8")
-    content = _verify_offline(path)
+    content = _verify_offline(path, recorder_path)
     assert content.returncode == 1
     assert "REJECTED" in content.stdout
 
     # A forged trust anchor is rejected on its own terms, with the reason that
     # matters: anyone can recompute a digest, so only a pinned one says who wrote it.
-    anchored = _verify_offline(path, "--trusted-digest", "1" * 64)
+    anchored = _verify_offline(path, recorder_path, "--trusted-digest", "1" * 64)
     assert anchored.returncode == 1
     assert "trust anchor" in anchored.stdout
 
 
-def test_verify_refuses_a_file_that_is_not_a_receipt(tmp_path):
+def test_verify_refuses_a_file_that_is_not_a_receipt(tmp_path, recorder_path):
     """A wrong input says what to run instead, rather than failing obscurely."""
     path = tmp_path / "notes.json"
     path.write_text(json.dumps({"hello": "world"}), encoding="utf-8")
-    rejected = _verify_offline(path)
+    rejected = _verify_offline(path, recorder_path)
     assert rejected.returncode == 2
     assert "mindpalace receipt" in rejected.stdout + rejected.stderr
 
@@ -1113,7 +1122,7 @@ async def test_a_self_contained_receipt_verifies_with_only_the_shipped_package(
     assert "--pack" in errors.getvalue(), "the refusal must name the option it needs"
 
 
-async def test_verify_needs_no_model_or_network(store, surfaces, tmp_path):
+async def test_verify_needs_no_model_or_network(store, surfaces, tmp_path, recorder_path):
     """No embedding model, no database, no server: verification is portable."""
 
     await remember("The API version is v1.", key="api.version")
@@ -1142,6 +1151,7 @@ async def test_verify_needs_no_model_or_network(store, surfaces, tmp_path):
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
             "PYTHONPATH": str(ROOT),
+            "MIND_PALACE_QUERY_LOG": recorder_path,
         },
         timeout=120,
     )
@@ -1239,7 +1249,7 @@ async def test_the_wheel_ships_what_verification_needs():
 @pytest.mark.skipif(
     not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL for the live CLI subprocess"
 )
-def test_the_cli_works_from_a_clean_environment(tmp_path):
+def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path):
     """The documented command sequence, run exactly as written.
 
     No test-only flags, no internal imports, no direct database manipulation: the
@@ -1265,6 +1275,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path):
                 "HF_HUB_OFFLINE": "1",
                 "TRANSFORMERS_OFFLINE": "1",
                 "PYTHONPATH": str(ROOT),
+                "MIND_PALACE_QUERY_LOG": recorder_path,
             },
             timeout=180,
         )
@@ -1281,6 +1292,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path):
             "DATABASE_URL": url,
             "HF_HUB_OFFLINE": "1",
             "PYTHONPATH": str(ROOT),
+            "MIND_PALACE_QUERY_LOG": recorder_path,
         },
         timeout=180,
     )
@@ -1301,7 +1313,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path):
     receipt_path = tmp_path / "receipt.json"
     cli("receipt", "What is the datastore?", "-o", str(receipt_path))
     assert receipt_path.exists()
-    verified = _verify_offline(receipt_path)
+    verified = _verify_offline(receipt_path, recorder_path)
     assert verified.returncode == 0, verified.stderr
     assert "VERIFIED" in verified.stdout
 

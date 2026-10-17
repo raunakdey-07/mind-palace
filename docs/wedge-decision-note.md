@@ -93,7 +93,7 @@ correct" is 127 top-1-correct plus 24 correct abstentions — a metric whose uni
 are "not wrong", not "correct". The whole matrix, the "every arm is net
 negative" claim and the "43 questions differ" breakdown are marked
 **INVALID / NOT ESTABLISHED** in
-`docs/performance/retrieval-lab-dev.json`, with the report since removed.
+with the report and its raw dump since removed -- (removed raw dump; summary retained above).
 
 Explaining which 77 questions they are, per question, is Phase 5a and it needs
 the lab measuring the product path. Anything said before that would be a guess,

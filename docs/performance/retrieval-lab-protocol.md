@@ -168,7 +168,7 @@ The rule this section exists to enforce:
 * **A tie-break is part of the method, not a detail.** If it is not fixed in
   code, two runs of the same commit can disagree, and a disagreement between
   runs is indistinguishable from a result. This cost a week of Session 9:
-  rebuilding `retrieval-lab-dev.json` on identical content moved
+  rebuilding the dev dump on identical content moved (the dump is now removed; (removed raw dump; summary retained above))
   `bm25.risk_coverage` on the `current` slice.
 * **A change that moves the metric is reported with old and new numbers side by
   side, whatever direction it moves.** The fix above is a correctness

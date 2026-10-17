@@ -160,19 +160,21 @@ monitoring/
 # the negation the example raises SystemExit on its first line in a fresh clone.
 !examples/project-log/**/*.md
 
-# eval/results was deliberately untracked: nine frozen artifacts there are cited
-# by name from tracked documents, so a clone could not resolve those citations,
-# and no guard reading `git ls-files` could cover them.
+# eval/results/ is generated benchmark output and is ignored again. It was
+# force-tracked for four months because nine of its per-run dumps were cited by
+# path from tracked documents and `check_frozen` could not cover a file git did
+# not track. That reasoning described a real problem and drew the wrong
+# conclusion: tracking 1.7 million lines of per-run output to keep citations
+# resolvable made the citations the load-bearing artefact.
 #
-# The owner has approved tracking them. They are measurements, and unlike the
-# rest of the benchmark output they are the ones the documentation depends on --
-# docs/evaluation/m006.md and m00675-reproducibility.md name all nine by path.
-# With them tracked, `scripts/check_frozen.py` enforces their SHA-256, which is
-# the thing a git-diff-over-ignored-files could never do.
+# The summary numbers those documents quote live in `docs/performance/` and in
+# the frozen artifacts that remain -- the question sets, the held-out gold, and
+# `eval/m00675/result.json`. A citation to a removed dump now names the summary
+# beside it instead of the raw file, and `check_doc_paths` still has a tracked
+# path to check.
 #
 # See docs/internal/progress-history.md Session 10 section 1d for the original
-# reasoning.
-!/eval/results/
+# reasoning, and PR #9 for what superseded it.
 
 # eval/m007/adjudication/*.md -- the M007.1 blind-review protocol.
 #

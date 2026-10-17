@@ -28,7 +28,7 @@ The development material currently available is:
 | `eval/memory_benchmarks.yaml` | 39 | operation, stage, query type, current/history, evidence, source, conflict, lifecycle, snapshot, replay, budget |
 | `eval/memory_questions.yaml` | 40 | current claims, historical claims, conflict groups, intent, stage, optional path/as-of |
 | `examples/evaluation/corpus/stage-{a..g}` | 7 snapshots | authored keys, claims, evidence quotes, document versions, deletions/restoration |
-| `eval/results/m00675-development-final.json` | 64 rows/policy | retrieval outputs, plans, selected keys, abstention, safety diagnostics |
+| `eval/results/m00675-development-final.json` ((removed raw dump; summary retained above)) | 64 rows/policy | retrieval outputs, plans, selected keys, abstention, safety diagnostics |
 | M004/M005 tests | many | lifecycle, snapshots, replay, evidence, interfaces, packing, corpus isolation |
 
 The two question files contain 79 development questions in total. The

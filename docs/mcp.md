@@ -1,9 +1,13 @@
 # Connect an agent
 
-Three clients, one server. The shapes differ; `DATABASE_URL` and
-`MIND_PALACE_INGEST_ROOTS` do not. `MIND_PALACE_INGEST_ROOTS` is what bounds
-`sync` and `memory_remember --file` to your repository, and leaving it unset is the
-one way to give an agent write access to more than you meant.
+`MIND_PALACE_QUERY_LOG: "1"` is the flight recorder. It is off by default and
+off everywhere unless you set it. Turn it on when you are dogfooding the archive
+and want `mindpalace feedback <query_id> --verdict right|wrong|abstained_wrongly`
+to grade real questions; it appends one row per call to
+`~/.mind-palace/logs/queries.jsonl`, which holds the query text to 512 characters
+plus the corpus, the ranking and the returned claim ids — never claim text. The
+file is `0600` inside a `0700` directory, and nothing leaves the machine. Leave it
+out of a shared or deployed configuration; `docs/security.md` has the boundary.
 
 ```jsonc
 // ~/.config/opencode/opencode.json   (OpenCode v2)
@@ -16,7 +20,8 @@ one way to give an agent write access to more than you meant.
         "command": ["mindpalace-mcp"],
         "environment": {
           "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
-          "MIND_PALACE_INGEST_ROOTS": "/home/you/projects"
+          "MIND_PALACE_INGEST_ROOTS": "/home/you/projects",
+          "MIND_PALACE_QUERY_LOG": "1"
         }
       }
     }

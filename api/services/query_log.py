@@ -13,21 +13,24 @@ sample of actual usage, which no offline suite can substitute for.
 
 ## What is recorded, and what is not
 
-Recorded: timestamp, operation, the query, `match_status`, the top three scores,
-the claim ids returned, and latency.
+Recorded: timestamp, operation, corpus, the query, `match_status`, the top three
+scores, the claim ids returned, and latency.
 
-Not recorded: the claim text, the source path, the corpus, or anything about the
-document. A log that survives on a developer's laptop is a place memory content
-ends up by accident, and this file sits in the same home directory as the database
-it describes. The claim ids are 64 hex characters; on their own they carry no
+Not recorded: the claim text, the source path, or anything about the document. A
+log that survives on a developer's laptop is a place memory content ends up by
+accident, and this file sits in the same home directory as the database it
+describes. The claim ids are 64 hex characters; on their own they carry no
 content, and `--verify` a receipt with one in hand.
 
 ## When it runs
 
-On by default in local development, off by default everywhere else, and off
-entirely when `MIND_PALACE_QUERY_LOG=0`. "Local development" means a loopback
-connection with no tenant scope configured, which is the single-user local mode
-and nothing else. A server deployment writes nothing unless it is asked to.
+Only when `MIND_PALACE_QUERY_LOG=1`. Not by default, anywhere. A row stores the
+caller's query text verbatim to `QUERY_LIMIT`, which is what makes the file worth
+having and also what makes it something to ask for deliberately.
+
+The log directory is created `0700` and the file `0600`, and both are re-asserted
+on every write so a file created by an older version is tightened rather than left
+world-readable.
 
 Writes are best-effort and never raise into a query. A full disk must not turn a
 recall into a 500, and a log that can fail a query does not get written.
@@ -46,6 +49,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 import time
 import uuid
 from datetime import datetime, timezone
@@ -59,6 +63,12 @@ TOP_SCORES = 3
 #: Cap on the query text stored verbatim. A query is the one part of the row that
 #: is the caller's own words rather than memory content, and it still gets a bound.
 QUERY_LIMIT = 512
+
+#: The log holds query text, so it is created owner-only inside an owner-only
+#: directory. Both constants rather than literals, because the same two numbers
+#: appear in `docs/security.md` and in the module docstring.
+FILE_MODE = 0o600
+DIRECTORY_MODE = 0o700
 
 
 def default_path() -> Path:
@@ -74,15 +84,22 @@ def default_path() -> Path:
 
 
 def enabled(tenant_scoped: bool) -> bool:
-    """Whether this process should write rows.
+    """Whether this process writes rows. Off unless `MIND_PALACE_QUERY_LOG=1`.
 
-    A scoped connection is a server deployment. Logging there is somebody's job
-    with somebody's retention policy, not a default this module gets to choose.
+    A row stores the caller's query text, verbatim to `QUERY_LIMIT`. That is the
+    point of the file -- grading real usage needs the question, not a hash of it --
+    and it is also the reason it cannot be a default. `docs/security.md` promises
+    that ordinary operation never puts query text in a log, and it used to be false
+    on a developer's own machine: the recorder was on for any loopback connection,
+    which is every local install and every test session. It is now opt-in, so the
+    promise holds without an exception someone has to remember.
+
+    `tenant_scoped` is accepted and ignored. A server deployment is a weaker reason
+    to say no than local development was, not a stronger one; opt-in covers both.
+    The argument stays so the caller does not have to change and so the decision
+    has one place.
     """
-    setting = os.getenv("MIND_PALACE_QUERY_LOG")
-    if setting is not None:
-        return setting not in ("0", "false", "off", "")
-    return not tenant_scoped
+    return os.getenv("MIND_PALACE_QUERY_LOG", "") in ("1", "true", "yes", "on")
 
 
 def query_id(corpus: str, operation: str, query: str, started: float) -> str:
@@ -94,6 +111,23 @@ def query_id(corpus: str, operation: str, query: str, started: float) -> str:
     """
     seed = "\x00".join([corpus, operation, query, f"{started:.6f}"])
     return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:12]
+
+
+def _tighten(target: Path, mode: int) -> None:
+    """Hold `target` to `mode` if it is wider, and leave it alone if it is not.
+
+    Re-asserted on every write, because the file and directory may predate the
+    opt-in: a log created by an earlier version is on disk at `0644`, and
+    tightening it only at creation would leave it world-readable forever.
+
+    Best effort, like the write itself. A filesystem that refuses `chmod` will
+    refuse the append too, and that path already returns without raising.
+    """
+    try:
+        if target.exists() and stat.S_IMODE(target.stat().st_mode) != mode:
+            target.chmod(mode)
+    except OSError:
+        pass
 
 
 def record(
@@ -119,6 +153,10 @@ def record(
         "query_id": identifier,
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
         "operation": operation,
+        # Which corpus, so a dogfooding run over several projects can be split
+        # afterwards without guessing from the question. It is an identifier the
+        # caller already supplied to the call being logged, not document content.
+        "corpus": corpus,
         "query": query[:QUERY_LIMIT],
         "match_status": match_status,
         "top_scores": [round(float(s), 6) for s in (top_scores or [])[:TOP_SCORES]],
@@ -132,7 +170,18 @@ def record(
     try:
         path = default_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as handle:
+        _tighten(path.parent, 0o700)
+        # Create 0600 rather than `chmod` after the fact: `os.open` with a mode
+        # applies it only to a file it creates, so an operator who deliberately
+        # made this path unwritable stays that way, and a file already on disk at
+        # 0644 is tightened below without being made writable in between.
+        handle = os.fdopen(
+            os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, FILE_MODE),
+            "a",
+            encoding="utf-8",
+        )
+        with handle:
+            _tighten(path, FILE_MODE)
             handle.write(json.dumps(row, sort_keys=True) + "\n")
     except (OSError, ValueError):
         # `OSError` covers a full disk, a read-only home and a missing parent.

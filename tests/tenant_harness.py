@@ -346,7 +346,12 @@ def _drop_session_role() -> None:
             engine.dispose()
 
     try:
-        engine = sa.create_engine(sync_url())
+        # Against `postgres`, not `sync_url()`. The session database is created and
+        # dropped by `conftest.py` around this fixture, and a teardown that runs
+        # after the drop cannot connect -- which is why a cluster accumulated 55
+        # leftover roles while this function looked correct on screen. `postgres`
+        # is the maintenance database and is never dropped.
+        engine = sa.create_engine(_sync_url_for("postgres"))
         with engine.connect() as conn:
             conn.execute(sa.text(f"DROP ROLE IF EXISTS {quoted}"))
             conn.commit()

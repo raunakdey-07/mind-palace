@@ -125,11 +125,24 @@ def test_the_log_is_off_for_a_tenant_scoped_connection(monkeypatch):
     assert query_log.enabled(tenant_scoped=True) is False
 
 
-def test_the_log_is_on_by_default_for_a_local_connection(monkeypatch):
+def test_the_log_is_off_unless_asked_for(monkeypatch):
+    """A row carries the caller's query text, so writing one is opt-in.
+
+    It used to be on for any loopback connection, which is every local install and
+    every test session -- so `docs/security.md`'s promise that logs hold no query
+    text was false on the machine making it. The setting is the whole contract now.
+    """
     monkeypatch.delenv("MIND_PALACE_QUERY_LOG", raising=False)
     monkeypatch.delenv("MIND_PALACE_TENANT_SCOPE", raising=False)
     assert query_log.tenant_scoped_now() is False
+    assert query_log.enabled(tenant_scoped=False) is False
+
+
+def test_setting_it_to_one_turns_the_log_on_everywhere(monkeypatch):
+    """Local or deployed, opt-in means opt-in. `tenant_scoped` no longer decides."""
+    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", "1")
     assert query_log.enabled(tenant_scoped=False) is True
+    assert query_log.enabled(tenant_scoped=True) is True
 
 
 def test_the_setting_overrides_both_ways(monkeypatch):
@@ -175,8 +188,9 @@ def test_a_corrupt_line_does_not_break_feedback(log):
 
 def test_the_context_manager_logs_when_the_operation_raises(tmp_path, monkeypatch):
     """A failed call is traffic too, and it is the traffic worth having."""
+    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", "1")
     path = tmp_path / "logs" / "queries.jsonl"
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", str(path))
+    monkeypatch.setenv("MIND_PALACE_DATA_DIR", str(tmp_path))
     with pytest.raises(RuntimeError):
         with query_log.Call("query", "a question that failed", corpus="c"):
             raise RuntimeError("boom")

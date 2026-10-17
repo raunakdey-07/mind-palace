@@ -51,6 +51,28 @@ class ClaimValidationError(ValueError):
         super().__init__(f"document={path} version={version_id}: {reason}")
 
 
+class UnresolvedSupersession(ValueError):
+    """A supersession reference names nothing this archive can see.
+
+    Split out from the ordinary `ValueError` because the two mean opposite things
+    to the caller. An ambiguous reference -- two documents, two claims, a count
+    that does not pair -- is a mistake to refuse, because guessing moves a live
+    fact into history on the strength of a coincidence. A reference to nothing is
+    not a mistake at all: it is an ordinary state of a repository mid-migration,
+    where `ad-002.md` was written before `adr-0001.md` existed or before it was
+    ingested.
+
+    Aborting the whole document over the second one loses the claims it *does*
+    state, which is the part a reader wants, over the edge it cannot draw. So this
+    becomes a warning on the ingest report and the document lands with its claims.
+    """
+
+    def __init__(self, reference: str, reason: str):
+        self.reference = reference
+        self.reason = reason
+        super().__init__(reason)
+
+
 def _json_value(value):
     if isinstance(value, (datetime, date)):
         return value.isoformat()
@@ -613,10 +635,11 @@ async def _targets_for_reference(db, corpus_id: str, identity: str, reference: s
     if not looks_like_path(reference):
         by_key = [c for c in candidates if c["key"] == reference]
         if not by_key:
-            raise ValueError(
+            raise UnresolvedSupersession(
+                reference,
                 f"supersedes reference {reference!r} matches no active claim key in this "
                 "corpus. Write the key exactly as it appears in the archive, or the path "
-                "of the document that holds the claim."
+                "of the document that holds the claim.",
             )
         if len(by_key) > 1:
             raise ValueError(
@@ -649,10 +672,11 @@ async def _targets_for_reference(db, corpus_id: str, identity: str, reference: s
             )
         ).all()
     if not rows:
-        raise ValueError(
+        raise UnresolvedSupersession(
+            reference,
             f"supersedes reference {reference!r} matches no document in this corpus. "
             "Ingest the superseded document first; supersession cannot retire a claim "
-            "this archive has never seen."
+            "this archive has never seen.",
         )
     if len(rows) > 1:
         raise ValueError(
@@ -665,7 +689,7 @@ async def _targets_for_reference(db, corpus_id: str, identity: str, reference: s
 
 async def _declared_supersessions(
     db, corpus_id: str, identity: str, references: list[str], claims: list[dict]
-) -> dict[str, tuple[str, str]]:
+) -> tuple[dict[str, tuple[str, str]], list[UnresolvedSupersession]]:
     """Pair this version's claims with the ones a document says it replaces.
 
     A reference names a set of live claims -- one document's worth, or one key's.
@@ -684,12 +708,25 @@ async def _declared_supersessions(
        live facts into history on the strength of a guess, and the guess would be
        invisible afterwards. The error names the ids so `--supersedes` can be used
        for exactly the claims the author meant.
+
+    A reference that resolves to nothing is returned alongside the pairs rather
+    than raised. It is the normal state of a repository where `ad-002.md` was
+    written before `adr-0001.md` arrived, and the claims in the document that
+    *were* written are worth archiving without it. The caller reports each one as
+    `supersession_unresolved`, so the edge that did not happen is on the record
+    instead of absent from it.
     """
     keys = [claim["key"] for claim in claims]
     pairs: dict[str, tuple[str, str]] = {}
     targets: list[dict] = []
+    unresolved: list[UnresolvedSupersession] = []
     for reference in references:
-        for target in await _targets_for_reference(db, corpus_id, identity, reference):
+        try:
+            found = await _targets_for_reference(db, corpus_id, identity, reference)
+        except UnresolvedSupersession as exc:
+            unresolved.append(exc)
+            continue
+        for target in found:
             if target["id"] not in {t["id"] for t in targets}:
                 targets.append(target)
 
@@ -712,7 +749,7 @@ async def _declared_supersessions(
                 f"no key with any of them. Refusing to pair by guesswork. Retire the "
                 f"remainder explicitly with --supersedes: {', '.join(o[:16] for o in orphans[:4])}."
             )
-    return pairs
+    return pairs, unresolved
 
 
 async def _cross_document_targets(
@@ -884,9 +921,11 @@ async def record_version(
         # Nothing explicit was passed, so the document itself is the instruction.
         # An explicit `--supersedes` outranks it: the caller named a claim, and a
         # declaration in the file is not a reason to overrule them.
-        cross_document = await _declared_supersessions(
+        cross_document, unresolved = await _declared_supersessions(
             db, corpus_id, identity, supersedes_refs, claims
         )
+    else:
+        unresolved = []
     for claim in claims:
         supersedes = previous_claims.get(claim["key"])
         basis = "same_document_key" if supersedes else None
@@ -943,7 +982,7 @@ async def record_version(
                     "chunk_id": chunk_id,
                 },
             )
-    return {**version, "skipped": False}
+    return {**version, "skipped": False, "supersession_unresolved": unresolved}
 
 
 async def record_deletion(db: AsyncSession, corpus_id: str, path: str) -> bool:

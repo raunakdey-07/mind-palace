@@ -257,3 +257,54 @@ async def test_an_unrelated_write_reports_no_near_misses(store):
 async def test_the_hint_survives_a_read_it_cannot_complete(store):
     """The write it annotates has already succeeded; a hint must not fail it."""
     assert await related_active("Anything at all.", "no-such-corpus") == []
+
+
+async def test_a_reference_to_a_missing_document_is_a_warning_not_a_failure(store):
+    """A repository halfway through a migration, not a broken document.
+
+    `ad-002.md` can be written before `adr-0001.md` arrives. Refusing the whole
+    document over that loses the claims it does state, which is the part a reader
+    wants, over an edge it cannot draw. So the document lands and the edge that did
+    not happen is named on the report.
+    """
+    body = (
+        "# ADR 002\n\n"
+        "- The primary datastore is PostgreSQL 16.\n\n"
+        "Supersedes: adr-001-not-here.md\n"
+    )
+    result = await ingestion_service.IngestionService(
+        memory_enabled=True, require_embeddings=False
+    ).ingest_file(content=body, path="ad-002.md", corpus_id=store.corpus)
+
+    assert result["success"], "an unresolvable reference must not fail the document"
+    assert [w["code"] for w in result["warnings"]] == ["supersession_unresolved"]
+    assert result["warnings"][0]["field"] == "adr-001-not-here.md"
+    assert result["claim_count"] == 1, "the claims it does state are archived"
+    assert any("PostgreSQL 16" in c["claim"] for c in await live(store))
+
+
+async def test_an_ambiguous_reference_still_fails_the_document(store):
+    """The opposite case, and the reason the two are not treated alike.
+
+    Two documents end in `0001.md`. Retiring whichever sorted first would move a
+    live fact into history on a coin flip, so this raises rather than warns. Both
+    have to be in the corpus first, which is the point: the ambiguity is only
+    knowable once the archive can see both names.
+    """
+    for path in ("a/0001.md", "b/0001.md"):
+        result = await ingestion_service.IngestionService(
+            memory_enabled=True, require_embeddings=False
+        ).ingest_file(
+            content="# Decision\n\n- The primary datastore is PostgreSQL 15.\n",
+            path=path,
+            corpus_id=store.corpus,
+        )
+        assert result["success"], path
+
+    body = "# ADR 003\n\n- The primary datastore is PostgreSQL 16.\n\nSupersedes: 0001.md\n"
+    with pytest.raises(ValueError) as raised:
+        await ingestion_service.IngestionService(
+            memory_enabled=True, require_embeddings=False
+        ).ingest_file(content=body, path="ad-003.md", corpus_id=store.corpus)
+    assert "a/0001.md" in str(raised.value) and "b/0001.md" in str(raised.value)
+    assert not any("PostgreSQL 16" in c["claim"] for c in await live(store))

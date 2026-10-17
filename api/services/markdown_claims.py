@@ -89,8 +89,20 @@ _MAX_LINKS = 2
 _SUPERSEDES = "supersedes"
 _SUPERSEDED_BY = "superseded_by"
 
+#: A supersession declaration, and only a declaration. Anchored at the start of
+#: the line after an optional list marker, optionally bold, and with no inline
+#: code in the pattern at all. An earlier version tolerated a backtick around the
+#: directive so that `` `Supersedes:` `` would read as one; that is what let the
+#: documentation of this feature break it. `docs/authoring.md` explains the
+#: syntax in running prose, so a line there begins with a literal
+#: `` `supersedes:` `` and the scanner took the rest of the sentence as a reference
+#: to retire, then refused to ingest the document. Inline code is prose here, so
+#: the pattern no longer recognizes it, and a mid-sentence mention never matches.
+#: Indentation is allowed because a nested list item carries some.
 _DECLARATION = re.compile(
-    r"^\s*(?:`|)?\s*(?P<name>supersedes|superseded[\s_-]?by)\s*(?:`|)?\s*:\s*(?P<value>\S.*?)\s*$",
+    r"^\s*(?:[-*+]\s+)?(?:\*\*|__)?"
+    r"(?P<name>supersedes|superseded[\s_-]?by)"
+    r"(?:\*\*|__)?\s*:\s*(?P<value>\S.*?)\s*$",
     re.IGNORECASE,
 )
 _LINK_TARGET = re.compile(r"^\[[^\]]*\]\(([^)]+)\)\s*$")

@@ -298,10 +298,23 @@ def chunk_with_heading_paths(
                     )
                     current_chunk = ""
                 cut = para[:max_chars]
-                # Prefer breaking at a sentence/word boundary within the window.
-                boundary = max(cut.rfind(". "), cut.rfind("\n"), cut.rfind(" "))
-                if boundary > max_chars // 2:
-                    cut = para[: boundary + 1]
+                # Break at a line boundary when there is one in the window. The
+                # claim extractor has to quote evidence back verbatim out of an
+                # archived chunk, and a chunk that starts or ends mid-line cannot
+                # supply the quote for that line -- the claim is dropped with
+                # `claim_extraction_no_quote` instead. Splitting on the last space
+                # rather than the last newline put section boundaries inside
+                # bullets, and every bullet on that boundary lost its evidence. A
+                # sentence or word boundary is the fallback for a single line that
+                # is longer than the whole window, which cannot be helped.
+                newline = cut.rfind("\n")
+                if newline > max_chars // 2:
+                    cut = para[:newline]
+                else:
+                    # Prefer breaking at a sentence/word boundary within the window.
+                    boundary = max(cut.rfind(". "), cut.rfind(" "))
+                    if boundary > max_chars // 2:
+                        cut = para[: boundary + 1]
                 chunks.append(
                     {
                         "text": cut.strip(),

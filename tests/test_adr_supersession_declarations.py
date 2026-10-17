@@ -435,10 +435,32 @@ def test_an_unrelated_frontmatter_key_is_not_a_declaration():
 # --- the refusals -----------------------------------------------------------
 
 
-async def test_a_reference_to_a_document_never_ingested_is_refused(store):
-    """Supersession cannot retire a claim this archive has never seen."""
-    with pytest.raises(Exception, match="matches no document"):
-        await ingest_one(store, ADR_0002, "0002-use-postgres16.md")
+async def test_a_reference_to_a_document_never_ingested_is_a_warning(store):
+    """Supersession cannot retire a claim this archive has never seen.
+
+    That is a fact about the reference, not a fault in the document, so it no
+    longer fails the write. `0002` names a file that was never ingested, which is
+    what a repository looks like partway through adding the predecessor: the
+    decision in `0002` is still readable and its claims are still worth archiving.
+    Refusing the whole document discarded the readable part over an edge that
+    cannot be drawn yet, and the report said only `failed`, which does not tell
+    anybody what to do.
+
+    What is still refused is ambiguity. See
+    `test_an_ambiguous_reference_is_still_refused` in
+    `tests/test_cross_document_supersession.py`: retiring either candidate on a
+    coin flip would put a live fact into history.
+    """
+    result = await ingest_one(store, ADR_0002, "0002-use-postgres16.md")
+    assert result["success"]
+    assert [w["code"] for w in result["warnings"]] == ["supersession_unresolved"]
+    assert result["warnings"][0]["field"] == "0001-use-postgres15.md"
+    assert result["claim_count"] >= 1
+
+    rows = await live_rows(store)
+    assert [r["claim"] for r in rows] == [
+        "The primary datastore is PostgreSQL 16 with three replicas."
+    ], "the document lands with exactly its own claims and no invented predecessor"
 
 
 async def test_an_explicit_flag_outranks_the_declaration(store):

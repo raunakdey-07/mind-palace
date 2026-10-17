@@ -768,7 +768,13 @@ async def _dispatch_scoped(operation: str, request: dict, runtime: _Runtime) -> 
         from api.services.remember import remember as write
 
         name = request.get("corpus") or "default"
-        written = await write(request.get("statement"), corpus=name, key=request.get("key"))
+        written = await write(
+            request.get("statement"),
+            corpus=name,
+            key=request.get("key"),
+            supersedes_claim_id=request.get("supersedes_claim_id"),
+            topic_key=request.get("topic_key"),
+        )
         return RememberResult(
             corpus=name,
             version_id=written.get("version_id"),
@@ -776,6 +782,8 @@ async def _dispatch_scoped(operation: str, request: dict, runtime: _Runtime) -> 
             path=written.get("path", ""),
             key=written.get("key"),
             changed=written.get("event") != "UNCHANGED",
+            related_active_claims=written.get("related_active_claims") or [],
+            query_id=written.get("query_id"),
         ).model_dump(mode="json")
 
     from api.models.memory import MemoryRequest

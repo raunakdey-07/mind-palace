@@ -43,6 +43,136 @@ def terms(text: str) -> set[str]:
     return result
 
 
+#: How many ranked claims a response carries for the caller to adjudicate.
+CANDIDATE_LIMIT = 3
+
+#: `score_1 - score_2` below which rank 1 is a near-tie rather than a hit.
+#:
+#: Measured on the 175 answerable dev questions that carry a gold key, over the
+#: ungated output of this scorer (175/175 rankable):
+#:
+#:   gold at rank 1        116/175  (0.663)
+#:   gold at rank 2        155/175  (0.886)
+#:   gold at rank 3        162/175  (0.926)
+#:   gold at rank 5        170/175  (0.971)
+#:
+#: Rank 1 is wrong for the other 59, and 46 of those are inside the top three.
+#: That is the population a single-score response cannot address, which is what
+#: `candidates` is for.
+#:
+#: The threshold is set where the split is most informative, not where it is
+#: cleanest -- there is no clean split, because a correct rank 1 is usually a
+#: near-tie too. Median `score_1 - score_2` is 0.0461 for a wrong rank 1 against
+#: 0.0954 for a right one, which overlap enough that no cut separates them:
+#:
+#:   cut    fires on wrong rank 1    fires on right rank 1    precision
+#:   0.05        32/59 (54%)              28/116 (24%)          0.533
+#:   0.10        49/59 (83%)              61/116 (53%)          0.445
+#:   0.15        53/59 (90%)              88/116 (76%)          0.376
+#:
+#: 0.10 has the best precision of the three and fires on 38 of the 46 rank-1
+#: misses that `candidates` can rescue. The remaining false alarms are the
+#: intended cost: `ambiguous` asks the caller to read three quotes, it does not
+#: refuse to answer.
+#:
+#: `authority_order` re-orders that near-tie band on a signal the scorer does not
+#: have, which lifts rank 1 to 129/175 without moving k >= 2. It does not change
+#: this threshold: a claim promoted by scope is still a claim the scorer could not
+#: separate, and reporting that as confident would be a lie with a number on it.
+DEFAULT_MARGIN = 0.10
+
+#: How far above `minimum` still counts as "near the floor".
+#:
+#: A top score just clear of the abstention floor is weak on its own terms,
+#: independently of what beat it.
+DEFAULT_NEAR_FLOOR = 0.10
+
+#: Cosine below which a candidate is not worth listing at all. Without it, a
+#: near-weak top answer advertises two more weak ones as if they were a shortlist.
+CANDIDATE_FLOOR = 0.15
+
+
+def margin_threshold() -> float:
+    """`DEFAULT_MARGIN`, overridable for a corpus whose scores run tighter."""
+    return _bounded("MEMORY_QUERY_MARGIN", DEFAULT_MARGIN)
+
+
+def authority_order(shortlist, live, *, dated: bool, band: float) -> list:
+    """Order a near-tie shortlist by how the claim is scoped, not by how it scored.
+
+    Scores decide relevance. They do not decide whether a claim is the standing
+    answer or a statement about one interval, and at the near-tie the two claims
+    score so closely that the score cannot tell them apart.
+
+    The rule is a single boolean: with no time constraint in the question, a claim
+    that carries `valid_from` or `valid_until` is scoped to an interval, and a
+    claim that carries neither stands as written. "What is the datastore?" is
+    asking for the standing answer, so the scoped claim does not lead.
+
+    Measured over the 175 answerable dev questions that carry a gold key, applying
+    this inside the ambiguous band only, against the same corpus and the same
+    scorer:
+
+        rule                          @1        @2        @3        @5
+        score only (no re-order)    116/175   155/175   162/175   170/175
+        scope first                 129/175   155/175   162/175   170/175
+        + newest observation        107/175   150/175   163/175   170/175
+        + status CURRENT            127/175   154/175   161/175   170/175
+        newest observation only      91/175   149/175   163/175   170/175
+        status CURRENT only         111/175   153/175   161/175   170/175
+
+    Scope-first is the only rule that gains at rank 1 and costs nothing at k >= 2:
+    sixteen rank-1 changes, fourteen of which put the gold claim first, one of
+    which took it off. Every rule that also re-orders on observation time or on
+    status does worse, because both are properties of how the corpus was written
+    rather than of the question, and they outrank the score inside the band.
+
+    Only the band moves. A claim already `band` or more behind is not a near-tie,
+    it lost, and promoting it would replace the scorer's answer with a heuristic
+    about the archive's shape.
+
+    `dated` switches it off entirely. A question that names a time is asking about
+    an interval, and there the scoped claim is the answer.
+    """
+    if dated or len(shortlist) < 2:
+        return list(shortlist)
+    top = shortlist[0][1]
+    close = [entry for entry in shortlist if top - entry[1] < band]
+    rest = [entry for entry in shortlist if top - entry[1] >= band]
+    if len(close) < 2:
+        return list(shortlist)
+    close.sort(key=lambda entry: (_scoped(live.get(entry[0])), -entry[1], entry[0]))
+    return close + rest
+
+
+def _scoped(claims) -> bool:
+    """Every claim under this key is scoped to an interval.
+
+    Scoped only when *all* of them are. A key holding both an interval claim and
+    a standing one is standing: the caller would be told to look at a claim that
+    is true outside the interval, which is the general case.
+    """
+    claims = claims or []
+    return bool(claims) and all(
+        c.valid_from is not None or c.valid_until is not None for c in claims
+    )
+
+
+def near_floor() -> float:
+    """`DEFAULT_NEAR_FLOOR`, same override rule."""
+    return _bounded("MEMORY_QUERY_NEAR_FLOOR", DEFAULT_NEAR_FLOOR)
+
+
+def _bounded(name: str, default: float) -> float:
+    try:
+        value = float(os.getenv(name, default))
+    except ValueError:
+        return default
+    # A non-finite or negative threshold would make every answer look ambiguous
+    # (or none of them). That is a configuration mistake, not a tuning knob.
+    return value if math.isfinite(value) and 0.0 <= value <= 1.0 else default
+
+
 @dataclass(frozen=True)
 class RelevancePolicy:
     approach: str = "E"
@@ -219,6 +349,11 @@ def relevance(
     rather than making the next query pay for the same encoding again. Nothing is
     read back from it.
 
+    The third return value carries counters plus ``scored``: the best score every
+    key reached, *before* the acceptance gates. The gates decide what to answer
+    from; ``scored`` is what the ranking actually looked like, and it is what makes
+    a near-tie visible instead of silently dropping the runner-up.
+
     ``vectorized=True`` computes the same inner product with NumPy. It is off by
     default because it was measured at 1.00x to 1.07x end to end and bought
     nothing: the inner product was never the cost. It is kept because the switch
@@ -232,7 +367,16 @@ def relevance(
     claims = {c.id: c for c in _claims(full)}
     ids = sorted(claims)
     if not ids:
-        return {}, interpreted, {"candidates": 0, "embedding_calls": 0, "embedding_texts": 0}
+        return (
+            {},
+            interpreted,
+            {
+                "candidates": 0,
+                "embedding_calls": 0,
+                "embedding_texts": 0,
+                "scored": {},
+            },
+        )
     representations = [representation(claims[c]) for c in ids]
     documents = [claim_terms(text) for text in representations]
     # Terms occurring in every candidate (e.g. project name) cannot DISCRIMINATE
@@ -299,6 +443,7 @@ def relevance(
         return _dot_scalar(topic_vectors[i], cached[ids[position]])
 
     chosen = {}
+    scored: dict[str, float] = {}
     for i in range(len(interpreted.topics)):
         by_key = {}
         for position, cid in enumerate(ids):
@@ -312,6 +457,12 @@ def relevance(
             # it, and every such question would then need the strong-score bar
             # instead of the normal minimum.
             overlap = bool(question_terms[i] & documents[position])
+            # The best any claim under this key scores for this topic, kept
+            # whether or not it cleared a gate. `chosen` below is what the product
+            # answers from; `scored` is what it ranked, and the difference is the
+            # near-miss. A caller that only ever sees `chosen` cannot tell a
+            # rejected key from a key that was never a candidate.
+            scored[claim.key] = max(scored.get(claim.key, -1), value)
             if policy.approach == "A":
                 accepted = value >= 0.30
             elif policy.approach == "B":
@@ -338,5 +489,7 @@ def relevance(
             "topics": len(interpreted.topics),
             "scorer": "lexical" if lexical else "embedding",
             "claim_vectors_cached": 0 if lexical else len(ids) - len(missing),
+            # The ungated per-key ranking, for the caller-facing near-tie signal.
+            "scored": scored,
         },
     )

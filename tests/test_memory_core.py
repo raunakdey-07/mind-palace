@@ -198,6 +198,12 @@ async def memory_db():
     # referenced rows are the rows the test just wrote -- which is what
     # production looks like, where there is one schema.
     cache_migration = load("migrations/versions/007_claim_embedding_cache.py")
+    # `011` widens `memory_claims.supersession_basis` from two values to four, and
+    # `record_version` writes two of them (`topic_key`, `explicit_claim_id`). The
+    # `004` CHECK rejects those, so the fixture has to carry the migration or every
+    # cross-document write in this file fails on a constraint the application does
+    # not use in production.
+    supersession_migration = load("migrations/versions/011_cross_document_supersession.py")
     try:
         async with engine.connect() as conn:
             transaction = await conn.begin()
@@ -229,6 +235,7 @@ async def memory_db():
                     with Operations.context(MigrationContext.configure(sync_conn)):
                         migration.upgrade()
                         cache_migration.upgrade()
+                        supersession_migration.upgrade()
                     # `011` adds resource ownership and the application writes
                     # that column on every archive row. This fixture deliberately
                     # stops at `004` -- it hand-builds `corpora`, `documents` and
@@ -357,7 +364,17 @@ async def test_current_conflicts_supersession_and_as_of(memory_db):
     filtered = await memory.query(db, corpus, "RED")
     assert filtered["current_memories"] == []
     # Both sides of a matching conflict remain grounded.
-    assert len(filtered["conflicts"]) == 1 and len(filtered["evidence"]) == 2
+    assert len(filtered["conflicts"]) == 1
+    # Three, not two: asking for "RED" also returns what RED itself replaced. The
+    # supersession edge is the only thing tying two differently-worded values
+    # together, so a history that required the older claim's own text to match the
+    # query would report that `RED` never replaced anything -- which is exactly the
+    # `adr-002` replaces `adr-001` case, where the two sentences differ by a
+    # version number the query never mentions. Evidence follows the claims.
+    #
+    # Only the evidence count is asserted. Which claim lands in which bucket is
+    # this fixture's conflict semantics, not the rule under test.
+    assert len(filtered["evidence"]) == 3
     await memory.record_deletion(db, corpus, "other.md")
     assert not (await memory.query(db, corpus))["conflicts"]
 

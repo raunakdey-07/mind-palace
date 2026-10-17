@@ -1,5 +1,17 @@
 # Wedge decision note
 
+**2026-10-17. §5.2 is overtaken.** This note recommended building the independent
+question set first and *not* building an extractor. A structural extractor now
+exists (`api/services/markdown_claims.py`) and runs as a fallback when a document
+carries no authored `claims:` block. It needs no model, so §4's "not established:
+the cost, because pricing it needs a credential" is answered by measurement rather
+than by a budget: plain Markdown with list items, numbered entries and `Key: Value`
+lines now produces claims with exact-substring evidence, and the exact-quote rule
+is unchanged. §2.1 rows 2 and 3 are fixed for the Markdown row; a conversation
+transcript is prose and still produces nothing, which is the case §4 says an
+extractor of this kind would not reach either. Everything below is the note as
+written on 2026-10-13.
+
 **2026-10-13. A recommendation, not an implementation.** Nothing in this note is
 applied. No route, command, tool, schema field, default or tag changes because of
 it. The owner decides.
@@ -81,7 +93,7 @@ correct" is 127 top-1-correct plus 24 correct abstentions — a metric whose uni
 are "not wrong", not "correct". The whole matrix, the "every arm is net
 negative" claim and the "43 questions differ" breakdown are marked
 **INVALID / NOT ESTABLISHED** in
-`docs/performance/retrieval-lab-report.md`, with the data kept.
+`docs/performance/retrieval-lab-dev.json`, with the report since removed.
 
 Explaining which 77 questions they are, per question, is Phase 5a and it needs
 the lab measuring the product path. Anything said before that would be a guess,

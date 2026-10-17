@@ -53,6 +53,10 @@ coverage.xml
 .venv
 env/
 venv/
+# Self-ignoring via the `.gitignore` a uv venv writes inside itself, so it shows
+# up as untracked the moment that file is missing or the venv is made another
+# way. 5.0 GB is not something to leave to a file inside a build directory.
+venv*/
 ENV/
 env.bak/
 venv.bak/
@@ -96,12 +100,22 @@ helm/
 !/docs/operations/**
 # docs/PROGRESS.md was 1397 lines and is now an index. The full text of all
 # prior sessions moved here, unedited, rather than being cut. Tracked so the
-# citations from docs/performance/retrieval-lab-report.md resolve on a clone.
+# citations from docs/performance/ resolve on a clone.
 !/docs/internal/
 !/docs/internal/**
 # The first of the three first-hour documents: README -> quickstart -> authoring.
 # Commands only, no prose, and it runs.
 !/docs/quickstart.md
+# The worked example the README Quickstart ingests. It is a plain ADR with no
+# frontmatter and no `claims:` block, which is the thing being demonstrated, so
+# it has to be a real file on a clean clone.
+!/docs/adr/
+!/docs/adr/**
+# Registering the agent. Three clients, three config shapes, and the README points
+# here for them, so the file has to survive a clone or the link 404s on a fresh
+# checkout. tests/test_mcp_client_docs.py parses the JSON in it and checks every
+# tool name against what the server actually advertises.
+!/docs/mcp.md
 # Material that was built, proved, and then deliberately withdrawn. It is part of
 # the project's record: without it the next person re-derives the same findings
 # and the same 42501. Not runnable from here -- it lives outside tests/ on purpose.
@@ -176,7 +190,9 @@ monitoring/
 # Both are in docs/performance/frozen-manifest.json with their digests, so
 # "do not modify" is now enforced rather than merely intended.
 
-# The retrieval lab's embedding cache: binary .npy blobs keyed by content
-# hash, several megabytes, and worthless on another machine. 596 of them were
-# committed by accident in 7ac19e6 and are being purged from this branch.
+# The retrieval lab's embedding cache, kept ignored after the lab was removed:
+# binary .npy blobs keyed by content hash, several megabytes, worthless on
+# another machine. 596 of them were committed by accident in 7ac19e6 and are being
+# purged from this branch. The entry stays so a stale local directory left by an
+# earlier checkout does not show up as untracked.
 .retrieval_lab_cache/

@@ -10,7 +10,7 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
 import mcp_server
-from api.models.memory import MemoryRequest, MemoryResponse, Snapshot, State
+from api.models.memory import MemoryRequest, MemoryResponse, MemoryWire, Snapshot, State
 
 OPERATIONS = ("current", "history", "changes", "evidence", "as-of", "snapshot", "replay", "pack")
 
@@ -70,7 +70,9 @@ async def test_tools_are_async_typed_and_preserve_legacy_tools():
         assert request_schema["properties"]["budget"]["minimum"] == 512
         assert request_schema["properties"]["budget"]["maximum"] == 128000
         assert request_schema["properties"]["intent"]["default"] == "auto"
-        assert tool.output_schema == MemoryResponse.model_json_schema()
+        # `MemoryWire`, the same shape REST declares, so both surfaces advertise one
+        # response contract. See `api.models.memory.MemoryWire`.
+        assert tool.output_schema == MemoryWire.model_json_schema()
         assert tool.annotations.read_only_hint == (operation != "snapshot")
         assert tool.annotations.destructive_hint is False
         assert tool.annotations.open_world_hint is False
@@ -110,7 +112,9 @@ async def test_tool_dispatches_typed_request_and_returns_json(service, operation
     }
     result = await mcp_server.mcp.call_tool(tool_name(operation), {"request": body})
     assert not result.is_error
-    assert result.structured_content == service.execute.return_value.model_dump(mode="json")
+    # `public_dict`: the wire carries the retrieval diagnostics and the digest does
+    # not, so an agent reading either MCP block sees `match_status` and `candidates`.
+    assert result.structured_content == service.execute.return_value.public_dict()
     assert json.loads(result.content[0].text) == result.structured_content
     assert isinstance(result.structured_content["state"]["as_of"], str)
     service.execute.assert_awaited_once_with(operation, MemoryRequest(**body))

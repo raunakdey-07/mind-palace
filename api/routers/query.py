@@ -20,6 +20,7 @@ from api.models.schemas import (
     StructuredResponse,
     SummarizeRequest,
 )
+from api.models.memory import MemoryWire
 from api.routers.memory import execute_memory
 from api.services.corpora import (
     CorpusScopeNotFound,
@@ -56,6 +57,11 @@ async def _resolve_live_scope(db, corpus: str | None) -> tuple[str | None, str |
 
 async def _ask_memory(request: AskRequest, start: float) -> MemoryAskResponse:
     pack = await execute_memory("query", request.memory_request())
+    # The service returns `MemoryResponse`; this route's response model is
+    # `MemoryWire`, which carries the retrieval diagnostics. Pydantic will not
+    # coerce a parent instance into a child field, so the conversion is explicit --
+    # and it is the conversion that decides what the caller receives.
+    wire = MemoryWire.model_validate(pack.public_dict())
     if not pack.evidence:
         return MemoryAskResponse(
             answer=(
@@ -64,7 +70,7 @@ async def _ask_memory(request: AskRequest, start: float) -> MemoryAskResponse:
                 else "No supporting memory evidence found for the requested corpus and state."
             ),
             intent="ask",
-            memory=pack,
+            memory=wire,
             latency_ms=int((time.perf_counter() - start) * 1000),
         )
 
@@ -95,7 +101,7 @@ async def _ask_memory(request: AskRequest, start: float) -> MemoryAskResponse:
         provider=llm_service.provider.__class__.__name__.replace("Provider", "").lower(),
         model=llm_service.model_name,
         temperature=0.2,
-        memory=pack,
+        memory=wire,
     )
 
 

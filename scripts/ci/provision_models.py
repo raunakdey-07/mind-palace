@@ -133,12 +133,24 @@ def verify() -> int:
     Deliberately imports `api.services.embedder.Embedder` and
     `api.services.reranker.Reranker` rather than loading the files directly: the
     question is whether Mind Palace can use the model, not whether the model exists.
+
+    The embedder is checked unconditionally, because onnxruntime is a default
+    dependency. The reranker is checked only when `sentence-transformers` imports,
+    because that is the `[torch]` extra and the main CI job does not install it.
+    Its weights are still downloaded and pinned either way -- `huggingface_hub` is a
+    default dependency -- so a job that does install `[torch]` finds them ready.
     """
     problems: list[str] = []
 
     # 1. The identifiers the application asks for must be the ones we pinned.
     from api.services.embedder import DEFAULT_MODEL
-    from api.services.reranker import Reranker
+
+    # `api.services.reranker` imports either way; what varies is whether its
+    # backend does. Testing the module rather than `CrossEncoder` would report the
+    # reranker as available and then fail to load it.
+    from api.services import reranker as reranker_module
+
+    reranker_available = reranker_module.CrossEncoder is not None
 
     pinned_embed_repo = repo_id("EMBEDDING_MODEL", {})
     pinned_rerank_repo = repo_id("RERANKER_MODEL", {})
@@ -187,17 +199,20 @@ def verify() -> int:
     except Exception as exc:  # noqa: BLE001 - any failure here is a provisioning failure
         problems.append(f"Embedder failed to load: {type(exc).__name__}: {exc}")
 
-    try:
-        reranker = Reranker()
-        scores = reranker.score(
-            "what datastore do we use", "The production datastore is PostgreSQL."
-        )
-        if not scores:
-            problems.append("Reranker returned no scores")
-        else:
-            print(f"Reranker loaded {reranker.model_name}")
-    except Exception as exc:  # noqa: BLE001 - as above
-        problems.append(f"Reranker failed to load: {type(exc).__name__}: {exc}")
+    if not reranker_available:
+        print("Reranker not checked: sentence-transformers is not installed (the [torch] extra)")
+    else:
+        try:
+            reranker = reranker_module.Reranker()
+            scores = reranker.score(
+                "what datastore do we use", "The production datastore is PostgreSQL."
+            )
+            if not scores:
+                problems.append("Reranker returned no scores")
+            else:
+                print(f"Reranker loaded {reranker.model_name}")
+        except Exception as exc:  # noqa: BLE001 - as above
+            problems.append(f"Reranker failed to load: {type(exc).__name__}: {exc}")
 
     if problems:
         print("\nMODEL PROVISIONING FAILURE", file=sys.stderr)

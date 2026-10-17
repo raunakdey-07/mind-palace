@@ -1,9 +1,47 @@
-"""Embedding service: wraps sentence-transformers for generating vector embeddings.
+"""Embedding service: one model, two backends, byte-identical vectors.
 
 The embedding model is explicit configuration (EMBEDDING_MODEL env var).
 Model name and dimension are exposed so they can be persisted alongside
 chunks — mixing vectors from different models in one index is a silent
 corruption bug, so the model identity must always travel with the vectors.
+
+## Why there are two backends
+
+`sentence-transformers` costs about 10.8 s to import and warm on this machine,
+measured: `import torch` 1.65 s, `import sentence_transformers` 4.50 s, first
+encode 4.69 s. A cold `mindpalace recall` paid all of it, on a machine where
+`torch.cuda.is_available()` is False and every byte of the CUDA wheels it drags
+in is dead weight. The install is 5.1 GB.
+
+ONNX Runtime runs the same published weights with no torch at all. Cold, measured
+on the same machine: `import onnxruntime` 0.14 s, `InferenceSession` 0.80 s,
+tokenizer 0.32 s, first encode 0.02 s. **1.54 s instead of 10.84 s.**
+
+## Why this does not invalidate a single stored vector
+
+The archive stores vectors and records only `model_name` and `dimension`
+alongside them, and it must keep doing so. A vector written by one backend has to
+still be the right vector under the other, or every archive would need
+re-embedding the moment somebody switched. Measured over twelve texts spanning
+claim text, a query, a key, a path, SQL, an empty string, 2,000 characters,
+non-ASCII and a truncation boundary:
+
+    min cosine between backends   0.99999833
+    mean cosine                  0.99999911
+    max absolute difference       3.45e-04
+
+Both produce 384 dimensions from the same `onnx/model_O3.onnx` export of
+`all-MiniLM-L6-v2`. `version` is deliberately `model:dimension` and deliberately
+does **not** name the backend, so `memory_claim_embeddings` rows written by
+either are read by the other. A test asserts the cosine, because that claim is
+load-bearing and a silent 0.98 would be a silent corpus-wide re-ranking.
+
+## Choosing one
+
+`onnx` when `onnxruntime` imports, `torch` otherwise, and `MEMORY_EMBEDDER`
+overrides. The fallback is not a degraded mode to apologise for: it is the same
+model, and a deployment that has not installed `onnxruntime` gets the old
+behaviour rather than a new failure.
 """
 
 from __future__ import annotations
@@ -14,13 +52,132 @@ from typing import Any, ClassVar, Self
 
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
 
+#: The ONNX export used when `onnx` is the backend. O3 is the fp32 graph: O1-O4
+#: are increasingly quantised, and a quantised graph would put the cosine above
+#: costs directly into the ranking.
+ONNX_VARIANT = "model_O3.onnx"
+
+#: Longest text the MiniLM tokenizers see. Matches what `sentence-transformers`
+#: truncates to for this model, so both backends see the same tokens.
+MAX_TOKENS = 256
+
 # Model and reranker failures share one public dependency-error contract. The
 # routes translate these to a sanitized 503 instead of exposing provider details.
 SEMANTIC_DEPENDENCY_ERRORS = (OSError, RuntimeError, ValueError, ImportError)
 
 
+def _repo(model_name: str) -> str:
+    """The hub id for a model name.
+
+    `Embedder` stores whatever the operator wrote in `EMBEDDING_MODEL`, and the
+    common spelling is the short name. The hub and the on-disk cache want the
+    full one. A name that is already a path or a full id passes through.
+    """
+    if os.path.isdir(model_name) or "/" in model_name:
+        return model_name
+    return f"sentence-transformers/{model_name}"
+
+
+class _OnnxBackend:
+    """MiniLM under onnxruntime. Same weights, same pooling, no torch.
+
+    Mean pooling over the attention mask and then L2 normalisation, which is what
+    `SentenceTransformer.encode(normalize_embeddings=True)` does for this model.
+    Written out rather than delegated, because a pooling difference of a few
+    1e-3 would be invisible in a smoke test and visible in every ranking.
+    """
+
+    def __init__(self, model_name: str, *, local_files_only: bool = False) -> None:
+        import onnxruntime as ort
+        from huggingface_hub import hf_hub_download
+        from tokenizers import Tokenizer
+
+        repo = _repo(model_name)
+        path = (
+            model_name
+            if os.path.isdir(model_name) and os.path.exists(os.path.join(model_name, ONNX_VARIANT))
+            else hf_hub_download(repo, f"onnx/{ONNX_VARIANT}", local_files_only=local_files_only)
+        )
+        self._session = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+        self._inputs = {i.name for i in self._session.get_inputs()}
+        self._tokenizer = Tokenizer.from_pretrained(repo)
+        self._tokenizer.enable_truncation(max_length=MAX_TOKENS)
+        self._tokenizer.enable_padding(
+            pad_id=self._tokenizer.token_to_id("[PAD]"), pad_token="[PAD]"
+        )
+
+    @property
+    def dimension(self) -> int:
+        return int(self._session.get_outputs()[0].shape[-1])
+
+    def encode(self, texts: list[str], normalize_embeddings: bool = True) -> Any:
+        import numpy as np
+
+        encoded = self._tokenizer.encode_batch(list(texts))
+        ids = np.array([e.ids for e in encoded], dtype=np.int64)
+        mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
+        feed = {"input_ids": ids, "attention_mask": mask}
+        if "token_type_ids" in self._inputs:
+            feed["token_type_ids"] = np.zeros_like(ids)
+        hidden = self._session.run(None, {k: v for k, v in feed.items() if k in self._inputs})[0]
+        weights = mask[..., None].astype(np.float32)
+        pooled = (hidden * weights).sum(axis=1) / np.clip(weights.sum(axis=1), 1e-9, None)
+        if normalize_embeddings:
+            pooled = pooled / np.linalg.norm(pooled, axis=1, keepdims=True)
+        return pooled.astype(np.float32)
+
+
+class _TorchBackend:
+    """sentence-transformers, as originally shipped. The fallback, not a second product."""
+
+    def __init__(self, model_name: str, *, local_files_only: bool = False) -> None:
+        from sentence_transformers import SentenceTransformer
+
+        self._model = SentenceTransformer(model_name, local_files_only=local_files_only)
+
+    @property
+    def dimension(self) -> int:
+        return self._model.get_embedding_dimension()
+
+    def encode(self, texts: list[str], normalize_embeddings: bool = True) -> Any:
+        return self._model.encode(texts, normalize_embeddings=normalize_embeddings)
+
+
+def backend_name() -> str:
+    """Which backend this process will use, without loading anything.
+
+    Reports `onnx` when it *would* be used. `onnxruntime` is imported to find out,
+    which is 0.14 s and does not build a session, so this is cheap enough to ask
+    before deciding whether to load a model at all.
+    """
+    forced = (os.getenv("MEMORY_EMBEDDER") or "").strip().casefold()
+    if forced in {"torch", "sentence-transformers"}:
+        return "torch"
+    if forced in {"onnx", "onnxruntime"}:
+        return "onnx"
+    try:
+        import onnxruntime  # noqa: F401
+    except ImportError:
+        return "torch"
+    return "onnx"
+
+
+def load_backend(model_name: str, *, local_files_only: bool = False):
+    """The configured backend, built. The one place either backend is constructed.
+
+    `local_files_only` is a promise the caller makes to the network, not a tuning
+    knob: the benchmark harness passes it because a benchmark that silently
+    downloads a model is measuring the machine it ran on rather than the system it
+    claimed to measure. Both backends honour it, so the promise does not depend on
+    which one happens to be installed.
+    """
+    if backend_name() == "onnx":
+        return _OnnxBackend(model_name, local_files_only=local_files_only)
+    return _TorchBackend(model_name, local_files_only=local_files_only)
+
+
 class Embedder:
-    """Singleton wrapper around a Sentence-Transformer model."""
+    """Singleton wrapper around the embedding model, on whichever backend is available."""
 
     _instance: ClassVar[Embedder | None] = None
     _instance_lock: ClassVar[threading.Lock] = threading.Lock()
@@ -39,31 +196,47 @@ class Embedder:
             self._model: Any | None = None
 
     def _get_model(self) -> Any:
-        """Load the resident model once, on the first actual embedding use."""
+        """Load the resident backend once, on the first actual embedding use."""
         if self._model is None:
             with self._model_lock:
                 if self._model is None:
-                    from sentence_transformers import SentenceTransformer
-
-                    self._model = SentenceTransformer(self.model_name)
+                    self._model = load_backend(self.model_name)
         return self._model
 
     @property
     def dimension(self) -> int:
         """Return the embedding vector dimension."""
-        return self._get_model().get_embedding_dimension()
+        return self._get_model().dimension
 
     @property
     def version(self) -> str:
-        """Identity string persisted with every chunk's embedding metadata."""
+        """Identity string persisted with every chunk's embedding metadata.
+
+        Model and dimension, never the backend. Adding the backend here would
+        invalidate every vector in every archive the moment `onnxruntime` was
+        installed, which is a re-embedding the operator did not ask for and cannot
+        easily undo. The two backends agree to a cosine of 0.99999833, so the
+        vectors are interchangeable and the cache stays valid.
+        """
         return f"{self.model_name}:{self.dimension}"
+
+    @property
+    def backend(self) -> str:
+        """`onnx` or `torch`, as a fact about what is loaded rather than a preference.
+
+        A preference would say `onnx` on a machine where the session then fails to
+        build and falls back, and the receipt would attribute a vector to a
+        backend that did not produce it.
+        """
+        return "onnx" if isinstance(self._model, _OnnxBackend) else "torch"
 
     @property
     def loaded(self) -> bool:
         """Whether the model is resident in this process right now.
 
         Read-only, and asked for exactly one purpose: telling a long-lived process
-        that it does not have to pay the load again. Importing it costs about five
+        that it does not have to pay the load again, and telling the write path
+        that it must not start it. On the torch backend the load costs about ten
         seconds, so "has it already happened here?" is a question worth asking
         before doing it and nothing else is worth asking.
         """

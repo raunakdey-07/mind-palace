@@ -62,24 +62,17 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      # The CPU index, because the runner has no GPU and the default PyPI torch
-      # wheel is the CUDA build.
-      #
-      # Measured this session, torch 2.9.1 cp311 linux x86_64:
-      #   default PyPI wheel   900 MB, and it depends on the nvidia-* tree
-      #   CPU index wheel      184 MB
-      # The 716 MB is the wheel alone; the nvidia wheels it drags in are larger
-      # again. Nothing in this suite uses CUDA, so the runner was downloading a
-      # GPU stack it could never execute -- which is also why `cache: pip` had
-      # little to save on a cold key and why a dependency bump re-downloaded
-      # gigabytes for no behavioural change.
+      # No CPU index and no torch. The default install is the ONNX stack, so the
+      # runner downloads 90 MB of onnxruntime instead of a 184 MB CPU-index torch
+      # wheel plus the nvidia tree it depends on. Nothing in this suite uses CUDA,
+      # and nothing in it needs torch either: the backend equivalence test lives in
+      # its own job below, because that test is the only thing here that does.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
-            -r requirements.txt
+          python -m pip install -r requirements.txt
           python -m pip install --no-deps -e .
-          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+          python -c "import onnxruntime; print('onnxruntime', onnxruntime.__version__)"
 
       - name: Verify package imports
         run: |
@@ -478,6 +471,44 @@ jobs:
             exit 1
           fi
           python examples/marketing-campaign-memory/demo.py
+
+  # The two embedding backends have to stay interchangeable, because the archive
+  # stores vectors and records only the model name and the dimension. If they drift
+  # apart, every corpus written under one backend is silently mis-ranked by the
+  # other. That claim is asserted in tests/test_embedder_backend_equivalence.py,
+  # which needs both, so it gets both -- here, and only here, so the default
+  # install and the main suite stay on the 90 MB stack.
+  embedding-backends:
+    name: Embedding backends stay interchangeable
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # The CPU index, because the runner has no GPU and the default PyPI torch
+      # wheel is the CUDA build. Measured torch 2.9.1 cp311 linux x86_64: 900 MB
+      # from PyPI against 184 MB from the CPU index, and the nvidia tree the PyPI
+      # wheel depends on is larger again.
+      - name: Install both backends
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -e '.[torch,dev]'
+          python -c "import torch, onnxruntime; print('torch', torch.__version__, '| onnxruntime', onnxruntime.__version__)"
+
+      - name: The two backends produce the same vector
+        run: |
+          export HF_HUB_OFFLINE=0
+          python -m pytest -q -p no:randomly \
+            tests/test_embedder_backend_equivalence.py \
+            tests/test_embedder.py
 
   five-minute-path:
     name: The five-minute path, from a clean checkout

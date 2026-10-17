@@ -16,6 +16,7 @@ from api.services.corpora import DEFAULT_CORPUS_ID
 from api.services.db import session_scope
 from api.services.embedder import Embedder
 from api.services.ingest_paths import require_permitted
+from api.services import markdown_claims
 from api.services.parser import (
     chunk_with_heading_paths,
     extract_sections_with_paths,
@@ -83,7 +84,15 @@ class IngestionService:
         return self.embedder.model_name, self.embedder.dimension
 
     async def _ingest_content(
-        self, db, content: str, path: str, corpus_id: str, owner_principal_id: str | None = None
+        self,
+        db,
+        content: str,
+        path: str,
+        corpus_id: str,
+        owner_principal_id: str | None = None,
+        *,
+        supersedes_claim_id: str | None = None,
+        topic_key: str | None = None,
     ) -> dict:
         """Shared ingestion pipeline for one parsed document.
 
@@ -94,13 +103,28 @@ class IngestionService:
 
         async with db.begin():
             await memory.lock_corpus(db, corpus_id)
-            metadata, _ = parse_markdown(content)
+            metadata, body = parse_markdown(content)
+            # Plain Markdown with no authored `claims:` block used to be indexed as
+            # text and nothing else, so recall abstained on every file in the
+            # corpus. Three conditions could turn the memory path on and none of
+            # them did: an ADR has no `claims:` block, and on a fresh corpus there
+            # is no archive for `memory.enabled()` to find. The fourth is here --
+            # the document has structure worth reading.
             use_memory = (
-                self.memory_enabled or "claims" in metadata or await memory.enabled(db, corpus_id)
+                self.memory_enabled
+                or "claims" in metadata
+                or await memory.enabled(db, corpus_id)
+                or markdown_claims.has_claims(body)
             )
             if use_memory:
                 result = await self._ingest_memory_content(
-                    db, content, path, corpus_id, owner_principal_id
+                    db,
+                    content,
+                    path,
+                    corpus_id,
+                    owner_principal_id,
+                    supersedes_claim_id=supersedes_claim_id,
+                    topic_key=topic_key,
                 )
             else:
                 result = await self._ingest_live_content(
@@ -218,6 +242,9 @@ class IngestionService:
         path: str,
         corpus_id: str,
         owner_principal_id: str | None = None,
+        *,
+        supersedes_claim_id: str | None = None,
+        topic_key: str | None = None,
     ) -> dict:
         """One caller-owned transaction for the archive and live-index projection."""
         from api.services import memory
@@ -238,6 +265,13 @@ class IngestionService:
             )
         chunks = chunk_with_heading_paths(extract_sections_with_paths(body))
         records = [{**chunk, "order_index": i} for i, chunk in enumerate(chunks)]
+        # What the document says about its own history, in frontmatter or in a body
+        # line. Read even when the document carries an authored `claims:` block,
+        # because declaring a supersession is a statement about the document, not a
+        # claim for the archive to extract.
+        declared_supersedes, _superseded_by = markdown_claims.supersession_references(
+            metadata, body
+        )
         # Validate before embedding or any live mutation. No inferred claims.
         # The third element is the authored claims, and until now it was
         # discarded -- so nothing downstream could say how much memory a document
@@ -245,6 +279,48 @@ class IngestionService:
         # block had never parsed. Carrying it through is what lets the caller
         # report documents *and* claims instead of a file count.
         _meta, _archived, claims = memory.validate_source(path, content, metadata, records)
+        if not claims and "claims" not in metadata and not frontmatter_warnings:
+            # Plain Markdown. An ADR, a runbook, a DECISIONS.md: no `claims:`
+            # block, and therefore nothing for recall to answer from. The
+            # structural reader fills that gap deterministically, with no model
+            # and no inference, and each claim it produces is a line of the file
+            # quoted back.
+            #
+            # It is a fallback and not a default, because an authored `claims:`
+            # block is the author naming their own keys and this has no business
+            # producing a second opinion beside it.
+            #
+            # And never on a document whose frontmatter did not parse. When that
+            # happens `parse_markdown` hands back the whole raw file as the body,
+            # frontmatter included, because there is no way to tell where the
+            # block was supposed to end. Reading structure out of that produces
+            # claims from the discarded `claims:` block itself -- the author gets
+            # memory fabricated from what was thrown away, with the
+            # `frontmatter_unparseable` warning still sitting underneath it. The
+            # warning is the honest answer and it is already reported.
+            derived, extraction_warnings = markdown_claims.claims_for(
+                metadata, body, records, path=path
+            )
+            for warning in extraction_warnings:
+                logging.getLogger(__name__).warning(
+                    "claim_extraction_problem",
+                    extra={"corpus_id": corpus_id, **warning.as_dict()},
+                )
+                # Same dict shape as a frontmatter warning, so every consumer of
+                # the ingestion report reads one list instead of two.
+                frontmatter_warnings.append(warning)
+            if derived and derived["claims"]:
+                # Re-validate against the augmented metadata. The extractor only
+                # emits evidence it has already located in an archived chunk, so
+                # this cannot fail on the quote rule -- but the archive is the
+                # only thing allowed to decide that, not this function.
+                metadata = {**metadata, **derived}
+                _meta, _archived, claims = memory.validate_source(path, content, metadata, records)
+            elif not extraction_warnings:
+                logging.getLogger(__name__).info(
+                    "no_structural_claims",
+                    extra={"corpus_id": corpus_id, "path": path},
+                )
         previous = await memory._latest(db, corpus_id, memory.memory_document_id(corpus_id, path))
         fingerprint = memory._hash(content, metadata)
         live = (
@@ -300,7 +376,17 @@ class IngestionService:
             commit=False,
         )
         version = await memory.record_version(
-            db, corpus_id, path, doc_id, content, metadata, records, owner_principal_id
+            db,
+            corpus_id,
+            path,
+            doc_id,
+            content,
+            metadata,
+            records,
+            owner_principal_id,
+            supersedes_claim_id=supersedes_claim_id,
+            topic_key=topic_key,
+            supersedes_refs=declared_supersedes,
         )
         await update_manifest(
             db, path, content_hash(content), doc_id, count, corpus_id, commit=False
@@ -369,6 +455,8 @@ class IngestionService:
         path: Optional[str] = None,
         corpus_id: str = DEFAULT_CORPUS_ID,
         owner_principal_id: str | None = None,
+        supersedes_claim_id: str | None = None,
+        topic_key: str | None = None,
     ) -> dict:
         """Ingest a single Markdown file into the given corpus.
 
@@ -378,10 +466,19 @@ class IngestionService:
         shape. The owner must come from the authenticated principal, never from
         the request body -- a client that chose its own owner could mark a
         document as another principal's.
+
+        `supersedes_claim_id` and `topic_key` are the cross-document supersession
+        arguments; see `memory.record_version`. Both apply to this write only.
         """
         async with session_scope() as db:
             return await self._ingest_content(
-                db, content, path or "unknown", corpus_id, owner_principal_id
+                db,
+                content,
+                path or "unknown",
+                corpus_id,
+                owner_principal_id,
+                supersedes_claim_id=supersedes_claim_id,
+                topic_key=topic_key,
             )
 
     async def ingest_repo(

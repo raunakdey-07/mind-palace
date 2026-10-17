@@ -1,6 +1,7 @@
 """Real MCP stdio protocol smoke test; read-only against a migrated database."""
 
 import asyncio
+import json
 import os
 import sys
 from pathlib import Path
@@ -40,7 +41,9 @@ async def test_memory_tools_over_stdio():
                 assert not packed.is_error
                 pack = MemoryResponse.model_validate(packed.structured_content)
                 assert len(pack.canonical_json()) <= 8000
-                assert packed.content[0].text == pack.canonical_json()
+                # The text block is the wire payload, not the digest: a stdio client
+                # that parses `content` still needs `match_status` and `candidates`.
+                assert json.loads(packed.content[0].text) == pack.public_dict()
                 bad = await session.call_tool(
                     "memory_evidence", {"request": {"corpus": corpus, "claim_id": "0" * 64}}
                 )

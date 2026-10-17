@@ -38,7 +38,14 @@ pytestmark = pytest.mark.skipif(
     reason="needs a real PostgreSQL to read real memory",
 )
 
-HEAVY = ("torch", "transformers", "sentence_transformers")
+#: What counts as "the model stack" in `sys.modules`.
+#:
+#: Both embedding backends, not one. `onnxruntime` is here because it is the
+#: default wherever it is installed, and a semantic path that loaded nothing at all
+#: would make the lexical comparison below meaningless -- which is exactly what the
+#: sanity assertion is for. The load-bearing half of the check is that lexical mode
+#: imports none of them.
+HEAVY = ("torch", "transformers", "sentence_transformers", "onnxruntime")
 
 #: The corpus, and the question pair that separates the two modes.
 FACTS = {

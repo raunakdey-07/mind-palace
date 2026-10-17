@@ -42,12 +42,22 @@ def test_embedder_empty():
 
 
 def test_embedder_loads_model_only_on_first_use(monkeypatch):
+    """Constructing an `Embedder` must not load anything.
+
+    `MEMORY_EMBEDDER=torch` is pinned because the test fakes
+    `sentence_transformers`, and the default backend is ONNX wherever
+    `onnxruntime` is installed. What is being checked is the laziness, which is a
+    property of `Embedder` and not of either backend; pinning the backend is what
+    makes that check mean what it says.
+    """
+    monkeypatch.setenv("MEMORY_EMBEDDER", "torch")
     previous = Embedder._instance
     calls = []
 
     class FakeModel:
-        def __init__(self, name):
+        def __init__(self, name, **kwargs):
             calls.append(name)
+            assert kwargs == {"local_files_only": False}, kwargs
 
         def get_embedding_dimension(self):
             return 2
@@ -70,14 +80,35 @@ def test_embedder_loads_model_only_on_first_use(monkeypatch):
         Embedder._instance = previous
 
 
+def test_constructing_an_embedder_loads_no_backend_at_all(monkeypatch):
+    """The laziness holds whichever backend is selected.
+
+    The lazy-load test above pins the backend, so on its own it would not notice a
+    constructor that eagerly built an ONNX session. `loaded` is the flag the rest
+    of the product asks, so it is the flag worth asserting.
+    """
+    from api.services.embedder import backend_name
+
+    previous = Embedder._instance
+    Embedder._instance = None
+    try:
+        embedder = Embedder()
+        assert embedder.loaded is False
+        assert backend_name() in {"onnx", "torch"}
+    finally:
+        Embedder._instance = previous
+
+
 def test_embedder_first_use_is_single_flight(monkeypatch):
+    monkeypatch.setenv("MEMORY_EMBEDDER", "torch")
     previous = Embedder._instance
     active = 0
     max_active = 0
     state_lock = threading.Lock()
 
     class FakeModel:
-        def __init__(self, _name):
+        def __init__(self, _name, **kwargs):
+            assert kwargs == {"local_files_only": False}, kwargs
             nonlocal active, max_active
             with state_lock:
                 active += 1

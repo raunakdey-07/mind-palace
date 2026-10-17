@@ -22,7 +22,7 @@ import time
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 
-from api.models.memory import FeedResponse, MemoryRequest, MemoryResponse
+from api.models.memory import FeedResponse, MemoryRequest, MemoryResponse, MemoryWire
 from api.models.remember import RememberRequest, RememberResult
 
 logger = logging.getLogger("mindpalace.ops")
@@ -35,6 +35,15 @@ WRITE_OPERATIONS = frozenset({"snapshot"})
 
 
 async def execute_memory(operation: str, request: MemoryRequest) -> MemoryResponse:
+    """Shared route body: execute one memory operation against the caller's corpus.
+
+    The routes declare `response_model=MemoryWire`, not `MemoryResponse`.
+    FastAPI serializes a `response_model` through `model_dump`, and `model_dump`
+    omits the retrieval diagnostics so the receipt digest stays a property of the
+    answer rather than of the ranking that produced it. A REST caller that
+    received only rank 1 could not tell a confident answer from a near-tie, which
+    is the whole reason the field exists.
+    """
     from api.services.authz import require_corpus
     from api.services.db import current_principal
     from api.services.memory_public import MemoryError, execute
@@ -63,6 +72,12 @@ async def remember(request: RememberRequest) -> RememberResult:
     returns ``changed=false`` with the same ``version_id``, because identity is
     derived from content. Remembering the same ``key`` with new text supersedes
     the previous value instead.
+
+    ``supersedes_claim_id`` and ``topic_key`` extend that across documents, so a
+    newer ADR retires what an older one said without either being edited. A write
+    that lands near claims that already exist reports them under
+    ``related_active_claims``; the archive cannot tell a supersession from a
+    contradiction, so it names them and lets the caller decide.
     """
     from api.services.memory import ClaimValidationError
     from api.services.remember import RememberError, remember as write
@@ -79,7 +94,13 @@ async def remember(request: RememberRequest) -> RememberResult:
             },
         )
     try:
-        written = await write(request.statement, corpus=request.corpus, key=request.key)
+        written = await write(
+            request.statement,
+            corpus=request.corpus,
+            key=request.key,
+            supersedes_claim_id=request.supersedes_claim_id,
+            topic_key=request.topic_key,
+        )
     except (RememberError, ClaimValidationError) as exc:
         # The two places a statement is rejected: the service's own validation, and
         # the archive's authored-evidence rule. Both are input problems, so both are
@@ -109,22 +130,24 @@ async def remember(request: RememberRequest) -> RememberResult:
         path=written.get("path", ""),
         key=written.get("key"),
         changed=written.get("event") != "UNCHANGED",
+        related_active_claims=written.get("related_active_claims") or [],
+        query_id=written.get("query_id"),
     )
 
 
-@router.post("/query", response_model=MemoryResponse)
+@router.post("/query", response_model=MemoryWire)
 async def query(request: MemoryRequest) -> MemoryResponse:
     """Query corpus memory with intent-aware, bounded evidence."""
     return await execute_memory("query", request)
 
 
-@router.post("/current", response_model=MemoryResponse)
+@router.post("/current", response_model=MemoryWire)
 async def current(request: MemoryRequest) -> MemoryResponse:
     """Read current memories within a corpus."""
     return await execute_memory("current", request)
 
 
-@router.post("/history", response_model=MemoryResponse)
+@router.post("/history", response_model=MemoryWire)
 async def history(request: MemoryRequest) -> MemoryResponse:
     """Read memory history with provenance."""
     return await execute_memory("history", request)
@@ -188,37 +211,37 @@ async def feed(
     return result
 
 
-@router.post("/changes", response_model=MemoryResponse)
+@router.post("/changes", response_model=MemoryWire)
 async def changes(request: MemoryRequest) -> MemoryResponse:
     """Read memory changes."""
     return await execute_memory("changes", request)
 
 
-@router.post("/evidence", response_model=MemoryResponse)
+@router.post("/evidence", response_model=MemoryWire)
 async def evidence(request: MemoryRequest) -> MemoryResponse:
     """Read evidence supporting memories."""
     return await execute_memory("evidence", request)
 
 
-@router.post("/as-of", response_model=MemoryResponse)
+@router.post("/as-of", response_model=MemoryWire)
 async def as_of(request: MemoryRequest) -> MemoryResponse:
     """Read memory at a historical observation time."""
     return await execute_memory("as-of", request)
 
 
-@router.post("/snapshot", response_model=MemoryResponse)
+@router.post("/snapshot", response_model=MemoryWire)
 async def snapshot(request: MemoryRequest) -> MemoryResponse:
     """Create an immutable snapshot, not an arbitrary memory write."""
     return await execute_memory("snapshot", request)
 
 
-@router.post("/replay", response_model=MemoryResponse)
+@router.post("/replay", response_model=MemoryWire)
 async def replay(request: MemoryRequest) -> MemoryResponse:
     """Replay an immutable snapshot."""
     return await execute_memory("replay", request)
 
 
-@router.post("/pack", response_model=MemoryResponse)
+@router.post("/pack", response_model=MemoryWire)
 async def pack(request: MemoryRequest) -> MemoryResponse:
     """Build canonical evidence context bounded in Unicode characters."""
     return await execute_memory("pack", request)

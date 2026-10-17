@@ -526,6 +526,10 @@ async def test_lexical_scorer_never_embeds_and_reports_itself(offline_embedder):
         "topics": 1,
         "scorer": "lexical",
         "claim_vectors_cached": 0,
+        # What the ranking looked like before the gates. `scores` is what the
+        # product answers from; the difference between the two is the near-miss
+        # `match_status` reports, and it is not derivable from `scores` alone.
+        "scored": {"architecture.database": 1.0, "hr.payroll": 0.0},
     }
     assert scores == {"architecture.database": 1.0}
 

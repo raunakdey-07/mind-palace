@@ -92,6 +92,14 @@ class MemoryResult:
     path: str
     statement: str | None = None
     key: str | None = None
+    #: Live claims that read like this write. The archive cannot tell a
+    #: supersession from a contradiction, so it names them and lets the caller
+    #: decide. Empty on a write that matched nothing already recorded.
+    related_active_claims: list[dict] = field(default_factory=list)
+    #: Handle for `mindpalace feedback <query_id> --verdict right|wrong`. Present
+    #: when the local query log is on, which it is unless the connection is
+    #: tenant-scoped or MIND_PALACE_QUERY_LOG says otherwise.
+    query_id: str | None = None
 
     @property
     def unchanged(self) -> bool:
@@ -119,6 +127,8 @@ class MemoryResult:
             path=written.get("path", ""),
             statement=statement,
             key=written.get("key"),
+            related_active_claims=written.get("related_active_claims") or [],
+            query_id=written.get("query_id"),
         )
 
 
@@ -339,6 +349,8 @@ class MemoryClient:
         corpus: str | None = None,
         key: str | None = None,
         file: str | None = None,
+        supersedes_claim_id: str | None = None,
+        topic_key: str | None = None,
     ) -> MemoryResult:
         """Record a fact as authoritative memory, and return what was written.
 
@@ -351,6 +363,14 @@ class MemoryClient:
         same ``version_id``: submitting identical memory is not duplication.
         Remembering the same ``key`` with new text supersedes the previous value.
 
+        ``supersedes_claim_id`` retires a named claim in this corpus and
+        ``topic_key`` retires whatever is active under that key, both from any
+        document -- so a newer ADR supersedes an older one without either file
+        being edited. The id may be given in full, as any unique prefix of it
+        (which is the form :meth:`recall` prints), or as a phrase from the claim's
+        own text. A write that lands near claims which already exist reports them
+        as ``related_active_claims``.
+
         Works locally against PostgreSQL, or over HTTP when the client has a
         ``base_url``. Requires no embedding model either way. The same operation is
         available as :meth:`MindPalace.remember`.
@@ -361,7 +381,14 @@ class MemoryClient:
             from api.services.remember import remember as write
 
             async def run() -> MemoryResult:
-                written = await write(statement, corpus=name, key=key, file=file)
+                written = await write(
+                    statement,
+                    corpus=name,
+                    key=key,
+                    file=file,
+                    supersedes_claim_id=supersedes_claim_id,
+                    topic_key=topic_key,
+                )
                 return MemoryResult.from_write(written, name, statement)
 
             try:
@@ -374,7 +401,9 @@ class MemoryClient:
                         # statement is not, and going through a runtime keeps the
                         # corpus's connection pool warm for the recall that
                         # usually follows.
-                        remote = self._remember_via_runtime(name, statement, key)
+                        remote = self._remember_via_runtime(
+                            name, statement, key, supersedes_claim_id, topic_key
+                        )
                         if remote is not None:
                             return remote
                     return MindPalace._run(run())
@@ -397,7 +426,13 @@ class MemoryClient:
             )
         payload = {
             k: v
-            for k, v in {"corpus": name, "statement": statement, "key": key}.items()
+            for k, v in {
+                "corpus": name,
+                "statement": statement,
+                "key": key,
+                "supersedes_claim_id": supersedes_claim_id,
+                "topic_key": topic_key,
+            }.items()
             if v is not None
         }
         try:
@@ -434,7 +469,12 @@ class MemoryClient:
         )
 
     def _remember_via_runtime(
-        self, name: str, statement: str | None, key: str | None
+        self,
+        name: str,
+        statement: str | None,
+        key: str | None,
+        supersedes_claim_id: str | None = None,
+        topic_key: str | None = None,
     ) -> "MemoryResult | None":
         """One write through a running runtime, or None if there is not one."""
         if not getattr(self._client, "use_runtime", False):
@@ -447,7 +487,14 @@ class MemoryClient:
 
         try:
             reply = runtime_module.call(
-                {"op": "remember", "corpus": name, "statement": statement, "key": key},
+                {
+                    "op": "remember",
+                    "corpus": name,
+                    "statement": statement,
+                    "key": key,
+                    "supersedes_claim_id": supersedes_claim_id,
+                    "topic_key": topic_key,
+                },
                 timeout=self._client.timeout,
             )
         except Exception:  # noqa: BLE001 - unreachable runtime means "do it myself"
@@ -474,6 +521,8 @@ class MemoryClient:
             path=result.get("path", ""),
             statement=statement,
             key=result.get("key"),
+            related_active_claims=result.get("related_active_claims") or [],
+            query_id=result.get("query_id"),
         )
 
     def recall(
@@ -884,6 +933,8 @@ class MindPalace:
         corpus: str | None = None,
         key: str | None = None,
         file: str | None = None,
+        supersedes_claim_id: str | None = None,
+        topic_key: str | None = None,
     ) -> MemoryResult:
         """Record a fact as authoritative memory, and return what was written.
 
@@ -904,7 +955,12 @@ class MindPalace:
         authoritative claim and its evidence are recorded either way.
         """
         return self.memory.remember(
-            statement, corpus=corpus or self.name or DEFAULT_CORPUS, key=key, file=file
+            statement,
+            corpus=corpus or self.name or DEFAULT_CORPUS,
+            key=key,
+            file=file,
+            supersedes_claim_id=supersedes_claim_id,
+            topic_key=topic_key,
         )
 
     def recall(

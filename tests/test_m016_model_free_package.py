@@ -35,7 +35,20 @@ ROOT = Path(__file__).resolve().parents[1]
 BLOCKER = '''
 import sys
 
-BLOCKED = {"torch", "transformers", "sentence_transformers"}
+# Both embedding backends, plus the tokenizer each of them reaches for. With only
+# `sentence-transformers` blocked, a machine with `onnxruntime` installed loads a
+# real model, `recall` succeeds semantically, and the degradation note below is
+# never reached -- which would make the test pass for the wrong reason on the
+# default install and fail on a bare one.
+BLOCKED = {
+    "torch",
+    "transformers",
+    "sentence_transformers",
+    "onnxruntime",
+    "onnx",
+    "tokenizers",
+    "huggingface_hub",
+}
 
 
 class _Blocker:

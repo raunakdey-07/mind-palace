@@ -260,16 +260,23 @@ class FixtureEmbedder:
 
 
 class CachedEmbedder(Embedder):
-    """Local-only instance: never initialize or mutate the production singleton."""
+    """Local-only instance: never initialize or mutate the production singleton.
+
+    Goes through `embedder.load_backend` rather than constructing
+    `SentenceTransformer` itself, so it picks the same backend the product does and
+    keeps the no-network promise on either one. A benchmark that downloaded a
+    model would be measuring the machine it ran on instead of the system it
+    claimed to measure.
+    """
 
     def __new__(cls):
         return object.__new__(cls)
 
     def __init__(self):
-        from sentence_transformers import SentenceTransformer
+        from api.services.embedder import load_backend
 
         self.model_name = os.getenv("EMBEDDING_MODEL", DEFAULT_MODEL)
-        self._model = SentenceTransformer(self.model_name, local_files_only=True)
+        self._model = load_backend(self.model_name, local_files_only=True)
         if self.dimension != 384:
             raise ValueError("Existing migration requires 384-dimensional embeddings")
 

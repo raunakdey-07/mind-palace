@@ -51,7 +51,8 @@ async def test_memory_dispatch(client, service, operation):
     }
     response = await client.post(f"/api/memory/{operation}", json=body)
     assert response.status_code == 200
-    assert response.json() == service.execute.return_value.model_dump(mode="json")
+    # `public_dict`: the wire carries the retrieval diagnostics, the digest does not.
+    assert response.json() == service.execute.return_value.public_dict()
     service.execute.assert_awaited_once_with(operation, MemoryRequest(**body))
 
 
@@ -116,7 +117,7 @@ def test_explicit_openapi_contract():
             "$ref": "#/components/schemas/MemoryRequest"
         }
         assert route["responses"]["200"]["content"]["application/json"]["schema"] == {
-            "$ref": "#/components/schemas/MemoryResponse"
+            "$ref": "#/components/schemas/MemoryWire"
         }
     assert "/api/memory/{operation}" not in schema["paths"]
 
@@ -154,7 +155,7 @@ async def test_empty_memory_never_calls_llm_or_rag(client, service, monkeypatch,
     assert response.status_code == 200
     data = response.json()
     assert data["mode"] == "memory"
-    assert data["memory"] == service.execute.return_value.model_dump(mode="json")
+    assert data["memory"] == service.execute.return_value.public_dict()
     assert data["sources"] == data["snippets"] == []
     assert data["retrieved_chunks"] == 0
     assert data["provider"] is None
@@ -210,7 +211,7 @@ async def test_ask_uses_exact_canonical_pack_and_evidence(client, service, monke
     data = response.json()
     assert data["sources"] == ["notes.md"]
     assert data["snippets"] == [evidence.text]
-    assert data["memory"] == pack.model_dump(mode="json")
+    assert data["memory"] == pack.public_dict()
     assert data["answer"] == generate.return_value
     operation, request = service.execute.await_args.args
     assert operation == "query"

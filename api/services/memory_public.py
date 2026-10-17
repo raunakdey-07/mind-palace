@@ -143,19 +143,22 @@ def project(
     state: State,
     saved: dict | None = None,
 ) -> MemoryResponse:
-    """Project one coherent archive view without exposing database rows or raw files."""
+    """Project one coherent archive view without exposing database rows or raw files.
+
+    `Claim` objects are built from `_query_result`'s complete claim list rather
+    than from the four buckets it returns. A claim the buckets do not classify
+    still has to be representable, because `changes` walks version contents and a
+    claim reachable only as "superseded" -- which is what a cross-document
+    supersession leaves behind -- would otherwise raise KeyError on every read of
+    the corpus.
+    """
     resolved = memory._query_result(versions, "", state.valid_at or state.as_of)
     matched = (
         resolved
         if not request.query
         else memory._query_result(versions, request.query, state.valid_at or state.as_of)
     )
-    raw_claims = {
-        c["id"]: c
-        for key in ("current_memories", "historical_memories", "uncertain_memories")
-        for c in resolved[key]
-    }
-    raw_claims.update({c["id"]: c for g in resolved["conflicts"] for c in g["claims"]})
+    raw_claims = {c["id"]: c for c in resolved["all_claims"]}
     evidence = {
         e["id"]: Evidence(
             id=e["id"],
@@ -292,6 +295,12 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
         # pack looks identical to an empty envelope and a consumer cannot tell
         # "nothing relevant" from "nothing sent".
         constraints=list(full.constraints),
+        # The ranking that produced this selection, not the pack that survived
+        # it. Truncating the shortlist would hide exactly the near-misses the
+        # caller needs in order to notice that the budget cost them the answer.
+        match_status=full.match_status,
+        match_margin=full.match_margin,
+        candidates=list(full.candidates),
         truncated=True,
     )
     if len(result.canonical_json()) > budget:
@@ -444,8 +453,14 @@ async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:
     """Canonical public entry point, with transaction ownership and sanitized errors."""
     _validate(operation, request)
     from api.services import telemetry
+    from api.services.query_log import Call
 
     started = time.perf_counter()
+    # One recorder for every surface. REST, SDK, MCP, the CLI and the local
+    # runtime all reach this function, so instrumenting it here is what makes the
+    # log a property of the product rather than of whichever adapter remembered
+    # to call something.
+    call = Call("query", request.query, corpus=request.corpus)
     with telemetry.span(
         f"memory.{operation}",
         corpus=request.corpus,
@@ -471,4 +486,10 @@ async def execute(operation: str, request: MemoryRequest) -> MemoryResponse:
             active.set_attribute("result.chars", len(result.canonical_json()))
             active.set_attribute("result.receipt", result.receipt is not None)
             active.set_attribute("duration_ms", (time.perf_counter() - started) * 1000)
+    call.log(
+        match_status=result.match_status,
+        match_margin=result.match_margin,
+        top_scores=[c.score for c in result.candidates],
+        returned_claim_ids=[c.claim_ids[0] for c in result.candidates if c.claim_ids],
+    )
     return result

@@ -7,9 +7,9 @@ Public release: `v0.5.0`
 The earlier discrepancy came from selecting the wrong policy suite. The
 repository contains:
 
-* `eval/results/m00675-development-final.json`: development `n=64`, `exact=47`
-* `eval/results/m00675-heldout.json`, policy `A`: held-out `n=60`, `exact=30`
-* `eval/results/m00675-heldout.json`, policy `frozen`: held-out `n=60`,
+* `eval/results/m00675-development-final.json` -- (removed raw dump; summary retained above): development `n=64`, `exact=47`
+* `eval/results/m00675-heldout.json` -- (removed raw dump; summary retained above), policy `A`: held-out `n=60`, `exact=30`
+* `eval/results/m00675-heldout.json` -- (removed raw dump; summary retained above), policy `frozen`: held-out `n=60`,
   `exact=47`
 
 The 30-versus-47 discrepancy is an **EVALUATOR/POLICY SUITE SELECTION** error:

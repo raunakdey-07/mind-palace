@@ -159,7 +159,7 @@ multiple-evidence extension, not a query migration.
 
 ### Recorded retrieval measurements
 
-The saved `eval/results/m0065-final.json` contains **17/24** exact original
+The saved `eval/results/m0065-final.json` -- (removed raw dump; summary retained above) -- contains **17/24** exact original
 current-claim sets versus the earlier lexical **0/24**, and **30/40** exact added
 question cases. Added category results are current **13/19**, historical **4/4**,
 temporal **3/6**, change **3/4**, conflict **4/4**, provenance **3/3**. All **17**

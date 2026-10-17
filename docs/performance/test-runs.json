@@ -105,6 +105,21 @@
       "passed": "1619",
       "skipped": "2"
     },
+    "54e5f1b: full suite: after purging 1.75M lines of dead result dumps": {
+      "collected": "1832",
+      "commit": "54e5f1bcb7d33e45ab7f35e8037707e279df03da",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: after purging 1.75M lines of dead result dumps",
+      "passed": "1830",
+      "seconds": 583.53,
+      "skipped": "2"
+    },
     "671a892: full suite, run A, after the install fixes": {
       "commit": "671a8925cb98f39bace587584c3a18b1d34dbed4",
       "failed": "0",

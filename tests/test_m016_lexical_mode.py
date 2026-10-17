@@ -175,15 +175,19 @@ def test_lexical_mode_is_faster_because_of_that(corpus):
     difference between the two modes is the one-time model load, so the ceiling on
     the win is whatever building a session costs. Measured on the default backend:
 
-        this machine    semantic 1.71s, lexical 0.65s   2.61x
-        GitHub runner   semantic 0.83s, lexical 0.46s   1.80x
+        this machine   semantic 1.71s, lexical 0.65s   2.61x
+        runner, run 1  semantic 0.90s, lexical 0.49s   1.81x
+        runner, run 2  semantic 0.85s, lexical 0.47s   1.82x
+        runner, run 3  semantic 0.64s, lexical 0.39s   1.63x
+        runner, PR run semantic 0.87s, lexical 0.50s   1.76x
 
     The 2x figure was calibrated against a `sentence-transformers` import, which
     cost about six seconds and made any ratio look generous. The default install
     runs onnxruntime, where the session builds in roughly 0.4 s, so the maximum
     available win is now about half a second and a ratio near two is the *expected*
-    result rather than a regression. 1.33x is far enough above 1.0 to catch
-    something having started to load the model anyway.
+    result rather than a regression. The bound is 1.33x because the worst of four
+    runner observations is 1.63x, which leaves room for a slower shared runner
+    without leaving room for the model to start loading.
 
     The claim that matters -- that lexical mode imports no model at all -- is
     asserted exactly, and machine-independently, by

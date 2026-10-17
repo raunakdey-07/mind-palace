@@ -352,12 +352,24 @@ the negative tests show each catching what the other would miss.
 Ordinary tenant isolation is not protection against a trusted superuser, and no
 combination of row-level security and receipts changes that.
 
-**Logs, backups, files and receipts:** logs carry sizes, counts and corpus names,
-never memory content or query text. Receipts are integrity artefacts; a receipt
+**Logs, backups, files and receipts:** operational logs carry sizes, counts and
+timings, never memory content and never query text. Receipts are integrity
+artefacts; a receipt
 proves a document has not changed, not that its content is true, and not that
 the caller was entitled to it — a receipt is only ever produced *after*
 authorization. Backups and replicas inherit the database's own protection and
 are outside this boundary.
+
+**One exception, and it is opt-in and local.** The flight recorder at
+`~/.mind-palace/logs/queries.jsonl` writes a row per call, and a row *does* carry
+the caller's query text verbatim to 512 characters — grading real usage needs the
+question, not a hash of it. So it is off unless `MIND_PALACE_QUERY_LOG=1` is set,
+and it never leaves the machine that set it. The directory is created `0700` and
+the file `0600`, both re-asserted on every write so a file left by an older
+version is tightened rather than staying world-readable. A row holds the
+timestamp, operation, corpus, query text, `match_status`, up to three scores,
+returned claim ids and latency — never claim text, never a source path. See
+`docs/mcp.md` for the setting that turns it on during local evaluation.
 
 ### Threat matrix
 

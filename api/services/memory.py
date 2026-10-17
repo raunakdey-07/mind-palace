@@ -356,6 +356,30 @@ async def _insert_version(
 NEIGHBOUR_FETCH = 40
 
 
+#: At or below this many cached vectors in the corpus, the neighbour search is a
+#: sequential scan of the corpus's own rows rather than an HNSW walk. Measured at
+#: well under a millisecond for 3,000 rows, and exact.
+#:
+#: `idx_claim_embeddings_hnsw` is a single global index over the whole table, so
+#: an ANN walk picks its `ef_search` candidates from every corpus in the database
+#: and the `corpus_id` filter is applied afterwards. Where that filter arrives from
+#: RLS rather than from the predicate, a small tenant loses: on `pgvector 0.5.1`,
+#: which has no `iterative_scan`, a 50-claim corpus sharing a table with 10,000
+#: others recovered **0 of 5** of its true neighbours and returned 1 of the 5 rows
+#: asked for. Below this many rows the index buys nothing anyway -- the planner
+#: picks a corpus-scoped B-tree and the result is exact -- so the scan is the same
+#: answer for a different reason, and it stays right when the corpus grows past the
+#: point where the planner would have chosen the graph.
+SMALL_CORPUS_EXACT = 1000
+
+#: The corpus-scoped count that decides between the two. Separate from the
+#: threshold so a test can state the boundary without restating the policy.
+SMALL_CORPUS_COUNT_SQL = """
+            SELECT count(*) FROM memory_claim_embeddings
+            WHERE corpus_id = :c AND embedding_model = :model
+              AND embedding_dimension = :dim AND embedding IS NOT NULL
+"""
+
 #: The nearest-neighbour half, on its own, so a plan can be read for it.
 #:
 #: Split out from `NEAREST_ACTIVE_SQL` because the thing that has to use the HNSW
@@ -440,21 +464,37 @@ async def _nearest_active_claims(
     index scan. That is why `NEIGHBOUR_FETCH` exceeds the reported count, and it
     is why `NEAREST_ACTIVE_SQL` is a module constant: a plan that cannot be read
     without calling the function cannot be `EXPLAIN`ed.
+
+    **A small corpus does not use the graph.** `idx_claim_embeddings_hnsw` is one
+    global index over the whole table, so its candidates are drawn from every
+    corpus in the database and the `corpus_id` filter lands afterwards. Below
+    `SMALL_CORPUS_EXACT` vectors the scan is exact, sub-millisecond, and immune to
+    that. Above it the graph is what makes the search affordable, so it stays.
     """
-    rows = (
-        await db.execute(
-            text(NEAREST_ACTIVE_SQL),
-            {
-                "c": corpus_id,
-                "q": _vector_literal(vector),
-                "model": model,
-                "dim": dimension,
-                "fetch": int(NEIGHBOUR_FETCH),
-                "limit": int(limit),
-                "doc": exclude_document,
-            },
-        )
-    ).all()
+    params = {
+        "c": corpus_id,
+        "q": _vector_literal(vector),
+        "model": model,
+        "dim": dimension,
+        "fetch": int(NEIGHBOUR_FETCH),
+        "limit": int(limit),
+        "doc": exclude_document,
+    }
+    small = int(
+        (
+            await db.execute(
+                text(SMALL_CORPUS_COUNT_SQL),
+                {"c": corpus_id, "model": model, "dim": dimension},
+            )
+        ).scalar()
+        or 0
+    )
+    if small <= SMALL_CORPUS_EXACT:
+        # One transaction-local setting pair, so the exact plan cannot leak into
+        # the caller's session or into the next query on this connection.
+        await db.execute(text("SET LOCAL enable_indexscan = off"))
+        await db.execute(text("SET LOCAL enable_indexonlyscan = off"))
+    rows = (await db.execute(text(NEAREST_ACTIVE_SQL), params)).all()
     return [
         {
             "id": row[0],

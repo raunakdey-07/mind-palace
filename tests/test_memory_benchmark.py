@@ -1,8 +1,10 @@
 """Offline unit tests and gated real PostgreSQL benchmark round trips."""
 
 import copy
+import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -304,6 +306,11 @@ async def test_generation_route_wiring_not_quality(workload_file, postgres_url, 
         assert not benchmark._ASK_HARNESS_LOCK.locked()
 
 
+@pytest.mark.skipif(
+    "sentence_transformers" not in sys.modules
+    and not importlib.util.find_spec("sentence_transformers"),
+    reason="the [torch] extra is not installed; the ONNX backend has its own tests",
+)
 def test_cached_embedder_requests_local_files_only(monkeypatch):
     """The benchmark must not reach the network on either backend.
 

@@ -138,6 +138,21 @@
       "seconds": 510.9,
       "skipped": "2"
     },
+    "67458ef: full suite: after fixing flight-recorder accuracy and isolating it from pytest": {
+      "collected": "1883",
+      "commit": "67458eff7edf00deb93263dd55297a6710a1823c",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: after fixing flight-recorder accuracy and isolating it from pytest",
+      "passed": "1881",
+      "seconds": 839.26,
+      "skipped": "2"
+    },
     "74a6141: full suite: after purging dead evidence dumps too": {
       "collected": "1832",
       "commit": "74a61414b2bed3e6132aa5b28b53001ef19d6ade",

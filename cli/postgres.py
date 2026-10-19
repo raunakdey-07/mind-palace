@@ -35,24 +35,95 @@ def db_host_port(url: str | None = None) -> tuple[str, int]:
 
 
 def db_ready(host: str, port: int, timeout: float = 2.0) -> bool:
-    """TCP plus an actual SELECT 1, so we don't race Postgres startup."""
+    """TCP plus an actual SELECT 1, so we don't race Postgres startup.
+
+    Postgres accepts TCP connections before it will answer a query, so a TCP
+    check alone reports a container as ready while it is still replaying its
+    WAL. The first command after an auto-start would then fail with "the
+    database system is starting up".
+
+    The probe uses its own engine rather than the application's shared one:
+    this runs before any client exists, and an engine bound to a different
+    event loop is a class of failure this code should not be able to cause.
+    """
     if not tcp_open(host, port, timeout=0.5):
         return False
     try:
-        import asyncio
-
         from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.pool import NullPool
 
-        from api.services.db import session_scope
+        url = database_url()
+        parsed = urlparse(url)
+        # Probe the host and port asked for, not whatever the URL happens to
+        # name: the caller may have been told to look somewhere else.
+        userinfo = ""
+        if "@" in parsed.netloc:
+            userinfo = parsed.netloc.rsplit("@", 1)[0] + "@"
+        host_for_url = f"[{host}]" if ":" in host else host
+        probe_url = parsed._replace(netloc=f"{userinfo}{host_for_url}:{port}").geturl()
+        engine = create_async_engine(
+            probe_url.replace("postgresql://", "postgresql+asyncpg://"),
+            poolclass=NullPool,
+        )
 
         async def _ping():
-            async with session_scope() as db:
-                await db.execute(text("SELECT 1"))
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
 
-        asyncio.run(asyncio.wait_for(_ping(), timeout=timeout))
+        try:
+            _run_blocking(_ping(), timeout=timeout)
+        finally:
+            _dispose(engine)
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 - readiness is a question, not a verdict
         return False
+
+
+def _run_blocking(coro, timeout: float) -> None:
+    """Run a coroutine to completion, from either kind of caller.
+
+    `asyncio.run` refuses to nest, so a command driven from inside a running
+    loop -- an embedding application, an in-process test -- has to do the work
+    on a worker thread with a loop of its own. Getting that wrong would make
+    the probe always report "not ready", and a false negative here is what
+    makes the CLI restart a database that is already running.
+    """
+    import asyncio
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(asyncio.wait_for(coro, timeout=timeout))
+        return
+
+    import threading
+
+    outcome: list = []
+
+    def worker():
+        try:
+            asyncio.run(asyncio.wait_for(coro, timeout=timeout))
+        except BaseException as exc:  # noqa: BLE001 - re-raised on the caller's thread
+            outcome.append(exc)
+
+    thread = threading.Thread(target=worker)
+    thread.start()
+    thread.join()
+    if outcome:
+        raise outcome[0]
+
+
+def _dispose(engine) -> None:
+    """Dispose an engine, wherever it was created."""
+
+    async def _close():
+        await engine.dispose()
+
+    try:
+        _run_blocking(_close(), timeout=5.0)
+    except Exception:  # noqa: BLE001 - disposal is best-effort
+        pass
 
 
 def is_local_host(host: str) -> bool:
@@ -105,35 +176,59 @@ def _normalize_container(raw: dict, cli: str) -> dict:
 
 
 def _publishes_port(container: dict, port: int) -> bool:
+    """Does this container publish ``port`` on the host?
+
+    The *host* port is what matters, because that is the port a client
+    connects to. Matched exactly rather than by substring: "5432" is a
+    substring of "15432", and a container publishing 15432 is not the one
+    publishing 5432. Starting it because its port number happens to contain
+    the right digits would be a worse failure than not starting it at all.
+    """
     ports = container.get("ports")
-    # JSON form from podman/docker
     if isinstance(ports, list):
-        for p in ports:
-            if isinstance(p, dict):
-                for key in (
-                    "host_port",
-                    "HostPort",
-                    "hostPort",
-                    "container_port",
-                    "ContainerPort",
-                    "containerPort",
-                    "port",
-                ):
-                    val = p.get(key)
-                    if val is not None and str(val) == str(port):
-                        return True
-            elif isinstance(p, str) and str(port) in p:
+        for entry in ports:
+            if isinstance(entry, dict):
+                host_port = entry.get("host_port", entry.get("HostPort", entry.get("hostPort")))
+                if host_port is None:
+                    continue
+                if int(host_port) == port:
+                    return True
+                # A published range starts at `host_port` and spans `range`
+                # ports, so 5432 is inside a range that starts at 5430.
+                span = entry.get("range")
+                if span and int(host_port) <= port < int(host_port) + int(span):
+                    return True
+            elif isinstance(entry, int) and entry == port:
                 return True
-            elif isinstance(p, int) and p == port:
+            elif isinstance(entry, str) and _host_port_in(entry, port):
                 return True
     if isinstance(ports, dict):
-        for key in ports:
-            if str(port) in str(key) or str(port) in str(ports[key]):
+        for key, value in ports.items():
+            if str(key) == str(port):
                 return True
-    # Fallback: any string representation mentions the port.
-    # Only treat as published if the ports representation contains the port token.
-    return str(port) in str(ports)
-    # (kept conservative; name alone is not enough)
+            if _host_port_in(str(value), port):
+                return True
+    if isinstance(ports, str):
+        return _host_port_in(ports, port)
+    return False
+
+
+def _host_port_in(rendered: str, port: int) -> bool:
+    """Is ``port`` the host port in a rendered ports field?
+
+    The rendered form is "0.0.0.0:5432->5432/tcp": the host port is the one
+    before the arrow, and the one after it is the container's own port. A
+    client connects to the host port, so the container port is not a match --
+    a container publishing 15432 is not the one publishing 5432.
+    """
+    import re
+
+    for chunk in rendered.split(","):
+        host_part = chunk.split("->")[0]
+        numbers = re.findall(r"\d+", host_part)
+        if numbers and int(numbers[-1]) == port:
+            return True
+    return False
 
 
 def _is_postgres(container: dict) -> bool:
@@ -316,12 +411,20 @@ def ensure_local_postgres(
 ) -> bool:
     """Try to make a local Postgres reachable.
 
-    Returns True if port is open afterwards. Only acts for localhost targets.
+    Returns True if the port is open afterwards. Only acts for localhost
+    targets -- a deployment whose database is elsewhere must not have a local
+    container started for it.
+
+    The healthy path costs one TCP connect and nothing else. A query is only
+    sent after something has actually been started, because that is the only
+    time the answer is in doubt: Postgres accepts a connection before it will
+    serve one, so a container that was just started has to be asked a
+    question, not merely a socket.
     """
     host, port = db_host_port()
     if not is_local_host(host):
-        return db_ready(host, port, timeout=1.0)
-    if db_ready(host, port, timeout=1.0):
+        return tcp_open(host, port, timeout=0.5)
+    if tcp_open(host, port, timeout=0.5):
         return True
     # Try to start a stopped container.
     container = find_stopped_postgres_container(port)
@@ -331,46 +434,4 @@ def ensure_local_postgres(
     if auto_provision:
         if provision_local_postgres(timeout=timeout):
             return True
-    return db_ready(host, port, timeout=1.0)
-
-
-# Backwards/alternate names hidden tests may use.
-start_local_postgres = ensure_local_postgres
-auto_start_local_postgres = ensure_local_postgres
-maybe_start_local_postgres = ensure_local_postgres
-recover_local_postgres = ensure_local_postgres
-ensure_postgres = ensure_local_postgres
-ensure_local_db = ensure_local_postgres
-ensure_database = ensure_local_postgres
-
-
-def _find_stopped_postgres_container(*args, **kwargs):
-    return find_stopped_postgres_container(*args, **kwargs)
-
-
-def _start_container(*args, **kwargs):
-    return start_container(*args, **kwargs)
-
-
-def _provision_local_postgres(*args, **kwargs):
-    return provision_local_postgres(*args, **kwargs)
-
-
-def _ensure_local_postgres(*args, **kwargs):
-    return ensure_local_postgres(*args, **kwargs)
-
-
-# Additional aliases for compatibility with possible test/helper names.
-find_local_postgres_container = find_stopped_postgres_container
-find_stopped_container = find_stopped_postgres_container
-find_local_container = find_stopped_postgres_container
-start_local_postgres_container = start_container
-start_postgres_container = start_container
-start_stopped_container = start_container
-provision_postgres = provision_local_postgres
-create_local_postgres = provision_local_postgres
-ensure_local_postgresql = ensure_local_postgres
-ensure_postgresql = ensure_local_postgres
-is_port_open = tcp_open
-wait_for_postgres = db_ready
-wait_for_local_postgres = db_ready
+    return tcp_open(host, port, timeout=0.5)

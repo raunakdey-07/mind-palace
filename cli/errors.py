@@ -39,18 +39,42 @@ _START_DATABASE = "Start it with: docker compose up -d postgresql"
 _APPLY_SCHEMA = (
     "Apply the schema with:\n" "    python -m alembic -c migrations/alembic.ini upgrade head"
 )
+_CHECK_PASSWORD = (
+    "Check the password in DATABASE_URL. The local database's password is "
+    "'secret'; a container started from docker-compose.yml uses the same one."
+)
+
+
+def _is_authentication_error(exc: Exception) -> bool:
+    """Is this failure a rejected credential rather than a dead database?
+
+    A wrong password and a closed port look alike to a driver and nothing
+    alike to a person: one is fixed with a command, the other with a
+    different command. Telling somebody to start the database when the
+    database is already running is worse than saying nothing.
+    """
+    text = str(exc).lower()
+    if "password authentication failed" in text or "authentication failed" in text:
+        return True
+    # PostgreSQL reports an unknown role the same way it reports a wrong
+    # password, so the two belong together.
+    return "role" in text and "does not exist" in text
 
 
 def _is_database_connection_error(exc: Exception) -> bool:
+    """Is this failure a database that could not be reached?
+
+    Deliberately narrow. A `BrokenPipeError` is an `OSError` too, and a
+    connection that dropped mid-write is not a database that is down; treating
+    them as the same thing would send an operator to restart a service that is
+    working perfectly.
+    """
     import errno
     import socket
 
-    # Direct connection refused.
-    if isinstance(exc, ConnectionRefusedError):
-        return True
-    if isinstance(exc, ConnectionError):
-        return True
     if isinstance(exc, socket.gaierror):
+        # The host does not resolve. That is a name, not a port, and the
+        # message says so.
         return False
     if isinstance(exc, OSError):
         if getattr(exc, "errno", None) in (
@@ -58,6 +82,7 @@ def _is_database_connection_error(exc: Exception) -> bool:
             errno.ETIMEDOUT,
             errno.EHOSTUNREACH,
             errno.ENETUNREACH,
+            errno.ENETDOWN,
         ):
             return True
         text = str(exc).lower()
@@ -65,6 +90,7 @@ def _is_database_connection_error(exc: Exception) -> bool:
             "connection refused" in text
             or "could not connect" in text
             or "connection is closed" in text
+            or "connection reset" in text
         ):
             return True
     # SQLAlchemy / asyncpg / psycopg wrappers.
@@ -76,9 +102,6 @@ def _is_database_connection_error(exc: Exception) -> bool:
     text = str(exc).lower()
     if "connection refused" in text or "could not connect to server" in text:
         return True
-    code = getattr(exc, "code", None)
-    if code in {"database_unavailable", "memory_unavailable", "database_unreachable"}:
-        return True
     return False
 
 
@@ -88,34 +111,53 @@ def explain(exc: Exception) -> Advice:
 
     if isinstance(exc, ValidationError):
         return _validation_advice(exc)
-    if _is_database_connection_error(exc):
-        return Advice(
-            "database_unavailable",
-            "The memory database is unavailable.",
-            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
-            "Start it with: docker compose up -d postgresql",
-            503,
-        )
-    if isinstance(exc, OSError) and getattr(exc, "filename", None) is None and ":" in str(exc):
-        return _unreadable_advice(exc)
 
     code = getattr(exc, "code", None)
     status = int(getattr(exc, "status_code", 1) or 1)
     detail = str(getattr(exc, "message", None) or exc)
 
-    if code in {"database_unavailable", "memory_unavailable", "database_unreachable"}:
-        schema = code == "memory_unavailable"
+    # The taxonomy's own codes first: they say which condition this is, and
+    # they are more precise than anything inferred from the exception type.
+    # `memory_unavailable` in particular means the database was reached and the
+    # schema is missing, which is a different problem from a dead port.
+    if code == "memory_unavailable":
         return Advice(
             code,
             "The memory database is unavailable.",
-            (
-                f"Mind Palace could not connect to PostgreSQL at {database_hint()}."
-                if not schema
-                else "Mind Palace connected, but the memory schema is not applied."
-            ),
-            (_START_DATABASE if not schema else _APPLY_SCHEMA),
+            "Mind Palace connected, but the memory schema is not applied.",
+            _APPLY_SCHEMA,
             503,
         )
+    if code in {"database_unavailable", "database_unreachable"}:
+        return Advice(
+            code,
+            "The memory database is unavailable.",
+            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            _START_DATABASE,
+            503,
+        )
+    # Then the driver-level failures, which arrive with no code at all: a
+    # refused connection is an `OSError` before it is anything else, and the
+    # SDK re-raises it untouched because a driver's exception is not a service
+    # error.
+    if _is_authentication_error(exc):
+        return Advice(
+            "authentication_failed",
+            "The database rejected the credentials.",
+            f"Mind Palace could not authenticate to PostgreSQL at {database_hint()}.",
+            _CHECK_PASSWORD,
+            503,
+        )
+    if _is_database_connection_error(exc):
+        return Advice(
+            "database_unavailable",
+            "The memory database is unavailable.",
+            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            _START_DATABASE,
+            503,
+        )
+    if isinstance(exc, OSError) and getattr(exc, "filename", None) is None and ":" in str(exc):
+        return _unreadable_advice(exc)
     if code == "transport_error":
         return Advice(
             code,

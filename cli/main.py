@@ -16,7 +16,6 @@ import typer
 import yaml
 
 from cli.memory import app as memory_app
-from cli.postgres import *  # noqa: F401,F403
 
 #: The five product commands, in the order a newcomer meets them.
 help = "Mind Palace: memory that remembers what changed, what was true when, and why to believe it."
@@ -32,16 +31,53 @@ from cli.runtime import app as runtime_app  # noqa: E402
 app.add_typer(runtime_app)
 
 
-@app.callback()
+#: What a bare `mindpalace` prints.
+#:
+#: It used to print "Missing command." and a usage line, which tells a newcomer
+#: that they typed something wrong rather than what to do next. The first run of
+#: a CLI is the one where that matters most, and it is the run with the least
+#: context: the person has a database, a model and a document directory to set
+#: up, and no idea which of the twenty commands is the first one. So the empty
+#: invocation is where the first three commands go.
+WELCOME = """\
+Mind Palace: memory that remembers what changed, what was true when, and why to believe it.
+
+Start here:
+
+  1. mindpalace init
+     Check that storage is ready -- it starts a local PostgreSQL if one is
+     installed and stopped -- and create your first corpus.
+  2. mindpalace remember "The production datastore is PostgreSQL."
+     Record a fact. It becomes memory with evidence, not a search index entry.
+  3. mindpalace recall "What is the production datastore?"
+     Ask a question. You get the answer, its source, and the time it was true.
+
+Already have Markdown?  mindpalace ingest-repo ./docs
+Every command:          mindpalace --help
+"""
+
+
+@app.callback(invoke_without_command=True)
 def _global_options(
+    ctx: typer.Context,
     debug: Annotated[
-        bool, typer.Option("--debug", help="Show full tracebacks for debugging.")
+        bool,
+        typer.Option(
+            "--debug",
+            help="Run this invocation in debug mode: full tracebacks for any failure.",
+        ),
     ] = False,
 ) -> None:
     if debug:
         import os
 
         os.environ["MIND_PALACE_DEBUG"] = "1"
+    # No subcommand means the person is looking for the first one, not making a
+    # mistake. `ctx.invoked_subcommand` is set before this callback runs, so it
+    # is None exactly when nothing was named.
+    if ctx.invoked_subcommand is None:
+        typer.echo(WELCOME)
+        raise typer.Exit(code=0)
 
 
 eval_app = typer.Typer(name="eval", help="Evaluation commands")
@@ -55,6 +91,14 @@ State = Annotated[
     bool,
     typer.Option("--verbose", "-v", help="Show the underlying error as well as the guidance."),
 ]
+#: The full traceback, for a person debugging the product rather than the
+#: deployment. It is deliberately a separate flag from `--verbose`: one adds a
+#: line of detail, the other adds a hundred lines of stack, and a person who
+#: asked for the first should not get the second.
+Debug = Annotated[
+    bool,
+    typer.Option("--debug", help="Show the full traceback for the underlying error."),
+]
 BaseURL = Annotated[
     str | None,
     typer.Option(
@@ -67,18 +111,39 @@ BaseURL = Annotated[
 ]
 
 
-def _fail(exc: Exception, verbose: bool) -> None:
-    """Print actionable failure text and exit non-zero."""
-    import os
+def _debug_requested(debug: bool) -> bool:
+    """Is the full traceback wanted?
+
+    Two spellings of one setting: the per-command `--debug` flag, and
+    `MIND_PALACE_DEBUG=1` for the process. The flag is passed down rather
+    than written to the environment, because a command that mutates the
+    environment of the process it was invoked from leaks into every later
+    command in that process -- which matters for an embedding application,
+    and for a test suite that runs commands in-process.
+    """
+    if debug:
+        return True
+    return os.getenv("MIND_PALACE_DEBUG") == "1"
+
+
+def _fail(exc: Exception, verbose: bool, debug: bool = False) -> None:
+    """Print actionable failure text and exit non-zero.
+
+    Two levels of detail, deliberately separate. `--verbose` adds the
+    exception's type and message on one line, which is what a person reading
+    the error wants. `--debug` adds the whole traceback, which is what a
+    person debugging the product wants, and which is never the first thing on
+    the screen either way.
+    """
     import sys
     import traceback
 
     from cli.errors import explain, render
 
-    debug = verbose or os.getenv("MIND_PALACE_DEBUG") == "1"
+    show_traceback = _debug_requested(debug)
     advice = explain(exc)
-    typer.echo(render(advice, exc, verbose=debug), err=True)
-    if debug:
+    typer.echo(render(advice, exc, verbose=verbose or show_traceback), err=True)
+    if show_traceback:
         traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
     raise typer.Exit(code=advice.status if advice.status > 1 else 1)
 
@@ -222,6 +287,8 @@ def init(
             ),
         ),
     ] = None,
+    verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Check that memory storage is ready, and report the next command.
 
@@ -274,7 +341,10 @@ def init(
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         from api.errors import storage_unavailable
 
-        typer.echo(storage_unavailable(exc), err=True)
+        # The driver detail is for the person debugging, not for the person
+        # whose database is down. Every other command hides it unless asked;
+        # this one did not, and an exception class name is not an answer.
+        typer.echo(storage_unavailable(exc if _debug_requested(debug) else None), err=True)
         raise typer.Exit(code=1) from exc
 
     if not all(tables):
@@ -357,6 +427,7 @@ def remember(
         bool, typer.Option("--json", help="Print the write result as JSON.")
     ] = False,
     verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Record a fact. It becomes memory with evidence, not a search index entry.
 
@@ -375,7 +446,7 @@ def remember(
     try:
         client = _client(base_url)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     try:
         result = _run(
@@ -388,7 +459,7 @@ def remember(
             topic_key=topic_key,
         )
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     if json_out:
         import json as json_module
@@ -545,6 +616,7 @@ def recall(
         bool, typer.Option("--json", help="Print the canonical response JSON.")
     ] = False,
     verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Answer a question from memory, with its source and the time it was true.
 
@@ -554,7 +626,7 @@ def recall(
     try:
         client = _client(base_url, runtime=True)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     try:
         response = _run(
@@ -565,7 +637,7 @@ def recall(
             include_receipt=explain_result,
         )
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     if json_out:
         typer.echo(response.canonical_json())
@@ -594,6 +666,7 @@ def explain(
         ),
     ] = False,
     verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Show why Mind Palace returned that answer.
 
@@ -605,7 +678,7 @@ def explain(
     try:
         client = _client(base_url, runtime=True)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     try:
         # Two reads, both existing contracts: the answer with its receipt, and the
@@ -622,7 +695,7 @@ def explain(
         )
         changes = _history_for(client, corpus, response)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     if json_out:
         typer.echo(_explain_json(response))
@@ -660,6 +733,7 @@ def history(
         bool, typer.Option("--json", help="Print the canonical response JSON.")
     ] = False,
     verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Show what this memory said before, and what replaced it.
 
@@ -669,12 +743,12 @@ def history(
     try:
         client = _client(base_url, runtime=True)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     try:
         response = _run(client.memory.history, corpus=corpus, query=question)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     if json_out:
         typer.echo(response.canonical_json())
@@ -788,6 +862,7 @@ def receipt(
     ] = None,
     base_url: BaseURL = None,
     verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Export a Memory Receipt: what was returned, and on what basis.
 
@@ -798,14 +873,14 @@ def receipt(
     try:
         client = _client(base_url, runtime=True)
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     try:
         response = _run(
             client.memory.query, question, corpus=corpus, as_of=as_of, include_receipt=True
         )
     except Exception as exc:  # noqa: BLE001
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     if not response.receipt:
         typer.echo(
@@ -1087,6 +1162,7 @@ def ingest_repo(
     path: str = typer.Argument(..., help="Path to the content repository"),
     corpus: Annotated[str, typer.Option("--corpus", help="Corpus name.")] = DEFAULT_CORPUS,
     verbose: State = False,
+    debug: Debug = False,
 ) -> None:
     """Batch ingest all Markdown files from a repository.
 
@@ -1128,12 +1204,12 @@ def ingest_repo(
     try:
         client = MindPalace(_corpus_or_fail(corpus))
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     try:
         summary = client.sync(str(resolved), delete_removed=False)
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
-        _fail(exc, verbose)
+        _fail(exc, verbose, debug)
         return
     typer.echo(
         f"[{'OK' if summary.success else 'FAIL'}] sync: +{summary.added} "

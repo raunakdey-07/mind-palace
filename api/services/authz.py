@@ -268,6 +268,21 @@ def deployment_mode() -> str:
     )
 
 
+#: The placeholder secrets `docker-compose.yml` falls back to.
+#:
+#: The compose file has to have defaults, because `podman-compose` evaluates a
+#: required variable eagerly across every service and would otherwise refuse
+#: to start the database over a secret the database does not use. A default is
+#: fine for a developer's machine and is not fine for a service on a network,
+#: so the server entrypoint refuses these two by name. The name is the check:
+#: a deployment that changed the value passes, and one that took the default
+#: does not.
+LOCAL_ONLY_SECRETS = {
+    "MIND_PALACE_RUNTIME_PASSWORD": "mindpalace-local-runtime-password",
+    "MIND_PALACE_CURSOR_SECRET": "mindpalace-local-dev-cursor-secret-00000000000000000000",
+}
+
+
 def server_mode_errors() -> list[str]:
     """Reasons this configuration must not serve, empty if it may.
 
@@ -291,6 +306,13 @@ def server_mode_errors() -> list[str]:
             "MIND_PALACE_DEPLOYMENT=server requires MIND_PALACE_AUTH_MODE=required; "
             "an unauthenticated service on a network is not tenant-scoped"
         )
+    for name, placeholder in LOCAL_ONLY_SECRETS.items():
+        if os.getenv(name, "").strip() == placeholder:
+            problems.append(
+                f"MIND_PALACE_DEPLOYMENT=server requires a real {name}; the value is "
+                "the local-development default from docker-compose.yml, and a "
+                "service on a network must not ship it"
+            )
     # Imported here because the module imports this one; a top-level import would
     # be circular.
     from api.services.ingest_paths import server_mode_errors as ingest_problems

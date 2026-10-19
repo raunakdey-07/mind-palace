@@ -26,6 +26,9 @@ receipt    what was returned, plus the digest of the whole response
 verify     offline: no database, no model, no network
 ```
 
+Run `mindpalace` with no arguments and it prints the first three commands, in
+the order a newcomer needs them.
+
 ---
 
 ## Quickstart

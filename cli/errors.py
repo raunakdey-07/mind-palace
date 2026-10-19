@@ -45,20 +45,51 @@ _CHECK_PASSWORD = (
 )
 
 
+def _exception_chain(exc: BaseException | None) -> list[BaseException]:
+    """Every exception in the chain, from the outermost to the innermost.
+
+    A driver error does not always arrive as the driver raised it. SQLAlchemy
+    wraps a failure that happens during a statement in a `DBAPIError` whose
+    `orig` is the original, and the service translates that into a
+    `MemoryError` with a generic code. The detail that distinguishes a wrong
+    password from a closed port survives in the chain and nowhere else, so
+    the chain is what has to be read.
+    """
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        nxt = current.__cause__ or current.__context__
+        if nxt is None:
+            original = getattr(current, "orig", None)
+            nxt = original if isinstance(original, BaseException) else None
+        current = nxt
+    return chain
+
+
 def _is_authentication_error(exc: Exception) -> bool:
     """Is this failure a rejected credential rather than a dead database?
 
     A wrong password and a closed port look alike to a driver and nothing
-    alike to a person: one is fixed with a command, the other with a
-    different command. Telling somebody to start the database when the
-    database is already running is worse than saying nothing.
+    alike to a person: one is fixed by changing a value, the other by starting
+    a service. Telling somebody to start the database when the database is
+    already running is worse than saying nothing.
     """
-    text = str(exc).lower()
-    if "password authentication failed" in text or "authentication failed" in text:
-        return True
-    # PostgreSQL reports an unknown role the same way it reports a wrong
-    # password, so the two belong together.
-    return "role" in text and "does not exist" in text
+    for error in _exception_chain(exc):
+        text = str(error).lower()
+        if "password authentication failed" in text or "authentication failed" in text:
+            return True
+        # PostgreSQL reports an unknown role the same way it reports a wrong
+        # password, so the two belong together.
+        if "role" in text and "does not exist" in text:
+            return True
+        # SQLSTATE 28P01 is invalid_password; 28000 is
+        # invalid_authorization_specification.
+        if getattr(error, "sqlstate", None) in {"28P01", "28000"}:
+            return True
+    return False
 
 
 def _is_database_connection_error(exc: Exception) -> bool:
@@ -116,7 +147,20 @@ def explain(exc: Exception) -> Advice:
     status = int(getattr(exc, "status_code", 1) or 1)
     detail = str(getattr(exc, "message", None) or exc)
 
-    # The taxonomy's own codes first: they say which condition this is, and
+    # A rejected credential is checked before the taxonomy's own codes, because
+    # the service translates every driver failure into the one code
+    # `database_unavailable` -- including a wrong password, which is a
+    # different problem with a different fix. The code cannot tell them
+    # apart; the exception chain still can.
+    if _is_authentication_error(exc):
+        return Advice(
+            "authentication_failed",
+            "The database rejected the credentials.",
+            f"Mind Palace could not authenticate to PostgreSQL at {database_hint()}.",
+            _CHECK_PASSWORD,
+            503,
+        )
+    # The taxonomy's own codes next: they say which condition this is, and
     # they are more precise than anything inferred from the exception type.
     # `memory_unavailable` in particular means the database was reached and the
     # schema is missing, which is a different problem from a dead port.
@@ -140,14 +184,6 @@ def explain(exc: Exception) -> Advice:
     # refused connection is an `OSError` before it is anything else, and the
     # SDK re-raises it untouched because a driver's exception is not a service
     # error.
-    if _is_authentication_error(exc):
-        return Advice(
-            "authentication_failed",
-            "The database rejected the credentials.",
-            f"Mind Palace could not authenticate to PostgreSQL at {database_hint()}.",
-            _CHECK_PASSWORD,
-            503,
-        )
     if _is_database_connection_error(exc):
         return Advice(
             "database_unavailable",

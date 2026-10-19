@@ -19,8 +19,17 @@ READY_TIMEOUT_SECONDS = 5.0
 #: The container name the compose file / init creates.
 DEFAULT_CONTAINER_NAME = "mindpalace_postgresql_1"
 
-#: Image used when provisioning a fresh local container.
+#: The image used when provisioning a fresh local container.
 DEFAULT_IMAGE = "ankane/pgvector"
+
+#: The port the local development database lives on.
+#:
+#: Provisioning is limited to this one. Creating a container on whatever port
+#: `DATABASE_URL` happens to name is a surprise with a lasting consequence --
+#: a container nobody asked for, on a port that was chosen for something else
+#: -- and it is not what the local setup documents. A database on any other
+#: port is one the operator runs, and the CLI leaves it alone.
+DEFAULT_POSTGRES_PORT = 5432
 
 
 def database_url() -> str:
@@ -356,12 +365,19 @@ def start_container(container: dict, timeout: float = READY_TIMEOUT_SECONDS) -> 
 
 
 def provision_local_postgres(timeout: float = READY_TIMEOUT_SECONDS) -> bool:
-    """Provision and start a fresh local pgvector container."""
+    """Provision and start a fresh local pgvector container.
+
+    Only for the standard local port. A database on any other port is one the
+    operator runs, and creating a container for it is a surprise with a
+    lasting consequence.
+    """
     clis = _container_clis()
     if not clis:
         return False
     cli = clis[0]
     host, port = db_host_port()
+    if port != DEFAULT_POSTGRES_PORT:
+        return False
     # If something is already listening, nothing to do.
     if db_ready(host, port, timeout=1.0):
         return True

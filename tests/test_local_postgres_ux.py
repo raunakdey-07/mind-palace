@@ -460,6 +460,7 @@ def test_a_missing_container_is_provisioned_with_a_restart_policy(monkeypatch, t
     monkeypatch.setattr(postgres, "_container_clis", lambda: [str(bindir / "podman")])
     monkeypatch.setattr(postgres, "db_ready", lambda *a, **k: False)
     monkeypatch.setattr(postgres, "tcp_open", lambda *a, **k: False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@127.0.0.1:5432/mindpalace")
 
     postgres.provision_local_postgres(timeout=0.1)
 
@@ -467,6 +468,32 @@ def test_a_missing_container_is_provisioned_with_a_restart_policy(monkeypatch, t
     assert "run" in recorded, recorded
     assert "--restart" in recorded and "unless-stopped" in recorded, recorded
     assert "pgvector" in recorded, recorded
+
+
+def test_a_database_on_another_port_is_never_provisioned(monkeypatch, tmp_path):
+    """The control: only the standard local port gets a container.
+
+    Provisioning on whatever port `DATABASE_URL` happens to name is a
+    surprise with a lasting consequence: a container nobody asked for, on a
+    port that was chosen for something else. A database on any other port is
+    one the operator runs.
+    """
+    from cli import postgres
+
+    calls = tmp_path / "calls.log"
+    bindir = _fake_container_cli(tmp_path, [], calls)
+
+    monkeypatch.setattr(postgres, "_container_clis", lambda: [str(bindir / "podman")])
+    monkeypatch.setattr(postgres, "db_ready", lambda *a, **k: False)
+    monkeypatch.setattr(postgres, "tcp_open", lambda *a, **k: False)
+    monkeypatch.setenv(
+        "DATABASE_URL", f"postgresql://mpadmin:secret@127.0.0.1:{DEAD_PORT}/mindpalace"
+    )
+
+    postgres.provision_local_postgres(timeout=0.1)
+
+    recorded = calls.read_text(encoding="utf-8") if calls.exists() else ""
+    assert "run" not in recorded, recorded
 
 
 # --------------------------------------------------------------------------
@@ -485,9 +512,14 @@ def test_the_compose_file_demands_no_variable():
     """
     compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
-    assert ":?" not in compose, (
+    # The check is on the file's *values*, not on the text: a comment that
+    # explains why the required form was removed mentions it, and a comment
+    # is not an interpolation.
+    values = [line for line in compose.splitlines() if not line.lstrip().startswith("#")]
+    offending = [line for line in values if ":?" in line]
+    assert not offending, (
         "docker-compose.yml still uses a required-variable reference; "
-        "podman-compose evaluates it eagerly and refuses to start"
+        f"podman-compose evaluates it eagerly and refuses to start: {offending}"
     )
 
 

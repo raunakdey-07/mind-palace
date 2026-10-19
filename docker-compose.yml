@@ -87,6 +87,14 @@ services:
       #                      `/api/corpora/{name}/sync` may read. Both routes take
       #                      a path on the server's filesystem, so a shared service
       #                      has to be told which directories are fair game.
+      #
+      # The two secrets below have local-development defaults, because
+      # `podman-compose` evaluates a required variable eagerly across every
+      # service: with `:?`, the `backend` service's secret stopped the
+      # `postgresql` service from starting, even though that service has no
+      # secret in it. A default is not a deployment secret, so a server
+      # deployment refuses to start while either one still holds its default
+      # value. Set them in `.env` (see `.env.example`) to run the backend.
       DATABASE_URL: postgresql://${MIND_PALACE_RUNTIME_USER:-mindpalace_runtime}:${MIND_PALACE_RUNTIME_PASSWORD:-mindpalace-local-runtime-password}@postgresql:5432/mindpalace
       MIND_PALACE_DEPLOYMENT: server
       MIND_PALACE_AUTH_MODE: required

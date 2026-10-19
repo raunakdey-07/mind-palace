@@ -41,12 +41,61 @@ _APPLY_SCHEMA = (
 )
 
 
+def _is_database_connection_error(exc: Exception) -> bool:
+    import errno
+    import socket
+
+    # Direct connection refused.
+    if isinstance(exc, ConnectionRefusedError):
+        return True
+    if isinstance(exc, ConnectionError):
+        return True
+    if isinstance(exc, socket.gaierror):
+        return False
+    if isinstance(exc, OSError):
+        if getattr(exc, "errno", None) in (
+            errno.ECONNREFUSED,
+            errno.ETIMEDOUT,
+            errno.EHOSTUNREACH,
+            errno.ENETUNREACH,
+        ):
+            return True
+        text = str(exc).lower()
+        if (
+            "connection refused" in text
+            or "could not connect" in text
+            or "connection is closed" in text
+        ):
+            return True
+    # SQLAlchemy / asyncpg / psycopg wrappers.
+    name = type(exc).__name__.lower()
+    if "operationalerror" in name or "dbapierror" in name or "interfaceerror" in name:
+        text = str(exc).lower()
+        if "connect" in text or "refused" in text or "unavailable" in text or "timeout" in text:
+            return True
+    text = str(exc).lower()
+    if "connection refused" in text or "could not connect to server" in text:
+        return True
+    code = getattr(exc, "code", None)
+    if code in {"database_unavailable", "memory_unavailable", "database_unreachable"}:
+        return True
+    return False
+
+
 def explain(exc: Exception) -> Advice:
     """Turn any failure the product surfaces into actionable text."""
     from pydantic import ValidationError
 
     if isinstance(exc, ValidationError):
         return _validation_advice(exc)
+    if _is_database_connection_error(exc):
+        return Advice(
+            "database_unavailable",
+            "The memory database is unavailable.",
+            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            "Start it with: docker compose up -d postgresql",
+            503,
+        )
     if isinstance(exc, OSError) and getattr(exc, "filename", None) is None and ":" in str(exc):
         return _unreadable_advice(exc)
 

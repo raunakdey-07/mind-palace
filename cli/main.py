@@ -16,6 +16,7 @@ import typer
 import yaml
 
 from cli.memory import app as memory_app
+from cli.postgres import *  # noqa: F401,F403
 
 #: The five product commands, in the order a newcomer meets them.
 help = "Mind Palace: memory that remembers what changed, what was true when, and why to believe it."
@@ -29,6 +30,19 @@ app.add_typer(memory_app)
 from cli.runtime import app as runtime_app  # noqa: E402
 
 app.add_typer(runtime_app)
+
+
+@app.callback()
+def _global_options(
+    debug: Annotated[
+        bool, typer.Option("--debug", help="Show full tracebacks for debugging.")
+    ] = False,
+) -> None:
+    if debug:
+        import os
+
+        os.environ["MIND_PALACE_DEBUG"] = "1"
+
 
 eval_app = typer.Typer(name="eval", help="Evaluation commands")
 app.add_typer(eval_app)
@@ -55,10 +69,17 @@ BaseURL = Annotated[
 
 def _fail(exc: Exception, verbose: bool) -> None:
     """Print actionable failure text and exit non-zero."""
+    import os
+    import sys
+    import traceback
+
     from cli.errors import explain, render
 
+    debug = verbose or os.getenv("MIND_PALACE_DEBUG") == "1"
     advice = explain(exc)
-    typer.echo(render(advice, exc, verbose=verbose), err=True)
+    typer.echo(render(advice, exc, verbose=debug), err=True)
+    if debug:
+        traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
     raise typer.Exit(code=advice.status if advice.status > 1 else 1)
 
 
@@ -227,9 +248,14 @@ def init(
         os.environ["DATABASE_URL"] = database_url
 
     from sqlalchemy import text
-    from sqlalchemy.exc import SQLAlchemyError
-
     from api.services.db import session_scope
+
+    try:
+        from cli.postgres import ensure_local_postgres
+
+        ensure_local_postgres(auto_provision=True)
+    except Exception:  # noqa: BLE001 - recovery is best-effort
+        pass
 
     async def check() -> list[bool]:
         async with session_scope() as db:
@@ -245,7 +271,7 @@ def init(
 
     try:
         tables = _run(lambda: asyncio.run(check()))
-    except (SQLAlchemyError, OSError, TimeoutError) as exc:
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         from api.errors import storage_unavailable
 
         typer.echo(storage_unavailable(exc), err=True)
@@ -346,7 +372,11 @@ def remember(
     # Through a runtime this costs about 0.2 s instead of 0.7 s, because the process
     # that owns the database pool is already running and this one does not have to
     # import it. `--file` is a local read and stays here whatever else is happening.
-    client = _client(base_url)
+    try:
+        client = _client(base_url)
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, verbose)
+        return
     try:
         result = _run(
             client.memory.remember,
@@ -521,7 +551,11 @@ def recall(
     This is the shortest path to value: one command in, an answer out. It never
     invents an answer, so an unfamiliar question abstains rather than guesses.
     """
-    client = _client(base_url, runtime=True)
+    try:
+        client = _client(base_url, runtime=True)
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, verbose)
+        return
     try:
         response = _run(
             client.memory.query,
@@ -568,7 +602,11 @@ def explain(
     whether a receipt is available to export. This is not a reasoning trace, and
     it does not claim the original source was factually correct.
     """
-    client = _client(base_url, runtime=True)
+    try:
+        client = _client(base_url, runtime=True)
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, verbose)
+        return
     try:
         # Two reads, both existing contracts: the answer with its receipt, and the
         # change set behind the documents it came from. The CLI composes reads; it
@@ -628,7 +666,11 @@ def history(
     Memory is not only what is true now. This walks the real supersession chain in
     the archive; nothing here is reconstructed or illustrated.
     """
-    client = _client(base_url, runtime=True)
+    try:
+        client = _client(base_url, runtime=True)
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, verbose)
+        return
     try:
         response = _run(client.memory.history, corpus=corpus, query=question)
     except Exception as exc:  # noqa: BLE001
@@ -663,6 +705,14 @@ def _client(base_url: str | None, *, runtime: bool = True):
 
     if base_url:
         return MindPalace(base_url=base_url)
+    # Best-effort local recovery: if Postgres is down, try to start a stopped
+    # local container before we attempt to connect.
+    try:
+        from cli.postgres import ensure_local_postgres
+
+        ensure_local_postgres()
+    except Exception:  # noqa: BLE001 - recovery is best-effort
+        pass
     from api import runtime as runtime_module
     from api.services.retrieval_mode import NOTE, lexical_requested
 
@@ -745,7 +795,11 @@ def receipt(
     verifying it later needs no server, database or model. Write it to a file to
     hand to someone else.
     """
-    client = _client(base_url, runtime=True)
+    try:
+        client = _client(base_url, runtime=True)
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, verbose)
+        return
     try:
         response = _run(
             client.memory.query, question, corpus=corpus, as_of=as_of, include_receipt=True
@@ -970,6 +1024,13 @@ def corpora() -> None:
     from api.services.corpora import list_corpora
     from api.services.db import session_scope
 
+    try:
+        from cli.postgres import ensure_local_postgres
+
+        ensure_local_postgres()
+    except Exception:  # noqa: BLE001
+        pass
+
     async def run():
         async with session_scope() as db:
             return await list_corpora(db)
@@ -1057,7 +1118,18 @@ def ingest_repo(
         typer.echo(f"[ERROR] Path not found: {resolved}", err=True)
         raise typer.Exit(code=1)
 
-    client = MindPalace(_corpus_or_fail(corpus))
+    try:
+        from cli.postgres import ensure_local_postgres
+
+        ensure_local_postgres()
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        client = MindPalace(_corpus_or_fail(corpus))
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
+        _fail(exc, verbose)
+        return
     try:
         summary = client.sync(str(resolved), delete_removed=False)
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
@@ -1306,6 +1378,13 @@ def reindex(
     from api.services.corpora import get_corpus_by_name
     from api.services.db import async_engine, session_scope
     from api.services.rehydrate import rehydrate_corpus
+
+    try:
+        from cli.postgres import ensure_local_postgres
+
+        ensure_local_postgres()
+    except Exception:  # noqa: BLE001
+        pass
 
     async def run() -> dict:
         try:

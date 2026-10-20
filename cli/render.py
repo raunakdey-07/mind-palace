@@ -27,6 +27,17 @@ def _short(value: str, limit: int = PREVIEW) -> str:
     return value if len(value) <= limit else value[: limit - 1] + "…"
 
 
+def _sentence(value: str) -> str:
+    """The claim as one line, in full.
+
+    A statement the writer wrapped over three lines is one sentence, and the
+    archive keeps the writer's line breaks so the relevance gate can embed the
+    line the topic is in. A terminal is not the writer's page, and the reader
+    is looking at a sentence.
+    """
+    return " ".join(value.split())
+
+
 def _time_line(response: MemoryResponse) -> str:
     """When the answer was true, and how that was decided."""
     state = response.state
@@ -132,7 +143,7 @@ def render_recall(
 
     for index, claim in enumerate(current, 1):
         prefix = f"{index}. " if len(current) > 1 else ""
-        lines.append(f"{prefix}{claim.claim}")
+        lines.append(f"{prefix}{_sentence(claim.claim)}")
         lines.append(f"   source: {_source_line(response, claim)}")
         lines.append(f"   time:   {_time_line(response)}")
 
@@ -194,7 +205,7 @@ def _explain_answer(response: MemoryResponse, current: list) -> str:
         return "ANSWER\n  Nothing matched this question, so there is nothing to explain."
     lines = ["ANSWER"]
     for claim in current:
-        lines.append(f"  {claim.claim}")
+        lines.append(f"  {_sentence(claim.claim)}")
         if claim.status != "CURRENT":
             lines.append(f"    status: {claim.status}")
     return "\n".join(lines)
@@ -242,7 +253,7 @@ def _explain_history(changes) -> str:
     lines = ["HISTORY"]
     for change in changes:
         stamp = f"{change.observed_at:%Y-%m-%d %H:%M} UTC"
-        current = _short(change.current[0].claim) if change.current else None
+        current = _sentence(change.current[0].claim) if change.current else None
         if change.event == "TRUNCATED":
             lines.append(f"  ({change.path})")
         elif not change.previous:
@@ -292,18 +303,18 @@ def render_history(response: MemoryResponse) -> str:
     lines = []
     for change in changes:
         stamp = f"{change.observed_at:%Y-%m-%d %H:%M} UTC"
-        current = change.current[0].claim if change.current else None
+        current = _sentence(change.current[0].claim) if change.current else None
         if not change.previous:
             lines.append(f"{stamp}  recorded  {current or change.path}")
         elif change.memory_changed and current:
-            lines.append(f"{stamp}  {change.previous[0].claim}")
+            lines.append(f"{stamp}  {_sentence(change.previous[0].claim)}")
             lines.append(f"            superseded by  {current}")
         else:
             lines.append(f"{stamp}  {change.event} {change.path} (memory unchanged)")
 
     tail = changes[-1].current or changes[-1].previous
     lines.append("")
-    lines.append(f"current now: {tail[0].claim if tail else 'nothing recorded'}")
+    lines.append(f"current now: {_sentence(tail[0].claim) if tail else 'nothing recorded'}")
     return "\n".join(lines)
 
 

@@ -243,6 +243,64 @@ async def test_reindex_rebuilds_the_cache_from_the_archive(memory_ingestion_db):
     assert await cache_count(memory_ingestion_db) == 1
 
 
+async def test_reindex_refreshes_a_vector_whose_representation_changed(memory_ingestion_db):
+    """An existing corpus is upgraded by one command, without dropping it.
+
+    The representation a claim is embedded as changed when the claim's text
+    changed, and a row that records the old representation is stale: it holds
+    the vector of a text the gate no longer scores. The row is keyed by
+    (corpus, claim), so the refresh is an update of the row that is already
+    there, not a second row and not a skipped one.
+    """
+    from api.services.ingestion import IngestionService
+    from api.services.rehydrate import backfill_claim_embeddings
+
+    sessions, corpus = memory_ingestion_db
+    service = IngestionService(memory_enabled=True)
+    await service.ingest_file(source(DATABASE), "docs/storage.md", corpus)
+
+    async with sessions() as db:
+        async with db.begin():
+            await db.execute(
+                text(
+                    "UPDATE memory_claim_embeddings SET representation_hash = :stale "
+                    "WHERE corpus_id = :c"
+                ),
+                {"stale": "0" * 64, "c": corpus},
+            )
+    async with sessions() as db:
+        stored = (
+            await db.execute(
+                text(
+                    "SELECT representation_hash FROM memory_claim_embeddings "
+                    "WHERE corpus_id = :c"
+                ),
+                {"c": corpus},
+            )
+        ).scalar_one()
+    assert stored == "0" * 64, "the row should be stale before the reindex"
+
+    async with sessions() as db:
+        async with db.begin():
+            written = await backfill_claim_embeddings(db, corpus)
+
+    assert written == 1
+    async with sessions() as db:
+        refreshed = (
+            await db.execute(
+                text(
+                    "SELECT representation_hash FROM memory_claim_embeddings "
+                    "WHERE corpus_id = :c"
+                ),
+                {"c": corpus},
+            )
+        ).scalar_one()
+    assert refreshed != "0" * 64, "the reindex did not refresh the stale row"
+    async with sessions() as db:
+        wanted, _texts = await claim_embeddings.pending(db, corpus)
+    assert refreshed == wanted[next(iter(wanted))]
+
+
 async def test_cached_vector_load_binds_no_array_parameters(memory_ingestion_db):
     """Regression: the cached-vector load must not bind large array parameters.
 

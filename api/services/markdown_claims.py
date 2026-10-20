@@ -22,6 +22,30 @@ Under a heading path, in this order:
 * `Key: Value` lines -- `Status: Accepted`, `Superseded-by: ADR-003`. These are
   the field an ADR is read for, and they are the line most worth keeping exact.
 
+## One statement, however many lines it is wrapped over
+
+A writer who keeps a source narrow wraps a long sentence:
+
+    - A machine that will not take a model at all. The default install is 216 MB and a
+      cold recall is about 1.4 s, so this is a narrower case than it was at v0.9.1,
+      when a 1.35 GB install and a 6 s first recall were the price of ranking.
+
+That is one statement, and it is the statement that carries the fact. Reading it
+as three lines and archiving the first one as a claim kept "The default install
+is 216 MB and a" -- the number and nothing that says what it is. The
+continuation lines are part of the claim, so the extractor reads a statement as
+its first line plus every continuation line that belongs to it.
+
+A statement ends at a blank line, at the next statement, at a heading, at a
+table, at a fenced code block, or at a declaration. Those are the places where
+the writer stopped writing one thing and started writing another.
+
+The `claim` text and the `value` are the statement with its line breaks
+collapsed to single spaces, because a claim is a sentence and a sentence does
+not carry the source's column layout. The `evidence` quote is the raw slice,
+with its line breaks and its indentation intact, because evidence has to be
+verifiable against the file byte for byte.
+
 ## What does not
 
 Fenced code, indented code, tables, HTML comments, link reference definitions,
@@ -106,6 +130,8 @@ _DECLARATION = re.compile(
     re.IGNORECASE,
 )
 _LINK_TARGET = re.compile(r"^\[[^\]]*\]\(([^)]+)\)\s*$")
+#: A line that opens a new sentence. Used to end a `Key: Value` statement.
+_NEW_SENTENCE = re.compile(r"^[A-Z]")
 #: A reference that names a document rather than a claim key.
 _PATHISH = re.compile(r"[/\\]|\.md\b", re.IGNORECASE)
 
@@ -266,6 +292,23 @@ def _iter_lines(body: str):
     Everything structural is skipped here rather than by the caller, so a fenced
     block cannot contribute a bullet that happens to look like a decision.
     """
+    for number, line, kind in _scan(body):
+        if kind == "prose":
+            yield number, line
+
+
+def _scan(body: str):
+    """Yield `(line_number, line, kind)` for every physical line of the body.
+
+    `kind` is `prose` for a line that could be part of a statement, `heading`
+    for a Markdown heading, and `block` for everything structural: a fenced code
+    block, an indented code block, a table, a horizontal rule, or a link
+    reference definition.
+
+    The kinds exist so a statement can *end* at a block instead of running over
+    it. A bullet that wraps across a table is two things, and the second one is
+    not a continuation of the first.
+    """
     in_fence = False
     fence_marker = ""
     for number, line in enumerate(body.splitlines(), 1):
@@ -276,35 +319,135 @@ def _iter_lines(body: str):
                 in_fence, fence_marker = True, marker
             elif line.strip().startswith(fence_marker):
                 in_fence, fence_marker = False, ""
+            yield number, line, "block"
             continue
         if in_fence:
+            yield number, line, "block"
             continue
         if _RULE.match(line) or _TABLE.match(line) or _DEFINITION.match(line):
+            yield number, line, "block"
             continue
         # Four leading spaces is an indented code block.
         if line.startswith("    ") or line.startswith("\t"):
+            yield number, line, "block"
             continue
-        yield number, line
+        if _HEADING.match(line):
+            yield number, line, "heading"
+            continue
+        yield number, line, "prose"
 
 
-def _quote_for(line: str, text: str) -> str:
-    """The exact substring of `line` that backs `text`.
+def _starts_statement(line: str, current: list[tuple[int, str]] | None) -> bool:
+    """Whether this line opens a statement rather than continuing one.
 
-    Evidence must be byte-exact, so the quote is located in the source line rather
-    than reconstructed. When the line is too long to quote whole, the leading
-    window is taken and trimmed to a word boundary -- still exact, still a
-    substring, just shorter.
+    A bullet, a numbered item and a `Key: Value` field each open one. A field
+    counts because a document that writes `Status:` and `Owner:` on consecutive
+    lines is making two statements, and joining them would produce a claim that
+    says neither.
+
+    The exception is a field-shaped line *inside* a wrapped bullet. Prose in a
+    bullet holds colons -- "Row-level security does not contain this: the
+    process is the thing that sets the tenant scope" -- and reading that as a
+    field would cut the bullet in half and throw away the rest of the
+    sentence. An indented line under a bullet belongs to that bullet.
     """
-    start = line.find(text)
-    if start < 0:
-        return ""
-    quote = text[:QUOTE_LIMIT]
-    if len(text) > QUOTE_LIMIT:
-        cut = quote.rfind(" ")
-        quote = quote[:cut] if cut > QUOTE_LIMIT // 2 else quote
-    if line[start : start + len(quote)] != quote:
-        return ""
-    return quote
+    if _BULLET.match(line) or _NUMBERED.match(line):
+        return True
+    if not _FIELD.match(line.strip()):
+        return False
+    if current and _is_list_item(current) and line[:1].isspace():
+        return False
+    return True
+
+
+def _is_list_item(lines: list[tuple[int, str]]) -> bool:
+    """Whether this statement is a bullet or a numbered item."""
+    return bool(_BULLET.match(lines[0][1]) or _NUMBERED.match(lines[0][1]))
+
+
+def _is_field_statement(lines: list[tuple[int, str]]) -> bool:
+    """Whether this statement is a `Key: Value` field."""
+    first = lines[0][1]
+    if _BULLET.match(first) or _NUMBERED.match(first):
+        return False
+    return bool(_FIELD.match(first.strip()))
+
+
+def _opens_a_sentence(line: str) -> bool:
+    """Whether this line starts a new sentence.
+
+    A `Key: Value` field is a sentence inside a paragraph, not a list entry,
+    so it ends where its sentence ends. A line that opens a new sentence is
+    the next statement, and folding it into the field would turn one fact
+    into a paragraph.
+    """
+    return bool(_NEW_SENTENCE.match(line))
+
+
+def _statement(lines: list[tuple[int, str]]) -> tuple[str, str, str] | None:
+    """The `(claim, value, raw)` of one logical statement, or None.
+
+    `lines` is the statement's first line followed by its continuation lines.
+    The claim and the value are the statement with its line breaks collapsed to
+    single spaces; `raw` is the verbatim slice, with the line breaks and the
+    indentation left in place, because evidence has to be verifiable against
+    the file byte for byte.
+
+    None means the statement is not a claim: a declaration, or a line that is
+    not shaped like one.
+    """
+    first = lines[0][1]
+    bullet = _BULLET.match(first)
+    numbered = _NUMBERED.match(first)
+    field = None
+    if bullet or numbered:
+        match = bullet or numbered
+        offset = match.start(1)
+    else:
+        field = _FIELD.match(first.strip())
+        if not field:
+            return None
+        if is_declaration(first):
+            # A statement about this document, not about the world. Keeping it
+            # would let `recall` answer "which ADR replaces this one" and call
+            # the answer a decision.
+            return None
+        offset = first.find(f"{field.group('key').strip()}: {field.group('value').strip()}")
+
+    pieces = [line[offset:] if index == 0 else line for index, (_n, line) in enumerate(lines)]
+    raw = "\n".join(pieces).rstrip()
+    normalized = [" ".join(piece.split()) for piece in pieces]
+    claim = " ".join(piece for piece in normalized if piece)
+    if not claim:
+        return None
+    if field is None:
+        return claim, claim, raw
+    # `Key: Value`: the value is the statement, the key says which one it is.
+    head = normalized[0]
+    value = head.split(": ", 1)[1] if ": " in head else head
+    tail = [piece for piece in normalized[1:] if piece]
+    value = " ".join([value] + tail) if tail else value
+    return claim, value, raw
+
+
+def _limit_quote(quote: str) -> str:
+    """The quote, bounded so a pack stays readable, and still exact.
+
+    A statement wrapped over several lines is cut on a line boundary, so the
+    evidence is a whole number of source lines. A single line is cut on a word
+    boundary. Either way the result is a substring of the source, which is the
+    only property that matters: evidence that cannot be located in the document
+    is not evidence.
+    """
+    if len(quote) <= QUOTE_LIMIT:
+        return quote
+    window = quote[:QUOTE_LIMIT]
+    if "\n" in window:
+        cut = window.rfind("\n")
+        if cut > QUOTE_LIMIT // 2:
+            return window[:cut]
+    cut = window.rfind(" ")
+    return window[:cut] if cut > QUOTE_LIMIT // 2 else window
 
 
 def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict], list[dict]]:
@@ -323,9 +466,52 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
     seen_claims: set[str] = set()
     seen_quotes: set[tuple[str, str]] = set()
 
-    for number, raw in _iter_lines(_HTML_COMMENT.sub("", body)):
-        heading = _HEADING.match(raw)
-        if heading:
+    pending: list[tuple[int, str]] = []
+    pending_path = ""
+
+    def close() -> None:
+        """Turn the statement that just ended into a claim, if it is one."""
+        nonlocal pending
+        if not pending:
+            return
+        lines = pending
+        pending = []
+        statement = _statement(lines)
+        if statement is None:
+            return
+        text, value, raw = statement
+        if not _declarative(text):
+            return
+        # Two identical statements under one heading are one statement written
+        # twice, not two facts. Keep one so re-ingesting an unchanged file is a
+        # no-op.
+        signature = (pending_path, text)
+        if signature in seen_quotes:
+            return
+        # The whole statement has to be quotable, not just the part that fits
+        # the quote limit: a statement that straddles two chunks has no
+        # evidence anybody can check, and a claim whose evidence does not
+        # resolve is a claim the archive rejects.
+        if not raw or not any(raw in hay for hay in haystacks):
+            warnings.append(
+                ExtractionWarning(ExtractionWarning.NO_QUOTE, path=path, line=lines[0][0])
+            )
+            return
+        seen_quotes.add(signature)
+
+        key_base = f"md:{_slug(pending_path)}"
+        ordinal = ordinals.get(key_base, 0)
+        ordinals[key_base] = ordinal + 1
+        key = f"{key_base}:{ordinal}"
+        if key in seen_claims:
+            return
+        seen_claims.add(key)
+        claims.append({"key": key, "claim": text, "value": value, "evidence": _limit_quote(raw)})
+
+    for number, raw, kind in _scan(_HTML_COMMENT.sub("", body)):
+        if kind == "heading":
+            close()
+            heading = _HEADING.match(raw)
             level = len(heading.group(1))
             title = heading.group(2).strip()
             if level == 1 and not headings and not claims:
@@ -337,51 +523,26 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
                 headings.pop()
             headings.append((level, title))
             continue
-
-        path_now = " > ".join(title for _level, title in headings)
-        match = _BULLET.match(raw) or _NUMBERED.match(raw)
-        text = ""
-        field = None
-        if match:
-            text = match.group(1).strip()
-        else:
-            if is_declaration(raw):
-                # A statement about this document, not about the world. Keeping it
-                # would let `recall` answer "which ADR replaces this one" and call
-                # the answer a decision.
+        if kind == "block":
+            close()
+            continue
+        if not raw.strip():
+            close()
+            continue
+        if _starts_statement(raw, pending):
+            close()
+            pending = [(number, raw)]
+            pending_path = " > ".join(title for _level, title in headings)
+            continue
+        if pending:
+            if _is_field_statement(pending) and _opens_a_sentence(raw):
+                # The field's sentence ended. What follows is a new sentence,
+                # and a field is one sentence, not a paragraph.
+                close()
                 continue
-            field = _FIELD.match(raw.strip())
-            if field:
-                text = f"{field.group('key').strip()}: {field.group('value').strip()}"
-
-        if not text or not _declarative(text):
-            continue
-        # Two identical lines under one heading are one statement written twice,
-        # not two facts. Keep one so re-ingesting an unchanged file is a no-op.
-        signature = (path_now, text)
-        if signature in seen_quotes:
-            continue
-        quote = _quote_for(raw, text)
-        if not quote or not any(quote in hay for hay in haystacks):
-            warnings.append(ExtractionWarning(ExtractionWarning.NO_QUOTE, path=path, line=number))
-            continue
-        seen_quotes.add(signature)
-
-        key_base = f"md:{_slug(path_now)}"
-        ordinal = ordinals.get(key_base, 0)
-        ordinals[key_base] = ordinal + 1
-        key = f"{key_base}:{ordinal}"
-        if key in seen_claims:
-            continue
-        seen_claims.add(key)
-        claims.append(
-            {
-                "key": key,
-                "claim": text,
-                "value": field.group("value").strip() if field else text,
-                "evidence": quote,
-            }
-        )
+            # A wrapped continuation of the statement above it.
+            pending.append((number, raw))
+    close()
 
     claims.sort(key=lambda claim: claim["key"])
     return claims, warnings

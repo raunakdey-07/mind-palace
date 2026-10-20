@@ -253,6 +253,55 @@ def extract_sections_with_paths(text: str) -> list[tuple[str, str]]:
     return sections
 
 
+#: A line that opens a list item.
+#:
+#: The chunker uses it to choose where a long paragraph may be cut. A cut
+#: inside a wrapped bullet leaves the bullet in two chunks, and the claim the
+#: extractor reads out of it has no quotable evidence: the archive needs the
+#: whole statement in one piece, and a statement that straddles a boundary has
+#: none.
+_LIST_ITEM = re.compile(r"^(?:[-*+]\s+|\d{1,3}[.)]\s+)")
+
+#: A `Key: Value` line. The extractor reads it as a statement of its own, and
+#: the chunker treats it as a boundary for the same reason.
+_FIELD_LINE = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9 _-]{0,40}):\s*(?P<value>\S.*)$")
+
+
+def _statement_cuts(text: str) -> list[int]:
+    """The offsets in `text` where a statement begins.
+
+    A statement is a list item or a `Key: Value` field, and it runs until the
+    next one. A field inside a wrapped bullet is not a statement: prose in a
+    bullet holds colons, and reading that as a field would cut the bullet in
+    half.
+
+    The chunker cuts here and the extractor reads whole statements, so the two
+    agree on where a statement is. When they disagree, a statement ends up
+    split across two chunks and its claim has no quotable evidence.
+    """
+    cuts: list[int] = []
+    offset = 0
+    in_list_item = False
+    for line in text.split("\n"):
+        if _LIST_ITEM.match(line):
+            cuts.append(offset)
+            in_list_item = True
+        elif _FIELD_LINE.match(line.strip()) and not (in_list_item and line[:1].isspace()):
+            cuts.append(offset)
+            in_list_item = False
+        offset += len(line) + 1
+    return cuts
+
+
+def _last_statement_cut(text: str, floor: int) -> int:
+    """The last statement boundary in `text` past `floor`, or -1."""
+    best = -1
+    for offset in _statement_cuts(text):
+        if offset > floor:
+            best = offset
+    return best
+
+
 def estimate_tokens(text: str) -> int:
     """Rough token estimate (4 chars ≈ 1 token)."""
 
@@ -298,17 +347,14 @@ def chunk_with_heading_paths(
                     )
                     current_chunk = ""
                 cut = para[:max_chars]
-                # Break at a line boundary when there is one in the window. The
-                # claim extractor has to quote evidence back verbatim out of an
-                # archived chunk, and a chunk that starts or ends mid-line cannot
-                # supply the quote for that line -- the claim is dropped with
-                # `claim_extraction_no_quote` instead. Splitting on the last space
-                # rather than the last newline put section boundaries inside
-                # bullets, and every bullet on that boundary lost its evidence. A
-                # sentence or word boundary is the fallback for a single line that
-                # is longer than the whole window, which cannot be helped.
+                # A cut before a statement, not inside one. A bullet wrapped
+                # over three lines is one statement, and a chunk boundary in
+                # the middle of it leaves the claim with no quotable evidence.
+                statement = _last_statement_cut(cut, max_chars // 2)
                 newline = cut.rfind("\n")
-                if newline > max_chars // 2:
+                if statement > 0:
+                    cut = para[:statement]
+                elif newline > max_chars // 2:
                     cut = para[:newline]
                 else:
                     # Prefer breaking at a sentence/word boundary within the window.

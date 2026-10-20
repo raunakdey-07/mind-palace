@@ -10,6 +10,7 @@ import math
 import os
 import re
 from dataclasses import dataclass
+from operator import mul
 from typing import Any
 
 from api.models.memory import MemoryRequest, MemoryResponse
@@ -90,6 +91,92 @@ DEFAULT_NEAR_FLOOR = 0.10
 #: Cosine below which a candidate is not worth listing at all. Without it, a
 #: near-weak top answer advertises two more weak ones as if they were a shortlist.
 CANDIDATE_FLOOR = 0.15
+
+#: A token that appears in at least this share of the candidates' claims is
+#: the corpus's own vocabulary: it is in so many of them that it cannot tell
+#: one claim from another. The project's own name lands here by construction,
+#: and a question that matched on it alone has not found its subject.
+COMMON_TOKEN_SHARE = 0.065
+
+#: The smallest number of claims a token has to be in before it counts as the
+#: corpus's own vocabulary at all. A corpus of twenty claims has none: a word
+#: in two of them is evidence, not noise, and a threshold that said otherwise
+#: would turn ordinary questions into abstentions.
+COMMON_TOKEN_FLOOR = 8
+
+#: How close the best claim that names the subject has to be to the best claim
+#: overall. A question whose subject the corpus barely mentions is a question
+#: the corpus cannot answer, however well the corpus's own vocabulary matched.
+#:
+#: The band's own value is not the test. The test is that the corpus's best
+#: answer to the question is about something else: "Mind Palace" is in the
+#: corpus's vocabulary, so a question that names it matches everything, and
+#: "Kafka" is not, so the one claim that mentions Kafka is a long way down.
+SUBJECT_RATIO = 0.80
+
+#: The subject has to be this rare in the corpus before the fact that the
+#: answer does not mention it says anything. A subject the corpus has plenty of
+#: claims about is the corpus's own topic, and the claim that answers the
+#: question about it need not repeat the word.
+SUBJECT_SHARE = 0.01
+
+#: Verbs that name an action rather than a subject. "How is Kafka configured?"
+#: asks about Kafka, and the verb is not the question. A corpus that never
+#: says "configured" has not been asked about anything.
+GENERIC_QUERY_TERMS = frozenset("""configur configure configured work setup support run
+    """.split())
+
+
+def _subject_is_not_the_answer(
+    best_subject: float, best_overall: float, subject_claims: int, corpus: int
+) -> bool:
+    """Whether the corpus's best answer to the question is not about its subject.
+
+    Two conditions, and both have to hold.
+
+    **The subject is rare in the corpus.** The one claim that mentions Kafka is
+    a long way down the ranking, and the claims that rank high matched the
+    project's own name instead. The subject is there; the corpus's answer to
+    this question is not about it. A subject the corpus has plenty of claims
+    about is the corpus's own topic, and the claim that answers the question
+    about it need not repeat the word.
+
+    **The claims that carry the subject are not the ones that answer.** The
+    subject's best claim is a long way below the best claim overall.
+
+    The test is deliberately narrow. A question whose subject is in no claim at
+    all is not this case: there is nothing to be competitive with, and the
+    answer to "Which architecture decisions apply?" is still the architecture
+    decisions. The broader test cost six questions on the 202-question dev
+    set, whose subjects ("the earlier job queue", "the Orders Service") are
+    the corpus's own topic and are not repeated by the claims that answer
+    them.
+    """
+    if subject_claims and subject_claims / corpus >= SUBJECT_SHARE:
+        return False
+    return 0.0 < best_subject < best_overall * SUBJECT_RATIO
+
+
+def boilerplate_tokens(documents: list[frozenset[str]], wanted: frozenset[str]) -> frozenset[str]:
+    """The tokens among `wanted` that so many claims carry that they cannot tell one from another.
+
+    Counted over the candidates the ranking is choosing between, because that
+    is the population the question has to be separated from. A token in every
+    claim is already removed from the ranking by `common`; this is the wider
+    set, the tokens that are in enough claims to be worthless as evidence.
+
+    Only `wanted` is counted. A token the question does not use cannot be the
+    one it matched on, and counting every token of every claim costs more than
+    the counting this gate needs.
+    """
+    if not documents or not wanted:
+        return frozenset()
+    counts = {token: 0 for token in wanted}
+    for document in documents:
+        for token in counts.keys() & document:
+            counts[token] += 1
+    floor = max(COMMON_TOKEN_FLOOR, int(len(documents) * COMMON_TOKEN_SHARE))
+    return frozenset(token for token, count in counts.items() if count >= floor)
 
 
 def margin_threshold() -> float:
@@ -294,8 +381,14 @@ def _dot_scalar(topic_vector, claim_vector) -> float:
 
     Kept as the reference implementation. The vectorised scorer must reproduce
     this at the pack boundary, not merely approximate it.
+
+    `sum(map(mul, ...))` rather than a generator expression, because this runs
+    once per claim per topic and the generator's per-item overhead was a
+    measurable part of a recall on a corpus of a thousand claims. The
+    accumulation order, and therefore the result, is the same either way:
+    `map` yields the products left to right and `sum` adds them left to right.
     """
-    return sum(a * b for a, b in zip(topic_vector, claim_vector))
+    return sum(map(mul, topic_vector, claim_vector))
 
 
 _TERM_CACHE: dict[str, frozenset[str]] = {}
@@ -390,6 +483,19 @@ def relevance(
     topic_terms = [terms(topic) - common for topic in interpreted.topics]
     # The question's own terms, un-reduced, for the same reason.
     question_terms = [terms(topic) for topic in interpreted.topics]
+    # The words in the question that name a subject: neither the corpus's own
+    # vocabulary nor a verb that names an action.
+    #
+    # "How is Kafka configured in Mind Palace?" is not a question about the
+    # project. The words that match are "Mind" and "Palace", which are in the
+    # project's own name and in a seventh of its claims, and the claims they
+    # reach say nothing about Kafka. The subject is the one word left.
+    asked = frozenset().union(*question_terms) if question_terms else frozenset()
+    boilerplate = boilerplate_tokens(documents, asked)
+    subject_terms = [
+        question_terms[index] - boilerplate - GENERIC_QUERY_TERMS
+        for index in range(len(interpreted.topics))
+    ]
 
     embedding_calls, embedding_texts = 0, 0
     topic_vectors = None
@@ -446,6 +552,14 @@ def relevance(
     scored: dict[str, float] = {}
     for i in range(len(interpreted.topics)):
         by_key = {}
+        # The best score any claim reached for this topic, and the best score a
+        # claim that names the subject reached. A question whose subject the
+        # corpus barely mentions is a question the corpus cannot answer, however
+        # well the corpus's own vocabulary matched, and the two numbers are what
+        # say so.
+        best_overall = 0.0
+        best_subject = 0.0
+        subject_claims = 0
         for position, cid in enumerate(ids):
             claim = claims[cid]
             if request.path and claim.path != request.path:
@@ -457,6 +571,16 @@ def relevance(
             # it, and every such question would then need the strong-score bar
             # instead of the normal minimum.
             overlap = bool(question_terms[i] & documents[position])
+            # The same question asked about the subject rather than about the
+            # corpus's own vocabulary. A question whose subject the corpus's
+            # best answer is not about is a question the corpus cannot answer,
+            # and these numbers are what say so.
+            if value > best_overall:
+                best_overall = value
+            if subject_terms[i] & documents[position]:
+                subject_claims += 1
+                if value > best_subject:
+                    best_subject = value
             # The best any claim under this key scores for this topic, kept
             # whether or not it cleared a gate. `chosen` below is what the product
             # answers from; `scored` is what it ranked, and the difference is the
@@ -475,6 +599,16 @@ def relevance(
                 )
             if accepted:
                 by_key[claim.key] = max(by_key.get(claim.key, -1), value)
+        if subject_terms[i] and _subject_is_not_the_answer(
+            best_subject, best_overall, subject_claims, len(documents)
+        ):
+            # The corpus's best answer to this question is about something else.
+            # "How is Kafka configured in Mind Palace?" matched the corpus's own
+            # name, and the one claim that mentions Kafka is a long way down.
+            # Answering it with the claims that matched the project's name
+            # would be answering a different question, so this topic contributes
+            # nothing.
+            continue
         top = max(by_key.values(), default=0)
         for key, value in by_key.items():
             if value >= top * policy.relative:

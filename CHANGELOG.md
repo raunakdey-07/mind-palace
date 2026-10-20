@@ -46,6 +46,48 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Fixed
 
+- **A bullet wrapped over three lines was archived as its first line.**
+  `docs/runtime.md` says the default install is 216 MB, and the sentence that
+  says so runs over three lines. The extractor cut the claim at the first
+  newline, so the archive held "The default install is 216 MB and a" and the
+  rest of the fact with it. A statement is now read as a whole: a bullet, a
+  numbered item and a `Key: Value` line each run to the end of their
+  continuation lines, and the claim text and value are that statement with its
+  line breaks collapsed to single spaces. The evidence quote is the raw slice,
+  line breaks and indentation intact, because evidence has to be verifiable
+  against the file byte for byte. The chunker cuts on the same boundaries the
+  extractor reads on, so a statement is never split across two chunks, which
+  would leave its claim with no quotable evidence at all. A re-sync of a corpus
+  ingested before this change re-reads it: the version fingerprint covers the
+  extracted claims, not only the file's bytes, so 67 of 78 files were
+  re-ingested even though none of them had changed.
+- **A response of three claims reported a margin of `score - 0.0`.**
+  The shortlist was the top of the whole ranking, filtered to the claims the
+  response actually carried. When the two keys above the response's own were
+  not in the response, the shortlist was left with one entry, and one entry has
+  no runner-up, so the margin came out as the score itself and the answer was
+  called clear. The shortlist is now the claims that were returned, in score
+  order, and the margin is measured against the runner-up the caller can
+  actually see.
+- **The flight recorder recorded one claim id beside a response that
+  displayed three.** It recorded the ranking's shortlist, which carries one id
+  per key and is not the set of claims the caller was shown. A verdict filed
+  against the answer was therefore graded against a claim the caller never
+  saw. The row now carries the ids of the claims that were returned.
+- **A question about a subject the corpus does not have was answered with
+  claims about the project's own name.** "How is Kafka configured in Mind
+  Palace?" matched on "Mind" and "Palace", which are in a sixth of the
+  corpus's claims, and returned three claims about the project's portability.
+  The relevance gate now discounts the corpus's own vocabulary and the verbs
+  that name an action rather than a subject, and a question whose subject the
+  corpus's best answer is not about abstains instead of answering.
+- **Every command asked the Hub about a model it already had.** The ONNX
+  loader fetched the model file and the tokenizer over HTTPS on every
+  invocation, which cost two round trips and brought back the Hub's
+  "you are sending unauthenticated requests" notice on stderr. Both files are
+  now resolved from the local cache first, and the network is the fallback. A
+  warm cache makes no request at all, prints no notice, and takes about half
+  the time.
 - **A refused database connection bypassed the CLI's failure handling.**
   `MindPalace(...)` connects to the database in its constructor, and
   `ingest-repo` built its client *outside* the `try` block that turns failures

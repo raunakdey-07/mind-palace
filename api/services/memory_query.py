@@ -186,14 +186,27 @@ def adjudicate(
     from api.services.memory import _canonical
 
     ranked = sorted(scored.items(), key=lambda item: (-item[1], item[0]))
+    # The shortlist is what the response returned, in score order -- not the top
+    # of the whole ranking. Two things follow from that, and both were wrong
+    # before.
+    #
+    # A key the caller cannot see is not a competitor it can adjudicate
+    # against, so a key that is not in the response is not listed.
+    #
+    # A key the caller CAN see, but that the global ranking put outside the top
+    # three, is a competitor the margin has to describe. Taking the global top
+    # three first and then filtering it to the response produced a shortlist of
+    # one for a response of three, and a margin of `score - 0.0` -- a number
+    # that reads like a decisive win over a field that was never in the
+    # ranking.
+    returned = {c.key for c in _claims(result)}
+    shortlist = [entry for entry in ranked if entry[0] in returned][:CANDIDATE_LIMIT]
     # Only claims the response can actually vouch for. A candidate the caller
     # cannot check the source of is worse than no candidate.
-    shortlist = ranked[:CANDIDATE_LIMIT]
     live = {key: [c for c in _claims(result) if c.key == key] for key, _score in shortlist}
-    # A key with no claim in the response cannot be shown to the caller, so it is
-    # not a competitor they can adjudicate against and the margin must not be
-    # quoted against it. `vouchable` is the shortlist the response can back up.
-    vouchable = [entry for entry in shortlist if live.get(entry[0])]
+    # `vouchable` is the shortlist the response can back up. Every key in it is
+    # in the response by construction, so it is the shortlist itself.
+    vouchable = list(shortlist)
     if not vouchable:
         return
     # Which one the caller reads first, and which pair the margin describes, are

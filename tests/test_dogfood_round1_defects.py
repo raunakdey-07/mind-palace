@@ -25,6 +25,7 @@ from __future__ import annotations
 import socket
 from datetime import datetime, timezone
 from math import sqrt
+from uuid import uuid4
 
 import pytest
 
@@ -201,7 +202,7 @@ async def test_a_resync_after_the_extractor_changes_updates_the_claims(monkeypat
     re-sync sees the difference and re-reads the document.
     """
     from api.services import markdown_claims
-    from api.services.corpora import DEFAULT_CORPUS_ID
+    from api.services.corpora import create_corpus
     from api.services.db import session_scope
     from api.services.ingestion import IngestionService
 
@@ -209,8 +210,16 @@ async def test_a_resync_after_the_extractor_changes_updates_the_claims(monkeypat
     path = "test/dogfood-resync.md"
     service = IngestionService()
 
+    # A corpus of its own. The default corpus is shared, and a corpus that
+    # holds memory history routes ingestion down a different path, which is
+    # another test's premise.
+    name = "dogfood-resync-" + uuid4().hex[:8]
     async with session_scope() as db:
-        first = await service._ingest_content(db, body, path, DEFAULT_CORPUS_ID)
+        corpus = await create_corpus(db, name, "dogfood resync")
+    corpus_id = corpus["id"]
+
+    async with session_scope() as db:
+        first = await service._ingest_content(db, body, path, corpus_id)
     assert first["success"]
     assert first.get("event") != "UNCHANGED"
 
@@ -236,7 +245,7 @@ async def test_a_resync_after_the_extractor_changes_updates_the_claims(monkeypat
 
     monkeypatch.setattr(markdown_claims, "claims_for", other)
     async with session_scope() as db:
-        second = await service._ingest_content(db, body, path, DEFAULT_CORPUS_ID)
+        second = await service._ingest_content(db, body, path, corpus_id)
     assert second["success"]
     assert second.get("event") != "UNCHANGED", "the unchanged file was skipped"
 

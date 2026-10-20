@@ -69,6 +69,10 @@ class SyncSummary:
     deleted: int = 0
     failed: int = 0
     chunk_count: int = 0
+    #: Claims the corpus holds after the sync. A document that produced no
+    #: claims is a document that contributes nothing to memory, and a sync
+    #: report that counts only chunks cannot say so.
+    claim_count: int = 0
     duration_ms: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -922,6 +926,7 @@ class MindPalace:
             deleted=result["deleted"],
             failed=result["failed"],
             chunk_count=result["chunk_count"],
+            claim_count=result.get("claim_count", 0),
             duration_ms=result["duration_ms"],
             errors=result.get("errors", []),
         )

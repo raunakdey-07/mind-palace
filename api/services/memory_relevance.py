@@ -81,6 +81,13 @@ CANDIDATE_LIMIT = 3
 #: have, which lifts rank 1 to 129/175 without moving k >= 2. It does not change
 #: this threshold: a claim promoted by scope is still a claim the scorer could not
 #: separate, and reporting that as confident would be a lie with a number on it.
+#:
+#: The gap this threshold is compared against is measured on the ordering score,
+#: because that is the score the candidate list shows and the one the CLI prints
+#: beside the banner that calls it a near-tie. The ordering score carries the
+#: coverage weight, so it runs above the raw cosine and its gaps run wider: the
+#: same 0.10 is a tighter condition than it was on the cosine, and a rank 1 that
+#: answers more of the question is allowed to be a clear winner on that scale.
 DEFAULT_MARGIN = 0.10
 
 #: How far above `minimum` still counts as "near the floor".

@@ -212,6 +212,61 @@ Memory Pack version changed, and no benchmark input was touched.
   corpus create` and `mindpalace credential issue` commands, the demo connects to
   `MIND_PALACE_URL`, and the suite starts a real Mind Palace on a real socket for
   it to talk to. There is no exception list any more.
+- **A Markdown table was invisible to `recall`.** The primary metrics in a
+  benchmark table are exactly the numbers a reader asks for, and the extractor
+  skipped every line that opened with a pipe. `docs/runtime.md` holds the
+  `sentence-transformers` against `onnxruntime` import and recall times; the
+  `cv-embed` performance report holds the bundle sizes and the latency
+  benchmarks. A table is now read: the header row names the columns, the
+  separator under it is what makes it a table, and each data row becomes one
+  claim -- the row's label followed by `<Column Header>: <Cell Value>` pairs. The
+  evidence is the row exactly as the document wrote it, so it is findable byte
+  for byte, and the chunker puts that reading beside the row so the claim's own
+  wording is in the chunk the archive quotes it from. A table too long for one
+  chunk is split by row and every chunk carries the header.
+- **A supersession reference that named nothing was written anyway.**
+  `mindpalace remember --supersedes <id>` with an id that no live claim carried
+  wrote the new claim and left the old one standing, so the archive held two
+  live claims about the same thing and the caller was told nothing. The write
+  is refused now, and the refusal names the reference that failed. The same
+  reference in a document -- `supersedes: <id>` in frontmatter -- stays a
+  warning, because a repository mid-migration is full of references to documents
+  that have not been written yet.
+- **The id `recall` prints was not an id the archive accepted.** `recall` shows
+  twelve characters of a sixty-four character id and tells the caller to use it,
+  and a document that named those twelve characters named nothing: the
+  reference matched only whole claim keys and whole paths. A hex prefix of
+  eight to sixty-four characters now matches the active claims, and more than
+  one match is refused rather than resolved by taking the first.
+- **`mindpalace remember --file` dropped `--supersedes` on the floor.** The
+  file branch of `remember` called the writer without the supersession
+  argument, so the write succeeded, printed `Remembered.`, and left the claim it
+  was meant to retire standing. The flag is passed through now.
+- **The CLI called two claims "almost the same" and printed a fifth apart.**
+  The margin was the raw-cosine difference while the candidate scores beside it
+  were the coverage-adjusted ones, so the banner said "two claims score almost
+  the same" beside 0.755 and 0.556 -- a gap of 0.199. The margin is measured on
+  the scale the candidate list shows, and a response of one claim is measured
+  against the runner-up in the ranking rather than against `0.0`, which read
+  like a decisive win over a field that was never there. When the near-tie is
+  what decides the verdict, the competitor is listed with it: a near-tie the
+  reader is not shown is a near-tie they cannot adjudicate.
+- **A history read that found claims said `abstained`.** The status is the one
+  word on the wire that says nothing was found, and a history read that
+  returned claims and events left it at its default. It says `confident` now,
+  and `abstained` only when the read found nothing.
+- **An ingest report counted chunks and never said how many claims the corpus
+  ended up with.** A document that produces no claims contributes nothing to
+  memory, and a report that cannot say so cannot be read as one. The sync
+  summary carries the claim count.
+- **Ingesting a repository spent most of its time on padding.** The embedding
+  session was already batched, but a batch is padded to its longest member, and
+  the batches were the ones the reader happened to produce. Text is now sorted
+  by length and batched with its own kind, which is the difference between
+  17.5 s and 8.5 s over 1,429 texts from a seven-file repository. The vectors
+  are the same either way: the mask zeroes the padding and the pooling divides
+  by the unmasked length, and the largest difference measured across the
+  strategies was 0.0.
 
 ### Changed
 

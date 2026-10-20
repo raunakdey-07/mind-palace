@@ -14,104 +14,17 @@ schema the product actually ships with, including the `011` trigger that makes a
 cross-document edge legal at all.
 """
 
-import hashlib
 import os
-from types import SimpleNamespace
-from uuid import uuid4
 
 import pytest
-from alembic.migration import MigrationContext
-from alembic.operations import Operations
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from api.models.memory import MemoryRequest
 from api.services import ingestion as ingestion_service
-from api.services import remember as remember_service
 from api.services.memory import _active_claims
 from api.services.memory_public import execute_in_session
 from api.services.remember import related_active, remember
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-@pytest.fixture
-async def store(monkeypatch):
-    """A real corpus on the real schema, in a rolled-back transaction.
-
-    Same shape as the golden-path fixture: the service keeps its real transaction
-    ownership and only the connection belongs to the test.
-    """
-    url = os.getenv("MEMORY_TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if not url:
-        pytest.skip("set MEMORY_TEST_DATABASE_URL or DATABASE_URL for PostgreSQL tests")
-    url = (
-        url.replace("postgresql+psycopg://", "postgresql+asyncpg://")
-        .replace("postgresql+psycopg2://", "postgresql+asyncpg://")
-        .replace("postgresql://", "postgresql+asyncpg://")
-    )
-    engine = create_async_engine(url, poolclass=NullPool)
-    schema = "xdoc_" + uuid4().hex
-    corpus = hashlib.sha256(uuid4().bytes).hexdigest()
-    try:
-        async with engine.connect() as conn:
-            outer = await conn.begin()
-            try:
-                await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
-                await conn.execute(text(f'SET LOCAL search_path TO "{schema}", public'))
-
-                def migrate(sync_conn):
-                    import importlib.util
-                    from pathlib import Path
-
-                    for path in sorted((Path(ROOT) / "migrations" / "versions").glob("*.py")):
-                        spec = importlib.util.spec_from_file_location(path.stem, path)
-                        module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
-                        with Operations.context(MigrationContext.configure(sync_conn)):
-                            module.upgrade()
-
-                await conn.run_sync(migrate)
-                await conn.execute(
-                    text("INSERT INTO corpora(id, name) VALUES (:id, :name)"),
-                    {"id": corpus, "name": schema},
-                )
-                async with AsyncSession(
-                    bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
-                ) as db:
-
-                    class SavepointSession:
-                        def begin(self):
-                            return db.begin_nested()
-
-                        def __getattr__(self, name):
-                            return getattr(db, name)
-
-                    from contextlib import asynccontextmanager
-
-                    @asynccontextmanager
-                    async def sessions():
-                        yield SavepointSession()
-
-                    # `related_active` opens its own `session_scope`, imported
-                    # inside the function, so the patch has to be on the module it
-                    # imports from rather than on `remember` itself.
-                    from api.services import db as db_module
-
-                    for module in (ingestion_service, remember_service, db_module):
-                        if hasattr(module, "session_scope"):
-                            monkeypatch.setattr(module, "session_scope", sessions)
-
-                    async def resolve(name, corpus_id=None):
-                        return corpus
-
-                    monkeypatch.setattr(remember_service, "ensure_corpus", resolve)
-                    yield SimpleNamespace(db=db, corpus=corpus, name=schema)
-            finally:
-                await outer.rollback()
-    finally:
-        await engine.dispose()
 
 
 async def live(store):

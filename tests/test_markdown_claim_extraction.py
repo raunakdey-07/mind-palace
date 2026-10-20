@@ -120,17 +120,49 @@ def test_unchanged_text_produces_identical_claims():
     assert extract(ADR, chunks_for(ADR))[0] == extract(ADR, chunks_for(ADR))[0]
 
 
-def test_code_tables_and_quotes_are_not_claims():
+def test_code_and_quotes_are_not_claims():
     body = (
         "# T\n\n"
         "- A real decision about the datastore.\n\n"
         "```\n"
         "- not a claim, it is an example command\n"
         "```\n\n"
-        "| col | col |\n|---|---|\n| - not a claim | x |\n\n"
         "> - not a claim either\n\n"
         "    - indented code, not a claim\n"
     )  # noqa: E501
+    found, _ = extract(body, chunks_for(body))
+    assert [c["claim"] for c in found] == ["A real decision about the datastore."]
+
+
+def test_a_table_row_is_a_claim_and_says_which_column_it_is():
+    """A row of pipes is not a sentence. The column name is what makes it a fact."""
+    body = (
+        "# T\n\n"
+        "| | `sentence-transformers` | onnxruntime |\n"
+        "|---|---|---|\n"
+        "| `import` | 6.15 s | 0.40 s |\n"
+    )
+    found, _ = extract(body, chunks_for(body))
+    assert [c["claim"] for c in found] == [
+        "`import`: `sentence-transformers`: 6.15 s; onnxruntime: 0.40 s"
+    ]
+
+
+def test_a_table_quote_is_the_row_the_document_wrote():
+    """The evidence has to be findable in the file byte for byte."""
+    body = (
+        "# T\n\n"
+        "| | `sentence-transformers` | onnxruntime |\n"
+        "|---|---|---|\n"
+        "| `import` | 6.15 s | 0.40 s |\n"
+    )
+    found, _ = extract(body, chunks_for(body))
+    assert [c["evidence"] for c in found] == ["| `import` | 6.15 s | 0.40 s |"]
+
+
+def test_a_line_that_only_holds_a_pipe_is_not_a_table():
+    """Without the separator row under it, a pipe is a paragraph that holds one."""
+    body = "# T\n\n- A real decision about the datastore.\n\n| a | b |\n"
     found, _ = extract(body, chunks_for(body))
     assert [c["claim"] for c in found] == ["A real decision about the datastore."]
 

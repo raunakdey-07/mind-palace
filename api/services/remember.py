@@ -104,6 +104,16 @@ def _hint_row(claim, score, channel) -> dict:
     }
 
 
+def _names(claim_id: str, references: set[str]) -> bool:
+    """Whether one of the references names this claim.
+
+    A reference may be a full claim id or the prefix of one -- the twelve
+    characters `recall` prints -- and a prefix that names a claim is the same
+    claim.
+    """
+    return any(claim_id == reference or claim_id.startswith(reference) for reference in references)
+
+
 async def related_active(
     statement: str, corpus_id: str, *, exclude_ids: set[str] | None = None
 ) -> list[dict]:
@@ -165,8 +175,10 @@ async def related_active(
     total = len(active)
     for claim in active:
         # A claim the caller already named is settled. Suggesting it back would be
-        # telling them to do the thing they just did.
-        if exclude_ids and claim["id"] in exclude_ids:
+        # telling them to do the thing they just did. The name may be a prefix
+        # of the id -- that is the form `recall` prints -- so the comparison is
+        # a prefix comparison.
+        if exclude_ids and _names(claim["id"], exclude_ids):
             continue
         overlap = similarity.weighted_overlap(
             words, similarity.terms(claim["claim"]), frequencies, total
@@ -220,7 +232,7 @@ async def _vector_channel(memory, db, statement, corpus_id, exclude_ids) -> dict
     threshold = _vector_threshold()
     out: dict[str, dict] = {}
     for row in rows:
-        if exclude_ids and row["id"] in exclude_ids:
+        if exclude_ids and _names(row["id"], exclude_ids):
             continue
         if row["similarity"] < threshold:
             continue
@@ -443,7 +455,14 @@ async def remember(
                 # An authored document: keep every claim it declares, under a
                 # project-relative path so the stored identity does not carry the
                 # absolute layout of the machine that happened to import it.
-                return await _write(content, document_path, corpus_id, key=None)
+                return await _write(
+                    content,
+                    document_path,
+                    corpus_id,
+                    key=None,
+                    supersedes_claim_id=supersedes_claim_id,
+                    topic_key=topic_key,
+                )
             structural, _warnings = (
                 extract(
                     body,
@@ -466,7 +485,14 @@ async def remember(
                 # structure, so it is archived as a document with those claims
                 # rather than collapsed into one statement that says nothing the
                 # file did not already say in more detail.
-                return await _write(content, document_path, corpus_id, key=None)
+                return await _write(
+                    content,
+                    document_path,
+                    corpus_id,
+                    key=None,
+                    supersedes_claim_id=supersedes_claim_id,
+                    topic_key=topic_key,
+                )
             statement = content
 
         if statement is None:
@@ -570,11 +596,20 @@ async def _write(
     download. Ranking degrades to lexical; the claim and its evidence are recorded
     either way, and `mindpalace reindex` fills the vectors in later.
     """
-    written = await IngestionService(memory_enabled=True, require_embeddings=False).ingest_file(
-        content=content,
-        path=path,
-        corpus_id=corpus_id,
-        supersedes_claim_id=supersedes_claim_id,
-        topic_key=topic_key,
-    )
+    from api.services.memory import SupersessionTargetUnresolved
+
+    try:
+        written = await IngestionService(memory_enabled=True, require_embeddings=False).ingest_file(
+            content=content,
+            path=path,
+            corpus_id=corpus_id,
+            supersedes_claim_id=supersedes_claim_id,
+            topic_key=topic_key,
+        )
+    except SupersessionTargetUnresolved as exc:
+        # A caller who named a claim is retiring that claim. If the reference
+        # names nothing, or names two, the write is refused and the error says
+        # which reference failed -- rather than landing a claim with no edge,
+        # which reads as a fresh fact and leaves the old one standing.
+        raise RememberError(str(exc)) from exc
     return {"key": key, "path": path, **written}

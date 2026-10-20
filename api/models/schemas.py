@@ -178,6 +178,10 @@ class SyncResponse(BaseModel):
     deleted: int = 0
     failed: int = 0
     chunk_count: int = 0
+    #: Claims the corpus holds after the sync. A document that produced no
+    #: claims contributes nothing to memory, and a report that counts only
+    #: chunks cannot say so.
+    claim_count: int = 0
     duration_ms: int = 0
     message: str = ""
     errors: list[str] = Field(default_factory=list)

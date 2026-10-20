@@ -277,6 +277,14 @@ def project(
         for g in connected
     ]
     _attach(response, evidence)
+    if operation in {"history", "pack", "changes"}:
+        # A projection that came back with claims or events found something.
+        # The default status says "abstained", which is the one word on the wire
+        # that means nothing was found, so a caller reading the status instead
+        # of the claims is told the opposite of what happened.
+        response.match_status = (
+            "confident" if (response.changes or _claims(response)) else "abstained"
+        )
     return response
 
 

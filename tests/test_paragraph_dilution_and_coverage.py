@@ -22,6 +22,8 @@ a question whose subject the corpus's best answer is not about abstains too.
 
 from __future__ import annotations
 
+import pytest
+
 from api.models.memory import Claim, MemoryRequest
 from api.services import claim_embeddings, memory_relevance
 
@@ -76,7 +78,11 @@ def test_the_lead_is_the_first_line_whatever_the_claim_says():
 
 
 class FakeEmbedder:
-    """A prescribed score per text, and the rest of them at `default`."""
+    """A prescribed score per text, and the rest of them at `default`.
+
+    The question is the first text and is scored against [1, 0], so the score
+    of a claim is the number this hands back.
+    """
 
     def __init__(self, scores=None, default=0.5):
         self.scores = scores or {}
@@ -85,11 +91,8 @@ class FakeEmbedder:
 
     def embed(self, texts):
         self.calls.append(list(texts))
-        out = []
-        for text in texts:
-            score = self.scores.get(text, self.default)
-            out.append([score, (1.0 - score * score) ** 0.5])
-        return out
+        scores = [self.scores.get(text, self.default) for text in texts[1:]]
+        return [[1.0, 0.0]] + [[score, (1.0 - score * score) ** 0.5] for score in scores]
 
 
 def _response(claims):
@@ -144,16 +147,16 @@ def test_a_claim_that_answers_more_of_the_question_ranks_above_a_fragment():
     )
     embedder = FakeEmbedder(
         scores={
-            "embedding suite: `7 passed`; report.embedding docs/security.md": 0.51,
+            "embedding suite: `7 passed`; report.embedding docs/security.md": 0.4285,
             (
                 "A machine that will not take a model at all. The default install is 216 MB and a"
                 " runtime.install docs/security.md"
-            ): 0.42,
+            ): 0.4107,
         },
-        default=0.42,
+        default=0.4107,
     )
     order = _order(question, [fragment, answer], embedder)
-    assert list(order) == [
+    assert [key for key, _ in sorted(order.items(), key=lambda item: -item[1])] == [
         "runtime.install",
         "report.embedding",
     ], "the claim that answers two of the question's concepts comes first"
@@ -175,6 +178,53 @@ def test_a_question_about_a_subject_the_corpus_never_used_abstains():
     embedder = FakeEmbedder(default=0.55)
     scores = _order("How does Mind Palace use Kubernetes?", claims, embedder)
     assert scores == {}
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What is Kubernetes?",
+        "Does it use Kafka?",
+        "Kubernetes",
+    ],
+)
+def test_a_single_content_term_question_about_an_absent_subject_abstains(question):
+    """One content word, and the corpus has never used it.
+
+    "What is Kubernetes?" and "Does it use Kafka?" leave a single content word
+    after the stopwords go, and that word is in no claim. There is nothing to
+    answer the question with, and the answer is an abstention rather than a
+    claim about whatever the corpus happens to talk about.
+
+    The score does not rescue it: the corpus's best answer here is below the
+    strong bar, so the corpus is not answering the question well either.
+    """
+    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims.append(_claim("other", "corpus.other", "The runtime keeps its own state directory"))
+    embedder = FakeEmbedder(default=0.30)
+    scores = _order(question, claims, embedder)
+    assert scores == {}, "one absent content word is enough to abstain"
+
+
+def test_a_corpus_that_answers_strongly_is_not_an_abstention():
+    """The lexical absence of the subject word does not overrule a good answer.
+
+    "Which architecture decisions apply?" names a word the corpus never uses,
+    and the corpus's own claims are the architecture decisions. Answering it
+    with them is right, and abstaining would be the lexical rule overruling a
+    good answer.
+    """
+    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims.append(
+        _claim(
+            "architecture",
+            "corpus.architecture",
+            "The architecture decisions are recorded in the decision log and nowhere else",
+        )
+    )
+    embedder = FakeEmbedder(default=0.90)
+    scores = _order("Which architecture decisions apply?", claims, embedder)
+    assert scores, "a corpus that answers strongly is not an abstention"
 
 
 def test_a_question_about_a_subject_the_corpus_has_still_answers():

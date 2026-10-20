@@ -366,7 +366,11 @@ def test_select_relevance_floor_and_top_score_band(scores, expected):
     claims = [make_claim(cid, cid, key=cid) for cid in "abc"]
     full = make_response(current_memories=claims)
     fake = FakeEmbedder({representation(c): score for c, score in zip(claims, scores)})
-    request = MemoryRequest(corpus="test", query="question")
+    # The query is a stopword so that it has no subject words at all. This test
+    # is about the numeric floor and the numeric band, and a query whose every
+    # content word is in no claim is a different question: the absent-subject
+    # rule abstains on it.
+    request = MemoryRequest(corpus="test", query="a")
     result = memory_query.select(full, request, memory_query.interpret(request), fake)
     assert {c.id for c in result.current_memories} == expected
     public.assert_grounded(result)

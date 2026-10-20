@@ -179,7 +179,9 @@ def _subject_is_not_the_answer(
     return 0.0 < best_subject < best_overall * SUBJECT_RATIO
 
 
-def _subject_is_absent(subject_terms: set[str], counts: dict[str, int]) -> bool:
+def _subject_is_absent(
+    subject_terms: set[str], counts: dict[str, int], best: float, strong: float
+) -> bool:
     """Whether the corpus has none of the question's subject words.
 
     "How does Mind Palace use Kubernetes?" names one subject, and the corpus
@@ -190,8 +192,15 @@ def _subject_is_absent(subject_terms: set[str], counts: dict[str, int]) -> bool:
     present is what the other rules are for: "the earlier job queue" and "the
     Orders Service" name subjects the corpus has claims about, and the questions
     that mention them still have answers.
+
+    A corpus that answers the question strongly is answering it whatever word
+    it used. "Which architecture decisions apply?" names a word the corpus never
+    uses, and the corpus's own claims are the architecture decisions; abstaining
+    there would be the lexical rule overruling a good answer.
     """
     if not subject_terms:
+        return False
+    if best >= strong:
         return False
     return not any(counts.get(token) for token in subject_terms)
 
@@ -693,7 +702,7 @@ def relevance(
                     adjusted = value * (1.0 + COVERAGE_WEIGHT * coverage)
                     ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), adjusted)
         if subject_terms[i] and (
-            _subject_is_absent(subject_terms[i], counts)
+            _subject_is_absent(subject_terms[i], counts, best_overall, policy.strong)
             or _subject_is_not_the_answer(
                 best_subject, best_overall, subject_claims, len(documents)
             )

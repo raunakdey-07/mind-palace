@@ -166,8 +166,8 @@ def boilerplate_tokens(documents: list[frozenset[str]], wanted: frozenset[str]) 
     set, the tokens that are in enough claims to be worthless as evidence.
 
     Only `wanted` is counted. A token the question does not use cannot be the
-    one it matched on, and counting every token of every claim is the second
-    most expensive thing this function does.
+    one it matched on, and counting every token of every claim costs more than
+    the counting this gate needs.
     """
     if not documents or not wanted:
         return frozenset()
@@ -486,11 +486,10 @@ def relevance(
     # The words in the question that name a subject: neither the corpus's own
     # vocabulary nor a verb that names an action.
     #
-    # "How is Kafka configured in Mind Palace?" against a corpus that never
-    # mentions Kafka is not a question about the project. The words that match
-    # are "Mind" and "Palace", which are in the project's own name and in a
-    # sixth of its claims, and the claims they reach say nothing about Kafka.
-    # The subject of the question is the one word the corpus does not have.
+    # "How is Kafka configured in Mind Palace?" is not a question about the
+    # project. The words that match are "Mind" and "Palace", which are in the
+    # project's own name and in a seventh of its claims, and the claims they
+    # reach say nothing about Kafka. The subject is the one word left.
     asked = frozenset().union(*question_terms) if question_terms else frozenset()
     boilerplate = boilerplate_tokens(documents, asked)
     subject_terms = [

@@ -388,10 +388,14 @@ def _statement(lines: list[tuple[int, str]]) -> tuple[str, str, str] | None:
     """The `(claim, value, raw)` of one logical statement, or None.
 
     `lines` is the statement's first line followed by its continuation lines.
-    The claim and the value are the statement with its line breaks collapsed to
-    single spaces; `raw` is the verbatim slice, with the line breaks and the
-    indentation left in place, because evidence has to be verifiable against
-    the file byte for byte.
+
+    `claim` is the statement as the writer wrote it, with the source's line
+    breaks and indentation intact, because the first line is where the writer
+    put the topic and the relevance gate embeds that line rather than the whole
+    paragraph. `value` is the same statement with its line breaks collapsed to
+    single spaces, because a value is a short form and a short form does not
+    carry the source's layout. `raw` is the verbatim slice, which is the
+    evidence.
 
     None means the statement is not a claim: a declaration, or a line that is
     not shaped like one.
@@ -417,17 +421,17 @@ def _statement(lines: list[tuple[int, str]]) -> tuple[str, str, str] | None:
     pieces = [line[offset:] if index == 0 else line for index, (_n, line) in enumerate(lines)]
     raw = "\n".join(pieces).rstrip()
     normalized = [" ".join(piece.split()) for piece in pieces]
-    claim = " ".join(piece for piece in normalized if piece)
-    if not claim:
+    flat = " ".join(piece for piece in normalized if piece)
+    if not flat:
         return None
     if field is None:
-        return claim, claim, raw
+        return raw, flat, raw
     # `Key: Value`: the value is the statement, the key says which one it is.
     head = normalized[0]
     value = head.split(": ", 1)[1] if ": " in head else head
     tail = [piece for piece in normalized[1:] if piece]
     value = " ".join([value] + tail) if tail else value
-    return claim, value, raw
+    return raw, value, raw
 
 
 def _limit_quote(quote: str) -> str:

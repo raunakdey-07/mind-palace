@@ -58,7 +58,27 @@ def representation(claim) -> str:
 
 
 def representation_of(claim_text: str, key: str, path: str) -> str:
-    return f"{claim_text} {key} {path}"
+    return f"{lead_clause(claim_text)} {key} {path}"
+
+
+def lead_clause(claim_text: str) -> str:
+    """The topical part of a claim: its first source line.
+
+    A statement wrapped over three lines is one sentence, and the mean-pooled
+    vector of the whole thing is the mean of all three lines' words. The
+    continuation clauses are detail, and averaging them in dilutes the claim's
+    own topic: the row-level-security claim in `docs/security.md` scored 0.530
+    on "How are tenants isolated in the database?" as the line the writer
+    wrapped it in, and 0.465 as the whole paragraph.
+
+    The lead is the first line of the statement as it was written, because that
+    is where the writer put the topic. A claim that fits on one line is its
+    own lead, and the representation of every authored claim is unchanged.
+    """
+    stripped = claim_text.strip()
+    if "\n" not in stripped:
+        return stripped
+    return stripped.split("\n", 1)[0].rstrip()
 
 
 def representation_hash(text_value: str) -> str:

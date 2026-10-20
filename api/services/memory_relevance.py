@@ -14,6 +14,7 @@ from operator import mul
 from typing import Any
 
 from api.models.memory import MemoryRequest, MemoryResponse
+from api.services import similarity
 
 # Function/temporal words are not independent evidence of a matching subject.
 STOP = frozenset("""a an the of for to in on at by from with without and or as well
@@ -102,7 +103,13 @@ COMMON_TOKEN_SHARE = 0.065
 #: corpus's own vocabulary at all. A corpus of twenty claims has none: a word
 #: in two of them is evidence, not noise, and a threshold that said otherwise
 #: would turn ordinary questions into abstentions.
-COMMON_TOKEN_FLOOR = 8
+#:
+#: Twelve, and not two. A word in a ninth of the corpus is still evidence:
+#: "the Orders Service" is a subject the corpus has claims about, and a
+#: question that names it has found its subject. A word in most of the corpus
+#: is the corpus's own name, and a question that names only that has not found
+#: anything.
+COMMON_TOKEN_FLOOR = 12
 
 #: How close the best claim that names the subject has to be to the best claim
 #: overall. A question whose subject the corpus barely mentions is a question
@@ -125,6 +132,21 @@ SUBJECT_SHARE = 0.01
 #: says "configured" has not been asked about anything.
 GENERIC_QUERY_TERMS = frozenset("""configur configure configured work setup support run
     """.split())
+
+#: How much a claim's coverage of the question's concepts is worth when the
+#: claims are ordered against each other.
+#:
+#: A claim that answers two of the question's five concepts is a better answer
+#: than a four-word log line that shares one of them, even when the log line
+#: scores higher on the embedding. "embedding suite: `7 passed`;" shares one
+#: word with "How large is the default install and which embedding backend does
+#: it use?"; the runtime.md claim about the 216 MB install carries "default"
+#: and "install".
+#:
+#: The multiplier is applied to the ordering score and never to the acceptance
+#: test. The thresholds are measured on the raw cosine, and moving the scale
+#: they sit on would change what the gate means.
+COVERAGE_WEIGHT = 1.0
 
 
 def _subject_is_not_the_answer(
@@ -157,6 +179,23 @@ def _subject_is_not_the_answer(
     return 0.0 < best_subject < best_overall * SUBJECT_RATIO
 
 
+def _subject_is_absent(subject_terms: set[str], counts: dict[str, int]) -> bool:
+    """Whether the corpus has none of the question's subject words.
+
+    "How does Mind Palace use Kubernetes?" names one subject, and the corpus
+    has never used the word. There is nothing to answer it with, and the
+    question abstains.
+
+    The condition is that *every* subject word is absent. One of them being
+    present is what the other rules are for: "the earlier job queue" and "the
+    Orders Service" name subjects the corpus has claims about, and the questions
+    that mention them still have answers.
+    """
+    if not subject_terms:
+        return False
+    return not any(counts.get(token) for token in subject_terms)
+
+
 def boilerplate_tokens(documents: list[frozenset[str]], wanted: frozenset[str]) -> frozenset[str]:
     """The tokens among `wanted` that so many claims carry that they cannot tell one from another.
 
@@ -177,6 +216,31 @@ def boilerplate_tokens(documents: list[frozenset[str]], wanted: frozenset[str]) 
             counts[token] += 1
     floor = max(COMMON_TOKEN_FLOOR, int(len(documents) * COMMON_TOKEN_SHARE))
     return frozenset(token for token, count in counts.items() if count >= floor)
+
+
+def question_weights(
+    documents: list[frozenset[str]], question_terms: list[set[str]]
+) -> tuple[dict[str, int], list[dict[str, float]], list[float]]:
+    """How rare each of the question's words is, and what each is worth.
+
+    The count is how many of the candidates carry the word, and the weight is
+    the inverse of it: a word in most of the corpus cannot tell one claim from
+    another, so a claim carrying it has earned less than a claim carrying a
+    word the corpus rarely uses.
+    """
+    wanted = frozenset().union(*question_terms) if question_terms else frozenset()
+    counts = {token: 0 for token in wanted}
+    for document in documents:
+        for token in counts.keys() & document:
+            counts[token] += 1
+    total = len(documents)
+    weights: list[dict[str, float]] = []
+    totals: list[float] = []
+    for terms in question_terms:
+        per_topic = {token: similarity.idf(token, counts, total) for token in terms}
+        weights.append(per_topic)
+        totals.append(sum(per_topic.values()) or 1.0)
+    return counts, weights, totals
 
 
 def margin_threshold() -> float:
@@ -470,8 +534,18 @@ def relevance(
                 "scored": {},
             },
         )
+    # Two texts per claim, and they answer different questions.
+    #
+    # `representations` is what the model scores: the claim's lead, the heading
+    # it sits under, and where it came from. A statement the writer wrapped over
+    # three lines is one sentence, and averaging the continuation clauses in
+    # dilutes the claim's own topic.
+    #
+    # `documents` is the claim's whole vocabulary, and it is what the question
+    # is compared against: which of the question's words this claim actually
+    # contains, and how rare each of them is in the corpus.
     representations = [representation(claims[c]) for c in ids]
-    documents = [claim_terms(text) for text in representations]
+    documents = [claim_terms(f"{claims[c].claim} {claims[c].key} {claims[c].path}") for c in ids]
     # Terms occurring in every candidate (e.g. project name) cannot DISCRIMINATE
     # between candidates, so ranking is computed on documents with them removed.
     # They are not evidence that the question is off-topic, so the acceptance gate
@@ -490,8 +564,12 @@ def relevance(
     # project. The words that match are "Mind" and "Palace", which are in the
     # project's own name and in a seventh of its claims, and the claims they
     # reach say nothing about Kafka. The subject is the one word left.
-    asked = frozenset().union(*question_terms) if question_terms else frozenset()
-    boilerplate = boilerplate_tokens(documents, asked)
+    counts, weights, weight_totals = question_weights(documents, question_terms)
+    boilerplate = frozenset(
+        token
+        for token, count in counts.items()
+        if count >= max(COMMON_TOKEN_FLOOR, int(len(documents) * COMMON_TOKEN_SHARE))
+    )
     subject_terms = [
         question_terms[index] - boilerplate - GENERIC_QUERY_TERMS
         for index in range(len(interpreted.topics))
@@ -549,9 +627,11 @@ def relevance(
         return _dot_scalar(topic_vectors[i], cached[ids[position]])
 
     chosen = {}
+    ranked_scores: dict[str, float] = {}
     scored: dict[str, float] = {}
     for i in range(len(interpreted.topics)):
         by_key = {}
+        ranked_by_key: dict[str, float] = {}
         # The best score any claim reached for this topic, and the best score a
         # claim that names the subject reached. A question whose subject the
         # corpus barely mentions is a question the corpus cannot answer, however
@@ -599,8 +679,24 @@ def relevance(
                 )
             if accepted:
                 by_key[claim.key] = max(by_key.get(claim.key, -1), value)
-        if subject_terms[i] and _subject_is_not_the_answer(
-            best_subject, best_overall, subject_claims, len(documents)
+                # The ordering score. The cosine says how alike the claim and
+                # the question are; the coverage says how much of the question
+                # the claim actually answers. A four-word log line and a
+                # sentence that names two of the question's five concepts can
+                # score alike, and only one of them is an answer.
+                if lexical:
+                    # The lexical score is already a coverage measure.
+                    ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), value)
+                else:
+                    shared = question_terms[i] & documents[position]
+                    coverage = sum(weights[i][token] for token in shared) / weight_totals[i]
+                    adjusted = value * (1.0 + COVERAGE_WEIGHT * coverage)
+                    ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), adjusted)
+        if subject_terms[i] and (
+            _subject_is_absent(subject_terms[i], counts)
+            or _subject_is_not_the_answer(
+                best_subject, best_overall, subject_claims, len(documents)
+            )
         ):
             # The corpus's best answer to this question is about something else.
             # "How is Kafka configured in Mind Palace?" matched the corpus's own
@@ -608,11 +704,17 @@ def relevance(
             # Answering it with the claims that matched the project's name
             # would be answering a different question, so this topic contributes
             # nothing.
+            #
+            # The first branch is the same question asked about a subject the
+            # corpus has never used: "How does Mind Palace use Kubernetes?"
+            # There is nothing to answer it with.
             continue
         top = max(by_key.values(), default=0)
         for key, value in by_key.items():
             if value >= top * policy.relative:
-                chosen[key] = max(chosen.get(key, -1), value)
+                chosen[key] = max(chosen.get(key, -1), ranked_by_key.get(key, value))
+        for key, value in ranked_by_key.items():
+            ranked_scores[key] = max(ranked_scores.get(key, -1.0), value)
     return (
         chosen,
         interpreted,
@@ -625,5 +727,8 @@ def relevance(
             "claim_vectors_cached": 0 if lexical else len(ids) - len(missing),
             # The ungated per-key ranking, for the caller-facing near-tie signal.
             "scored": scored,
+            # The same ranking, ordered by how much of the question each claim
+            # answers. The shortlist the caller is shown is in this order.
+            "ranked": ranked_scores,
         },
     )

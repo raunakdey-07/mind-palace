@@ -135,6 +135,7 @@ def adjudicate(
     policy,
     *,
     dated: bool = False,
+    ranked: dict[str, float] | None = None,
 ) -> None:
     """Say how far the ranking can be trusted, and carry the near-misses with it.
 
@@ -185,7 +186,14 @@ def adjudicate(
 
     from api.services.memory import _canonical
 
-    ranked = sorted(scored.items(), key=lambda item: (-item[1], item[0]))
+    # The ranking order and the score it reports are two numbers, and the
+    # difference between them is the point of the change. `ranked` is the
+    # ordering score, which counts how much of the question a claim answers
+    # alongside how alike it is. `scored` is the raw cosine, which is what the
+    # margin is measured on: the thresholds were measured on that scale, and
+    # moving them would change what the gate means.
+    order = ranked if ranked is not None else scored
+    ordered = sorted(order.items(), key=lambda item: (-item[1], item[0]))
     # The shortlist is what the response returned, in score order -- not the top
     # of the whole ranking. Two things follow from that, and both were wrong
     # before.
@@ -200,7 +208,7 @@ def adjudicate(
     # that reads like a decisive win over a field that was never in the
     # ranking.
     returned = {c.key for c in _claims(result)}
-    shortlist = [entry for entry in ranked if entry[0] in returned][:CANDIDATE_LIMIT]
+    shortlist = [entry for entry in ordered if entry[0] in returned][:CANDIDATE_LIMIT]
     # Only claims the response can actually vouch for. A candidate the caller
     # cannot check the source of is worse than no candidate.
     live = {key: [c for c in _claims(result) if c.key == key] for key, _score in shortlist}
@@ -249,8 +257,16 @@ def adjudicate(
     # The margin describes the shortlist that was returned, not the whole ranking.
     # A key the caller cannot see is not a competitor it can adjudicate against,
     # and a margin quoted against one would describe a decision nobody is offered.
-    best = vouchable[0][1]
-    second = vouchable[1][1] if len(vouchable) > 1 else 0.0
+    #
+    # It is measured on the raw cosine, not on the ordering score. The ordering
+    # score counts how much of the question a claim answers; the margin says
+    # how far apart the two best claims are, and that is a question about the
+    # embedding alone. The two best are taken from the shortlist's raw values
+    # rather than from its order, so a claim that answers more of the question
+    # cannot report a negative margin.
+    raw_values = sorted((scored.get(key, value) for key, value in vouchable), reverse=True)
+    best = raw_values[0]
+    second = raw_values[1] if len(raw_values) > 1 else 0.0
     margin = best - second
     result.match_margin = round(margin, 6)
 
@@ -370,6 +386,7 @@ def select(
             counters.get("scored") or {},
             policy,
             dated=intent.as_of is not None or request.as_of is not None,
+            ranked=counters.get("ranked") or None,
         )
     return result
 

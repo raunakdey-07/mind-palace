@@ -22,7 +22,7 @@ from api.models.memory import (
     MemoryResponse,
     State,
 )
-from api.services import memory, memory_public, memory_query, memory_relevance
+from api.services import claim_embeddings, memory, memory_public, memory_query, memory_relevance
 
 try:
     from tests import test_memory_public as public
@@ -54,7 +54,7 @@ class FakeEmbedder:
 
 
 def representation(claim):
-    return f"{claim.claim} {claim.key} {claim.path}"
+    return claim_embeddings.representation_of(claim.claim, claim.key, claim.path)
 
 
 @pytest.fixture
@@ -530,6 +530,9 @@ async def test_lexical_scorer_never_embeds_and_reports_itself(offline_embedder):
         # product answers from; the difference between the two is the near-miss
         # `match_status` reports, and it is not derivable from `scores` alone.
         "scored": {"architecture.database": 1.0, "hr.payroll": 0.0},
+        # The same ranking in the order the shortlist is shown: the score and
+        # how much of the question the claim answers, together.
+        "ranked": {"architecture.database": 1.0},
     }
     assert scores == {"architecture.database": 1.0}
 

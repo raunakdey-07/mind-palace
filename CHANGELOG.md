@@ -46,6 +46,30 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Fixed
 
+- **A statement wrapped over three lines was embedded as three sentences' worth
+  of dilution.** The mean-pooled vector of a long statement is the mean of all
+  its words, and the continuation clauses are detail, so averaging them in
+  pulled the claim's own topic down. The row-level-security claim in
+  `docs/security.md` scored 0.530 on "How are tenants isolated in the
+  database?" as the line the writer wrapped it in, and 0.465 as the whole
+  paragraph, which put it outside the band the response is built from. A claim
+  is now embedded as its lead: the line the writer put the topic in, plus the
+  heading it sits under. The claim itself is still the whole statement, and
+  the answer still reads as the sentence the writer wrote.
+- **A four-word log line outranked the sentence that answered the question.**
+  "embedding suite: `7 passed`;" shares one word with "How large is the
+  default install and which embedding backend does it use?" and scored higher
+  on the embedding than the runtime.md claim about the 216 MB install, which
+  carries two of the question's five concepts. The order now counts how much
+  of the question a claim answers as well as how alike it is, weighted by how
+  rare each of the question's words is in the corpus. The acceptance test is
+  unchanged: the thresholds are measured on the raw cosine.
+- **A question about a subject the corpus has never used was answered from the
+  corpus's own vocabulary.** "How does Mind Palace use Kubernetes?" matched
+  "Mind" and "Palace" and returned claims about the project's portability. A
+  question whose subject words are all absent from the corpus abstains, and so
+  does a question whose subject is in the corpus but is not what the corpus's
+  best answer is about.
 - **A bullet wrapped over three lines was archived as its first line.**
   `docs/runtime.md` says the default install is 216 MB, and the sentence that
   says so runs over three lines. The extractor cut the claim at the first

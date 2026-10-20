@@ -510,13 +510,19 @@ def _logged_outcome(result) -> dict:
     read, and `abstained` means what it says: nothing came back. A non-ranked read
     that returned claims is recorded `confident`, which is the only other value
     the schema allows that is not a claim about a ranking that was never computed.
+
+    The ids are the claims that were returned, not the ranking's shortlist. The
+    two are not the same set: the shortlist carries one id per key, and a
+    response of three claims can rank behind two keys the caller never saw. A
+    row that said "one claim" beside a response that displayed three was a
+    recording of the ranking, not of the answer, and grading the answer from it
+    is grading the wrong thing.
     """
     claims = [
         *(result.current_memories or []),
         *(result.historical_memories or []),
         *(result.uncertain_memories or []),
     ]
-    ranked = [c.claim_ids[0] for c in (result.candidates or []) if c.claim_ids]
     status = result.match_status
     if status == "abstained" and (claims or result.changes):
         status = "confident"
@@ -524,5 +530,5 @@ def _logged_outcome(result) -> dict:
         "match_status": status,
         "match_margin": result.match_margin,
         "top_scores": [c.score for c in (result.candidates or [])],
-        "returned_claim_ids": ranked or [c.id for c in claims],
+        "returned_claim_ids": [c.id for c in claims],
     }

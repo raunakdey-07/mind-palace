@@ -152,6 +152,21 @@ def _timestamp(value, *, validity: bool = False) -> datetime | None:
     return value.astimezone(timezone.utc)
 
 
+def _says_what_the_document_says(claim_text: str, chunk_text: str) -> bool:
+    """Whether the claim reuses the chunk's own wording.
+
+    Where the writer put the line breaks is not a wording difference. A bullet
+    that is wrapped over three lines in the source is one statement, and the
+    structural extractor reads it as one statement with the breaks collapsed
+    to single spaces. The words and the punctuation still have to match the
+    chunk exactly: this is about where the lines break, not about what the
+    claim says.
+    """
+    if claim_text in chunk_text:
+        return True
+    return " ".join(claim_text.split()) in " ".join(chunk_text.split())
+
+
 def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list[dict]]:
     if not isinstance(metadata, dict) or not isinstance(chunks, list):
         raise ValueError("metadata must be a mapping and chunks a list")
@@ -225,7 +240,7 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
                     f"character from the document body -- paraphrasing, re-wrapping, "
                     f"smart quotes and em dashes are all rejected"
                 )
-            if claim["claim"] not in matching["text"]:
+            if not _says_what_the_document_says(claim["claim"], matching["text"]):
                 raise ValueError(
                     f"claim[{index}] text must appear in the supporting chunk that its "
                     f"evidence matched; semantic inference is not supported. The claim "

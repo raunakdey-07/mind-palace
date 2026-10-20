@@ -46,8 +46,10 @@ behaviour rather than a new failure.
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
+from contextlib import contextmanager
 from typing import Any, ClassVar, Self
 
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
@@ -64,6 +66,65 @@ MAX_TOKENS = 256
 # Model and reranker failures share one public dependency-error contract. The
 # routes translate these to a sanitized 503 instead of exposing provider details.
 SEMANTIC_DEPENDENCY_ERRORS = (OSError, RuntimeError, ValueError, ImportError)
+
+#: The loggers the Hub's notices come from.
+_HUB_LOGGERS = ("huggingface_hub", "huggingface_hub.utils._http")
+
+
+@contextmanager
+def _quiet_hub():
+    """The Hub's "you are sending unauthenticated requests" notice, silenced.
+
+    The Hub returns that notice as a response header and the client prints it
+    as a warning. It is about rate limits, and it was printed on every command
+    because the loader asked the Hub about a file it already had on disk. A
+    tool that is local-first and says nothing about phoning home should not
+    print a notice about phoning home.
+    """
+    loggers = [logging.getLogger(name) for name in _HUB_LOGGERS]
+    previous = [(logger, logger.level) for logger in loggers]
+    for logger in loggers:
+        logger.setLevel(logging.ERROR)
+    try:
+        yield
+    finally:
+        for logger, level in previous:
+            logger.setLevel(level)
+
+
+def _from_cache(repo: str, filename: str, *, local_files_only: bool) -> str:
+    """The path of a Hub file, from the local cache when the cache has it.
+
+    The local copy is tried first, because a warm cache does not need the
+    network and a request the Hub never has to answer is a request that never
+    brings back a notice about tokens. The network is the fallback, not the
+    default.
+
+    `local_files_only=True` is the caller's promise that this process will not
+    reach the network, and it is honoured: the fallback does not run, and the
+    call fails instead.
+    """
+    from huggingface_hub import hf_hub_download
+
+    try:
+        return hf_hub_download(repo, filename, local_files_only=True)
+    except Exception:
+        if local_files_only:
+            raise
+        return hf_hub_download(repo, filename)
+
+
+def _load_tokenizer(repo: str, *, local_files_only: bool):
+    """The tokenizer, from the local cache when the cache has it.
+
+    `Tokenizer.from_pretrained` always asks the Hub, even when the file it
+    wants is already on disk, so the file is resolved here and the tokenizer
+    is read from the path. Same file, same tokenizer, no round trip.
+    """
+    from tokenizers import Tokenizer
+
+    path = _from_cache(repo, "tokenizer.json", local_files_only=local_files_only)
+    return Tokenizer.from_file(path)
 
 
 def _repo(model_name: str) -> str:
@@ -89,18 +150,16 @@ class _OnnxBackend:
 
     def __init__(self, model_name: str, *, local_files_only: bool = False) -> None:
         import onnxruntime as ort
-        from huggingface_hub import hf_hub_download
-        from tokenizers import Tokenizer
 
         repo = _repo(model_name)
         path = (
             model_name
             if os.path.isdir(model_name) and os.path.exists(os.path.join(model_name, ONNX_VARIANT))
-            else hf_hub_download(repo, f"onnx/{ONNX_VARIANT}", local_files_only=local_files_only)
+            else _from_cache(repo, f"onnx/{ONNX_VARIANT}", local_files_only=local_files_only)
         )
         self._session = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
         self._inputs = {i.name for i in self._session.get_inputs()}
-        self._tokenizer = Tokenizer.from_pretrained(repo)
+        self._tokenizer = _load_tokenizer(repo, local_files_only=local_files_only)
         self._tokenizer.enable_truncation(max_length=MAX_TOKENS)
         self._tokenizer.enable_padding(
             pad_id=self._tokenizer.token_to_id("[PAD]"), pad_token="[PAD]"
@@ -170,10 +229,15 @@ def load_backend(model_name: str, *, local_files_only: bool = False):
     downloads a model is measuring the machine it ran on rather than the system it
     claimed to measure. Both backends honour it, so the promise does not depend on
     which one happens to be installed.
+
+    The Hub's notices are silenced for the load. A model that is already on disk
+    is loaded from disk, and the only thing the notice said was that the Hub
+    noticed.
     """
-    if backend_name() == "onnx":
-        return _OnnxBackend(model_name, local_files_only=local_files_only)
-    return _TorchBackend(model_name, local_files_only=local_files_only)
+    with _quiet_hub():
+        if backend_name() == "onnx":
+            return _OnnxBackend(model_name, local_files_only=local_files_only)
+        return _TorchBackend(model_name, local_files_only=local_files_only)
 
 
 class Embedder:

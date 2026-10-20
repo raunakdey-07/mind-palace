@@ -114,11 +114,47 @@ COMMON_TOKEN_FLOOR = 8
 #: "Kafka" is not, so the one claim that mentions Kafka is a long way down.
 SUBJECT_RATIO = 0.80
 
+#: The subject has to be this rare in the corpus before the fact that the
+#: answer does not mention it says anything. A subject the corpus has plenty of
+#: claims about is the corpus's own topic, and the claim that answers the
+#: question about it need not repeat the word.
+SUBJECT_SHARE = 0.01
+
 #: Verbs that name an action rather than a subject. "How is Kafka configured?"
 #: asks about Kafka, and the verb is not the question. A corpus that never
 #: says "configured" has not been asked about anything.
 GENERIC_QUERY_TERMS = frozenset("""configur configure configured work setup support run
     """.split())
+
+
+def _subject_is_not_the_answer(
+    best_subject: float, best_overall: float, subject_claims: int, corpus: int
+) -> bool:
+    """Whether the corpus's best answer to the question is not about its subject.
+
+    Two conditions, and both have to hold.
+
+    **The subject is rare in the corpus.** The one claim that mentions Kafka is
+    a long way down the ranking, and the claims that rank high matched the
+    project's own name instead. The subject is there; the corpus's answer to
+    this question is not about it. A subject the corpus has plenty of claims
+    about is the corpus's own topic, and the claim that answers the question
+    about it need not repeat the word.
+
+    **The claims that carry the subject are not the ones that answer.** The
+    subject's best claim is a long way below the best claim overall.
+
+    The test is deliberately narrow. A question whose subject is in no claim at
+    all is not this case: there is nothing to be competitive with, and the
+    answer to "Which architecture decisions apply?" is still the architecture
+    decisions. The broader test cost six questions on the 202-question dev
+    set, whose subjects ("the earlier job queue", "the Orders Service") are
+    the corpus's own topic and are not repeated by the claims that answer
+    them.
+    """
+    if subject_claims and subject_claims / corpus >= SUBJECT_SHARE:
+        return False
+    return 0.0 < best_subject < best_overall * SUBJECT_RATIO
 
 
 def boilerplate_tokens(documents: list[frozenset[str]], wanted: frozenset[str]) -> frozenset[str]:
@@ -524,6 +560,7 @@ def relevance(
         # say so.
         best_overall = 0.0
         best_subject = 0.0
+        subject_claims = 0
         for position, cid in enumerate(ids):
             claim = claims[cid]
             if request.path and claim.path != request.path:
@@ -534,18 +571,17 @@ def relevance(
             # subject the question is asking about whenever a second claim shares
             # it, and every such question would then need the strong-score bar
             # instead of the normal minimum.
-            #
-            # The question's side is reduced, though: only the words that name
-            # a subject count. A question whose subject the corpus does not have
-            # cannot be answered by a claim that matched on the corpus's own
-            # vocabulary, so those claims have to earn the answer on the score
-            # alone.
-            subject = subject_terms[i] or question_terms[i]
-            overlap = bool(subject & documents[position])
+            overlap = bool(question_terms[i] & documents[position])
+            # The same question asked about the subject rather than about the
+            # corpus's own vocabulary. A question whose subject the corpus's
+            # best answer is not about is a question the corpus cannot answer,
+            # and these numbers are what say so.
             if value > best_overall:
                 best_overall = value
-            if overlap and value > best_subject:
-                best_subject = value
+            if subject_terms[i] & documents[position]:
+                subject_claims += 1
+                if value > best_subject:
+                    best_subject = value
             # The best any claim under this key scores for this topic, kept
             # whether or not it cleared a gate. `chosen` below is what the product
             # answers from; `scored` is what it ranked, and the difference is the
@@ -564,18 +600,15 @@ def relevance(
                 )
             if accepted:
                 by_key[claim.key] = max(by_key.get(claim.key, -1), value)
-        if subject_terms[i] and best_subject > 0.0 and best_subject < best_overall * SUBJECT_RATIO:
+        if subject_terms[i] and _subject_is_not_the_answer(
+            best_subject, best_overall, subject_claims, len(documents)
+        ):
             # The corpus's best answer to this question is about something else.
             # "How is Kafka configured in Mind Palace?" matched the corpus's own
             # name, and the one claim that mentions Kafka is a long way down.
             # Answering it with the claims that matched the project's name
             # would be answering a different question, so this topic contributes
             # nothing.
-            #
-            # A question whose subject is in no claim at all does not fire this.
-            # "Which architecture decisions apply?" names a word the corpus does
-            # not use, and the answer is still the architecture decisions: there
-            # is no subject to be competitive with.
             continue
         top = max(by_key.values(), default=0)
         for key, value in by_key.items():

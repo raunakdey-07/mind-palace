@@ -418,53 +418,7 @@ def _many_claims(prefix, count, text):
     ]
 
 
-def test_a_question_about_an_absent_subject_abstains():
-    """The corpus is about Mind Palace. The question is about Kafka.
-
-    "Mind" and "Palace" are the corpus's own vocabulary, so the question
-    matched on them and the answer was a claim about the project rather than
-    about the subject. The subject is not in the corpus, so the honest answer
-    is that the corpus does not have it.
-    """
-    claims = _many_claims("own", 120, "Mind Palace is the memory system this corpus describes")
-    response = _corpus_response(claims)
-    embedder = FakeEmbedder(default=0.52)
-    request = MemoryRequest(corpus="test", query="How is Kafka configured in Mind Palace?")
-    scores, _, _ = memory_relevance.relevance(
-        response,
-        request,
-        "current",
-        embedder,
-        memory_relevance.RelevancePolicy.configured(),
-    )
-    assert scores == {}, "a question about an absent subject must not answer"
-
-
-def test_a_question_about_a_subject_the_corpus_has_still_answers():
-    """The gate is about an absent subject, not about being harder to reach."""
-    claims = _many_claims("own", 120, "Mind Palace is the memory system this corpus describes")
-    claims = claims + [
-        _corpus_claim(
-            "kafka",
-            "feed.kafka",
-            "Kafka is configured with twelve partitions in this deployment.",
-            path="docs/feed.md",
-        )
-    ]
-    response = _corpus_response(claims)
-    embedder = FakeEmbedder(default=0.52)
-    request = MemoryRequest(corpus="test", query="How is Kafka configured in Mind Palace?")
-    scores, _, _ = memory_relevance.relevance(
-        response,
-        request,
-        "current",
-        embedder,
-        memory_relevance.RelevancePolicy.configured(),
-    )
-    assert "feed.kafka" in scores
-
-
-def test_a_subject_the_corpus_barely_mentions_does_not_answer_either():
+def test_a_subject_the_corpus_barely_mentions_does_not_answer():
     """The corpus's best answer to the question is about something else.
 
     "Kafka" is in the corpus, in one claim that the ranking puts far below
@@ -495,6 +449,50 @@ def test_a_subject_the_corpus_barely_mentions_does_not_answer_either():
         memory_relevance.RelevancePolicy.configured(),
     )
     assert scores == {}, "the corpus's best answer is not about the subject"
+
+
+def test_a_question_about_a_subject_the_corpus_has_still_answers():
+    """The gate is about an absent subject, not about being harder to reach."""
+    claims = _many_claims("own", 120, "Mind Palace is the memory system this corpus describes")
+    claims = claims + [
+        _corpus_claim(
+            "kafka",
+            "feed.kafka",
+            "Kafka is configured with twelve partitions in this deployment.",
+            path="docs/feed.md",
+        )
+    ]
+    response = _corpus_response(claims)
+    embedder = FakeEmbedder(default=0.52)
+    request = MemoryRequest(corpus="test", query="How is Kafka configured in Mind Palace?")
+    scores, _, _ = memory_relevance.relevance(
+        response,
+        request,
+        "current",
+        embedder,
+        memory_relevance.RelevancePolicy.configured(),
+    )
+    assert "feed.kafka" in scores
+
+
+def test_a_question_the_corpus_answers_strongly_is_not_an_abstention():
+    """The gate is about the subject, not about the score.
+
+    "Which architecture decisions apply?" names a word the corpus never uses,
+    and the answer is still the architecture decisions.
+    """
+    claims = _many_claims("own", 120, "The architecture decisions are recorded here")
+    response = _corpus_response(claims)
+    embedder = FakeEmbedder(default=0.9)
+    request = MemoryRequest(corpus="test", query="Which architecture decisions apply?")
+    scores, _, _ = memory_relevance.relevance(
+        response,
+        request,
+        "current",
+        embedder,
+        memory_relevance.RelevancePolicy.configured(),
+    )
+    assert scores, "a question the corpus answers well is not an abstention"
 
 
 # ---------------------------------------------------------------------------

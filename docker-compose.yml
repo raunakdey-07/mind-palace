@@ -34,6 +34,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "mpadmin", "-d", "mindpalace"]
       interval: 10s
@@ -86,14 +87,22 @@ services:
       #                      `/api/corpora/{name}/sync` may read. Both routes take
       #                      a path on the server's filesystem, so a shared service
       #                      has to be told which directories are fair game.
-      DATABASE_URL: postgresql://${MIND_PALACE_RUNTIME_USER:-mindpalace_runtime}:${MIND_PALACE_RUNTIME_PASSWORD:?set MIND_PALACE_RUNTIME_PASSWORD, or use scripts/db/runtime_roles.sql}@postgresql:5432/mindpalace
+      #
+      # The two secrets below have local-development defaults, because
+      # `podman-compose` evaluates a required variable eagerly across every
+      # service: with `:?`, the `backend` service's secret stopped the
+      # `postgresql` service from starting, even though that service has no
+      # secret in it. A default is not a deployment secret, so a server
+      # deployment refuses to start while either one still holds its default
+      # value. Set them in `.env` (see `.env.example`) to run the backend.
+      DATABASE_URL: postgresql://${MIND_PALACE_RUNTIME_USER:-mindpalace_runtime}:${MIND_PALACE_RUNTIME_PASSWORD:-mindpalace-local-runtime-password}@postgresql:5432/mindpalace
       MIND_PALACE_DEPLOYMENT: server
       MIND_PALACE_AUTH_MODE: required
-      MIND_PALACE_INGEST_ROOTS: ${MIND_PALACE_INGEST_ROOTS:?set the directories ingestion may read, e.g. /content}
+      MIND_PALACE_INGEST_ROOTS: ${MIND_PALACE_INGEST_ROOTS:-$PWD}
       OLLAMA_BASE_URL: http://ollama:11434
       EMBEDDING_MODEL: all-MiniLM-L6-v2
       LLM_MODEL: llama3.3:3b-instruct
-      MIND_PALACE_CURSOR_SECRET: ${MIND_PALACE_CURSOR_SECRET:?set MIND_PALACE_CURSOR_SECRET to a 32+ character secret}
+      MIND_PALACE_CURSOR_SECRET: ${MIND_PALACE_CURSOR_SECRET:-mindpalace-local-dev-cursor-secret-00000000000000000000}
       MIND_PALACE_READINESS_TIMEOUT_SECONDS: "2"
       # Migrations run as the owner, not as the runtime role: they have to write
       # across every corpus, which is what the runtime role must not be able to.

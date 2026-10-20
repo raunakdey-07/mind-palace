@@ -457,20 +457,29 @@ Failures answer what happened, why, and what to run.
 
 ```console
 $ mindpalace recall "..."   # with the database stopped
-Mind Palace needs persistent storage, and it could not reach it.
+The memory database is unavailable.
 
-Why: it could not connect to PostgreSQL at localhost:5432.
+Why: Mind Palace could not connect to PostgreSQL at localhost:5432.
 
 What to do:
-  docker compose up -d postgresql
+  Start it with: docker compose up -d postgresql
 
-Then check it works:
-  python -m alembic -c migrations/alembic.ini upgrade head
-  mindpalace init
+(database_unavailable)
 ```
 
-`--verbose` appends the underlying exception. It is never the only thing you see,
-and never the first thing.
+`--verbose` appends the underlying exception's type and message. It is never
+the only thing you see, and never the first thing. `--debug` (or
+`MIND_PALACE_DEBUG=1`) adds the full traceback, for the case where one line of
+detail is not enough.
+
+A refused connection is never a stack trace. The database not answering is an
+ordinary situation, and the answer to it is a sentence and a command.
+
+When the database is local and stopped, Mind Palace starts it for you: it
+looks for a container publishing the configured port and starts the stopped
+one it finds. `mindpalace init` also creates a `pgvector` container when
+there is none, so it is one command on a machine that has never run Mind
+Palace. A database on another host is never touched.
 
 ---
 

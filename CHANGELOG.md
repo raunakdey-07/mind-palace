@@ -46,6 +46,43 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Fixed
 
+- **A refused database connection bypassed the CLI's failure handling.**
+  `MindPalace(...)` connects to the database in its constructor, and
+  `ingest-repo` built its client *outside* the `try` block that turns failures
+  into guidance. A stopped PostgreSQL therefore produced a 130-line
+  `asyncio`/`sqlalchemy`/`asyncpg` stack trace where the operator needed a
+  sentence and a command. Every command that opens a client now does it inside
+  the handler, and a driver-level connection failure is translated into the
+  same `database_unavailable` advice the taxonomy already defines. The
+  underlying exception is still reachable — `--verbose` adds its type and
+  message, `--debug` (or `MIND_PALACE_DEBUG=1`) adds the full traceback — but
+  it is never the only thing shown and never the first.
+- **A rejected password was reported as a dead database.** The two look alike
+  to a driver and nothing alike to a person: one is fixed by changing a value,
+  the other by starting a service. Telling somebody to start the database when
+  the database is already running sends them the wrong way, so an
+  authentication failure now says which of the two it is.
+- **`mindpalace init` could not start a local database that had been stopped.**
+  After a reboot, a container in `Exited` state stayed stopped, and the
+  operator had to know that `podman ps -a` was the command to run. The CLI now
+  looks for a stopped local PostgreSQL container publishing the configured port
+  and starts it, waiting for it to answer a query rather than merely accept a
+  connection — Postgres accepts TCP before it will serve, and a check that
+  stopped at the socket reported a container as ready while it was still
+  starting up. `init` goes one step further and provisions a `pgvector`
+  container when there is nothing to start, so it is genuinely one command on a
+  machine that has never run Mind Palace. A remote database is never touched.
+- **`docker-compose.yml` could not be started by `podman-compose`.** The file
+  required `${MIND_PALACE_RUNTIME_PASSWORD:?...}`, and `podman-compose`
+  evaluates a required variable eagerly across every service — so the `backend`
+  service's secret stopped the `postgresql` service from starting at all, even
+  though that service has no secret in it. The variables now have local
+  defaults, and the strictness that mattered moves to where it belongs: a
+  deployment in `server` mode now refuses to start while a secret still holds
+  its local-development default, because those defaults are printed in the
+  repository. The PostgreSQL service also carries `restart: unless-stopped`, so
+  a reboot no longer leaves port 5432 dead.
+
 - **The unrestricted tenant scope was self-assertable** (migration
   `010_bind_unrestricted_scope`). `mindpalace.tenant_scope` is a session setting,
   so any role that could open a connection could write `{*}` — the sentinel for
@@ -111,6 +148,12 @@ Memory Pack version changed, and no benchmark input was touched.
   it to talk to. There is no exception list any more.
 
 ### Changed
+
+- **A bare `mindpalace` prints where to start.** It used to print
+  "Missing command." and a usage line — a statement about the person's typing
+  rather than about the product, on the run with the least context. It now
+  prints the first three commands, in the order a newcomer needs them, and
+  points at `mindpalace --help` for the rest. `mindpalace --help` is unchanged.
 
 - **`/health/ready` answers `503` only in `server` mode.** In `local` there is no
   second tenant to isolate from, the documented workflow is a developer

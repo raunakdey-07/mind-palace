@@ -39,6 +39,101 @@ _START_DATABASE = "Start it with: docker compose up -d postgresql"
 _APPLY_SCHEMA = (
     "Apply the schema with:\n" "    python -m alembic -c migrations/alembic.ini upgrade head"
 )
+_CHECK_PASSWORD = (
+    "Check the password in DATABASE_URL. The local database's password is "
+    "'secret'; a container started from docker-compose.yml uses the same one."
+)
+
+
+def _exception_chain(exc: BaseException | None) -> list[BaseException]:
+    """Every exception in the chain, from the outermost to the innermost.
+
+    A driver error does not always arrive as the driver raised it. SQLAlchemy
+    wraps a failure that happens during a statement in a `DBAPIError` whose
+    `orig` is the original, and the service translates that into a
+    `MemoryError` with a generic code. The detail that distinguishes a wrong
+    password from a closed port survives in the chain and nowhere else, so
+    the chain is what has to be read.
+    """
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        nxt = current.__cause__ or current.__context__
+        if nxt is None:
+            original = getattr(current, "orig", None)
+            nxt = original if isinstance(original, BaseException) else None
+        current = nxt
+    return chain
+
+
+def _is_authentication_error(exc: Exception) -> bool:
+    """Is this failure a rejected credential rather than a dead database?
+
+    A wrong password and a closed port look alike to a driver and nothing
+    alike to a person: one is fixed by changing a value, the other by starting
+    a service. Telling somebody to start the database when the database is
+    already running is worse than saying nothing.
+    """
+    for error in _exception_chain(exc):
+        text = str(error).lower()
+        if "password authentication failed" in text or "authentication failed" in text:
+            return True
+        # PostgreSQL reports an unknown role the same way it reports a wrong
+        # password, so the two belong together.
+        if "role" in text and "does not exist" in text:
+            return True
+        # SQLSTATE 28P01 is invalid_password; 28000 is
+        # invalid_authorization_specification.
+        if getattr(error, "sqlstate", None) in {"28P01", "28000"}:
+            return True
+    return False
+
+
+def _is_database_connection_error(exc: Exception) -> bool:
+    """Is this failure a database that could not be reached?
+
+    Deliberately narrow. A `BrokenPipeError` is an `OSError` too, and a
+    connection that dropped mid-write is not a database that is down; treating
+    them as the same thing would send an operator to restart a service that is
+    working perfectly.
+    """
+    import errno
+    import socket
+
+    if isinstance(exc, socket.gaierror):
+        # The host does not resolve. That is a name, not a port, and the
+        # message says so.
+        return False
+    if isinstance(exc, OSError):
+        if getattr(exc, "errno", None) in (
+            errno.ECONNREFUSED,
+            errno.ETIMEDOUT,
+            errno.EHOSTUNREACH,
+            errno.ENETUNREACH,
+            errno.ENETDOWN,
+        ):
+            return True
+        text = str(exc).lower()
+        if (
+            "connection refused" in text
+            or "could not connect" in text
+            or "connection is closed" in text
+            or "connection reset" in text
+        ):
+            return True
+    # SQLAlchemy / asyncpg / psycopg wrappers.
+    name = type(exc).__name__.lower()
+    if "operationalerror" in name or "dbapierror" in name or "interfaceerror" in name:
+        text = str(exc).lower()
+        if "connect" in text or "refused" in text or "unavailable" in text or "timeout" in text:
+            return True
+    text = str(exc).lower()
+    if "connection refused" in text or "could not connect to server" in text:
+        return True
+    return False
 
 
 def explain(exc: Exception) -> Advice:
@@ -47,26 +142,58 @@ def explain(exc: Exception) -> Advice:
 
     if isinstance(exc, ValidationError):
         return _validation_advice(exc)
-    if isinstance(exc, OSError) and getattr(exc, "filename", None) is None and ":" in str(exc):
-        return _unreadable_advice(exc)
 
     code = getattr(exc, "code", None)
     status = int(getattr(exc, "status_code", 1) or 1)
     detail = str(getattr(exc, "message", None) or exc)
 
-    if code in {"database_unavailable", "memory_unavailable", "database_unreachable"}:
-        schema = code == "memory_unavailable"
+    # A rejected credential is checked before the taxonomy's own codes, because
+    # the service translates every driver failure into the one code
+    # `database_unavailable` -- including a wrong password, which is a
+    # different problem with a different fix. The code cannot tell them
+    # apart; the exception chain still can.
+    if _is_authentication_error(exc):
+        return Advice(
+            "authentication_failed",
+            "The database rejected the credentials.",
+            f"Mind Palace could not authenticate to PostgreSQL at {database_hint()}.",
+            _CHECK_PASSWORD,
+            503,
+        )
+    # The taxonomy's own codes next: they say which condition this is, and
+    # they are more precise than anything inferred from the exception type.
+    # `memory_unavailable` in particular means the database was reached and the
+    # schema is missing, which is a different problem from a dead port.
+    if code == "memory_unavailable":
         return Advice(
             code,
             "The memory database is unavailable.",
-            (
-                f"Mind Palace could not connect to PostgreSQL at {database_hint()}."
-                if not schema
-                else "Mind Palace connected, but the memory schema is not applied."
-            ),
-            (_START_DATABASE if not schema else _APPLY_SCHEMA),
+            "Mind Palace connected, but the memory schema is not applied.",
+            _APPLY_SCHEMA,
             503,
         )
+    if code in {"database_unavailable", "database_unreachable"}:
+        return Advice(
+            code,
+            "The memory database is unavailable.",
+            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            _START_DATABASE,
+            503,
+        )
+    # Then the driver-level failures, which arrive with no code at all: a
+    # refused connection is an `OSError` before it is anything else, and the
+    # SDK re-raises it untouched because a driver's exception is not a service
+    # error.
+    if _is_database_connection_error(exc):
+        return Advice(
+            "database_unavailable",
+            "The memory database is unavailable.",
+            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            _START_DATABASE,
+            503,
+        )
+    if isinstance(exc, OSError) and getattr(exc, "filename", None) is None and ":" in str(exc):
+        return _unreadable_advice(exc)
     if code == "transport_error":
         return Advice(
             code,

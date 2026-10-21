@@ -156,12 +156,13 @@ async def _retrieve(db, corpus_id: str, query: str, k: int, strategy: str) -> li
     from api.services.retrieval import RetrievalService
 
     try:
-        vector = Embedder().embed_single(query)
+        embedder = Embedder()
+        vector = embedder.embed_single(query)
     except SEMANTIC_DEPENDENCY_ERRORS:
         logger.info("context_semantic_unavailable", extra={"strategy": strategy})
         return []
     try:
-        return await RetrievalService(db).search(
+        return await RetrievalService(db, embedder=embedder).search(
             vector,
             k=k,
             hybrid=(strategy != "vector"),

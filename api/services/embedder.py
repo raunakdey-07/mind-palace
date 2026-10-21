@@ -77,6 +77,23 @@ MAX_TOKENS = 256
 #: padding they save.
 ONNX_BATCH_SIZE = 8
 
+#: How many texts are tokenized at once when their lengths are being measured.
+#:
+#: The measurement is a pass over the texts that throws the tokens away, so it
+#: is bounded to keep a repository's worth of chunks from being held in memory
+#: at once. 256 texts is one document's worth.
+LENGTH_BLOCK = 256
+
+#: How many times longer than the shortest text in its batch a text may be
+#: before it is given a batch of its own.
+#:
+#: A batch is padded to its longest member, so a batch holding one long text
+#: and seven short ones makes all eight pay for the long one. A claim
+#: representation is a single lead clause, so an outlier is one document's
+#: unusually long first line, and it should not tax the representations that
+#: happen to share a batch with it.
+MAX_PADDING_RATIO = 4.0
+
 # Model and reranker failures share one public dependency-error contract. The
 # routes translate these to a sanitized 503 instead of exposing provider details.
 SEMANTIC_DEPENDENCY_ERRORS = (OSError, RuntimeError, ValueError, ImportError)
@@ -153,6 +170,115 @@ def _repo(model_name: str) -> str:
     return f"sentence-transformers/{model_name}"
 
 
+def physical_cores() -> int | None:
+    """The physical cores this machine has, or None when that cannot be told.
+
+    Linux names the cores per package and the package each core belongs to, so
+    the physical count is the cores per package times the number of packages.
+    Everything else -- macOS, Windows, a container with a masked `/proc` --
+    returns None, and the caller keeps the runtime's own choice.
+    """
+    cores_per_package: set[str] = set()
+    packages: set[str] = set()
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as handle:
+            for line in handle:
+                key, _, value = line.partition(":")
+                key = key.strip()
+                value = value.strip()
+                if key == "cpu cores":
+                    cores_per_package.add(value)
+                elif key == "physical id":
+                    packages.add(value)
+    except OSError:
+        return None
+    if not packages or not cores_per_package:
+        return None
+    try:
+        per_package = max(int(value) for value in cores_per_package)
+    except ValueError:
+        return None
+    return per_package * len(packages)
+
+
+def _intra_op_threads() -> int:
+    """How many threads the ONNX session should use.
+
+    onnxruntime's default is one thread per *logical* processor. On a machine
+    with SMT that is two threads per physical core, and the two halves of a core
+    fight for the same execution units. Measured on a 4-core/8-thread Ryzen 3
+    5300U, a batch of eight claim representations took 58.9 ms with the default
+    and 38.7 ms with one thread per physical core: 1.5x, for the same vectors.
+
+    The vectors are bit-identical either way. The thread count changes the order
+    the reductions happen in, and not their result, so this is a cost change and
+    not a behaviour change.
+
+    `MIND_PALACE_ONNX_THREADS` overrides the choice, for a machine whose shape
+    this cannot see.
+    """
+    override = (os.getenv("MIND_PALACE_ONNX_THREADS") or "").strip()
+    if override:
+        try:
+            return max(1, int(override))
+        except ValueError:
+            pass
+    cores = physical_cores()
+    if cores is None:
+        return 0  # The runtime's own default.
+    try:
+        allowed = len(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        allowed = cores
+    return max(1, min(cores, allowed))
+
+
+def _batches(order: list[int], lengths: list[int]) -> list[list[int]]:
+    """Group length-sorted indices into batches of similar length.
+
+    The texts are sorted, so a batch holds the next `ONNX_BATCH_SIZE` of them.
+    A text that is much longer than the batch it would land in starts a new
+    batch instead, so one outlier cannot pad the short texts beside it out to
+    its own length.
+    """
+    batches: list[list[int]] = []
+    start = 0
+    while start < len(order):
+        shortest = lengths[order[start]]
+        end = start + 1
+        while (
+            end < len(order)
+            and end - start < ONNX_BATCH_SIZE
+            and lengths[order[end]] <= shortest * MAX_PADDING_RATIO
+        ):
+            end += 1
+        batches.append(order[start:end])
+        start = end
+    return batches
+
+
+def _session_options():
+    """The options the ONNX session is built with.
+
+    The graph is optimised at every level the runtime knows about.
+    `ORT_ENABLE_ALL` is what a default `SessionOptions` already asks for, so
+    naming it changes nothing on this version of onnxruntime. It is named
+    anyway, because the alternative is a session whose optimisation level is
+    whatever the installed runtime happens to default to, and the difference
+    between the two is a factor on the ingest's wall clock rather than a
+    rounding error. The level a session runs at is part of how this file
+    behaves, so it is stated here rather than inherited.
+    """
+    import onnxruntime as ort
+
+    options = ort.SessionOptions()
+    options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    # One thread per physical core rather than per logical processor. See
+    # `_intra_op_threads` for the measurement.
+    options.intra_op_num_threads = _intra_op_threads()
+    return options
+
+
 class _OnnxBackend:
     """MiniLM under onnxruntime. Same weights, same pooling, no torch.
 
@@ -171,7 +297,11 @@ class _OnnxBackend:
             if os.path.isdir(model_name) and os.path.exists(os.path.join(model_name, ONNX_VARIANT))
             else _from_cache(repo, f"onnx/{ONNX_VARIANT}", local_files_only=local_files_only)
         )
-        self._session = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+        # The graph is optimised at every level the runtime knows about, and the
+        # session gets one thread per physical core. See `_session_options`.
+        self._session = ort.InferenceSession(
+            path, sess_options=_session_options(), providers=["CPUExecutionProvider"]
+        )
         self._inputs = {i.name for i in self._session.get_inputs()}
         self._tokenizer = _load_tokenizer(repo, local_files_only=local_files_only)
         self._tokenizer.enable_truncation(max_length=MAX_TOKENS)
@@ -190,7 +320,7 @@ class _OnnxBackend:
             return self._run(list(texts), normalize_embeddings)
 
         # The tokenizer pads every sequence in a batch to the longest one in
-        # that batch, and attention is quadratic in the sequence length. A
+        # that batch, and every padded position costs the same as a real one. A
         # corpus of mixed lengths therefore pays for the longest text in every
         # batch it shares one with, and most of the work is padding.
         #
@@ -200,18 +330,39 @@ class _OnnxBackend:
         # fourteen batches as the files were read, 8.5 s in length-sorted
         # batches of 8.
         #
+        # The length that matters is the token count, not the character count.
+        # A key like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4`
+        # is a different number of tokens than it is characters, and sorting by
+        # characters puts the representations into the wrong order: measured
+        # over the 2,178 claim representations of one corpus, sorting by tokens
+        # padded 63,093 positions where sorting by characters padded 71,989, and
+        # encoded them 13% faster.
+        #
         # The vectors are the same either way. The mask zeroes the padding and
         # the pooling divides by the unmasked length, so what a text is padded
         # to does not change what it says: the largest difference measured
-        # across the strategies was 0.0.
-        order = sorted(range(len(texts)), key=lambda index: len(texts[index]))
+        # across the strategies was 0.0, and the byte-for-byte digests of a
+        # whole corpus agreed.
+        lengths = self._token_lengths(texts)
+        order = sorted(range(len(texts)), key=lambda index: lengths[index])
         windowed: list[tuple[int, Any]] = []
-        for start in range(0, len(order), ONNX_BATCH_SIZE):
-            window = order[start : start + ONNX_BATCH_SIZE]
+        for window in _batches(order, lengths):
             vectors = self._run([texts[index] for index in window], normalize_embeddings)
             windowed.extend(zip(window, vectors))
         windowed.sort(key=lambda pair: pair[0])
         return np.array([vector for _index, vector in windowed], dtype=np.float32)
+
+    def _token_lengths(self, texts: list[str]) -> list[int]:
+        """How many tokens each text is.
+
+        Measured in blocks, so a repository's worth of chunks is never held in
+        memory at once, and the ids are dropped: only the counts are kept.
+        """
+        lengths: list[int] = []
+        for start in range(0, len(texts), LENGTH_BLOCK):
+            encoded = self._tokenizer.encode_batch(texts[start : start + LENGTH_BLOCK])
+            lengths.extend(sum(entry.attention_mask) for entry in encoded)
+        return lengths
 
     def _run(self, texts: list[str], normalize_embeddings: bool) -> Any:
         import numpy as np

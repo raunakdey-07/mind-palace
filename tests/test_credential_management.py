@@ -1025,6 +1025,10 @@ def test_no_request_serving_surface_reads_a_raw_file():
             "reads the same operator-configured query log, with no path argument "
             "on the command line at all"
         ),
+        ("api/services/embedder.py", "physical_cores"): (
+            "reads /proc/cpuinfo, which is the machine's own processor list and "
+            "not caller input. It decides how many threads the ONNX session uses"
+        ),
     }
     #: Files that are not request-serving paths at all.
     OFF_SURFACE = {

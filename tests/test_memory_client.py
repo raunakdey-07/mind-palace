@@ -464,7 +464,9 @@ def test_legacy_named_initialization_and_sync(monkeypatch, create):
     assert ensure.await_count == int(create)
     summary = mp.sync("docs", delete_removed=False)
     assert (summary.success, summary.added, summary.chunk_count) == (True, 1, 5)
-    mp._ingestion.sync_repo.assert_awaited_once_with("docs", "corpus-id", delete_removed=False)
+    mp._ingestion.sync_repo.assert_awaited_once_with(
+        "docs", "corpus-id", delete_removed=False, embed_chunks=False
+    )
 
 
 @pytest.mark.parametrize("strategy", ["vector", "hybrid", "hybrid_rrf"])
@@ -512,7 +514,10 @@ def test_legacy_search_and_context(monkeypatch, strategy):
     embeds_after_search = mp._embedder.embed_single.call_count
     assert mp.context("question", k=3, strategy=strategy, budget_tokens=1000) == "packed"
     corpora.get_corpus_by_name.assert_awaited_with("session", "legacy", write=False)
-    retrieval.RetrievalService.assert_called_with("session")
+    # The retrieval service gets the client's embedder, so a chunk search that
+    # has to give the chunks it needs a vector uses the same one the query was
+    # embedded with.
+    retrieval.RetrievalService.assert_called_with("session", embedder=mp._embedder)
     retrieval.RetrievalService.return_value.search.assert_awaited_with(
         [0.5],
         k=3,

@@ -266,6 +266,21 @@
       "seconds": 1387.91,
       "skipped": "2"
     },
+    "e832b50: full suite: delete-removed and corpus reset": {
+      "collected": "1989",
+      "commit": "e832b50ffd98782fe6e1044210d6a49c4f939b49",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: delete-removed and corpus reset",
+      "passed": "1987",
+      "seconds": 793.7,
+      "skipped": "2"
+    },
     "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
       "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",
       "failed": "0",

@@ -162,9 +162,9 @@ def test_a_reset_wipes_one_corpus_and_leaves_the_others_alone(repo, corpus, tmp_
     assert reset.exit_code == 0, reset.output
 
     assert _claims(corpus) == [], "the reset corpus still holds its claims"
-    assert "The billing service uses MySQL." in _claims(other), (
-        "the reset took another corpus with it"
-    )
+    assert "The billing service uses MySQL." in _claims(
+        other
+    ), "the reset took another corpus with it"
 
 
 def test_a_reset_leaves_the_corpus_there(repo, corpus):

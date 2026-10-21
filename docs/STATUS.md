@@ -388,6 +388,22 @@ bit-identical across batch sizes, so this is a cost measurement and not a
 change of behaviour. A 3x reduction would have to come from encoding less, and
 the brief was explicit that the embeddings must not change.
 
+### A corpus that goes stale, and the two ways out of it
+
+**A file removed from a curated directory stayed active in the corpus
+forever.** Its claims kept answering questions, and nothing reported that the
+source was gone. `mindpalace ingest-repo` hardcoded `delete_removed=False`, so
+the service could retire a document and the CLI never asked for it. The flag
+is `--delete-removed`, and the default is unchanged: a sync that retires
+documents is a decision, and the flag is how the caller makes it.
+
+**A corpus that had collected a test claim needed a clean slate**, and the way
+out of that was to drop the whole PostgreSQL database through `podman exec`,
+which took every other corpus in it with the one that was dirty.
+`mindpalace corpus reset` erases one corpus and re-initialises it under the
+same name and the same id, with its grants intact. It asks for `--yes`,
+because the erasure cannot be undone.
+
 ## Correctness
 
 **An accuracy figure is not the useful number.** "131/157" averages a right answer

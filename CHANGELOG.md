@@ -348,6 +348,19 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Added
 
+- **`mindpalace ingest-repo --delete-removed`.** A document whose source file
+  is no longer in the directory stayed active in the corpus forever: its
+  claims kept answering questions and nothing reported that the source was
+  gone. The service could retire a document and the CLI never asked for it,
+  because `ingest-repo` hardcoded `delete_removed=False`. The flag is how the
+  caller makes that decision, and the default is unchanged.
+- **`mindpalace corpus reset <name>`.** A scratch corpus that has collected a
+  test claim needs a clean slate, and the way out of that used to be dropping
+  the whole PostgreSQL database, which took every other corpus with it. The
+  corpus is erased and re-initialised under the same name and the same id,
+  with its grants intact, and no other corpus is touched. It asks for `--yes`,
+  because the erasure cannot be undone.
+
 - **Corpus erasure** (migration `009_permission_and_erasure`). `DELETE
   /api/corpora/{name}` used to return `409` whenever the archive referenced the
   corpus, so a corpus that had ever recorded a fact could never be removed. It is

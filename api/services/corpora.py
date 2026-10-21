@@ -222,6 +222,56 @@ async def list_corpora(db: AsyncSession) -> list[dict]:
     ]
 
 
+async def reset_corpus(db: AsyncSession, name: str, description: str = "") -> dict:
+    """Erase a corpus and re-create it empty. Every other corpus is untouched.
+
+    A scratch corpus that has collected a test claim and a file that is no
+    longer in the directory needs to start again, and the way out of that used
+    to be dropping the whole PostgreSQL database, which took every other corpus
+    in it with the one that was dirty.
+
+    The corpus id is derived from the name, so the corpus that comes back is
+    the same corpus. Its grants are read before the erasure and put back
+    afterwards: a reset that quietly revoked every credential's access would
+    leave a corpus that exists and that nobody can reach.
+
+    The erasure is the same one `delete_corpus` performs, so what a reset
+    removes is exactly what a delete removes.
+    """
+    corpus = await get_corpus_by_name(db, name)
+    if not corpus:
+        raise ValueError(f"corpus '{name}' not found")
+    grants = [
+        row[0]
+        for row in (
+            await db.execute(
+                text("SELECT principal_id FROM memory_principal_corpora WHERE corpus_id = :c"),
+                {"c": corpus["id"]},
+            )
+        ).all()
+    ]
+    report = await delete_corpus(db, name)
+    if not report["deleted"]:
+        raise ValueError(f"corpus '{name}' not found")
+    fresh = await create_corpus(db, name, description or corpus.get("description") or "")
+    for principal_id in grants:
+        await db.execute(
+            text(
+                "INSERT INTO memory_principal_corpora (principal_id, corpus_id) "
+                "VALUES (:p, :c) ON CONFLICT DO NOTHING"
+            ),
+            {"p": principal_id, "c": fresh["id"]},
+        )
+    await db.commit()
+    return {
+        "corpus": name,
+        "corpus_id": fresh["id"],
+        "removed": report["removed"],
+        "grants": len(grants),
+        "not_removed": report["not_removed"],
+    }
+
+
 async def delete_corpus(db: AsyncSession, name: str) -> dict:
     """Erase a corpus and every row of memory the server holds for it.
 

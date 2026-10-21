@@ -1161,6 +1161,17 @@ def ingest(
 def ingest_repo(
     path: str = typer.Argument(..., help="Path to the content repository"),
     corpus: Annotated[str, typer.Option("--corpus", help="Corpus name.")] = DEFAULT_CORPUS,
+    delete_removed: Annotated[
+        bool,
+        typer.Option(
+            "--delete-removed",
+            help=(
+                "Retire the documents whose source files are no longer in the "
+                "directory. Off by default: a sync that retires documents is a "
+                "decision, and the flag is how you make it."
+            ),
+        ),
+    ] = False,
     verbose: State = False,
     debug: Debug = False,
 ) -> None:
@@ -1176,6 +1187,11 @@ def ingest_repo(
     outside MIND_PALACE_INGEST_ROOTS is refused identically rather than being
     quietly allowed by dropping the HTTP hop. `--corpus` is the same option every
     other write command already carries; the route read it off the request body.
+
+    A document whose source file is no longer in the directory stays in the
+    corpus until `--delete-removed` says otherwise. Its claims keep answering
+    questions for as long as the corpus lives, and nothing reports that the
+    source is gone.
     """
     from api.services.ingest_paths import IngestPathRefused, require_permitted
     from mindpalace_sdk import MindPalace
@@ -1207,7 +1223,7 @@ def ingest_repo(
         _fail(exc, verbose, debug)
         return
     try:
-        summary = client.sync(str(resolved), delete_removed=False)
+        summary = client.sync(str(resolved), delete_removed=delete_removed)
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         _fail(exc, verbose, debug)
         return
@@ -2023,6 +2039,55 @@ def corpus_create(
     typer.echo("")
     typer.echo("Now grant a credential to it:")
     typer.echo(f"  mindpalace credential issue my-app --corpus {name}")
+
+
+@corpora_app.command("reset")
+def corpus_reset(
+    name: str = typer.Argument(..., help="The corpus to wipe and re-initialise."),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Required. The corpus's contents are erased."
+    ),
+) -> None:
+    """Wipe a corpus and re-initialise it, leaving every other corpus alone.
+
+    The corpus comes back empty, under the same name and the same id, with its
+    grants intact. Every other corpus in the database is untouched: the way out
+    of a scratch corpus that has collected a test claim used to be dropping the
+    whole PostgreSQL database, which took everything else with it.
+
+    It removes what *this server* holds. It cannot remove a receipt or Memory
+    Pack already exported, a database backup, or a copy stored elsewhere --
+    and it prints that rather than implying otherwise.
+    """
+    if not yes:
+        typer.echo(
+            f"this erases everything in corpus '{name}'. "
+            "Re-run with --yes if that is what you want.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    async def run():
+        async with _authz_session() as db:
+            from api.services.corpora import reset_corpus
+
+            return await reset_corpus(db, name)
+
+    try:
+        report = _run_async(run())
+    except Exception as exc:  # noqa: BLE001 - one message for the operator
+        _fail(exc, False)
+        return
+
+    typer.echo(f"reset corpus '{report['corpus']}' ({report['corpus_id'][:12]})")
+    typer.echo("")
+    typer.echo("rows removed, by table:")
+    for table, count in sorted(report["removed"].items()):
+        if count:
+            typer.echo(f"  {table:<28} {count}")
+    typer.echo("")
+    typer.echo(f"grants kept: {report['grants']}")
+    typer.echo(f"not removed: {report['not_removed']}")
 
 
 @corpora_app.command("delete")

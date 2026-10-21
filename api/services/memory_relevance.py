@@ -739,8 +739,23 @@ def relevance(
                     # The lexical score is already a coverage measure.
                     ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), value)
                 else:
-                    shared = question_terms[i] & context[position]
-                    coverage = sum(weights[i][token] for token in shared) / weight_totals[i]
+                    # The coverage is measured against the question, not against
+                    # the part of it that found the claim.
+                    #
+                    # A question that names a subject asks about that subject,
+                    # and a part of the question is a lens for finding the
+                    # claims, not a smaller question. "What is the gzipped
+                    # bundle size and keystroke-to-preview latency of the SDK?"
+                    # splits into two parts, and the first one -- "What is the
+                    # gzipped bundle size?" -- names no subject at all. Measured
+                    # against that part, every row of the bundle-size table
+                    # covers the same terms, so the row that answers the
+                    # question is ordered among them by the embedding's opinion
+                    # of an unrelated sentence. Measured against the question,
+                    # the SDK's row covers one term the other rows do not, and
+                    # it is the answer.
+                    shared = question_terms[0] & context[position]
+                    coverage = sum(weights[0][token] for token in shared) / weight_totals[0]
                     adjusted = value * (1.0 + COVERAGE_WEIGHT * coverage)
                     ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), adjusted)
         if subject_terms[i] and (

@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1992 passed, 0 failed, 2 skipped** (as of `c61ce10`); 1994 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| tests | **1996 passed, 0 failed, 2 skipped** (as of `bd3cfc2`); 1998 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -450,6 +450,35 @@ the unmasked length, so what a text is padded to does not change what it says,
 and the thread count changes the order the reductions happen in and not their
 result. The batch size, the batch order and the thread count were each
 measured to leave the vectors bit-identical.
+
+### A table row, and the part of the question that lost the subject
+
+`mindpalace recall "What is the gzipped bundle size and keystroke-to-preview
+latency of the SDK?"` answered with the bundle sizes of two other chunks. The
+SDK's own row was fifth, and the 8,000-character response budget keeps four
+claims, so the reader never saw the row that answers the question.
+
+**The question is split into parts before it is scored, and the first part
+loses the subject.** "What is the gzipped bundle size?" names no component at
+all. Every row of the bundle-size table covers that part equally, so the part's
+coverage cannot tell the rows apart, and the row that answers the question was
+ordered among its siblings by the embedding's opinion of an unrelated sentence.
+Measured against the question as a whole, the SDK's row covers one term its
+siblings do not, and it is the answer.
+
+**The coverage is measured against the question now, not against the part that
+found the claim.** A part is a lens for finding the claims, not a smaller
+question. The budget is unchanged: it is still the Unicode characters of the
+complete canonical JSON, and the claim that answers the question is the one
+that survives it.
+
+Against the real `cv-embed` documents, the two facts the question asks for
+come back in the first two claims, the unrelated rows of the same table after
+them, and the response is 7,233 of the 8,000 characters with nothing dropped.
+
+Nothing else moved. The frozen M006.75 set is identical on all sixty
+questions, field for field, and the 202-question development set flips no
+question.
 
 ## Correctness
 

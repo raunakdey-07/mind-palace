@@ -265,6 +265,21 @@
       "seconds": 550.3,
       "skipped": "1"
     },
+    "bd3cfc2: full suite: the coverage measured against the question, on top of the chunk-vector work": {
+      "collected": "1998",
+      "commit": "bd3cfc2f688aa38a55d13b4b4bec30bcc9604a53",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: the coverage measured against the question, on top of the chunk-vector work",
+      "passed": "1996",
+      "seconds": 825.43,
+      "skipped": "2"
+    },
     "c61ce10: full suite: lazy chunk embeddings, ONNX session tuning": {
       "collected": "1994",
       "commit": "c61ce1033cb707df17d3c94f4c7cc9b371a47d29",

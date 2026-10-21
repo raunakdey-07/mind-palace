@@ -14,9 +14,10 @@ numbers are rejected rather than silently lost. Each version permits one authore
 claim per key; evidence is a nonempty exact quote string or a nonempty list of
 distinct quote strings. Duplicate quotes are rejected. List order is preserved
 in metadata (and thus the fingerprint); references are resolved in sorted quote order,
-using the first occurrence in the lowest-order matching archived chunk. Every
-supporting chunk must also contain the claim text. All references are authored
-atomically with the version; there is no service for appending evidence later.
+using the first occurrence in the lowest-order archived chunk that holds both the
+quote and the claim's own wording. Every supporting chunk must also contain the
+claim text. All references are authored atomically with the version; there is no
+service for appending evidence later.
 
 as_of is an inclusive OBSERVATION cutoff, not a truth/validity date. NULL validity
 means unknown. Current claims are those in the latest non-deleted version of each

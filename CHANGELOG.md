@@ -306,6 +306,14 @@ Memory Pack version changed, and no benchmark input was touched.
   loop: 4,974 statements for the 2,487 claims of a 78-document repository. They
   are written in batches now, and the vectors that are already cached under
   their own hash are not encoded a second time.
+- **A document holding the same table row twice was refused.** The evidence
+  quote was resolved against the first chunk that held it, and the same bytes
+  under two different table headers are two different claims, so the second
+  one was looked for in the first table and was not found there. The quote is
+  resolved against the chunk that holds it *and* the claim's own wording now,
+  which is the same rule stated more precisely: a chunk that holds the quote
+  and not the wording is not the claim's chunk. A claim whose wording is in no
+  chunk that holds the quote is still refused.
 
 ### Changed
 

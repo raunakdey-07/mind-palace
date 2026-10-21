@@ -289,6 +289,26 @@ def _explain_verification(response: MemoryResponse) -> str:
     return "\n".join(lines)
 
 
+def _chain_tail(changes):
+    """The claim the chain ends on: one that nothing in the chain replaced.
+
+    The last version in the timeline is not always the one holding the claim
+    that ended the chain, and a version can hold several claims. What the
+    reader is told is current has to be a claim the archive still holds live,
+    because a superseded claim printed under "current now" states the opposite
+    of what the archive knows.
+    """
+    timeline = []
+    for change in changes:
+        timeline.extend(change.previous)
+        timeline.extend(change.current)
+    if not timeline:
+        return None
+    replaced = {claim.supersedes_id for claim in timeline if claim.supersedes_id}
+    live = [claim for claim in timeline if claim.id not in replaced]
+    return live[-1] if live else None
+
+
 def render_history(response: MemoryResponse) -> str:
     """The supersession chain, oldest first, as a readable progression.
 
@@ -312,9 +332,9 @@ def render_history(response: MemoryResponse) -> str:
         else:
             lines.append(f"{stamp}  {change.event} {change.path} (memory unchanged)")
 
-    tail = changes[-1].current or changes[-1].previous
+    tail = _chain_tail(changes)
     lines.append("")
-    lines.append(f"current now: {_sentence(tail[0].claim) if tail else 'nothing recorded'}")
+    lines.append(f"current now: {_sentence(tail.claim) if tail else 'nothing recorded'}")
     return "\n".join(lines)
 
 

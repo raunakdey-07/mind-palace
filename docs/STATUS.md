@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1637 passed, 0 failed, 2 skipped** (as of `d1a4612`); 1639 collected, from the junitxml CI run `38446879617` uploaded in the same job. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded runner figures, kept for the record: `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| tests | **1981 passed, 0 failed, 2 skipped** (as of `7465fe8`); 1983 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded runner figures, kept for the record: `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -314,6 +314,79 @@ ANALYZE change and is a harness defect, not a product one: it is exactly the
 non-determinism `scripts/benchmark/baseline_packs.py` was written to pin. Until
 that harness is fixed, quote the *invariant* (identical across the three phases)
 and never the absolute digest value.
+
+## What a live CLI run against a real corpus found
+
+The commands were run against real corpora -- `mindpalace history`,
+`mindpalace recall`, `mindpalace ingest-repo` -- and four defects came out of
+it. The fixes are measured, and the tests that would have caught each one are
+in `tests/test_history_lineage_and_ingest_speed.py`.
+
+**`history` walked the supersession edges backwards only.** The graph has an
+edge in each direction and the reader followed one of them, so a question that
+anchored on a *retired* claim found nothing to walk back to: the claim that
+replaced it never entered the timeline, and the retired claim was printed under
+`current now` as the one that is true now. The chain is now the connected
+component of the supersession graph, in both directions and across documents.
+The frame words (`change`, `changed`, `history`, `evolve`, `evolved`, `before`,
+`previously`, `replace`, `replaced`) are dropped before the question is
+matched, and a lineage is scored on the union of its tokens, so a question that
+names the before and the after matches the whole chain.
+
+**A table row lost the heading it sits under.** The relevance gate compared
+the question against the claim's own words, and the word "SDK" was in the
+heading above the table rather than in the cell. The heading is part of the
+claim's context now, read from the chunk the claim was quoted from. It matters
+where the claim's own key cannot carry it: a key holds a slug of its heading
+path cut at 48 characters, so a deeply nested heading loses the words that
+identify it.
+
+**A wrapped sentence was archived as the half that carries no fact.** A
+`Key: Value` statement ended where the next line opened with a capital, so
+`the measured baseline: bundle sizes, first-paint and keystroke latency, PDF
+and` was a complete claim. A line that stops on a conjunction or a preposition
+is not finished, and the chunk boundary rule now follows the same rule.
+
+**A table row that says nothing was a claim.** A table whose header row is
+empty has no column to name a value by, so every row rendered as its own label
+-- one claim per link in a table of documents. This repository's own `README.md`
+carried sixteen of them.
+
+**And a document holding the same table row twice was refused.** The evidence
+quote was resolved against the first chunk that held it, and the same bytes
+under two headers are two different claims. The evidence is quoted from the
+lowest-order chunk that holds both the quote and the claim's own wording now.
+
+### The ingest, profiled
+
+`sync_repo` on this repository's `docs/`, 78 files, 1,814 chunks, 2,734 claims,
+on a container-local PostgreSQL and the default ONNX backend:
+
+| phase | before | after |
+|---|---|---:|
+| ONNX embedding, 256-token chunk texts | 59.8 s | 59.3 s |
+| ONNX embedding, claim representations | 38.5 s | 32.6 s |
+| `memory_claims` + `memory_evidence` writes | 5.8 s | 2.3 s |
+| `memory_claim_embeddings` writes | 7.3 s | 5.0 s |
+| `chunks` writes | 4.3 s | 4.5 s |
+| **wall clock** | **125.6 s** | **112.3 s** |
+
+The before column is `main`; the after column is this branch, and the branch
+ingests **two more documents** than `main` does, because the two that used to
+be refused now land.
+
+**The honest part: the ingest is 80% embedding, and the embedding is at the
+hardware's floor.** The claims, the evidence and the claim representations are
+written in batches now -- they were written one row at a time inside a Python
+loop, 4,974 statements for the 2,487 claims of a 78-document repository -- and
+a representation whose hash is already cached is not encoded again. The
+remaining time is the model: a 256-token MiniLM forward measures 322 GFLOPS
+here, which is this machine's limit for fp32, and the per-text cost does not
+improve past a batch of 8 (measured, interleaved, at batch sizes 4, 8, 16 and
+32 -- the shipped constant of 8 is already at the knee). The vectors are
+bit-identical across batch sizes, so this is a cost measurement and not a
+change of behaviour. A 3x reduction would have to come from encoding less, and
+the brief was explicit that the embeddings must not change.
 
 ## Correctness
 

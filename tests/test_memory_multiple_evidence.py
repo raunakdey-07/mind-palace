@@ -262,9 +262,25 @@ def test_list_resolution_is_deterministic_and_duplicates_are_rejected():
     assert memory._prepare(authored(), list(reversed(supporting_chunks())))[2] == claims
     with pytest.raises(ValueError, match="distinct quotes"):
         memory._prepare(authored(["first", "first"]), supporting_chunks())
-    # Preserve the existing first-matching-chunk rule, even if a later chunk supports it.
+    # The evidence is quoted from the chunk that holds the quote AND the
+    # claim's own wording. A chunk that holds the quote and not the wording is
+    # not the claim's chunk, and a claim whose wording is in no chunk that holds
+    # the quote is refused.
+    #
+    # The lowest-order chunk that holds both is the one that wins, so a
+    # document that holds the same bytes twice -- the same table row under two
+    # headers -- quotes each claim from its own table.
+    metadata, archived, claims = memory._prepare(
+        authored(["second", "first"]), [{"text": "first", "order_index": 0}, *supporting_chunks()]
+    )
+    assert claims[0]["evidence"] == [
+        {"quote": "first", "order_index": 2, "start_offset": 15, "end_offset": 20},
+        {"quote": "second", "order_index": 9, "start_offset": 17, "end_offset": 23},
+    ]
     with pytest.raises(ValueError, match="text must appear"):
-        memory._prepare(authored(), [{"text": "first", "order_index": 0}, *supporting_chunks()])
+        memory._prepare(
+            authored(), [{"text": "first", "order_index": 0}, {"text": "second", "order_index": 1}]
+        )
 
 
 @pytest.mark.asyncio
@@ -387,7 +403,16 @@ async def test_second_reference_insert_failure_rolls_back_whole_version(multiple
         nonlocal inserted
         if "INSERT INTO memory_evidence" in str(statement):
             inserted += 1
-            if inserted == 2:
+            # The evidence rows are written in one statement now, so the
+            # failure the test is about -- a write that goes wrong partway
+            # through the references -- is a failure of the batch that carries
+            # more than one of them.
+            #
+            # The patched method is an instance attribute, so it is not bound:
+            # the statement is the first positional argument and the rows are
+            # the next one.
+            rows = args[0] if args else kwargs.get("parameters")
+            if isinstance(rows, list) and len(rows) > 1:
                 raise RuntimeError("second reference failed")
         return await execute(statement, *args, **kwargs)
 
@@ -400,7 +425,7 @@ async def test_second_reference_insert_failure_rolls_back_whole_version(multiple
                     {"c": corpus},
                 )
                 await record_multiple(db, corpus)
-    assert inserted == 2
+    assert inserted == 1
     assert await memory.history(db, corpus) == []
     assert await memory.evidence(db, corpus) == []
     assert not (await db.execute(text("SELECT 1 FROM documents WHERE id = 'pending-live'"))).first()

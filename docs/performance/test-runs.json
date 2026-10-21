@@ -153,6 +153,21 @@
       "seconds": 839.26,
       "skipped": "2"
     },
+    "7465fe8: full suite: bidirectional history lineage, table heading context, batched ingest writes": {
+      "collected": "1983",
+      "commit": "7465fe80ed2863649753efb29c5357e49df55c48",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: bidirectional history lineage, table heading context, batched ingest writes",
+      "passed": "1981",
+      "seconds": 576.0,
+      "skipped": "2"
+    },
     "74a6141: full suite: after purging dead evidence dumps too": {
       "collected": "1832",
       "commit": "74a61414b2bed3e6132aa5b28b53001ef19d6ade",

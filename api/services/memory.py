@@ -14,9 +14,10 @@ numbers are rejected rather than silently lost. Each version permits one authore
 claim per key; evidence is a nonempty exact quote string or a nonempty list of
 distinct quote strings. Duplicate quotes are rejected. List order is preserved
 in metadata (and thus the fingerprint); references are resolved in sorted quote order,
-using the first occurrence in the lowest-order matching archived chunk. Every
-supporting chunk must also contain the claim text. All references are authored
-atomically with the version; there is no service for appending evidence later.
+using the first occurrence in the lowest-order archived chunk that holds both the
+quote and the claim's own wording. Every supporting chunk must also contain the
+claim text. All references are authored atomically with the version; there is no
+service for appending evidence later.
 
 as_of is an inclusive OBSERVATION cutoff, not a truth/validity date. NULL validity
 means unknown. Current claims are those in the latest non-deleted version of each
@@ -243,7 +244,28 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
         # a count and an instruction cost nothing and leak nothing.
         searched = len(archived)
         for quote in sorted(quotes):
-            matching = next((c for c in archived if quote in c["text"]), None)
+            # The chunk that holds the quote *and* the claim's own wording.
+            #
+            # A table row that appears in two tables is the same bytes twice,
+            # and the two read differently because the headers differ: the same
+            # `| recall@1 | 0.5284 | 0.5227 |` is "recall@1: before: 0.5284;
+            # after: 0.5227" under one header and "recall@1: OLD: 0.5284; NEW:
+            # 0.5227" under another. Taking the first chunk with the row found
+            # the wrong table, the claim's own wording was not in it, and the
+            # document was refused outright -- two of this repository's own
+            # documents, one of them the record of every measurement the
+            # project has taken.
+            matching = next(
+                (
+                    chunk
+                    for chunk in archived
+                    if quote in chunk["text"]
+                    and _says_what_the_document_says(claim["claim"], chunk["text"])
+                ),
+                None,
+            )
+            if matching is None:
+                matching = next((c for c in archived if quote in c["text"]), None)
             if matching is None:
                 raise ValueError(
                     f"claim[{index}] evidence must be an exact substring of an archived "
@@ -1030,6 +1052,19 @@ async def record_version(
         )
     else:
         unresolved = []
+    # The rows are collected first and written in two statements rather than
+    # two per claim.
+    #
+    # Every value in a claim row is known before the loop starts: the
+    # supersession target comes from the previous version or from the
+    # cross-document resolution, and both are resolved above. So the loop is
+    # pure arithmetic, and the only thing the per-row statements bought was a
+    # round trip to the database for every claim and every piece of evidence.
+    # A repository of 78 documents produced 2,487 claims and 2,487 evidence
+    # rows: 4,974 statements, each one a round trip, for a write that is
+    # 4,974 rows.
+    claim_rows: list[dict] = []
+    evidence_rows: list[dict] = []
     for claim in claims:
         supersedes = previous_claims.get(claim["key"])
         basis = "same_document_key" if supersedes else None
@@ -1043,13 +1078,7 @@ async def record_version(
         if claim["key"] in cross_document:
             supersedes, basis = cross_document[claim["key"]]
         claim_id = _hash("claim", version["id"], claim["key"])
-        await db.execute(
-            text("""
-            INSERT INTO memory_claims (corpus_id, memory_document_id, version_id, id,
-                key, value, claim, valid_from, valid_until, supersedes_id, supersession_basis)
-            VALUES (:c, :d, :v, :id, :key, CAST(:value AS jsonb), :claim,
-                    :valid_from, :valid_until, :supersedes, :basis)
-        """),
+        claim_rows.append(
             {
                 **params,
                 **claim,
@@ -1057,7 +1086,7 @@ async def record_version(
                 "value": _canonical(claim["value"]),
                 "supersedes": supersedes,
                 "basis": basis,
-            },
+            }
         )
         for reference in claim.get("evidence", [claim]):
             chunk_id = chunk_ids[reference["order_index"]]
@@ -1072,20 +1101,34 @@ async def record_version(
                 if "evidence" in claim
                 else _hash("evidence", claim_id)
             )
-            await db.execute(
-                text("""
-                INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id,
-                                             quote, start_offset, end_offset)
-                VALUES (:c, :v, :id, :claim_id, :chunk_id, :quote, :start_offset, :end_offset)
-            """),
+            evidence_rows.append(
                 {
                     **params,
                     **reference,
                     "id": evidence_id,
                     "claim_id": claim_id,
                     "chunk_id": chunk_id,
-                },
+                }
             )
+    if claim_rows:
+        await db.execute(
+            text("""
+            INSERT INTO memory_claims (corpus_id, memory_document_id, version_id, id,
+                key, value, claim, valid_from, valid_until, supersedes_id, supersession_basis)
+            VALUES (:c, :d, :v, :id, :key, CAST(:value AS jsonb), :claim,
+                    :valid_from, :valid_until, :supersedes, :basis)
+        """),
+            claim_rows,
+        )
+    if evidence_rows:
+        await db.execute(
+            text("""
+            INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id,
+                                         quote, start_offset, end_offset)
+            VALUES (:c, :v, :id, :claim_id, :chunk_id, :quote, :start_offset, :end_offset)
+        """),
+            evidence_rows,
+        )
     return {**version, "skipped": False, "supersession_unresolved": unresolved}
 
 
@@ -1197,8 +1240,78 @@ async def changes(db: AsyncSession, corpus_id: str, path: str | None = None) -> 
 ANCHOR_FLOOR = 0.30
 ANCHOR_BAND = 0.10
 
+#: Words that frame a question about history rather than naming what changed.
+#:
+#: "How did the default install change?" is a question about the default install.
+#: "Change" is the frame the question is put in, and no claim is about the word
+#: "change", so requiring a claim to carry it means the question matches nothing
+#: and the answer says there is no history. The archive knows what changed; the
+#: question does not have to say so.
+#:
+#: These are dropped only when a question is being resolved against the
+#: supersession graph. A question about the word "history" as a subject is
+#: answered by the corpus's own text, not by this list.
+HISTORY_FRAMING_TERMS = frozenset(
+    """change changed history evolve evolved before previously replace replaced""".split()
+)
 
-def _query_result(versions, query_text, valid_at=None):
+
+def _supersession_chains(claims: list[dict]) -> list[list[dict]]:
+    """The connected components of the supersession graph.
+
+    An edge runs from a claim to the claim it supersedes, and from a claim to
+    every claim that supersedes it. The graph is walked in **both** directions,
+    so a claim that was retired is found together with the claim that retired
+    it, whichever one the reader happened to anchor on.
+
+    Walking backwards only is the defect this exists to fix. `mindpalace history
+    "PyTorch embedder"` anchored on the newer claim and walked back to the older
+    one, so the timeline was right. `mindpalace history "How did the default
+    embedding backend and install size change?"` anchored on the *older* claim,
+    found nothing to walk back to, and reported the retired claim as the one
+    that is true now.
+
+    Cross-document edges are edges. The key and the path of the two claims
+    differ, and the archive still records that one replaced the other, so the
+    chain is built from the `supersedes_id` column alone.
+    """
+    by_id = {claim["id"]: claim for claim in claims}
+    parent = {claim["id"]: claim["id"] for claim in claims}
+
+    def find(node: str) -> str:
+        root = node
+        while parent[root] != root:
+            root = parent[root]
+        while parent[node] != root:
+            parent[node], node = root, parent[node]
+        return root
+
+    for claim in claims:
+        target = claim.get("supersedes_id")
+        if target and target in by_id:
+            left, right = find(claim["id"]), find(target)
+            if left != right:
+                parent[right] = left
+
+    groups: dict[str, list[dict]] = {}
+    for claim in claims:
+        groups.setdefault(find(claim["id"]), []).append(claim)
+    return list(groups.values())
+
+
+def _query_result(versions, query_text, valid_at=None, *, lineage: bool = False):
+    """Bucket the claims of a coherent archive view against a question.
+
+    ``lineage=True`` resolves the question against the supersession graph
+    rather than against one claim at a time. A claim and the claim that
+    replaced it are one subject to a reader, and the question is asked of the
+    pair, so the answer carries both halves and the retired half is never the
+    last thing the timeline says. The frame words are dropped first, because a
+    question about what changed is not a question about the word "changed".
+
+    Off by default: a ranked read asks which claim answers the question, and
+    there the answer is one claim.
+    """
     latest = {}
     for version in versions:
         identity = version["memory_document_id"]
@@ -1236,6 +1349,10 @@ def _query_result(versions, query_text, valid_at=None):
     # between them. A query with no content words left is an empty query, which
     # returns everything, as it always has.
     content = similarity.terms(query_text)
+    if lineage:
+        # The frame the question is put in is not part of what it is about. See
+        # `HISTORY_FRAMING_TERMS`.
+        content = content - HISTORY_FRAMING_TERMS
 
     def haystack(claim):
         return frozenset(
@@ -1266,16 +1383,56 @@ def _query_result(versions, query_text, valid_at=None):
     # here, where inverse document frequency makes it the strongest signal there
     # is. `similarity.overlap` documents the split.
     relaxed: frozenset[str] = frozenset()
-    if content and not any(content <= haystack(claim) for claim in claims):
+    if not lineage and content and not any(content <= haystack(claim) for claim in claims):
         scored = [(similarity.overlap(content, similarity.terms(c["claim"])), c) for c in claims]
         best = max((score for score, _c in scored), default=0.0)
         if best >= ANCHOR_FLOOR:
             relaxed = frozenset(c["id"] for score, c in scored if best - score <= ANCHOR_BAND)
 
-    def matches(claim):
+    if lineage:
+        # A claim and the claim that replaced it are one subject to a reader, so
+        # the question is asked of the chain and not of one claim in it. A
+        # question that names the before and the after is a question about the
+        # chain: "the default install" is in the older claim, "the default
+        # backend" is in the newer one, and neither half answers it alone.
+        #
+        # The chain is the connected component of the supersession graph, so it
+        # carries the successor as well as the predecessor. Anchoring on the
+        # retired claim therefore reaches the claim that retired it, and the
+        # retired claim is never the last thing the timeline says.
+        chains = _supersession_chains(claims)
+        chain_tokens = [frozenset().union(*(haystack(c) for c in chain)) for chain in chains]
+        chain_words = [
+            frozenset().union(*(similarity.terms(c["claim"]) for c in chain)) for chain in chains
+        ]
         if not content:
-            return True
-        return content <= haystack(claim) or claim["id"] in relaxed
+            matched_ids = {claim["id"] for claim in claims}
+        else:
+            anchors = [index for index, tokens in enumerate(chain_tokens) if content <= tokens]
+            if not anchors:
+                # Second pass, as above, but scored on the chain: the question is
+                # measured against the union of the tokens the whole lineage
+                # carries, so a question spanning the before and the after is
+                # scored on both halves.
+                scores = [similarity.overlap(content, words) for words in chain_words]
+                best = max(scores, default=0.0)
+                if best >= ANCHOR_FLOOR:
+                    anchors = [
+                        index for index, score in enumerate(scores) if best - score <= ANCHOR_BAND
+                    ]
+            matched_ids = {claim["id"] for index in anchors for claim in chains[index]}
+
+        def matches(claim):
+            if not content:
+                return True
+            return claim["id"] in matched_ids
+
+    else:
+
+        def matches(claim):
+            if not content:
+                return True
+            return content <= haystack(claim) or claim["id"] in relaxed
 
     superseded_ids = {claim["supersedes_id"] for claim in claims if claim["supersedes_id"]}
     at = _timestamp(valid_at) if valid_at is not None else datetime.now(timezone.utc)

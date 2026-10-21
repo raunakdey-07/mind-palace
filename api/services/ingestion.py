@@ -154,17 +154,29 @@ class IngestionService:
         costs retrieval quality and nothing else. The authoritative claim and its
         evidence are still recorded.
 
+        Identical texts are embedded once. A repository's own documents repeat
+        lines -- a boilerplate table row, a sentence a writer copied -- and
+        encoding the same text twice produces the same vector twice.
+
         Returns the (model_name, dimension) to persist. Both are None when no
         vector was produced, which the schema already permits.
         """
         if not self.require_embeddings:
             logger.info("embedding_skipped", extra={"chunks": len(records)})
             return None, None
-        embeddings = self.embedder.embed([r["text"] for r in records])
-        if len(embeddings) != len(records):
+        if not records:
+            return self.embedder.model_name, self.embedder.dimension
+        texts = [record["text"] for record in records]
+        distinct: dict[str, list[int]] = {}
+        for index, value in enumerate(texts):
+            distinct.setdefault(value, []).append(index)
+        keys = list(distinct)
+        embeddings = self.embedder.embed(keys)
+        if len(embeddings) != len(keys):
             raise ValueError("embedding count does not match chunk count")
-        for record, embedding in zip(records, embeddings):
-            record["embedding"] = embedding
+        for value, embedding in zip(keys, embeddings):
+            for index in distinct[value]:
+                records[index]["embedding"] = embedding
         return self.embedder.model_name, self.embedder.dimension
 
     async def _ingest_content(
@@ -526,12 +538,12 @@ class IngestionService:
         if not self.require_embeddings:
             return 0
         try:
-            from api.services.claim_embeddings import pending, store
+            from api.services.claim_embeddings import embed_representations, pending, store
 
             wanted, texts = await pending(db, corpus_id, list(version_ids))
             if not wanted:
                 return 0
-            vectors = dict(zip(wanted, self.embedder.embed(texts)))
+            vectors = await embed_representations(db, corpus_id, wanted, texts, self.embedder)
             return await store(
                 db,
                 corpus_id,

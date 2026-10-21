@@ -39,6 +39,12 @@ INSERT = """
        OR memory_claim_embeddings.embedding_dimension IS DISTINCT FROM EXCLUDED.embedding_dimension
 """
 
+#: How many representation hashes are bound into one lookup.
+#:
+#: Bounded so a reindex of a whole corpus does not bind one enormous array,
+#: and large enough that a document's worth of hashes is one round trip.
+HASH_BATCH = 500
+
 
 class ClaimView(NamedTuple):
     """Minimal shape `representation` needs, for rows straight from SQL."""
@@ -164,6 +170,98 @@ async def load_cached(
     return out
 
 
+async def load_cached_by_hash(
+    db: AsyncSession, corpus_id: str, hashes: set[str], model: str, dimension: int
+) -> dict[str, list[float]]:
+    """Vectors for representations already cached under this model.
+
+    Keyed by representation hash rather than by claim id, because the hash is
+    the hash of the exact text that was embedded: two claims whose
+    representations are the same text have the same vector, so the second one
+    does not have to be encoded again.
+
+    The array parameter holds hashes and nothing else, and it is bound in
+    batches. `load_cached` binds no array at all because it is called on every
+    read with the whole corpus's claims, and the array version of that query
+    cost 22x at 5,000 claims once asyncpg started preparing it. Here the set
+    is a document's worth of hashes, and a batch of them is an index lookup
+    rather than a cliff.
+    """
+    if not hashes:
+        return {}
+    ordered = sorted(hashes)
+    out: dict[str, list[float]] = {}
+    for start in range(0, len(ordered), HASH_BATCH):
+        batch = ordered[start : start + HASH_BATCH]
+        rows = await db.execute(
+            text("""
+                SELECT representation_hash, embedding::text AS vector
+                FROM memory_claim_embeddings
+                WHERE corpus_id = :corpus
+                  AND embedding_model = :model
+                  AND embedding_dimension = :dimension
+                  AND representation_hash = ANY(CAST(:hashes AS CHAR(64)[]))
+            """),
+            {
+                "corpus": corpus_id,
+                "model": model,
+                "dimension": dimension,
+                "hashes": batch,
+            },
+        )
+        for stored_hash, vector in rows.all():
+            out[stored_hash] = json.loads(vector)
+    return out
+
+
+async def embed_representations(
+    db: AsyncSession,
+    corpus_id: str,
+    wanted: dict[str, str],
+    texts: list[str],
+    embedder,
+) -> dict[str, list[float]]:
+    """The vector for every representation, encoding only what is not cached.
+
+    Three things are skipped, and all three are exact rather than approximate.
+
+    A representation whose hash is already in `memory_claim_embeddings` under
+    the running model is not encoded again: the row holds the hash of the
+    exact text that was embedded, so the same text has the same vector.
+
+    Two claims whose representations are the same text are encoded once
+    between them rather than twice.
+
+    And nothing here changes what a vector is. The values are the ones the
+    model produced for those texts, whether this call encoded them or found
+    them.
+    """
+    if not wanted:
+        return {}
+    pairs = list(zip(wanted.keys(), texts))
+    cached = await load_cached_by_hash(
+        db, corpus_id, set(wanted.values()), embedder.model_name, embedder.dimension
+    )
+    missing: dict[str, list[str]] = {}
+    for claim_id, representation in pairs:
+        if wanted[claim_id] in cached:
+            continue
+        missing.setdefault(representation, []).append(claim_id)
+    vectors: dict[str, list[float]] = {}
+    if missing:
+        keys = list(missing)
+        encoded = embedder.embed(keys)
+        if len(encoded) != len(keys):
+            raise ValueError("embedding count does not match representation count")
+        for representation, vector in zip(keys, encoded):
+            for claim_id in missing[representation]:
+                vectors[claim_id] = vector
+    for claim_id, _representation in pairs:
+        if claim_id not in vectors:
+            vectors[claim_id] = cached[wanted[claim_id]]
+    return vectors
+
+
 async def store(
     db: AsyncSession,
     corpus_id: str,
@@ -175,13 +273,17 @@ async def store(
     *,
     commit: bool = True,
 ) -> int:
-    """Persist freshly computed vectors. Caller owns the transaction."""
-    written = 0
+    """Persist freshly computed vectors. Caller owns the transaction.
+
+    One statement for the whole batch. The rows were written one at a time, and
+    a repository of 78 documents produced 2,487 of them: 2,487 round trips for
+    a write that is 2,487 rows.
+    """
+    rows = []
     for claim_id, vector in vectors.items():
         if claim_id not in items:
             continue
-        await db.execute(
-            text(INSERT),
+        rows.append(
             {
                 "corpus": corpus_id,
                 "claim": claim_id,
@@ -190,12 +292,13 @@ async def store(
                 "dimension": dimension,
                 "version": version,
                 "vector": _vector_literal(vector),
-            },
+            }
         )
-        written += 1
+    if rows:
+        await db.execute(text(INSERT), rows)
     if commit:
         await db.commit()
-    return written
+    return len(rows)
 
 
 async def stats(db: AsyncSession, corpus_id: str) -> dict:

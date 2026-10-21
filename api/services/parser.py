@@ -274,6 +274,17 @@ _TABLE_ROW = re.compile(r"^\s*\|")
 #: row of data.
 _SEPARATOR_CELL = re.compile(r"^[\s:\-]+$")
 
+#: Words a chunk must not end on.
+#:
+#: A chunk that stops on "and" reads as a sentence that broke off, and the claim
+#: the extractor reads out of it inherits the cut. The writer wrapped the
+#: sentence, so the cut moves back to the end of the last complete phrase.
+_CHUNK_TRAILING_WORDS = frozenset(
+    """a an the and or but nor so yet for of in on at by with from to into onto
+    over under as than about after before between through during without within
+    upon per via""".split()
+)
+
 
 def table_cells(line: str) -> list[str]:
     """The cells of one Markdown table row.
@@ -494,6 +505,20 @@ def _table_chunks(heading_path: str, lines: list[str], max_chars: int) -> list[d
     return chunks
 
 
+def _trim_trailing_word(text: str) -> str:
+    """Move a cut back past the conjunction or preposition it stopped on.
+
+    A chunk boundary that lands on "PDF and" splits a wrapped sentence in
+    half, and the extractor reads the half that carries no fact. The cut moves
+    back to the end of the last complete phrase instead.
+    """
+    words = list(re.finditer(r"[A-Za-z]+", text))
+    if not words or words[-1].group(0).casefold() not in _CHUNK_TRAILING_WORDS:
+        return text
+    space = text.rfind(" ", 0, words[-1].start())
+    return text[:space] if space > 0 else text
+
+
 def _chunk_text(heading_path: str, content: str, max_chars: int) -> list[dict[str, Any]]:
     """The chunks for a run of prose."""
     chunks: list[dict[str, Any]] = []
@@ -542,6 +567,12 @@ def _chunk_text(heading_path: str, content: str, max_chars: int) -> list[dict[st
                 boundary = max(cut.rfind(". "), cut.rfind(" "))
                 if boundary > max_chars // 2:
                     cut = para[: boundary + 1]
+            # And never on a conjunction or a preposition. A chunk that stops
+            # on "PDF and" holds half a sentence, and the claim the extractor
+            # reads out of it is that half.
+            trimmed = _trim_trailing_word(cut)
+            if len(trimmed) > max_chars // 2:
+                cut = trimmed
             chunks.append(
                 {
                     "text": cut.strip(),

@@ -368,6 +368,62 @@ async def test_the_ingest_writes_its_rows_in_batches(store, monkeypatch):
     assert len(evidence) == 1, f"the evidence was written {len(evidence)} times, not once"
 
 
+async def test_a_representation_already_cached_is_not_encoded_again(store, monkeypatch):
+    """A claim whose text did not change keeps the vector the archive holds.
+
+    The cache row records the hash of the exact text that was embedded, so a
+    document that is re-read and keeps one of its claims does not have to
+    encode that claim again: the vector is a function of the text, and the
+    archive already has it.
+    """
+    from api.services import ingestion as ingestion_service
+
+    recorded: list[str] = []
+
+    class RecordingEmbedder:
+        model_name = "recorded"
+        dimension = 384
+        version = "recorded:384"
+
+        def embed(self, texts):
+            recorded.extend(texts)
+            return [[0.1] * 384 for _ in texts]
+
+    monkeypatch.setattr(ingestion_service, "Embedder", RecordingEmbedder)
+    service = ingestion_service.IngestionService(memory_enabled=True, require_embeddings=True)
+
+    await service.ingest_file(_source("The primary database is PostgreSQL."), "db.md", store.corpus)
+    assert recorded, "the first ingest encoded nothing"
+
+    recorded.clear()
+    await service.ingest_file(
+        _source("The primary database is PostgreSQL.", "The cache is Redis."),
+        "db.md",
+        store.corpus,
+    )
+    second = list(recorded)
+    assert any("note.1" in text for text in second), second
+    assert not [text for text in second if "note.0" in text], second
+
+
+def _source(*sentences: str) -> str:
+    """A document with an authored claims block, the way an author writes one."""
+    import json
+
+    claims = "".join(
+        f"  - key: note.{index}\n"
+        f"    value: {json.dumps(sentence)}\n"
+        f"    claim: {json.dumps(sentence)}\n"
+        f"    evidence: {json.dumps(sentence)}\n"
+        for index, sentence in enumerate(sentences)
+    )
+    return (
+        f'---\ntitle: "Notes"\ndocument_type: "note"\nclaims:\n{claims}---\n\n# Notes\n\n'
+        + "\n".join(sentences)
+        + "\n"
+    )
+
+
 # --------------------------------------------------------------------------
 # 5. The same table row in two tables
 # --------------------------------------------------------------------------

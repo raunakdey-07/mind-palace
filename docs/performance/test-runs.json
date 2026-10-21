@@ -250,6 +250,21 @@
       "seconds": 550.3,
       "skipped": "1"
     },
+    "c61ce10: full suite: lazy chunk embeddings, ONNX session tuning": {
+      "collected": "1994",
+      "commit": "c61ce1033cb707df17d3c94f4c7cc9b371a47d29",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: lazy chunk embeddings, ONNX session tuning",
+      "passed": "1992",
+      "seconds": 837.39,
+      "skipped": "2"
+    },
     "d1a4612: full suite, workstation, disposable PG 15.4 at 15434, Session 8": {
       "collected": "1639",
       "commit": "d1a461230a47db2b236c85f0af449792605f54de",

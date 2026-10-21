@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -48,8 +49,32 @@ class RetrievalService:
     - Cross-encoder reranking
     """
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, *, embedder=None):
         self.db = db
+        # The embedder the backfill uses to give the chunks that have no vector
+        # one. It has to be the same embedder the query was embedded with, or
+        # the vectors and the query live in two different spaces.
+        self.embedder = embedder
+
+    async def _ensure_chunk_vectors(self, corpus_id: Optional[str]) -> None:
+        """Give the chunks that have no vector one, before a search.
+
+        A corpus synced without `--embed-chunks` has chunks with no vector, and
+        this search reads only the chunks that have one. Without this the
+        search would answer "nothing matched" for a corpus full of text.
+
+        Best-effort: a failure here costs the search its results, and it must
+        not fail the search itself. A read that cannot write still answers, and
+        it answers with whatever vectors the corpus already has.
+        """
+        try:
+            from api.services.repository import backfill_chunk_embeddings
+
+            await backfill_chunk_embeddings(self.db, corpus_id, embedder=self.embedder)
+        except Exception as exc:  # noqa: BLE001 - a cache fill must not fail a read
+            logging.getLogger(__name__).warning(
+                "chunk_embedding_backfill_failed error=%s", type(exc).__name__
+            )
 
     async def search(
         self,
@@ -72,6 +97,7 @@ class RetrievalService:
         Results are scoped to ``corpus_id`` when provided — searches never leak
         across corpora.
         """
+        await self._ensure_chunk_vectors(corpus_id)
         fetch_k = max(k, candidate_k) if (rerank and query_text) else k
 
         where_clauses = ["c.embedding IS NOT NULL"]

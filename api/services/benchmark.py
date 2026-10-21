@@ -135,7 +135,7 @@ async def run_benchmark(
     embedder.embed_single("warmup")
 
     async with session_scope() as db:
-        service = RetrievalService(db)
+        service = RetrievalService(db, embedder=embedder)
 
         for bm in benchmarks:
             query = bm["query"]

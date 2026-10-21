@@ -762,7 +762,7 @@ async def _measure(call, repetitions):
 
 async def _baseline(workload, q, vector):
     async with workload.sessions() as db:
-        return await RetrievalService(db).search(
+        return await RetrievalService(db, embedder=workload.embedder).search(
             vector,
             k=20,
             hybrid=True,

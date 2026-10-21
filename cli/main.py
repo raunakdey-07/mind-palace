@@ -1172,6 +1172,18 @@ def ingest_repo(
             ),
         ),
     ] = False,
+    embed_chunks: Annotated[
+        bool,
+        typer.Option(
+            "--embed-chunks",
+            help=(
+                "Also embed every chunk, for the chunk-level search. Off by "
+                "default: a document that produced claims is answered from the "
+                "claim archive, and a chunk search gives the chunks it needs a "
+                "vector when it runs."
+            ),
+        ),
+    ] = False,
     verbose: State = False,
     debug: Debug = False,
 ) -> None:
@@ -1223,7 +1235,9 @@ def ingest_repo(
         _fail(exc, verbose, debug)
         return
     try:
-        summary = client.sync(str(resolved), delete_removed=delete_removed)
+        summary = client.sync(
+            str(resolved), delete_removed=delete_removed, embed_chunks=embed_chunks
+        )
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         _fail(exc, verbose, debug)
         return

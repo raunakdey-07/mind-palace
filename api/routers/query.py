@@ -122,7 +122,7 @@ async def ask(
                 query_vector = embedder.embed_single(request.question)
             except SEMANTIC_DEPENDENCY_ERRORS as exc:
                 raise HTTPException(status_code=503, detail="Semantic model unavailable") from exc
-            retrieval = RetrievalService(db)
+            retrieval = RetrievalService(db, embedder=embedder)
             try:
                 results = await retrieval.search(
                     query_vector,
@@ -220,7 +220,7 @@ async def summarize(request: SummarizeRequest, response: Response) -> Structured
         if corpus_id is None:
             chunks = []
         else:
-            retrieval = RetrievalService(db)
+            retrieval = RetrievalService(db, embedder=embedder)
             chunks = await retrieval.get_document_chunks(request.document_id, corpus_id=corpus_id)
 
     if not chunks:
@@ -276,7 +276,7 @@ async def interview(request: InterviewRequest, response: Response) -> Structured
         if corpus_id is None:
             chunks = []
         else:
-            retrieval = RetrievalService(db)
+            retrieval = RetrievalService(db, embedder=embedder)
             chunks = await retrieval.get_document_chunks(request.document_id, corpus_id=corpus_id)
 
     if not chunks:
@@ -336,7 +336,7 @@ async def related(request: RelatedRequest, response: Response) -> StructuredResp
         if corpus_id is None:
             related_docs = []
         else:
-            retrieval = RetrievalService(db)
+            retrieval = RetrievalService(db, embedder=embedder)
             related_docs = await retrieval.get_related_documents(
                 request.document_id, k=request.k, corpus_id=corpus_id
             )
@@ -403,7 +403,7 @@ async def timeline(
         if corpus_id is None:
             docs = []
         else:
-            retrieval = RetrievalService(db)
+            retrieval = RetrievalService(db, embedder=embedder)
             docs = await retrieval.get_timeline(
                 document_type, start_date, end_date, limit, corpus_id=corpus_id
             )

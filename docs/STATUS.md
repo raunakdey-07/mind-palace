@@ -388,6 +388,35 @@ bit-identical across batch sizes, so this is a cost measurement and not a
 change of behaviour. A 3x reduction would have to come from encoding less, and
 the brief was explicit that the embeddings must not change.
 
+### A table row, and the part of the question that lost the subject
+
+`mindpalace recall "What is the gzipped bundle size and keystroke-to-preview
+latency of the SDK?"` answered with the bundle sizes of two other chunks. The
+SDK's own row was fifth, and the 8,000-character response budget keeps four
+claims, so the reader never saw the row that answers the question.
+
+**The question is split into parts before it is scored, and the first part
+loses the subject.** "What is the gzipped bundle size?" names no component at
+all. Every row of the bundle-size table covers that part equally, so the part's
+coverage cannot tell the rows apart, and the row that answers the question was
+ordered among its siblings by the embedding's opinion of an unrelated sentence.
+Measured against the question as a whole, the SDK's row covers one term its
+siblings do not, and it is the answer.
+
+**The coverage is measured against the question now, not against the part that
+found the claim.** A part is a lens for finding the claims, not a smaller
+question. The budget is unchanged: it is still the Unicode characters of the
+complete canonical JSON, and the claim that answers the question is the one
+that survives it.
+
+Against the real `cv-embed` documents, the two facts the question asks for
+come back in the first two claims, the unrelated rows of the same table after
+them, and the response is 7,233 of the 8,000 characters with nothing dropped.
+
+Nothing else moved. The frozen M006.75 set is identical on all sixty
+questions, field for field, and the 202-question development set flips no
+question.
+
 ## Correctness
 
 **An accuracy figure is not the useful number.** "131/157" averages a right answer

@@ -325,8 +325,8 @@ Memory Pack version changed, and no benchmark input was touched.
   produced no claims keeps its vectors, because the chunk index is the only
   index such a document has. `mindpalace ingest-repo --embed-chunks` asks for
   the vectors anyway, and `mindpalace reindex` rebuilds them from the archive.
-  Measured over two corpora, 2,092 chunks and 3,898 claims: **209.0 s to 59.5
-  s**, with the chunk-embedding phase going from 111.1 s to 0.5 s. Every claim
+  Measured over two corpora, 2,097 chunks and 3,907 claims: **147.0 s to 59.7
+  s**, with the chunk-embedding phase going from 72.8 s to 0.6 s. Every claim
   vector is byte-for-byte identical before and after.
 - **A chunk search gives the chunks it needs a vector before it looks.** A
   corpus synced without chunk vectors used to answer the chunk-level search

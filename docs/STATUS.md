@@ -413,21 +413,22 @@ chunk texts are immutable, so a chunk gets the same vector either way.
 The profile below is a different corpus set and a different machine from the
 one above, so the two tables are not comparable to each other. Two corpora:
 this repository's `docs/` (78 files) and a second repository's `docs/` (7
-files), 85 files, 2,092 chunks and 3,898 claims, on a container-local
+files), 85 files, 2,097 chunks and 3,907 claims, on a container-local
 PostgreSQL and the default ONNX backend:
 
 | phase | before | after |
 |---|---|---:|
-| ONNX embedding, chunk texts | 111.1 s | 0.5 s |
-| ONNX embedding, claim representations | 64.2 s | 33.8 s |
-| `chunks` writes | 8.1 s | 1.8 s |
-| `memory_claim_embeddings` writes | 8.2 s | 6.6 s |
-| `memory_claims` + `memory_evidence` writes | 3.9 s | 3.7 s |
-| **wall clock** | **209.0 s** | **59.5 s** |
+| ONNX embedding, chunk texts | 72.8 s | 0.6 s |
+| ONNX embedding, claim representations | 44.9 s | 34.1 s |
+| `chunks` writes | 6.1 s | 1.8 s |
+| `memory_claim_embeddings` writes | 6.9 s | 6.4 s |
+| `memory_claims` + `memory_evidence` writes | 3.4 s | 3.8 s |
+| **wall clock** | **147.0 s** | **59.7 s** |
 
-Reproduce it with `scripts/benchmark/ingest_profile.py`, which times every
-phase where the work happens, so the phases add up to the wall clock instead of
-describing it.
+The before column is `main` and the after column is this branch, both measured
+on the same machine over the same files. Reproduce it with
+`scripts/benchmark/ingest_profile.py`, which times every phase where the work
+happens, so the phases add up to the wall clock instead of describing it.
 
 **Two more things were measured, not guessed.** The ONNX session now asks for
 every graph optimisation the runtime knows about, and it gets one thread per
@@ -443,7 +444,7 @@ one corpus, sorting by tokens padded 63,093 positions where sorting by
 characters padded 71,989, and encoded them 13% faster.
 
 **No vector changed.** The claim vectors are byte-for-byte identical before and
-after: the digest of every stored vector of both corpora is the same, 2,741
+after: the digest of every stored vector of both corpora is the same, 2,750
 rows and 1,157 rows. The mask zeroes the padding and the pooling divides by
 the unmasked length, so what a text is padded to does not change what it says,
 and the thread count changes the order the reductions happen in and not their

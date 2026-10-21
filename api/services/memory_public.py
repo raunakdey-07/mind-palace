@@ -156,7 +156,17 @@ def project(
     matched = (
         resolved
         if not request.query
-        else memory._query_result(versions, request.query, state.valid_at or state.as_of)
+        else memory._query_result(
+            versions,
+            request.query,
+            state.valid_at or state.as_of,
+            # A history read asks about a chain of claims, so the question is
+            # resolved against the supersession graph: a claim that was retired
+            # is found together with the claim that retired it, whichever one
+            # the question happened to name. Every other operation asks which
+            # claim answers the question, and there the answer is one claim.
+            lineage=operation in {"history", "changes"},
+        )
     )
     raw_claims = {c["id"]: c for c in resolved["all_claims"]}
     evidence = {

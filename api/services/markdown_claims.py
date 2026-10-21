@@ -143,6 +143,25 @@ _NEW_SENTENCE = re.compile(r"^[A-Z]")
 #: A reference that names a document rather than a claim key.
 _PATHISH = re.compile(r"[/\\]|\.md\b", re.IGNORECASE)
 
+#: Words a sentence cannot end on.
+#:
+#: A line that stops on one of these is not finished. The writer wrapped the
+#: sentence and the rest of it is on the next line, so the next line continues
+#: the statement even when it opens with a capital: "PDF and" is followed by
+#: "DOCX export cost", and reading the second line as a new statement archived
+#: the half of the sentence that carries no fact.
+#:
+#: Determiners are here for the same reason: "the default install is 216 MB and
+#: a" is unfinished too.
+_CONTINUATION_WORDS = frozenset(
+    """a an the and or but nor so yet for of in on at by with from to into onto
+    over under as than about after before between through during without within
+    upon per via""".split()
+)
+
+#: Characters a status cell is made of. A tick, a cross, a dash, a dot.
+_STATUS_MARKS = frozenset("✓✔☑☐✗✘✕×⨯-–—_.*·•")
+
 #: Values that mean "there is no such document". An ADR template almost always
 #: carries `Superseded-by: none`, and treating that as a reference would fail
 #: every decision record that has not been replaced yet -- which is all of them,
@@ -420,6 +439,56 @@ def _opens_a_sentence(line: str) -> bool:
     return bool(_NEW_SENTENCE.match(line))
 
 
+def _ends_with_continuation_word(line: str) -> bool:
+    """Whether this line stops on a word the sentence cannot end on.
+
+    The writer wrapped the sentence and the rest of it is on the next line.
+    Reading the next line as a new statement because it happens to begin with
+    a capital is what cut "the measured baseline: bundle sizes, first-paint
+    and keystroke latency, PDF and" off mid-sentence.
+    """
+    words = re.findall(r"[A-Za-z]+", line)
+    return bool(words) and words[-1].casefold() in _CONTINUATION_WORDS
+
+
+def _carries_no_fact(cell: str) -> bool:
+    """Whether a table cell holds nothing but a status mark.
+
+    Blank, a dash, a tick, a cross. A row made of these says that everything
+    is fine and names nothing.
+    """
+    text = cell.strip()
+    if not text:
+        return True
+    return all(character in _STATUS_MARKS for character in text)
+
+
+def _is_degenerate_row(header: list[str], cells: list[str]) -> bool:
+    """Whether a table row says nothing beyond its own label.
+
+    Two shapes produce one. A row whose header cell is empty has no column to
+    name its value by, so the value is dropped and the row reads as its label
+    alone: a navigation table with an empty header row produces one claim per
+    link and says nothing about what any of them is. And a row whose values are
+    all status marks says that everything is fine and names nothing.
+
+    Neither is a decision, and both inflate the claim count: a repository's own
+    README carried sixteen of them, one per link in a table of documents.
+    """
+    values = cells[1:]
+    if not values:
+        return True
+    named = [
+        (header[position] if position < len(header) else "", value)
+        for position, value in enumerate(values, 1)
+    ]
+    if not any(name.strip() for name, _value in named):
+        # No column can name a value, so the row renders as its label alone.
+        return True
+    spoken = [value for _name, value in named if value.strip()]
+    return bool(spoken) and all(_carries_no_fact(value) for value in spoken)
+
+
 def _statement(lines: list[tuple[int, str]]) -> tuple[str, str, str] | None:
     """The `(claim, value, raw)` of one logical statement, or None.
 
@@ -522,6 +591,11 @@ def _table_claims(
         raw = lines[2 + index]
         text = render_table_row(header, cells)
         if not _declarative(text):
+            continue
+        if _is_degenerate_row(header, cells):
+            # The row says nothing beyond its own label, or says that
+            # everything is fine. Keeping it would inflate the claim count
+            # with a claim that answers no question.
             continue
         signature = (heading_path, text)
         if signature in seen_quotes:
@@ -645,9 +719,18 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
             pending_path = " > ".join(title for _level, title in headings)
             continue
         if pending:
-            if _is_field_statement(pending) and _opens_a_sentence(raw):
+            if (
+                _is_field_statement(pending)
+                and _opens_a_sentence(raw)
+                and not _ends_with_continuation_word(pending[-1][1])
+            ):
                 # The field's sentence ended. What follows is a new sentence,
                 # and a field is one sentence, not a paragraph.
+                #
+                # Unless the field stopped on a word the sentence cannot end
+                # on. "PDF and" is not a finished sentence, and the line that
+                # completes it is not the next statement even when it opens
+                # with a capital.
                 close()
                 continue
             # A wrapped continuation of the statement above it.

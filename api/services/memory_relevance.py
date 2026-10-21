@@ -493,6 +493,30 @@ def claim_terms(text: str) -> frozenset[str]:
     return value
 
 
+def claim_headings(full: MemoryResponse) -> dict[str, frozenset[str]]:
+    """The section terms each claim sits under, read from its own evidence.
+
+    A table row reads as "`sdk.js`: Size: 20.40 kB" and says nothing about
+    which part of the document it came from. The heading above the table is
+    what makes it the SDK's bundle size rather than any other file's, and a
+    question that asks about the SDK is a question about that heading.
+
+    The heading comes from the evidence rather than from the claim's key,
+    because the key holds a *slug* of it: lowercased, dashed, and cut at 48
+    characters. A heading the slug dropped is a heading the archive still
+    knows, and reading it from the evidence is the only place it is whole.
+    """
+    out: dict[str, set[str]] = {}
+    for evidence in full.evidence:
+        heading = getattr(evidence, "heading", None)
+        if not heading:
+            continue
+        found = claim_terms(heading)
+        if found:
+            out.setdefault(evidence.claim_id, set()).update(found)
+    return {claim_id: frozenset(found) for claim_id, found in out.items()}
+
+
 def relevance(
     full: MemoryResponse,
     request: MemoryRequest,
@@ -562,6 +586,16 @@ def relevance(
     # contains, and how rare each of them is in the corpus.
     representations = [representation(claims[c]) for c in ids]
     documents = [claim_terms(f"{claims[c].claim} {claims[c].key} {claims[c].path}") for c in ids]
+    # The section a claim sits under is part of what the claim is about, so it
+    # is part of the vocabulary the question is compared against. It is kept
+    # apart from `documents` on purpose: the corpus's own statistics -- what
+    # every claim carries, and how rare each word is -- are computed over the
+    # claim's own words, and adding a heading to that population would make
+    # every document heading look like the corpus's own name.
+    headings = claim_headings(full)
+    context = [
+        documents[position] | headings.get(cid, frozenset()) for position, cid in enumerate(ids)
+    ]
     # Terms occurring in every candidate (e.g. project name) cannot DISCRIMINATE
     # between candidates, so ranking is computed on documents with them removed.
     # They are not evidence that the question is off-topic, so the acceptance gate
@@ -580,7 +614,7 @@ def relevance(
     # project. The words that match are "Mind" and "Palace", which are in the
     # project's own name and in a seventh of its claims, and the claims they
     # reach say nothing about Kafka. The subject is the one word left.
-    counts, weights, weight_totals = question_weights(documents, question_terms)
+    counts, weights, weight_totals = question_weights(context, question_terms)
     boilerplate = frozenset(
         token
         for token, count in counts.items()
@@ -662,18 +696,19 @@ def relevance(
                 continue
             value = score(i, position)
             # Overlap asks "is the question about this claim?", so it is tested
-            # against the full claim terms. Reducing them first would delete the
-            # subject the question is asking about whenever a second claim shares
-            # it, and every such question would then need the strong-score bar
-            # instead of the normal minimum.
-            overlap = bool(question_terms[i] & documents[position])
+            # against the full claim terms and the section the claim sits
+            # under. Reducing them first would delete the subject the question
+            # is asking about whenever a second claim shares it, and every such
+            # question would then need the strong-score bar instead of the
+            # normal minimum.
+            overlap = bool(question_terms[i] & context[position])
             # The same question asked about the subject rather than about the
             # corpus's own vocabulary. A question whose subject the corpus's
             # best answer is not about is a question the corpus cannot answer,
             # and these numbers are what say so.
             if value > best_overall:
                 best_overall = value
-            if subject_terms[i] & documents[position]:
+            if subject_terms[i] & context[position]:
                 subject_claims += 1
                 if value > best_subject:
                     best_subject = value
@@ -704,7 +739,7 @@ def relevance(
                     # The lexical score is already a coverage measure.
                     ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), value)
                 else:
-                    shared = question_terms[i] & documents[position]
+                    shared = question_terms[i] & context[position]
                     coverage = sum(weights[i][token] for token in shared) / weight_totals[i]
                     adjusted = value * (1.0 + COVERAGE_WEIGHT * coverage)
                     ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), adjusted)

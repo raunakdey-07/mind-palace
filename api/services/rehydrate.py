@@ -194,7 +194,7 @@ async def backfill_claim_embeddings(db: AsyncSession, corpus_id: str) -> int:
     raised, because the cache is an optimization and rehydration itself is what
     the caller actually needs.
     """
-    from api.services.claim_embeddings import pending, store
+    from api.services.claim_embeddings import embed_representations, pending, store
     from api.services.embedder import Embedder
 
     try:
@@ -202,7 +202,7 @@ async def backfill_claim_embeddings(db: AsyncSession, corpus_id: str) -> int:
         if not wanted:
             return 0
         embedder = Embedder()
-        vectors = dict(zip(wanted, embedder.embed(texts)))
+        vectors = await embed_representations(db, corpus_id, wanted, texts, embedder)
         return await store(
             db,
             corpus_id,

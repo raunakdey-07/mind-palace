@@ -267,6 +267,45 @@ Memory Pack version changed, and no benchmark input was touched.
   are the same either way: the mask zeroes the padding and the pooling divides
   by the unmasked length, and the largest difference measured across the
   strategies was 0.0.
+- **`mindpalace history` walked the supersession edges backwards only.** The
+  graph has an edge in each direction, and the reader followed only one of them.
+  A question that anchored on a retired claim found nothing to walk back to, so
+  the claim that replaced it never entered the timeline and the retired claim
+  was printed as the one that is true now. The chain is now the connected
+  component of the supersession graph, in both directions and across documents,
+  so anchoring on the older claim reaches the newer one. The frame words are
+  dropped before the question is matched, because "How did the default install
+  change?" is a question about the default install and not about the word
+  "change", and a lineage is scored on the union of its tokens so a question
+  that names the before and the after matches the whole chain.
+- **A superseded claim could be printed as `current now`.** The last line of a
+  history read named the first claim of the last version, which is not always
+  the claim that ended the chain, and a retired claim is not what is true now.
+  It names the last claim in the timeline that nothing in the timeline replaced.
+- **A table row lost the heading it sits under.** A row reads as
+  "`sdk.js`: Size: 20.40 kB" and says nothing about which part of the document
+  it came from, and the word "SDK" was in the heading above the table rather
+  than in the cell. The heading is part of the claim's context now, read from
+  the chunk the claim was quoted from. It matters where the claim's own key
+  cannot carry it: a key holds a slug of its heading path cut at 48 characters,
+  so a deeply nested heading loses the words that identify it, and those are
+  exactly the words a question about the table uses.
+- **A wrapped sentence was archived as the half that carries no fact.** A
+  `Key: Value` statement ended where the next line opened with a capital, so
+  "the measured baseline: bundle sizes, first-paint and keystroke latency, PDF
+  and" was a complete claim and the rest of the sentence was a different one. A
+  line that stops on a conjunction or a preposition is not finished, and the
+  chunk boundary rule follows the same rule: a chunk never stops on one
+  either.
+- **A table row that says nothing was a claim.** A table whose header row is
+  empty has no column to name a value by, so every row read as its own label:
+  one claim per link, and nothing about what any of them is. A row of status
+  marks says the same thing. Both are dropped now.
+- **An ingest spent a database round trip per row.** The claims, the evidence
+  and the claim representations were written one row at a time, inside a Python
+  loop: 4,974 statements for the 2,487 claims of a 78-document repository. They
+  are written in batches now, and the vectors that are already cached under
+  their own hash are not encoded a second time.
 
 ### Changed
 

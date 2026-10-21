@@ -31,6 +31,21 @@
       "seconds": 585.51,
       "skipped": "2"
     },
+    "1d00c53: full suite: delete-removed and corpus reset, on top of the chunk-vector work": {
+      "collected": "2000",
+      "commit": "1d00c531a295a48f39f7d00642b6cbc586f560d3",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: delete-removed and corpus reset, on top of the chunk-vector work",
+      "passed": "1998",
+      "seconds": 836.9,
+      "skipped": "2"
+    },
     "3108404: full suite, run A (trust round)": {
       "collected": "1621",
       "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",

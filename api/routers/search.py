@@ -65,7 +65,7 @@ async def search(
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
 
     try:
-        retrieval = RetrievalService(db)
+        retrieval = RetrievalService(db, embedder=embedder)
         results = await retrieval.search(
             query_text=q,
             query_vector=query_vector,

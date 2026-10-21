@@ -112,7 +112,7 @@ async def test_ingestion_a_to_b_preserves_history_and_replaces_live_chunks(memor
     second = await service.ingest_file(source("PostgreSQL"), "architecture.md", corpus)
     assert second["success"] and second["document_id"] == first["document_id"]
     async with sessions() as db:
-        live = await RetrievalService(db).search(
+        live = await RetrievalService(db, embedder=FixedEmbedder()).search(
             FixedEmbedder().embed(["database"])[0], corpus_id=corpus, k=10
         )
         assert [r.text for r in live] == ["The primary database is PostgreSQL."]
@@ -162,7 +162,7 @@ async def test_memory_sync_deletion_restore_and_metadata_only(memory_ingestion_d
     async with sessions() as db:
         assert not (await memory.query(db, corpus))["current_memories"]
         assert len(await memory.evidence(db, corpus)) == 2
-        assert not await RetrievalService(db).search(
+        assert not await RetrievalService(db, embedder=FixedEmbedder()).search(
             FixedEmbedder().embed(["database"])[0], corpus_id=corpus
         )
     path.write_text(source("PostgreSQL"))
@@ -206,7 +206,7 @@ async def test_rehydrate_rebuilds_live_projection_without_new_archive_version(
             )
         ).scalar_one()
         assert document == first["document_id"]
-        live = await RetrievalService(db).search(
+        live = await RetrievalService(db, embedder=FixedEmbedder()).search(
             FixedEmbedder().embed(["database"])[0], corpus_id=corpus
         )
         assert [row.text for row in live] == ["The primary database is Redis."]
@@ -258,7 +258,9 @@ async def test_failed_memory_write_rolls_back_live_chunks_manifest_and_archive(
     async with sessions() as db:
         assert len(await memory.history(db, corpus)) == 1
         assert len(await memory.evidence(db, corpus)) == 1
-        live = await RetrievalService(db).search(FixedEmbedder().embed([""])[0], corpus_id=corpus)
+        live = await RetrievalService(db, embedder=FixedEmbedder()).search(
+            FixedEmbedder().embed([""])[0], corpus_id=corpus
+        )
         assert [r.text for r in live] == ["The primary database is Redis."]
         manifest = (
             await db.execute(

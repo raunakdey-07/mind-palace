@@ -93,6 +93,13 @@ async def sync_corpus(
     delete_removed: bool = Query(
         True, description="Remove indexed docs whose source files were deleted"
     ),
+    embed_chunks: bool = Query(
+        False,
+        description=(
+            "Also embed every chunk, for the chunk-level search. Off by default: a "
+            "document that produced claims is answered from the claim archive."
+        ),
+    ),
     db: DbSession = None,
 ) -> SyncResponse:
     """Synchronize a corpus with a source directory.
@@ -109,7 +116,9 @@ async def sync_corpus(
     except IngestPathRefused as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     svc = IngestionService()
-    result = await svc.sync_repo(source, corpus["id"], delete_removed=delete_removed)
+    result = await svc.sync_repo(
+        source, corpus["id"], delete_removed=delete_removed, embed_chunks=embed_chunks
+    )
     return SyncResponse(**result)
 
 

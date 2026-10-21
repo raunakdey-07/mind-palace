@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1981 passed, 0 failed, 2 skipped** (as of `7465fe8`); 1983 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded runner figures, kept for the record: `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| tests | **1992 passed, 0 failed, 2 skipped** (as of `c61ce10`); 1994 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -387,6 +387,69 @@ improve past a batch of 8 (measured, interleaved, at batch sizes 4, 8, 16 and
 bit-identical across batch sizes, so this is a cost measurement and not a
 change of behaviour. A 3x reduction would have to come from encoding less, and
 the brief was explicit that the embeddings must not change.
+
+### The chunk vectors, which nothing read
+
+**Half the ingest was computing vectors for an index no read path queries.**
+`recall`, `history`, `explain` and `receipt` all read
+`memory_claim_embeddings`. None of them reads `chunks.embedding`. The chunk
+vectors are the legacy chunk-level index, and a document that produced claims
+was indexed twice: once as claims, which is what the product reads, and once
+as 1,200-character chunks, which cost 256 tokens each to encode.
+
+A document that produced no claims is the other case, and it is not the same
+case. Such a document contributes no claim, so the chunk index is the only
+index it has, and it keeps its vectors. `mindpalace ingest-repo --embed-chunks`
+asks for the vectors for every document, and `mindpalace reindex` rebuilds
+them from the archive for a corpus that was synced without them.
+
+**The chunk index is not dead, and the search says so by working.** A search
+gives the chunks that have no vector one before it looks, so the chunk-level
+search answers for a corpus that was synced without them instead of returning
+nothing for a corpus full of text. The vectors are the ones an ingest would
+have computed -- the chunk's own text, through the same embedder -- and the
+chunk texts are immutable, so a chunk gets the same vector either way.
+
+The profile below is a different corpus set and a different machine from the
+one above, so the two tables are not comparable to each other. Two corpora:
+this repository's `docs/` (78 files) and a second repository's `docs/` (7
+files), 85 files, 2,097 chunks and 3,907 claims, on a container-local
+PostgreSQL and the default ONNX backend:
+
+| phase | before | after |
+|---|---|---:|
+| ONNX embedding, chunk texts | 72.8 s | 0.6 s |
+| ONNX embedding, claim representations | 44.9 s | 34.1 s |
+| `chunks` writes | 6.1 s | 1.8 s |
+| `memory_claim_embeddings` writes | 6.9 s | 6.4 s |
+| `memory_claims` + `memory_evidence` writes | 3.4 s | 3.8 s |
+| **wall clock** | **147.0 s** | **59.7 s** |
+
+The before column is `main` and the after column is this branch, both measured
+on the same machine over the same files. Reproduce it with
+`scripts/benchmark/ingest_profile.py`, which times every phase where the work
+happens, so the phases add up to the wall clock instead of describing it.
+
+**Two more things were measured, not guessed.** The ONNX session now asks for
+every graph optimisation the runtime knows about, and it gets one thread per
+*physical* core rather than per logical processor: onnxruntime's default is
+one per logical processor, and on a machine with SMT the two halves of a core
+fight for the same execution units. On the 4-core/8-thread machine this was
+measured on, a batch of eight claim representations took 58.9 ms with the
+default and 38.7 ms with one thread per physical core. And the batches are
+formed from the token lengths rather than the character lengths, because a key
+like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4` is a different
+number of tokens than it is characters: over the 2,178 claim representations of
+one corpus, sorting by tokens padded 63,093 positions where sorting by
+characters padded 71,989, and encoded them 13% faster.
+
+**No vector changed.** The claim vectors are byte-for-byte identical before and
+after: the digest of every stored vector of both corpora is the same, 2,750
+rows and 1,157 rows. The mask zeroes the padding and the pooling divides by
+the unmasked length, so what a text is padded to does not change what it says,
+and the thread count changes the order the reductions happen in and not their
+result. The batch size, the batch order and the thread count were each
+measured to leave the vectors bit-identical.
 
 ## Correctness
 

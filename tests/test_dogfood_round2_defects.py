@@ -313,9 +313,15 @@ def test_the_onnx_backend_puts_texts_of_a_length_together():
 
     assert ONNX_BATCH_SIZE >= 1
     source = Path(ROOT, "api/services/embedder.py").read_text(encoding="utf-8")
+    # The length that matters is the token count, not the character count: a
+    # key like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4` is a
+    # different number of tokens than it is characters.
     assert (
-        "sorted(range(len(texts)), key=lambda index: len(texts[index]))" in source
+        "sorted(range(len(texts)), key=lambda index: lengths[index])" in source
     ), "the ONNX backend no longer batches by length"
+    assert (
+        "lengths = self._token_lengths(texts)" in source
+    ), "the ONNX backend no longer measures the length in tokens"
 
 
 # --- 5. The history status -------------------------------------------------

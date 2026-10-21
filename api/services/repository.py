@@ -270,6 +270,81 @@ async def insert_chunks(
     return len(chunks)
 
 
+#: How many chunks one backfill gives vectors to.
+#:
+#: The vectors are a cache, and the cache is filled from the chunks' own text.
+#: A corpus with more chunks than this backfills over several searches rather
+#: than in one enormous request.
+CHUNK_BACKFILL_BATCH = 2000
+
+
+async def backfill_chunk_embeddings(
+    db: AsyncSession,
+    corpus_id: str | None = None,
+    *,
+    embedder=None,
+) -> int:
+    """Give the chunks that have no vector one, and return how many it gave.
+
+    A corpus synced without `--embed-chunks` has chunks with no vector, and the
+    chunk-level search reads only the chunks that have one. This fills the gap
+    the first time the search runs, so the search answers instead of silently
+    returning nothing.
+
+    The vectors are the ones an ingest would have computed: the chunk's own
+    text, through the same embedder. The chunk texts are immutable, so the
+    vector a chunk gets here is the vector it would have got then.
+
+    It runs in the caller's transaction and commits it. The vectors are a cache,
+    and a cache written in a transaction nobody commits is a cache written on
+    every read; and the search has to see them, which a transaction that is
+    still open would not allow.
+    """
+    from api.services.embedder import Embedder
+
+    params: dict = {}
+    where = "c.embedding IS NULL"
+    if corpus_id is not None:
+        where += " AND d.corpus_id = :corpus_id"
+        params["corpus_id"] = corpus_id
+    rows = (
+        await db.execute(
+            text(
+                "SELECT c.id, c.text FROM chunks c JOIN documents d ON c.doc_id = d.id "
+                f"WHERE {where} LIMIT :limit"
+            ),
+            {**params, "limit": CHUNK_BACKFILL_BATCH},
+        )
+    ).all()
+    if not rows:
+        return 0
+    embedder = embedder or Embedder()
+    vectors = embedder.embed([row[1] for row in rows])
+    if len(vectors) != len(rows):
+        raise ValueError("embedding count does not match chunk count")
+    await db.execute(
+        text("""
+            UPDATE chunks SET embedding = CAST(:vector AS vector),
+                              embedding_model = :model,
+                              embedding_dimension = :dimension,
+                              embedding_version = :version
+            WHERE id = :id
+        """),
+        [
+            {
+                "id": row[0],
+                "vector": "[" + ",".join(repr(float(x)) for x in vector) + "]",
+                "model": embedder.model_name,
+                "dimension": embedder.dimension,
+                "version": getattr(embedder, "version", "backfill"),
+            }
+            for row, vector in zip(rows, vectors)
+        ],
+    )
+    await db.commit()
+    return len(rows)
+
+
 async def search_chunks(
     db: AsyncSession,
     corpus_id: str,

@@ -135,7 +135,13 @@ def _supersession_order(repo_path: Path, md_files: list[Path]) -> list[str]:
 class IngestionService:
     """Service for ingesting Markdown documents."""
 
-    def __init__(self, *, memory_enabled: bool = False, require_embeddings: bool = True):
+    def __init__(
+        self,
+        *,
+        memory_enabled: bool = False,
+        require_embeddings: bool = True,
+        embed_chunks: bool = False,
+    ):
         self.embedder = Embedder()
         self.memory_enabled = memory_enabled
         # `remember` records authoritative memory and sets this False, so a first
@@ -143,6 +149,9 @@ class IngestionService:
         # silently accepting a directory of documents and producing a corpus that
         # cannot be searched would be worse than failing.
         self.require_embeddings = require_embeddings
+        # Whether every chunk gets a vector of its own, whatever the document
+        # produced. Off by default, and the reason is in `_embed_records`.
+        self.embed_chunks = embed_chunks
 
     def _embed_records(self, records: list[dict]) -> tuple[str | None, int | None]:
         """Embed chunk records, or skip the model entirely when the caller allows it.
@@ -179,6 +188,34 @@ class IngestionService:
                 records[index]["embedding"] = embedding
         return self.embedder.model_name, self.embedder.dimension
 
+    def _chunk_vectors(
+        self, records: list[dict], claims: list[dict], embed_chunks: bool | None = None
+    ) -> tuple[str | None, int | None]:
+        """The vectors for a document's chunks, when they are worth computing.
+
+        A document that produced claims is answered from the claim archive.
+        `recall`, `history`, `explain` and `receipt` all read
+        `memory_claim_embeddings`, and none of them reads `chunks.embedding`.
+        The chunk vectors are the legacy chunk-level index, and computing one for
+        every chunk of every document was the largest single cost in a sync: on
+        a 78-document repository it was 59.3 s of a 112.3 s ingest, for an index
+        nothing on the claim path reads.
+
+        A document that produced no claims is the other case, and it keeps its
+        vectors. The chunk index is the only index such a document has: it
+        contributes no claim, so a vector is the only way anything can find it.
+
+        `embed_chunks` asks for the vectors anyway, for a caller who wants the
+        legacy chunk-level search over the whole corpus. A chunk search gives
+        the chunks it needs a vector when it runs, and `mindpalace reindex`
+        rebuilds them from the archive for a corpus that was synced without
+        them.
+        """
+        wanted = self.embed_chunks if embed_chunks is None else embed_chunks
+        if not (wanted or not claims):
+            return None, None
+        return self._embed_records(records)
+
     async def _ingest_content(
         self,
         db,
@@ -189,6 +226,7 @@ class IngestionService:
         *,
         supersedes_claim_id: str | None = None,
         topic_key: str | None = None,
+        embed_chunks: bool | None = None,
     ) -> dict:
         """Shared ingestion pipeline for one parsed document.
 
@@ -221,6 +259,7 @@ class IngestionService:
                     owner_principal_id,
                     supersedes_claim_id=supersedes_claim_id,
                     topic_key=topic_key,
+                    embed_chunks=embed_chunks,
                 )
             else:
                 result = await self._ingest_live_content(
@@ -341,6 +380,7 @@ class IngestionService:
         *,
         supersedes_claim_id: str | None = None,
         topic_key: str | None = None,
+        embed_chunks: bool | None = None,
     ) -> dict:
         """One caller-owned transaction for the archive and live-index projection."""
         from api.services import memory
@@ -442,7 +482,7 @@ class IngestionService:
                 "message": "Document unchanged, skipped",
             }
 
-        embedding_model, embedding_dimension = self._embed_records(records)
+        embedding_model, embedding_dimension = self._chunk_vectors(records, claims, embed_chunks)
         doc_id = await upsert_document(
             db,
             extract_title(metadata),
@@ -573,6 +613,7 @@ class IngestionService:
         owner_principal_id: str | None = None,
         supersedes_claim_id: str | None = None,
         topic_key: str | None = None,
+        embed_chunks: bool | None = None,
     ) -> dict:
         """Ingest a single Markdown file into the given corpus.
 
@@ -585,6 +626,9 @@ class IngestionService:
 
         `supersedes_claim_id` and `topic_key` are the cross-document supersession
         arguments; see `memory.record_version`. Both apply to this write only.
+
+        `embed_chunks` asks for a vector for every chunk as well as every claim.
+        See `sync_repo` for why that is not the default.
         """
         async with session_scope() as db:
             return await self._ingest_content(
@@ -595,6 +639,7 @@ class IngestionService:
                 owner_principal_id,
                 supersedes_claim_id=supersedes_claim_id,
                 topic_key=topic_key,
+                embed_chunks=embed_chunks,
             )
 
     async def ingest_repo(
@@ -610,6 +655,7 @@ class IngestionService:
         repo_path: str,
         corpus_id: str = DEFAULT_CORPUS_ID,
         delete_removed: bool = True,
+        embed_chunks: bool = False,
     ) -> dict:
         """Synchronize a corpus with a source directory.
 
@@ -629,6 +675,14 @@ class IngestionService:
         themselves, which left the SDK's `sync()` and the MCP `sync` tool -- both
         of which arrive here directly -- reading outside the configured roots.
         One guard at the chokepoint covers all four surfaces.
+
+        `embed_chunks` asks for a vector for every chunk as well as every claim.
+        A document that produced claims is answered from the claim archive, so
+        its chunk vectors are the legacy chunk-level index and computing them
+        was about half the wall clock of a sync. A document that produced no
+        claims keeps its vectors either way, because the chunk index is the
+        only index it has. A chunk search gives the chunks it needs a vector
+        when it runs.
         """
         start = time.perf_counter()
         # The roots check the callers were doing individually. Returns the
@@ -658,7 +712,9 @@ class IngestionService:
 
                 state = "changed" if known else "added"
                 async with session_scope() as db:
-                    result = await self._ingest_content(db, content, rel_path, corpus_id)
+                    result = await self._ingest_content(
+                        db, content, rel_path, corpus_id, embed_chunks=embed_chunks
+                    )
 
                 for warning in result.get("warnings", []):
                     warnings.append({**warning, "path": rel_path})

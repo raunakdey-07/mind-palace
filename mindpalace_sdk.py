@@ -907,16 +907,28 @@ class MindPalace:
         async with session_scope() as db:
             await get_or_create_corpus(db, self.name)
 
-    def sync(self, path: str, *, delete_removed: bool = True) -> SyncSummary:
+    def sync(
+        self, path: str, *, delete_removed: bool = True, embed_chunks: bool = False
+    ) -> SyncSummary:
         """Synchronize the corpus with a source directory.
 
         Added files are ingested; changed files are reprocessed; files removed
         from the source are dropped from the index (when ``delete_removed``).
+
+        ``embed_chunks`` asks for a vector for every chunk as well as every
+        claim. A document that produced claims is answered from the claim
+        archive, so its chunk vectors are the legacy chunk-level index; not
+        computing them costs about half the wall clock of a sync. A document
+        that produced no claims keeps its vectors either way, because the chunk
+        index is the only index it has. A chunk search gives the chunks it
+        needs a vector when it runs.
         """
         corpus_id = self._corpus_id(write=True)
         with self._as_caller():
             result = self._run(
-                self._ingestion.sync_repo(path, corpus_id, delete_removed=delete_removed)
+                self._ingestion.sync_repo(
+                    path, corpus_id, delete_removed=delete_removed, embed_chunks=embed_chunks
+                )
             )
         return SyncSummary(
             success=result["success"],
@@ -1063,7 +1075,7 @@ class MindPalace:
 
         async def _search():
             async with session_scope() as db:
-                svc = RetrievalService(db)
+                svc = RetrievalService(db, embedder=self._embedder)
                 return await svc.search(
                     vector,
                     k=k,

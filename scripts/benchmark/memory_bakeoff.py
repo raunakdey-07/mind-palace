@@ -281,7 +281,7 @@ async def product_context(db: AsyncSession, corpus_name: str, case: dict, embedd
 
     row = await get_corpus_by_name(db, corpus_name)
     vector = embedder.embed_single(case["question"])
-    results = await RetrievalService(db).search(
+    results = await RetrievalService(db, embedder=embedder).search(
         vector,
         k=8,
         hybrid=True,

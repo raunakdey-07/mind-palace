@@ -160,8 +160,9 @@ async def probe(schema: str) -> int:
 
             async def product_context(db):
                 row = await get_corpus_by_name(db, schema)
-                vector = Embedder().embed_single(question)
-                found = await RetrievalService(db).search(
+                embedder = Embedder()
+                vector = embedder.embed_single(question)
+                found = await RetrievalService(db, embedder=embedder).search(
                     vector,
                     k=8,
                     hybrid=True,

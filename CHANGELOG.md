@@ -317,6 +317,37 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Changed
 
+- **A sync no longer computes vectors for an index nothing reads.** `recall`,
+  `history`, `explain` and `receipt` all read `memory_claim_embeddings`; none
+  of them reads `chunks.embedding`. A document that produced claims was
+  encoded twice, once as claims and once as 1,200-character chunks at 256
+  tokens each, and the second half was the larger of the two. A document that
+  produced no claims keeps its vectors, because the chunk index is the only
+  index such a document has. `mindpalace ingest-repo --embed-chunks` asks for
+  the vectors anyway, and `mindpalace reindex` rebuilds them from the archive.
+  Measured over two corpora, 2,092 chunks and 3,898 claims: **209.0 s to 59.5
+  s**, with the chunk-embedding phase going from 111.1 s to 0.5 s. Every claim
+  vector is byte-for-byte identical before and after.
+- **A chunk search gives the chunks it needs a vector before it looks.** A
+  corpus synced without chunk vectors used to answer the chunk-level search
+  with nothing, for a corpus full of text. The search now fills the gap with
+  the vectors an ingest would have computed -- the chunk's own text, through
+  the same embedder -- so it answers instead of returning nothing.
+- **The ONNX session gets one thread per physical core.** onnxruntime's
+  default is one thread per logical processor, and on a machine with SMT the
+  two halves of a core fight for the same execution units. On the 4-core/
+  8-thread machine this was measured on, a batch of eight claim
+  representations took 58.9 ms with the default and 38.7 ms with one thread
+  per physical core. The vectors are bit-identical either way, and
+  `MIND_PALACE_ONNX_THREADS` overrides the choice.
+- **Batches are formed from token lengths rather than character lengths.** A
+  key like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4` is a
+  different number of tokens than it is characters, and sorting by characters
+  put the representations into the wrong order: over the 2,178 claim
+  representations of one corpus, sorting by tokens padded 63,093 positions
+  where sorting by characters padded 71,989, and encoded them 13% faster. One
+  unusually long text no longer pads the batch it shares to its own length.
+
 - **A bare `mindpalace` prints where to start.** It used to print
   "Missing command." and a usage line — a statement about the person's typing
   rather than about the product, on the run with the least context. It now
@@ -347,6 +378,13 @@ Memory Pack version changed, and no benchmark input was touched.
   An unverifiable guarantee is not a guarantee.
 
 ### Added
+
+- **`mindpalace ingest-repo --embed-chunks`.** A caller who wants the legacy
+  chunk-level search over a whole corpus asks for the chunk vectors
+  explicitly. The flag is on the CLI, on `MindPalace.sync()`, and on
+  `POST /api/corpora/{name}/sync`. Without it, a document that produced claims
+  is archived without chunk vectors, because the claim archive is what every
+  read path queries.
 
 - **Corpus erasure** (migration `009_permission_and_erasure`). `DELETE
   /api/corpora/{name}` used to return `409` whenever the archive referenced the

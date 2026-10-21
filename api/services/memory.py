@@ -73,6 +73,17 @@ class UnresolvedSupersession(ValueError):
         super().__init__(reason)
 
 
+class SupersessionTargetUnresolved(ValueError):
+    """An explicit supersession reference that names no live claim.
+
+    The declared path -- a document that says `supersedes: <id>` -- treats this
+    as a warning, because a repository mid-migration is full of references to
+    documents that have not been written yet. The explicit path treats it as a
+    refusal, because a person who typed `--supersedes` meant one specific claim
+    and can be told what went wrong.
+    """
+
+
 def _json_value(value):
     if isinstance(value, (datetime, date)):
         return value.isoformat()
@@ -629,13 +640,13 @@ async def _resolve_claim_id(db, corpus_id: str, identity: str, given: str) -> st
     if not matches and not hex_like:
         matches = _phrase_matches(given, candidates)
     if not matches:
-        raise ValueError(
-            f"supersedes_claim_id {given!r} matches no active claim in this corpus, as an "
-            "id prefix or as text. A superseded, deleted or other-corpus claim cannot be "
-            "superseded again."
+        raise SupersessionTargetUnresolved(
+            f"supersedes_claim_id {given!r} is not an active claim in this corpus. "
+            "It matches no active claim by id prefix or by text. A superseded, "
+            "deleted or other-corpus claim cannot be superseded again."
         )
     if len(matches) > 1:
-        raise ValueError(
+        raise SupersessionTargetUnresolved(
             f"supersedes_claim_id {given!r} matches {len(matches)} active claims "
             f"({', '.join(c['id'][:16] for c in matches[:3])}); use more of the id"
             + ("" if hex_like else ". Retire the one you meant by its id, which `recall` prints.")
@@ -670,11 +681,34 @@ def _phrase_matches(given: str, candidates: list[dict], threshold: float = 0.60)
     ]
 
 
+def _claims_by_id_prefix(candidates: list[dict], reference: str) -> list[dict]:
+    """Active claims whose id starts with a hex prefix, if the prefix is one.
+
+    A claim id is a SHA-256 hex digest, so it is lowercase hex by construction.
+    The prefix `recall` prints is twelve characters of it, and the reference a
+    document writes is that same twelve characters.
+
+    Eight characters is the floor. Below that, a prefix is more likely to be a
+    word that happens to be hex than a deliberate identifier, and a claim key
+    that starts with hex digits is a far more likely reading of it.
+
+    More than one match is returned rather than resolved. The caller reports
+    the ambiguity and names the claims that collided; a prefix that quietly
+    picked one of them would be a supersession landing on a claim nobody named.
+    """
+    text = reference.strip().casefold()
+    if not 8 <= len(text) <= 64:
+        return []
+    if not all(c in "0123456789abcdef" for c in text):
+        return []
+    return [c for c in candidates if c["id"].startswith(text)]
+
+
 async def _targets_for_reference(db, corpus_id: str, identity: str, reference: str) -> list[dict]:
     """The active claims a supersession reference names, or none with a reason.
 
-    A reference is a document path or a claim key, and it may be either in full or
-    as the part of the path that distinguishes it. `adr/0001-use-pg15.md`,
+    A reference is a document path, a claim key, or a claim id, and it may be either
+    in full or as the part of the path that distinguishes it. `adr/0001-use-pg15.md`,
     `0001-use-pg15.md` and `examples/adr/0001-use-pg15.md` all name one document,
     because an author writes the shortest thing that identifies it and the archive
     is the only party that knows the corpus layout.
@@ -683,6 +717,13 @@ async def _targets_for_reference(db, corpus_id: str, identity: str, reference: s
     work: two documents called `0001.md` in different directories are an ambiguous
     reference, and an ambiguous reference that resolves anyway is a supersession
     landing on the wrong decision.
+
+    A claim id is matched the way `recall` prints it. `recall` shows twelve
+    characters of a sixty-four character id, because a full id on every answer is
+    unreadable, and a document that says `supersedes: f74ee8c3b475` has to name
+    the same thing the reader was shown. A hex prefix of eight to sixty-four
+    characters is matched against the active claims, and more than one match is
+    refused rather than resolved by taking the first.
     """
     from api.services.markdown_claims import looks_like_path
 
@@ -690,11 +731,19 @@ async def _targets_for_reference(db, corpus_id: str, identity: str, reference: s
     if not looks_like_path(reference):
         by_key = [c for c in candidates if c["key"] == reference]
         if not by_key:
+            by_id = _claims_by_id_prefix(candidates, reference)
+            if len(by_id) > 1:
+                raise ValueError(
+                    f"supersedes reference {reference!r} matches {len(by_id)} active "
+                    f"claims ({', '.join(c['id'][:16] for c in by_id[:3])}); use more of the id"
+                )
+            if by_id:
+                return by_id
             raise UnresolvedSupersession(
                 reference,
-                f"supersedes reference {reference!r} matches no active claim key in this "
-                "corpus. Write the key exactly as it appears in the archive, or the path "
-                "of the document that holds the claim.",
+                f"supersedes reference {reference!r} matches no active claim key or claim id "
+                "in this corpus. Write the key exactly as it appears in the archive, the "
+                "id `recall` printed, or the path of the document that holds the claim.",
             )
         if len(by_key) > 1:
             raise ValueError(

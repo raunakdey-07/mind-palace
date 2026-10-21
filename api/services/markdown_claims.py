@@ -21,6 +21,10 @@ Under a heading path, in this order:
 * `1. ` numbered items, which is how a decision log writes its entries.
 * `Key: Value` lines -- `Status: Accepted`, `Superseded-by: ADR-003`. These are
   the field an ADR is read for, and they are the line most worth keeping exact.
+* Markdown pipe tables, one claim per data row. The row's first cell is the
+  label the row is about and every other cell is named by the header above it,
+  so `| 6.15 s | 0.40 s |` under a `sentence-transformers | onnxruntime` header
+  becomes two facts that say what they measure.
 
 ## One statement, however many lines it is wrapped over
 
@@ -48,10 +52,14 @@ verifiable against the file byte for byte.
 
 ## What does not
 
-Fenced code, indented code, tables, HTML comments, link reference definitions,
+Fenced code, indented code, HTML comments, link reference definitions,
 horizontal rules, and block quotes. A code block holds example commands that are
 not decisions; quoting one as a claim would put an unverified line into the
 archive with the same standing as a signed-off decision.
+
+A table is read, but only when it is a table. The separator row under the
+header is what makes it one, so a paragraph that happens to hold a pipe is left
+alone rather than read as a row of columns that was never there.
 
 A bare heading is the context for what follows it, not a claim on its own, and
 the first `# title` of a document is its name rather than a statement.
@@ -301,17 +309,23 @@ def _scan(body: str):
     """Yield `(line_number, line, kind)` for every physical line of the body.
 
     `kind` is `prose` for a line that could be part of a statement, `heading`
-    for a Markdown heading, and `block` for everything structural: a fenced code
-    block, an indented code block, a table, a horizontal rule, or a link
-    reference definition.
+    for a Markdown heading, `table` for a whole Markdown table, and `block` for
+    everything structural: a fenced code block, an indented code block, a
+    horizontal rule, or a link reference definition.
 
     The kinds exist so a statement can *end* at a block instead of running over
     it. A bullet that wraps across a table is two things, and the second one is
     not a continuation of the first.
     """
+    from api.services.parser import is_table_separator
+
+    lines = body.splitlines()
     in_fence = False
     fence_marker = ""
-    for number, line in enumerate(body.splitlines(), 1):
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        number = index + 1
         fence = _FENCE.match(line)
         if fence:
             marker = fence.group(0).strip()[:3]
@@ -320,21 +334,43 @@ def _scan(body: str):
             elif line.strip().startswith(fence_marker):
                 in_fence, fence_marker = False, ""
             yield number, line, "block"
+            index += 1
             continue
         if in_fence:
             yield number, line, "block"
+            index += 1
             continue
-        if _RULE.match(line) or _TABLE.match(line) or _DEFINITION.match(line):
+        if _RULE.match(line) or _DEFINITION.match(line):
             yield number, line, "block"
+            index += 1
+            continue
+        # A table: a header row, the separator under it, and the rows after.
+        # The separator is what makes it a table, so a line that opens with a
+        # pipe and nothing else is a paragraph that happens to hold one.
+        following = lines[index + 1] if index + 1 < len(lines) else ""
+        if _TABLE.match(line) and _TABLE.match(following) and is_table_separator(following):
+            block = [line, following]
+            index += 2
+            while index < len(lines) and _TABLE.match(lines[index]):
+                block.append(lines[index])
+                index += 1
+            yield number, "\n".join(block), "table"
+            continue
+        if _TABLE.match(line):
+            yield number, line, "block"
+            index += 1
             continue
         # Four leading spaces is an indented code block.
         if line.startswith("    ") or line.startswith("\t"):
             yield number, line, "block"
+            index += 1
             continue
         if _HEADING.match(line):
             yield number, line, "heading"
+            index += 1
             continue
         yield number, line, "prose"
+        index += 1
 
 
 def _starts_statement(line: str, current: list[tuple[int, str]] | None) -> bool:
@@ -454,6 +490,59 @@ def _limit_quote(quote: str) -> str:
     return window[:cut] if cut > QUOTE_LIMIT // 2 else window
 
 
+def _table_claims(
+    block: str,
+    heading_path: str,
+    start: int,
+    ordinals: dict[str, int],
+    seen_claims: set[str],
+    seen_quotes: set[tuple[str, str]],
+    haystacks: list[str],
+    path: str,
+    warnings: list[ExtractionWarning],
+) -> list[dict]:
+    """One claim per data row of a Markdown table.
+
+    The row's first cell is the label the row is about, and every other cell is
+    named by the header above it. A row of pipes is not a sentence: `| 6.15 s |
+    0.40 s |` says two numbers and nothing about what they measure, and the
+    name of the column is the whole of what turns the row into a fact.
+
+    The evidence is the row exactly as the document wrote it, so a reader can
+    find it byte for byte. The claim is the row read out, which is why the
+    chunker puts that reading beside the row: the archive will not hold a claim
+    whose own wording is nowhere in the chunk it was quoted from.
+    """
+    from api.services.parser import read_table, render_table_row
+
+    lines = block.split("\n")
+    header, rows = read_table(lines)
+    out: list[dict] = []
+    for index, cells in enumerate(rows):
+        raw = lines[2 + index]
+        text = render_table_row(header, cells)
+        if not _declarative(text):
+            continue
+        signature = (heading_path, text)
+        if signature in seen_quotes:
+            continue
+        if not raw or not any(raw in hay for hay in haystacks):
+            warnings.append(
+                ExtractionWarning(ExtractionWarning.NO_QUOTE, path=path, line=start + 1 + index)
+            )
+            continue
+        seen_quotes.add(signature)
+        key_base = f"md:{_slug(heading_path)}"
+        ordinal = ordinals.get(key_base, 0)
+        ordinals[key_base] = ordinal + 1
+        key = f"{key_base}:{ordinal}"
+        if key in seen_claims:
+            continue
+        seen_claims.add(key)
+        out.append({"key": key, "claim": text, "value": text, "evidence": _limit_quote(raw)})
+    return out
+
+
 def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict], list[dict]]:
     """Return `(claims, warnings)` for a Markdown body.
 
@@ -529,6 +618,23 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
             continue
         if kind == "block":
             close()
+            continue
+        if kind == "table":
+            close()
+            heading_path = " > ".join(title for _level, title in headings)
+            claims.extend(
+                _table_claims(
+                    raw,
+                    heading_path,
+                    number,
+                    ordinals,
+                    seen_claims,
+                    seen_quotes,
+                    haystacks,
+                    path,
+                    warnings,
+                )
+            )
             continue
         if not raw.strip():
             close()

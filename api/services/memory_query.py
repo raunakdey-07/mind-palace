@@ -162,6 +162,17 @@ def adjudicate(
     claims holding the same value are interchangeable, so a near-tie between them
     needs no adjudication and does not earn the warning.
 
+    The margin and the scores in the candidate list are on one scale. The CLI
+    prints a candidate's score beside the banner that calls it a near-tie, and a
+    margin measured on a different scale than the score beside it is a
+    contradiction the reader can see: it said "two claims score almost the same"
+    beside 0.755 and 0.556, a gap of 0.199, because the margin was the
+    raw-cosine difference and the scores were the coverage-adjusted ones. The
+    scale the candidate list shows is the scale the margin measures. The
+    absolute floor checks stay on the raw cosine, because they ask whether a
+    claim is strong enough at all, and the coverage weight can carry a score
+    above 1, which no floor can be compared against.
+
     `dated` says the question names a time. It switches off the one thing this
     function knows that the scorer does not: with no time constraint in the
     question, a claim scoped to an interval is not the standing answer. See
@@ -186,12 +197,18 @@ def adjudicate(
 
     from api.services.memory import _canonical
 
-    # The ranking order and the score it reports are two numbers, and the
-    # difference between them is the point of the change. `ranked` is the
-    # ordering score, which counts how much of the question a claim answers
-    # alongside how alike it is. `scored` is the raw cosine, which is what the
-    # margin is measured on: the thresholds were measured on that scale, and
-    # moving them would change what the gate means.
+    # The margin and the scores the candidate list displays have to be on one
+    # scale, or the CLI contradicts itself in front of the reader. It printed
+    # "two claims score almost the same" beside 0.755 and 0.556 -- a gap of
+    # 0.199 -- because the margin was the raw-cosine difference (0.032) while
+    # the scores beside it were the coverage-adjusted ones.
+    #
+    # `ranked` is the ordering score: how alike a claim is, and how much of the
+    # question it answers. That is the scale the candidate list shows, so it is
+    # the scale the margin measures. The absolute floor checks below stay on the
+    # raw cosine, because they ask whether a claim is strong enough at all and
+    # the coverage weight can carry a score above 1, which no floor can be
+    # compared against.
     order = ranked if ranked is not None else scored
     ordered = sorted(order.items(), key=lambda item: (-item[1], item[0]))
     # The shortlist is what the response returned, in score order -- not the top
@@ -199,7 +216,9 @@ def adjudicate(
     # before.
     #
     # A key the caller cannot see is not a competitor it can adjudicate
-    # against, so a key that is not in the response is not listed.
+    # against, so a key that is not in the response is not listed -- unless it
+    # is the competitor that decides the verdict, in which case it is listed too.
+    # A near-tie the reader is not shown is a near-tie they cannot adjudicate.
     #
     # A key the caller CAN see, but that the global ranking put outside the top
     # three, is a competitor the margin has to describe. Taking the global top
@@ -217,6 +236,36 @@ def adjudicate(
     vouchable = list(shortlist)
     if not vouchable:
         return
+    quotes = {e.id: e.text for e in full.evidence}
+    # The live claims the archive holds for each key, so a competitor the
+    # response did not carry can still be listed with its quote and its source.
+    # A key whose claims are all superseded is not a competitor: it is history,
+    # and the margin measures the field the answer beat, not the field it
+    # replaced.
+    held: dict[str, list] = {}
+    for claim in full.current_memories:
+        held.setdefault(claim.key, []).append(claim)
+
+    def _candidate(key, score, claims) -> Candidate:
+        seen: list[str] = []
+        for claim in sorted(claims, key=lambda c: c.id):
+            for eid in claim.evidence_ids:
+                text = quotes.get(eid)
+                if text and text not in seen:
+                    seen.append(text)
+        return Candidate(
+            key=key,
+            # Six places, because a score printed at full precision implies a
+            # discrimination the scorer does not have.
+            score=round(float(score), 6),
+            status=claims[0].status,
+            value=claims[0].value,
+            claim_ids=sorted(c.id for c in claims),
+            version_ids=sorted({c.version_id for c in claims}),
+            path=claims[0].path,
+            quotes=seen[:3],
+        )
+
     # Which one the caller reads first, and which pair the margin describes, are
     # two different questions. `authority_order` may put a lower-scoring claim
     # first, so the margin below is taken from the score order of `vouchable`,
@@ -224,71 +273,83 @@ def adjudicate(
     # re-ordered by scope is still a near-tie, and reporting it as `confident`
     # would launder the scorer's uncertainty into a confident-sounding number.
     listed = authority_order(vouchable, live, dated=dated, band=margin_threshold())
-    quotes = {e.id: e.text for e in full.evidence}
     candidates: list[Candidate] = []
     for key, score in listed:
         claims = live.get(key) or []
         if not claims:
             continue
-        seen: list[str] = []
-        for claim in sorted(claims, key=lambda c: c.id):
-            for eid in claim.evidence_ids:
-                text = quotes.get(eid)
-                if text and text not in seen:
-                    seen.append(text)
-        candidates.append(
-            Candidate(
-                key=key,
-                # Six places, because a cosine printed at full precision implies
-                # a discrimination the scorer does not have.
-                score=round(float(score), 6),
-                status=claims[0].status,
-                value=claims[0].value,
-                claim_ids=sorted(c.id for c in claims),
-                version_ids=sorted({c.version_id for c in claims}),
-                path=claims[0].path,
-                quotes=seen[:3],
-            )
-        )
+        candidates.append(_candidate(key, score, claims))
     if not candidates:
         return
-    result.candidates = candidates
 
-    # The margin describes the shortlist that was returned, not the whole ranking.
-    # A key the caller cannot see is not a competitor it can adjudicate against,
-    # and a margin quoted against one would describe a decision nobody is offered.
+    # The runner-up the margin measures against.
     #
-    # It is measured on the raw cosine, not on the ordering score. The ordering
-    # score counts how much of the question a claim answers; the margin says
-    # how far apart the two best claims are, and that is a question about the
-    # embedding alone. The two best are taken from the shortlist's raw values
-    # rather than from its order, so a claim that answers more of the question
-    # cannot report a negative margin.
-    raw_values = sorted((scored.get(key, value) for key, value in vouchable), reverse=True)
-    best = raw_values[0]
-    second = raw_values[1] if len(raw_values) > 1 else 0.0
-    margin = best - second
+    # With two claims in the response, the runner-up is the second of them: a
+    # competitor the caller can see.
+    #
+    # With one, it is the best of the claims the answer actually beat -- the
+    # next one down the ranking. A response of one scored `score - 0.0` against
+    # nobody and reported itself a decisive win over a field that was never in
+    # the ranking. The ranking is the field, and the ranking is what the caller
+    # is being asked to adjudicate against.
+    leader_key, leader_score = vouchable[0]
+    leader_at = next((index for index, entry in enumerate(ordered) if entry[0] == leader_key), 0)
+    # The field the answer beat. The claims above the leader lost the relative
+    # band and were never in the response, so they are not what the answer was
+    # chosen over.
+    beaten = ordered[leader_at + 1 :]
+    if len(vouchable) > 1:
+        runner_score = vouchable[1][1]
+    elif beaten:
+        runner_score = beaten[0][1]
+    else:
+        runner_score = 0.0
+    margin = leader_score - runner_score
     result.match_margin = round(margin, 6)
+
+    # The absolute strength of the leader, on the scale the floors were measured
+    # on: the raw cosine.
+    best = max((scored.get(key, value) for key, value in vouchable), default=0.0)
 
     if best < CANDIDATE_FLOOR:
         # Nothing this far above nothing is a near-tie. Reporting one would be
         # noise dressed as caution.
         result.match_status = "confident"
+        result.candidates = candidates
         return
     if best < max(policy.minimum, 0.0) + near_floor():
         # Weak in absolute terms, whatever beat it.
         result.match_status = "ambiguous"
+        result.candidates = candidates
         return
     if margin < margin_threshold():
+        # The competitors that decide the verdict have to be visible. If the
+        # response carried one claim and the ranking found a near-tie with
+        # another, the reader is asked to adjudicate between two claims, so
+        # both are listed -- up to the shortlist limit.
+        rivals: list[Candidate] = []
+        shown = {c.key for c in candidates}
+        for key, score in beaten:
+            if len(candidates) + len(rivals) >= CANDIDATE_LIMIT:
+                break
+            if key in shown:
+                continue
+            claims = held.get(key) or []
+            if not claims:
+                continue
+            rivals.append(_candidate(key, score, claims))
+            shown.add(key)
         top_value = _canonical(candidates[0].value)
-        for candidate in candidates[1:]:
+        for candidate in candidates[1:] + rivals:
             # Two claims holding the same value are interchangeable, so a near-tie
             # between them needs no adjudication and does not earn the warning.
             if _canonical(candidate.value) == top_value:
                 continue
             result.match_status = "ambiguous"
+            result.candidates = candidates + rivals
             return
     result.match_status = "confident"
+    result.candidates = candidates
 
 
 def select(

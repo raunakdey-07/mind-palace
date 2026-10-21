@@ -266,6 +266,82 @@ _LIST_ITEM = re.compile(r"^(?:[-*+]\s+|\d{1,3}[.)]\s+)")
 #: the chunker treats it as a boundary for the same reason.
 _FIELD_LINE = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9 _-]{0,40}):\s*(?P<value>\S.*)$")
 
+#: A line that opens a Markdown table row.
+_TABLE_ROW = re.compile(r"^\s*\|")
+
+#: A table cell made only of dashes, colons and spaces. The row of them under a
+#: table's header is the separator, and it is what tells a header row from a
+#: row of data.
+_SEPARATOR_CELL = re.compile(r"^[\s:\-]+$")
+
+
+def table_cells(line: str) -> list[str]:
+    """The cells of one Markdown table row.
+
+    A row is written between pipes, and the pipes at the ends are decoration:
+    `| a | b |` has two cells, not four. A cell may hold a pipe of its own, and
+    a table that carries one is rare enough that splitting on every pipe is the
+    honest reading: a cell that claims to hold two columns is a malformed row,
+    and dropping the row is better than inventing a column.
+    """
+    text = line.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|"):
+        text = text[:-1]
+    return [cell.strip() for cell in text.split("|")]
+
+
+def is_table_separator(line: str) -> bool:
+    """Whether this row is the `| --- | --- |` line under a table's header.
+
+    The separator is what makes a table a table. A line that starts with a pipe
+    on its own is a paragraph that happens to contain one.
+    """
+    cells = table_cells(line)
+    return bool(cells) and all(_SEPARATOR_CELL.match(cell) for cell in cells)
+
+
+def render_table_row(header: list[str], row: list[str]) -> str:
+    """The declarative form of one table row.
+
+    `<label>: <Column Header>: <Cell Value>; <Column Header>: <Cell Value>`
+
+    The row's first cell is the label the row is about, and every other cell is
+    named by the header above it. A cell with no header has no name to be
+    given, and a cell with no value says nothing, so both are left out rather
+    than turned into a dangling colon.
+
+    This is the form the archive holds as the claim, because a row of pipes is
+    not a sentence: `| 6.15 s | 0.40 s |` says two numbers and nothing about
+    what they measure. The name of the column is the whole of what turns the
+    row into a fact.
+    """
+    label = row[0] if row else ""
+    pairs = []
+    for index, value in enumerate(row[1:], 1):
+        if not value:
+            continue
+        name = header[index] if index < len(header) else ""
+        if not name:
+            continue
+        pairs.append(f"{name}: {value}")
+    if not pairs:
+        return label
+    body = "; ".join(pairs)
+    return f"{label}: {body}" if label else body
+
+
+def read_table(lines: list[str]) -> tuple[list[str], list[list[str]]]:
+    """The header cells and the data rows of one table.
+
+    `lines` is the table's own lines: the header row, the separator under it,
+    and the data rows after that. A table with no separator is not a table,
+    and the caller does not call this with one.
+    """
+    header = table_cells(lines[0])
+    return header, [table_cells(line) for line in lines[2:]]
+
 
 def _statement_cuts(text: str) -> list[int]:
     """The offsets in `text` where a statement begins.
@@ -312,7 +388,19 @@ def chunk_with_heading_paths(
     sections: list[tuple[str, str]],
     max_chars: int = 1200,
 ) -> list[dict[str, Any]]:
-    """Convert sections into chunks with heading_path metadata."""
+    """Convert sections into chunks with heading_path metadata.
+
+    A Markdown table is chunked apart from the prose around it. Its rows go in
+    verbatim, so a row's evidence is a byte-exact slice of the document, and
+    the rendered form of each row goes in beside them, so the claim the
+    extractor reads out of a row names the columns it came from -- and so the
+    claim's own wording is in the chunk, which the archive requires before it
+    will archive a claim at all.
+
+    A table too long for one chunk is split by row, and every chunk carries the
+    header, because a row that lost the header above it does not say which
+    column it belongs to.
+    """
 
     chunks: list[dict[str, Any]] = []
 
@@ -320,78 +408,171 @@ def chunk_with_heading_paths(
         if not content.strip() and not heading_path:
             continue
 
-        if len(content) <= max_chars:
-            chunks.append(
-                {
-                    "text": content,
-                    "heading_path": heading_path,
-                    "token_count": estimate_tokens(content),
-                }
-            )
+        for kind, payload in _split_tables(content):
+            if kind == "table":
+                chunks.extend(_table_chunks(heading_path, payload, max_chars))
+            else:
+                chunks.extend(_chunk_text(heading_path, payload, max_chars))
+
+    return chunks
+
+
+def _split_tables(content: str) -> list[tuple[str, Any]]:
+    """Split a section's text into prose segments and table blocks.
+
+    A table block is the list of its own lines, header first. The prose around
+    it keeps its blank lines, so the paragraphs on either side are still the
+    paragraphs they were.
+    """
+    lines = content.split("\n")
+    segments: list[tuple[str, Any]] = []
+    buffer: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        following = lines[index + 1] if index + 1 < len(lines) else ""
+        if _TABLE_ROW.match(line) and _TABLE_ROW.match(following) and is_table_separator(following):
+            block = [line, following]
+            index += 2
+            while index < len(lines) and _TABLE_ROW.match(lines[index]):
+                block.append(lines[index])
+                index += 1
+            if buffer:
+                segments.append(("text", "\n".join(buffer)))
+                buffer = []
+            segments.append(("table", block))
             continue
+        buffer.append(line)
+        index += 1
+    if buffer:
+        segments.append(("text", "\n".join(buffer)))
+    return segments
 
-        paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
-        current_chunk = ""
 
-        for para in paragraphs:
-            # A single paragraph longer than max_chars must itself be split,
-            # otherwise one huge paragraph produces an oversized chunk.
-            while len(para) > max_chars:
-                if current_chunk:
-                    chunks.append(
-                        {
-                            "text": current_chunk,
-                            "heading_path": heading_path,
-                            "token_count": estimate_tokens(current_chunk),
-                        }
-                    )
-                    current_chunk = ""
-                cut = para[:max_chars]
-                # A cut before a statement, not inside one. A bullet wrapped
-                # over three lines is one statement, and a chunk boundary in
-                # the middle of it leaves the claim with no quotable evidence.
-                statement = _last_statement_cut(cut, max_chars // 2)
-                newline = cut.rfind("\n")
-                if statement > 0:
-                    cut = para[:statement]
-                elif newline > max_chars // 2:
-                    cut = para[:newline]
-                else:
-                    # Prefer breaking at a sentence/word boundary within the window.
-                    boundary = max(cut.rfind(". "), cut.rfind(" "))
-                    if boundary > max_chars // 2:
-                        cut = para[: boundary + 1]
+def _table_chunks(heading_path: str, lines: list[str], max_chars: int) -> list[dict[str, Any]]:
+    """The chunks for one table.
+
+    The table's own lines go in verbatim, so a row's evidence is a byte-exact
+    slice of the document. The rendered rows go in with them, so the claim read
+    out of a row names its columns and so the claim's wording is in the chunk.
+
+    Every chunk carries the header. A row that lost the header above it does
+    not say which column it belongs to, and the rendered form only reads
+    against the header that named it.
+    """
+    header, rows = read_table(lines)
+    header_lines = lines[:2]
+
+    groups: list[tuple[list[str], list[str]]] = []
+    raw_group: list[str] = []
+    rendered_group: list[str] = []
+    size = len("\n".join(header_lines))
+    for index, row in enumerate(rows):
+        raw = lines[2 + index]
+        rendered = render_table_row(header, row)
+        addition = len(raw) + len(rendered) + 2
+        if raw_group and size + addition > max_chars:
+            groups.append((raw_group, rendered_group))
+            raw_group, rendered_group = [], []
+            size = len("\n".join(header_lines))
+        raw_group.append(raw)
+        rendered_group.append(rendered)
+        size += addition
+    if raw_group:
+        groups.append((raw_group, rendered_group))
+
+    chunks: list[dict[str, Any]] = []
+    for raw_lines, rendered_lines in groups:
+        text = "\n".join([*header_lines, *raw_lines, *rendered_lines])
+        chunks.append(
+            {
+                "text": text,
+                "heading_path": heading_path,
+                "token_count": estimate_tokens(text),
+            }
+        )
+    return chunks
+
+
+def _chunk_text(heading_path: str, content: str, max_chars: int) -> list[dict[str, Any]]:
+    """The chunks for a run of prose."""
+    chunks: list[dict[str, Any]] = []
+
+    if not content.strip() and not heading_path:
+        return chunks
+
+    if len(content) <= max_chars:
+        chunks.append(
+            {
+                "text": content,
+                "heading_path": heading_path,
+                "token_count": estimate_tokens(content),
+            }
+        )
+        return chunks
+
+    paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+    current_chunk = ""
+
+    for para in paragraphs:
+        # A single paragraph longer than max_chars must itself be split,
+        # otherwise one huge paragraph produces an oversized chunk.
+        while len(para) > max_chars:
+            if current_chunk:
                 chunks.append(
                     {
-                        "text": cut.strip(),
+                        "text": current_chunk,
                         "heading_path": heading_path,
-                        "token_count": estimate_tokens(cut),
+                        "token_count": estimate_tokens(current_chunk),
                     }
                 )
-                para = para[len(cut) :].lstrip()
-
-            candidate = para if not current_chunk else f"{current_chunk}\n\n{para}"
-
-            if len(candidate) <= max_chars:
-                current_chunk = candidate
+                current_chunk = ""
+            cut = para[:max_chars]
+            # A cut before a statement, not inside one. A bullet wrapped
+            # over three lines is one statement, and a chunk boundary in
+            # the middle of it leaves the claim with no quotable evidence.
+            statement = _last_statement_cut(cut, max_chars // 2)
+            newline = cut.rfind("\n")
+            if statement > 0:
+                cut = para[:statement]
+            elif newline > max_chars // 2:
+                cut = para[:newline]
             else:
-                if current_chunk:
-                    chunks.append(
-                        {
-                            "text": current_chunk,
-                            "heading_path": heading_path,
-                            "token_count": estimate_tokens(current_chunk),
-                        }
-                    )
-                current_chunk = para
-
-        if current_chunk:
+                # Prefer breaking at a sentence/word boundary within the window.
+                boundary = max(cut.rfind(". "), cut.rfind(" "))
+                if boundary > max_chars // 2:
+                    cut = para[: boundary + 1]
             chunks.append(
                 {
-                    "text": current_chunk,
+                    "text": cut.strip(),
                     "heading_path": heading_path,
-                    "token_count": estimate_tokens(current_chunk),
+                    "token_count": estimate_tokens(cut),
                 }
             )
+            para = para[len(cut) :].lstrip()
+
+        candidate = para if not current_chunk else f"{current_chunk}\n\n{para}"
+
+        if len(candidate) <= max_chars:
+            current_chunk = candidate
+        else:
+            if current_chunk:
+                chunks.append(
+                    {
+                        "text": current_chunk,
+                        "heading_path": heading_path,
+                        "token_count": estimate_tokens(current_chunk),
+                    }
+                )
+            current_chunk = para
+
+    if current_chunk:
+        chunks.append(
+            {
+                "text": current_chunk,
+                "heading_path": heading_path,
+                "token_count": estimate_tokens(current_chunk),
+            }
+        )
 
     return chunks

@@ -49,9 +49,21 @@ def evidence(identifier, text):
     )
 
 
-def adjudicate_scored(scored, claims, evidence_rows, policy=None):
+def adjudicate_scored(scored, claims, evidence_rows, policy=None, corpus=None):
+    """Adjudicate a response the way the archive does.
+
+    `claims` is what the response carried. `corpus` is what the archive holds
+    -- the whole corpus, of which the response is a selection. It is separate
+    because a competitor the caller cannot see is only a competitor if the
+    archive can still show it.
+    """
     result = MemoryResponse(query="q", corpus="c", current_memories=claims)
-    full = MemoryResponse(query="q", corpus="c", evidence=evidence_rows)
+    full = MemoryResponse(
+        query="q",
+        corpus="c",
+        current_memories=corpus if corpus is not None else claims,
+        evidence=evidence_rows,
+    )
     adjudicate(full, result, scored, policy or RelevancePolicy.configured())
     return result
 
@@ -109,12 +121,42 @@ def test_no_claims_means_abstained_and_no_candidates():
     assert result.match_margin is None
 
 
-def test_the_margin_describes_the_returned_shortlist_not_the_whole_ranking():
-    """A key the caller cannot see is not a competitor it can adjudicate against."""
-    # `search` scores high but its claim is not in the response, so it is not listed.
-    result = adjudicate_scored({"datastore": 0.70, "search": 0.69}, TWO[:1], QUOTES)
+def test_the_margin_is_measured_against_the_ranking_not_against_nobody():
+    """A response of one claim is a near-tie when the ranking says it is.
+
+    The margin used to be `score_1 - 0.0`: a number that reads like a decisive
+    win over a field that was never in the ranking. The ranking is the field the
+    caller is being asked to adjudicate against, so the runner-up comes from
+    there.
+    """
+    # `search` scores just under `datastore`, and the response carried only
+    # `datastore`.
+    result = adjudicate_scored({"datastore": 0.70, "search": 0.69}, TWO[:1], QUOTES, corpus=TWO)
+    assert result.match_margin == pytest.approx(0.01)
+    # The competitor that decides the verdict is listed, so the reader can see
+    # what they are being asked to choose between.
+    assert {c.key for c in result.candidates} == {"datastore", "search"}
+    assert result.match_status == "ambiguous"
+
+
+def test_the_margin_and_the_candidate_scores_are_on_one_scale():
+    """The banner must not contradict the numbers printed beside it.
+
+    The CLI prints a candidate's score next to a banner that calls it a
+    near-tie, so the margin has to be the difference between two of those
+    scores. It used to be the raw-cosine difference, which put "almost the same"
+    beside 0.755 and 0.556 -- a gap of 0.199.
+    """
+    result = adjudicate_scored({"datastore": 0.72, "search": 0.30}, TWO, QUOTES)
+    scores = [c.score for c in result.candidates]
+    assert result.match_margin == pytest.approx(max(scores) - min(scores))
+
+
+def test_a_lone_claim_against_no_field_is_still_its_own_score():
+    """One claim in the corpus and one in the response: nothing competed."""
+    result = adjudicate_scored({"datastore": 0.50}, TWO[:1], QUOTES[:1])
     assert [c.key for c in result.candidates] == ["datastore"]
-    assert result.match_margin == pytest.approx(0.70)
+    assert result.match_margin == pytest.approx(0.50)
     assert result.match_status == "confident"
 
 

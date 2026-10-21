@@ -46,6 +46,17 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Fixed
 
+- **A question about the SDK's bundle size was answered with two other
+  chunks' bundle sizes.** The question is split into parts before it is
+  scored, and the first part -- "What is the gzipped bundle size?" -- names no
+  subject at all. Every row of the bundle-size table covers that part equally,
+  so the row that answers the question was ordered among its siblings by the
+  embedding's opinion of an unrelated sentence, and the 8,000-character
+  response budget dropped it. The coverage is measured against the question
+  now, not against the part that found the claim: a part is a lens for finding
+  the claims, not a smaller question. The frozen M006.75 set is identical on
+  all sixty questions and the 202-question development set flips no question.
+
 - **A statement wrapped over three lines was embedded as three sentences' worth
   of dilution.** The mean-pooled vector of a long statement is the mean of all
   its words, and the continuation clauses are detail, so averaging them in

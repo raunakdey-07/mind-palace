@@ -168,6 +168,21 @@
       "seconds": 839.26,
       "skipped": "2"
     },
+    "733c88f: full suite: the coverage measured against the question": {
+      "collected": "1987",
+      "commit": "733c88f615139e432ee2b17fb270a21d5cca1add",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: the coverage measured against the question",
+      "passed": "1985",
+      "seconds": 572.1,
+      "skipped": "2"
+    },
     "7465fe8: full suite: bidirectional history lineage, table heading context, batched ingest writes": {
       "collected": "1983",
       "commit": "7465fe80ed2863649753efb29c5357e49df55c48",
@@ -264,6 +279,21 @@
       "passed": "1600",
       "seconds": 550.3,
       "skipped": "1"
+    },
+    "bd3cfc2: full suite: the coverage measured against the question, on top of the chunk-vector work": {
+      "collected": "1998",
+      "commit": "bd3cfc2f688aa38a55d13b4b4bec30bcc9604a53",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: the coverage measured against the question, on top of the chunk-vector work",
+      "passed": "1996",
+      "seconds": 825.43,
+      "skipped": "2"
     },
     "c61ce10: full suite: lazy chunk embeddings, ONNX session tuning": {
       "collected": "1994",

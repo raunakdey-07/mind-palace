@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **2002 passed, 0 failed, 2 skipped** (as of `46bc91c`); 2004 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| tests | **2007 passed, 0 failed, 2 skipped** (as of `b6d4852`); 2009 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -450,6 +450,57 @@ the unmasked length, so what a text is padded to does not change what it says,
 and the thread count changes the order the reductions happen in and not their
 result. The batch size, the batch order and the thread count were each
 measured to leave the vectors bit-identical.
+
+### The connections, two per document
+
+**A sync opened a new PostgreSQL connection for every document, twice.** The
+engine is `NullPool`: a pooled connection cannot cross an event loop, and the
+SDK and the CLI create a short-lived loop per operation, so every session was a
+new connection. `sync_repo` opened two sessions per document -- one to ask
+whether the path was already indexed, one to ingest it -- so a 78-document
+repository paid for 156 connections.
+
+The cost is per connection, so it scales with the distance to the database.
+Against the container-local PostgreSQL this repository is developed against, one
+connection measures 28 ms and the 156 of them cost 4.4 s. The reported
+**11.8 s** is the same shape measured against a remote server.
+
+The run now holds one connection for its whole length, and the transaction
+boundary does not move: each document still opens and commits its own
+transaction, so a document that fails is rolled back on its own, the connection
+stays usable and the run carries on. The tenant scope is written per
+transaction and is transaction-local, so a reused connection cannot carry one
+document's scope into the next.
+
+Measured over this repository's `docs/` and a second repository's `docs/`, on a
+container-local PostgreSQL and the default ONNX backend:
+
+| phase | before | after |
+|---|---|---:|
+| connection setup | 4.91 s | 0.15 s |
+| ONNX embedding, chunk texts | 0.42 s | 0.41 s |
+| ONNX embedding, claim representations | 25.01 s | 25.33 s |
+| `chunks` writes | 1.07 s | 0.25 s |
+| `memory_claim_embeddings` writes | 4.81 s | 4.39 s |
+| `memory_claims` + `memory_evidence` writes | 2.55 s | 1.70 s |
+| **wall clock** | **42.7 s** | **33.9 s** |
+| connections opened | 174 | 4 |
+
+The before column is `main`; the after column is this branch, both measured on
+the same machine over the same files, with
+`scripts/benchmark/ingest_profile.py`. The `mind-palace` corpus alone goes
+from **34.3 s to 25.7 s**, and its connection setup from 4.40 s to 0.04 s.
+
+**Nothing in the archive changed.** The claims, the versions, the chunks and
+every claim vector are identical before and after, by digest: the same four
+digests in both runs, over 2,750 claim rows for this repository and 1,157 for
+the second.
+
+**And the benchmark could erase the corpus it measured.** It wrote into the
+corpus its command line named, and `--reset` erased it, so a benchmark run
+over `--corpus mind-palace=docs` wiped the live `mind-palace` corpus outright.
+The name on the command line is a report label now; the run writes into a
+corpus whose name begins with `_profile_` and deletes it when the run ends.
 
 ### A table row, and the part of the question that lost the subject
 

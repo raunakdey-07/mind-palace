@@ -345,7 +345,7 @@ def _cleanup(superuser: dict, credential_id: str, scratch: str) -> None:
     """
     for argv, label in (
         (["credential", "revoke", credential_id], "revoke the credential"),
-        (["corpus", "delete", scratch], "delete the scratch corpus"),
+        (["corpus", "delete", scratch, "--yes"], "delete the scratch corpus"),
     ):
         code, output = run([sys.executable, "-m", "cli.main", *argv], superuser)
         if code != 0:

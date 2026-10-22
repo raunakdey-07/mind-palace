@@ -90,6 +90,7 @@ async def memory_ingestion_db(monkeypatch):
                         yield db
 
                 monkeypatch.setattr(ingestion, "session_scope", sessions)
+                monkeypatch.setattr(ingestion, "sync_session_scope", sessions)
                 monkeypatch.setattr(ingestion, "Embedder", FixedEmbedder)
                 yield sessions, corpus
             finally:

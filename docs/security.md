@@ -1003,17 +1003,17 @@ filesystem from a caller, and whether it goes through that one resolver.
 
 | Surface | Reads | Enforced | Through `require_permitted` |
 |---|---|---|---|
-| `mindpalace ingest-repo <path>` | a directory of Markdown | yes | yes — `cli/main.py:875` |
-| `mindpalace ingest <path>` | one file, then POSTs its contents | yes | yes — `cli/main.py:836` |
-| `mindpalace remember --file <path>` | one file, as a statement | yes | yes — `api/services/remember.py:287` |
+| `mindpalace ingest-repo <path>` | a directory of Markdown | yes | yes — `cli/main.py:1212` |
+| `mindpalace ingest <path>` | one file, then POSTs its contents | yes | yes — `cli/main.py:1143` |
+| `mindpalace remember --file <path>` | one file, as a statement | yes | yes — `api/services/remember.py:563` |
 | `mindpalace reindex` | no caller path; the corpus's own documents | n/a | n/a |
 | `POST /api/ingest/repo` | a directory | yes | yes — `api/routers/ingest.py:76` |
 | `POST /api/ingest/file` | content in the request body, no path | n/a | n/a |
-| `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:108` |
-| SDK `MindPalace.sync(path)` | a directory | yes | yes — `api/services/ingestion.py:422` |
-| SDK `MindPalace.remember(file=…)` | one file | yes | yes — `api/services/remember.py:287` |
+| `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:115` |
+| SDK `MindPalace.sync(path)` | a directory | yes | yes — `api/services/ingestion.py:694` |
+| SDK `MindPalace.remember(file=…)` | one file | yes | yes — `api/services/remember.py:563` |
 | MCP `sync(corpus, path)` | a directory | yes | yes — same `sync_repo` |
-| MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:238` |
+| MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:262` |
 | `mindpalace verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
 | `mindpalace receipt -o <file>` | writes; not a read | n/a | n/a |
 | benchmark `--baseline <file>` | a previous report, for comparison | **no, deliberately** | n/a |

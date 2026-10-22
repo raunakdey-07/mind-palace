@@ -359,6 +359,29 @@ Memory Pack version changed, and no benchmark input was touched.
   where sorting by characters padded 71,989, and encoded them 13% faster. One
   unusually long text no longer pads the batch it shares to its own length.
 
+- **A sync opens one connection instead of two per document.** The engine is
+  `NullPool`, because a pooled connection cannot cross an event loop and the
+  SDK and the CLI create a short-lived loop per operation. `sync_repo` opened
+  two sessions per document anyway -- one to ask whether the path was already
+  indexed, one to ingest it -- so a 78-document repository paid for 156
+  PostgreSQL connections. The cost is per connection, so it scales with the
+  distance to the database: 4.4 s of a 34.3 s ingest against a container-local
+  database, and 11.8 s against a remote one. The run now holds one connection
+  for its whole length. The transaction boundary does not move -- each document
+  still opens and commits its own transaction, so a document that fails is
+  rolled back on its own, the connection stays usable and the run carries on --
+  and the tenant scope is written per transaction and is transaction-local, so
+  a reused connection cannot carry one document's scope into the next.
+  Measured over this repository's `docs/` and a second repository's `docs/`:
+  **42.7 s to 33.9 s**, with the connections opened going from 174 to 4. Every
+  claim, chunk and claim vector is identical before and after, by digest.
+- **`scripts/benchmark/ingest_profile.py` cannot erase a live corpus.** It
+  wrote into the corpus its command line named, and `--reset` erased it, so a
+  benchmark run over `--corpus mind-palace=docs` wiped the live `mind-palace`
+  corpus outright. The name on the command line is a report label now; the run
+  writes into a corpus whose name begins with `_profile_` and deletes it when
+  the run ends.
+
 - **A bare `mindpalace` prints where to start.** It used to print
   "Missing command." and a usage line — a statement about the person's typing
   rather than about the product, on the run with the least context. It now

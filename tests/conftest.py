@@ -351,11 +351,17 @@ async def store(monkeypatch):
                     # `related_active` opens its own `session_scope`, imported
                     # inside the function, so the patch has to be on the module it
                     # imports from rather than on `remember` itself.
+                    #
+                    # `sync_session_scope` is the other way a session is opened:
+                    # `sync_repo` uses it to hold one connection for the length of
+                    # a repository sync. A fixture that replaces one and not the
+                    # other sends the sync to the wrong database.
                     from api.services import db as db_module
 
                     for module in (ingestion_service, remember_service, db_module):
-                        if hasattr(module, "session_scope"):
-                            monkeypatch.setattr(module, "session_scope", sessions)
+                        for name in ("session_scope", "sync_session_scope"):
+                            if hasattr(module, name):
+                                monkeypatch.setattr(module, name, sessions)
 
                     async def resolve(name, corpus_id=None):
                         return corpus

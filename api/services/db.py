@@ -63,6 +63,10 @@ ASYNC_DATABASE_URL = (
 # runs a single long-lived loop so pooling helps there, but SDK/CLI callers
 # create short-lived loops per operation and pooled connections would break
 # with 'attached to a different loop' errors.
+#
+# A repository sync is the one bulk caller, and it opens its own connection
+# for the length of the run: `sync_session_scope` below. That connection is
+# opened and closed inside one operation, so it never crosses a loop either.
 async_engine: AsyncEngine = create_async_engine(
     ASYNC_DATABASE_URL,
     echo=False,
@@ -174,6 +178,39 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Standalone async session context manager for non-FastAPI callers."""
     async with AsyncSessionLocal() as session:
         yield session
+
+
+@asynccontextmanager
+async def sync_session_scope() -> AsyncGenerator[AsyncSession, None]:
+    """One session on one connection, held for the length of a repository sync.
+
+    `session_scope` is a connection per session, because the engine is
+    `NullPool`: an SDK or CLI caller runs a short-lived event loop per
+    operation, and a pooled connection handed to the next loop dies with
+    "attached to a different loop". That is the right default for a one-shot
+    command.
+
+    It is the wrong default for a repository sync, which opens a session per
+    document and so paid for a fresh PostgreSQL connection each time: 156
+    connections for a 78-document repository, measured at 4.4 s of a 34.3 s
+    ingest against a container-local PostgreSQL and 11.8 s against a remote
+    one. The cost is per connection, so it scales with the distance to the
+    database.
+
+    This holds one connection for the whole operation and gives the session to
+    it, so the connection is opened once. The transaction boundary does not
+    move: every caller still opens and commits its own transaction, so a
+    document that fails is rolled back on its own and the connection stays
+    usable for the next document.
+
+    The tenant scope is unaffected. It is written by
+    `set_config(..., is_local := true)` on every transaction begin, so it is
+    discarded when that transaction ends, and a reused connection cannot
+    carry one document's scope into the next.
+    """
+    async with async_engine.connect() as connection:
+        async with AsyncSession(bind=connection, expire_on_commit=False) as session:
+            yield session
 
 
 @asynccontextmanager

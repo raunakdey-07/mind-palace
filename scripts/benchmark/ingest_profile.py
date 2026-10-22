@@ -2,20 +2,31 @@
 
     python3 scripts/benchmark/ingest_profile.py \
         --corpus mind-palace=docs \
-        --corpus cv-embed=/mnt/Warehouse/projects/cv-embed/docs \
-        --reset
+        --corpus cv-embed=/mnt/Warehouse/projects/cv-embed/docs
 
 Every phase is timed where the work happens, so the numbers add up to the wall
 clock instead of describing it. The phases are:
 
+    connection setup      the PostgreSQL connections the run opened
     chunk embeddings      the ONNX forwards over every chunk's full text
     claim representations  the ONNX forwards over every claim's lead clause
     claims and evidence    the archive rows for the claims
     claim vector rows      the `memory_claim_embeddings` rows
     chunk rows             the `chunks` rows
 
-`--reset` erases each corpus first, so the run measures a cold ingest. Without
-it a second run short-circuits on the manifest and measures nothing.
+The corpora are disposable. The run writes into a corpus whose name begins
+with `_profile_`, never into the name on the command line, and deletes it when
+the run ends. `--reset` used to erase the corpus the command line named, so a
+benchmark run erased the live `mind-palace` and `cv-embed` corpora outright.
+The name on the command line is a report label; the corpus it writes into is
+derived from it, and a label that already carries the prefix is used as it
+stands:
+
+    --corpus mind-palace=docs     writes into `_profile_mind_palace`
+    --corpus _profile_mp=docs     writes into `_profile_mp`
+
+`--keep` leaves the disposable corpora behind, for a run whose output is
+wanted after the script exits.
 """
 
 from __future__ import annotations
@@ -23,6 +34,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -30,12 +42,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+#: Every corpus this script writes into carries this prefix. It is what makes
+#: the corpus disposable, and it is what a reader of the database sees.
+DISPOSABLE_PREFIX = "_profile_"
 
-def _instrument(timings: dict) -> list:
+
+def _disposable_name(label: str) -> str:
+    """The corpus name this script writes `label` into.
+
+    A label that already carries the prefix is used as it stands, so a caller
+    who wants `_profile_mp` or `_profile_cv` can say so. Anything else is
+    turned into one, because the label is a report label and the corpus it
+    names is a scratch corpus that is deleted when the run ends.
+    """
+    if label.startswith(DISPOSABLE_PREFIX):
+        return label
+    slug = re.sub(r"[^a-z0-9]+", "_", label.casefold()).strip("_")
+    return DISPOSABLE_PREFIX + (slug or "corpus")
+
+
+def _instrument(timings: dict, connections: dict) -> list:
     """Wrap the phase functions so every phase is timed where it runs."""
     import inspect
 
     from api.services import claim_embeddings, ingestion, memory
+    from api.services.db import async_engine
 
     patches: list = []
 
@@ -70,7 +101,41 @@ def _instrument(timings: dict) -> list:
     # not the one the call site resolves.
     wrap(ingestion, "insert_chunks", "chunk rows")
     wrap(memory, "record_version", "claims and evidence")
+
+    # The connection setup, at the pool. `NullPool` opens a DB-API connection
+    # per checkout, so this is where the cost of not reusing a connection
+    # lands, and the count is how many connections the run opened.
+    pool = async_engine.sync_engine.pool
+    original_connect = pool.connect
+
+    def timed_connect(*args, **kwargs):
+        start = time.perf_counter()
+        try:
+            return original_connect(*args, **kwargs)
+        finally:
+            connections["count"] += 1
+            timings["connection setup"] = timings.get("connection setup", 0.0) + (
+                time.perf_counter() - start
+            )
+
+    pool.connect = timed_connect
+    patches.append((pool, "connect", original_connect))
     return patches
+
+
+async def _erase(names: list[str]) -> None:
+    """Delete the disposable corpora the run created."""
+    if not names:
+        return
+    from api.services.corpora import delete_corpus
+    from api.services.db import session_scope
+
+    for name in names:
+        try:
+            async with session_scope() as db:
+                await delete_corpus(db, name)
+        except Exception as exc:  # noqa: BLE001 - a cleanup failure is not a run failure
+            print(f"could not delete the disposable corpus {name}: {exc}", file=sys.stderr)
 
 
 async def _run(args) -> dict:
@@ -80,18 +145,22 @@ async def _run(args) -> dict:
 
     totals = {"wall clock": 0.0}
     per_corpus = {}
-    patches = _instrument(totals)
+    connections = {"count": 0}
+    patches = _instrument(totals, connections)
+    disposable: list[str] = []
     try:
         for spec in args.corpus:
-            name, _, source = spec.partition("=")
+            label, _, source = spec.partition("=")
             path = Path(source).expanduser().resolve()
             if not path.is_dir():
                 raise SystemExit(f"not a directory: {path}")
+            name = _disposable_name(label)
             if args.reset:
                 async with session_scope() as db:
                     await delete_corpus(db, name)
             async with session_scope() as db:
                 corpus = await get_or_create_corpus(db, name)
+            disposable.append(name)
             before = dict(totals)
             start = time.perf_counter()
             service = IngestionService()
@@ -99,7 +168,8 @@ async def _run(args) -> dict:
                 summary = await service.sync_repo(str(path), corpus["id"])
             elapsed = time.perf_counter() - start
             totals["wall clock"] += elapsed
-            per_corpus[name] = {
+            per_corpus[label] = {
+                "corpus": name,
                 "source": str(path),
                 "seconds": round(elapsed, 2),
                 "added": summary["added"],
@@ -109,15 +179,21 @@ async def _run(args) -> dict:
                 "chunks": summary["chunk_count"],
                 "claims": summary["claim_count"],
                 "phases": {
-                    label: round(totals[label] - before.get(label, 0.0), 2)
-                    for label in sorted(totals)
-                    if label != "wall clock"
+                    label_: round(totals[label_] - before.get(label_, 0.0), 2)
+                    for label_ in sorted(totals)
+                    if label_ != "wall clock"
                 },
             }
     finally:
         for owner, name, original in patches:
             setattr(owner, name, original)
-    return {"per_corpus": per_corpus, "totals": {k: round(v, 2) for k, v in totals.items()}}
+        if not args.keep:
+            await _erase(disposable)
+    return {
+        "per_corpus": per_corpus,
+        "connections": connections["count"],
+        "totals": {k: round(v, 2) for k, v in totals.items()},
+    }
 
 
 def main() -> int:
@@ -127,12 +203,17 @@ def main() -> int:
         action="append",
         required=True,
         metavar="NAME=PATH",
-        help="a corpus name and the directory to sync into it",
+        help="a report label and the directory to sync into a disposable corpus",
     )
     parser.add_argument(
         "--reset",
         action="store_true",
-        help="erase each corpus first, so the run measures a cold ingest",
+        help="erase each disposable corpus first, so the run measures a cold ingest",
+    )
+    parser.add_argument(
+        "--keep",
+        action="store_true",
+        help="leave the disposable corpora behind instead of deleting them",
     )
     args = parser.parse_args()
     url = os.getenv("DATABASE_URL")
@@ -140,18 +221,19 @@ def main() -> int:
         print("FAIL: set DATABASE_URL", file=sys.stderr)
         return 1
     report = asyncio.run(_run(args))
-    for name, data in report["per_corpus"].items():
-        print(f"\n{name}  <- {data['source']}")
+    for label, data in report["per_corpus"].items():
+        print(f"\n{label}  <- {data['source']}  (corpus {data['corpus']})")
         print(
             f"  +{data['added']} ~{data['changed']} ={data['unchanged']} "
             f"!{data['failed']}, {data['chunks']} chunks, {data['claims']} claims"
         )
-        for label, seconds in data["phases"].items():
-            print(f"  {label:<24} {seconds:>7.2f} s")
+        for phase, seconds in data["phases"].items():
+            print(f"  {phase:<24} {seconds:>7.2f} s")
         print(f"  {'wall clock':<24} {data['seconds']:>7.2f} s")
     print("\nTOTAL")
-    for label, seconds in report["totals"].items():
-        print(f"  {label:<24} {seconds:>7.2f} s")
+    for phase, seconds in report["totals"].items():
+        print(f"  {phase:<24} {seconds:>7.2f} s")
+    print(f"  {'connections opened':<24} {report['connections']:>7d}")
     return 0
 
 

@@ -365,6 +365,7 @@ async def _build_bulk_corpus() -> dict:
     # The production hook, captured before anything is installed over it.
     hook = IngestionService._refresh_planner_statistics
     saved_scope, saved_embedder = ingestion.session_scope, ingestion.Embedder
+    saved_sync_scope = ingestion.sync_session_scope
     logger = logging.getLogger("api.services.ingestion")
     saved_level = logger.level
     # The hook reports at INFO and the root logger is at WARNING, so without this
@@ -380,6 +381,7 @@ async def _build_bulk_corpus() -> dict:
                 await _provision(schema, corpus, conn)
                 sessions = _sessions(conn)
                 ingestion.session_scope = sessions
+                ingestion.sync_session_scope = sessions
                 ingestion.Embedder = FixedEmbedder
                 sql = await _capture_load_sql()
                 params = {"c": corpus, "path": None, "at": None}
@@ -409,7 +411,11 @@ async def _build_bulk_corpus() -> dict:
                 await outer.rollback()
     finally:
         IngestionService._refresh_planner_statistics = hook
-        ingestion.session_scope, ingestion.Embedder = saved_scope, saved_embedder
+        ingestion.session_scope, ingestion.sync_session_scope, ingestion.Embedder = (
+            saved_scope,
+            saved_sync_scope,
+            saved_embedder,
+        )
         logger.removeHandler(log_capture)
         logger.setLevel(saved_level)
         shutil.rmtree(repo, ignore_errors=True)
@@ -527,6 +533,7 @@ async def _throwaway_corpus(monkeypatch, root: Path, n_docs: int):
         try:
             await _provision(schema, corpus, conn)
             monkeypatch.setattr(ingestion, "session_scope", _sessions(conn))
+            monkeypatch.setattr(ingestion, "sync_session_scope", _sessions(conn))
             monkeypatch.setattr(ingestion, "Embedder", FixedEmbedder)
             yield _sessions(conn), corpus, IngestionService(memory_enabled=True), repo
         finally:

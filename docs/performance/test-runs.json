@@ -295,6 +295,21 @@
       "seconds": 550.3,
       "skipped": "1"
     },
+    "b6d4852: full suite: one connection per sync, on top of the corpus-reset work": {
+      "collected": "2009",
+      "commit": "b6d4852e43e9bf9d0aba56363a7801e5895f419f",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: one connection per sync, on top of the corpus-reset work",
+      "passed": "2007",
+      "seconds": 585.85,
+      "skipped": "2"
+    },
     "bd3cfc2: full suite: the coverage measured against the question, on top of the chunk-vector work": {
       "collected": "1998",
       "commit": "bd3cfc2f688aa38a55d13b4b4bec30bcc9604a53",

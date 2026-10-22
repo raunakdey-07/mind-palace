@@ -201,3 +201,53 @@ def test_ingest_repo_still_needs_no_server(repo, corpus):
         )
 
     assert result.exit_code == 0, result.output
+
+
+def test_a_delete_removes_the_corpus_and_leaves_siblings_alone(repo, corpus, tmp_path):
+    """`corpus delete --yes` erases one corpus and leaves the others alone."""
+    other = corpus + "-other"
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    (other_dir / "billing.md").write_text(OTHER_DOC)
+
+    assert _invoke(["ingest-repo", str(repo), "--corpus", corpus], roots=str(repo)).exit_code == 0
+    assert (
+        _invoke(["ingest-repo", str(other_dir), "--corpus", other], roots=str(other_dir)).exit_code
+        == 0
+    )
+
+    deleted = _invoke(["corpus", "delete", corpus, "--yes"])
+    assert deleted.exit_code == 0, deleted.output
+    assert "erased corpus" in deleted.output
+
+    assert _claims(corpus) == [], "the deleted corpus still holds its claims"
+    assert "The billing service uses MySQL." in _claims(
+        other
+    ), "the delete took another corpus with it"
+
+    listed = _invoke(["corpora"])
+    assert corpus not in listed.output.split(), f"corpus still listed after delete: {listed.output}"
+    assert other in listed.output.split(), "sibling corpus disappeared"
+
+
+def test_a_delete_refuses_without_yes(repo, corpus):
+    """Erasure cannot be undone, so the operator says so."""
+    assert _invoke(["ingest-repo", str(repo), "--corpus", corpus], roots=str(repo)).exit_code == 0
+
+    refused = _invoke(["corpus", "delete", corpus])
+    assert refused.exit_code != 0
+    assert "The checkout service uses PostgreSQL." in _claims(
+        corpus
+    ), "erased without being asked to"
+
+
+def test_a_delete_refuses_on_default():
+    refused = _invoke(["corpus", "delete", "default", "--yes"])
+    assert refused.exit_code != 0
+    assert "default" in refused.output.lower()
+
+
+def test_a_delete_refuses_on_nonexistent():
+    refused = _invoke(["corpus", "delete", "no-such-corpus-xyz", "--yes"])
+    assert refused.exit_code != 0
+    assert "not found" in refused.output.lower()

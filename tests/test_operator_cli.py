@@ -205,7 +205,7 @@ def test_corpus_delete_reports_what_it_removed(scratch):
     assert code == 0, out
     assert out.strip().startswith("mpk_")
 
-    code, out = _run("corpus", "delete", scratch)
+    code, out = _run("corpus", "delete", scratch, "--yes")
     assert code == 0, out
     assert "erased corpus" in out
     assert "rows removed, by table" in out
@@ -216,7 +216,7 @@ def test_corpus_delete_reports_what_it_removed(scratch):
     assert "mpk_" not in out
     assert scratch not in out.split("not removed")[-1].split("\n")[0] or True
 
-    code, out = _run("corpus", "delete", scratch)
+    code, out = _run("corpus", "delete", scratch, "--yes")
     assert code == 1, "deleting an absent corpus must not report success"
     assert "not found" in out
 

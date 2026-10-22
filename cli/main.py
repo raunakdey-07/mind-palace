@@ -2125,6 +2125,21 @@ def corpus_delete(
     Pack the customer already exported, a database backup, or a copy they stored
     elsewhere -- and it prints that rather than implying otherwise.
     """
+    if name == "default":
+        typer.echo(
+            "cannot delete the 'default' corpus; wipe it with "
+            "`mindpalace corpus reset default --yes` instead.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    if not yes:
+        typer.echo(
+            f"this erases everything in corpus '{name}'. "
+            "Re-run with --yes if that is what you want.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
 
     async def run():
         async with _authz_session() as db:

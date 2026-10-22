@@ -606,7 +606,7 @@ def _table_claims(
             )
             continue
         seen_quotes.add(signature)
-        key_base = f"md:{_slug(heading_path)}"
+        key_base = f"md:{_slug(heading_path)}:table"
         ordinal = ordinals.get(key_base, 0)
         ordinals[key_base] = ordinal + 1
         key = f"{key_base}:{ordinal}"

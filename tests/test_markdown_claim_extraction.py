@@ -222,3 +222,24 @@ def test_a_line_that_cannot_be_quoted_is_dropped_and_named():
     assert warnings[0].code == "claim_extraction_no_quote"
     assert warnings[0].line == 3
     assert "decision" not in str(warnings[0].as_dict())
+
+
+def test_adding_a_table_above_a_bullet_does_not_renumber_the_bullet():
+    """A table is its own ordinal space, so a bullet keeps its key."""
+    before = "# T\n\n- An unrelated prose bullet about the datastore.\n"
+    after = (
+        "# T\n\n"
+        "| File | Gzip |\n"
+        "| --- | --- |\n"
+        "| `embed.js` | 20.40 kB |\n"
+        "\n"
+        "- An unrelated prose bullet about the datastore.\n"
+    )
+    old = {c["key"]: c for c in extract(before, chunks_for(before))[0]}
+    new = {c["key"]: c for c in extract(after, chunks_for(after))[0]}
+    # The prose bullet keeps its original key, so no false supersession.
+    assert any("unrelated prose bullet" in c["claim"] for c in old.values())
+    assert any("unrelated prose bullet" in c["claim"] for c in new.values())
+    old_bullet_key = next(k for k, c in old.items() if "unrelated prose bullet" in c["claim"])
+    new_bullet_key = next(k for k, c in new.items() if "unrelated prose bullet" in c["claim"])
+    assert old_bullet_key == new_bullet_key, (old_bullet_key, new_bullet_key)

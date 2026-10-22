@@ -159,6 +159,87 @@ async def test_a_retired_claim_is_never_reported_as_current_now(store):
         assert line != f"current now: {OLD_CLAIM}", (question, rendered)
 
 
+async def test_history_does_not_select_a_chain_with_no_individual_anchor(store):
+    """A chain whose only relevance is the union of its nodes is not a lineage."""
+    from api.services.remember import remember
+
+    await remember("first claim about apple", corpus=store.name)
+    first = next(
+        claim for claim in await _live_claims(store) if "first claim about apple" in claim["claim"]
+    )
+    await remember("second claim about banana", corpus=store.name, supersedes_claim_id=first["id"])
+    second = next(
+        claim
+        for claim in await _live_claims(store)
+        if "second claim about banana" in claim["claim"]
+    )
+    await remember("third claim about cherry", corpus=store.name, supersedes_claim_id=second["id"])
+
+    response = await memory_public.execute_in_session(
+        store.db,
+        "history",
+        MemoryRequest(corpus=store.name, query="apple banana cherry date"),
+    )
+    assert response.changes == [], [change.current for change in response.changes]
+
+
+async def test_explain_includes_history_for_every_answer_claim(store):
+    """A multi-claim answer does not drop claims from HISTORY."""
+    from cli.render import render_explain
+
+    body = (
+        "# Widgets\n\n"
+        "- Widget alpha costs 10.\n"
+        "- Widget beta costs 20.\n"
+        "- Widget gamma costs 30.\n"
+    )
+    await _ingest_file(store, body, "widgets.md")
+
+    response = await memory_public.execute_in_session(
+        store.db, "query", MemoryRequest(corpus=store.name, query="widget")
+    )
+    assert len(response.current_memories) == 3
+
+    # Mimic the CLI's explain path: history per source document.
+    paths = sorted({claim.path for claim in response.current_memories if claim.path})
+    changes = []
+    for path in paths:
+        history = await memory_public.execute_in_session(
+            store.db, "history", MemoryRequest(corpus=store.name, path=path)
+        )
+        # Filter to answered claims, as the CLI now does.
+        answer_ids = {claim.id for claim in response.current_memories}
+        answer_order = {claim.id: i for i, claim in enumerate(response.current_memories)}
+        for change in history.changes:
+            current = sorted(
+                (c for c in change.current if c.id in answer_ids),
+                key=lambda c: answer_order.get(c.id, len(answer_order)),
+            )
+            if not current:
+                continue
+            from api.models.memory import Change
+
+            changes.append(
+                Change(
+                    version_id=change.version_id,
+                    predecessor_id=change.predecessor_id,
+                    event=change.event,
+                    path=change.path,
+                    observed_at=change.observed_at,
+                    memory_changed=change.memory_changed,
+                    relationship=change.relationship,
+                    previous=change.previous,
+                    current=current,
+                )
+            )
+    changes.sort(key=lambda change: change.observed_at)
+
+    rendered = render_explain(response, changes=changes)
+    history_section = rendered.split("HISTORY", 1)[1].split("VERIFICATION", 1)[0]
+    for claim in response.current_memories:
+        assert claim.claim in history_section, (claim.claim, history_section)
+
+
 async def _live_claims(store) -> list[dict]:
     from api.services.memory import _active_claims
 

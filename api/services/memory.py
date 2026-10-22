@@ -1405,6 +1405,21 @@ def _query_result(versions, query_text, valid_at=None, *, lineage: bool = False)
         chain_words = [
             frozenset().union(*(similarity.terms(c["claim"]) for c in chain)) for chain in chains
         ]
+        # A chain may only anchor when at least one of its own claims clears
+        # the relevance floor on its own. Union scoring alone lets a multi-node
+        # chain accumulate one query word per node and beat a genuinely relevant
+        # claim, so the floor is checked per claim, not per union. The check uses
+        # the same haystack the strict path uses (key, claim, value and path), so
+        # a claim identified by its key still counts as an anchor on its own.
+        chain_has_anchor = [
+            any(
+                (content <= haystack(member))
+                or similarity.overlap(content, haystack(member)) >= ANCHOR_FLOOR
+                or similarity.overlap(content, similarity.terms(member["claim"])) >= ANCHOR_FLOOR
+                for member in chain
+            )
+            for chain in chains
+        ]
         if not content:
             matched_ids = {claim["id"] for claim in claims}
         else:
@@ -1413,8 +1428,12 @@ def _query_result(versions, query_text, valid_at=None, *, lineage: bool = False)
                 # Second pass, as above, but scored on the chain: the question is
                 # measured against the union of the tokens the whole lineage
                 # carries, so a question spanning the before and the after is
-                # scored on both halves.
-                scores = [similarity.overlap(content, words) for words in chain_words]
+                # scored on both halves. A chain with no individual anchor is
+                # disqualified: union overlap alone is not evidence of relevance.
+                scores = [
+                    similarity.overlap(content, words) if chain_has_anchor[index] else 0.0
+                    for index, words in enumerate(chain_words)
+                ]
                 best = max(scores, default=0.0)
                 if best >= ANCHOR_FLOOR:
                     anchors = [

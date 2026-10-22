@@ -823,10 +823,36 @@ def _history_for(client, corpus: str, response) -> list:
     from api.models.memory import Change
 
     paths = sorted({claim.path for claim in response.current_memories if claim.path})
+    answer_ids = {claim.id for claim in response.current_memories}
     changes = []
     for path in paths[:MAX_EXPLAIN_SOURCES]:
         history = _run(client.memory.history, corpus=corpus, path=path)
-        changes.extend(change for change in history.changes if change not in changes)
+        for change in history.changes:
+            # Keep only the change events that carry a claim this answer shows,
+            # and trim each event to those claims so HISTORY names every answered
+            # claim instead of only the first one in a multi-claim version.
+            answer_order = {
+                claim.id: index for index, claim in enumerate(response.current_memories)
+            }
+            current = sorted(
+                (claim for claim in change.current if claim.id in answer_ids),
+                key=lambda claim: answer_order.get(claim.id, len(answer_order)),
+            )
+            if not current:
+                continue
+            filtered = Change(
+                version_id=change.version_id,
+                predecessor_id=change.predecessor_id,
+                event=change.event,
+                path=change.path,
+                observed_at=change.observed_at,
+                memory_changed=change.memory_changed,
+                relationship=change.relationship,
+                previous=change.previous,
+                current=current,
+            )
+            if filtered not in changes:
+                changes.append(filtered)
     changes.sort(key=lambda change: change.observed_at)
     if len(paths) > MAX_EXPLAIN_SOURCES:
         # Say what was left out. A partial history that looks complete is worse

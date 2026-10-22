@@ -253,15 +253,24 @@ def _explain_history(changes) -> str:
     lines = ["HISTORY"]
     for change in changes:
         stamp = f"{change.observed_at:%Y-%m-%d %H:%M} UTC"
-        current = _sentence(change.current[0].claim) if change.current else None
         if change.event == "TRUNCATED":
             lines.append(f"  ({change.path})")
-        elif not change.previous:
-            # The first version of a document records memory; it does not replace any.
-            lines.append(f"  {stamp}  recorded  {current or change.path}")
-        elif change.memory_changed and current:
-            lines.append(f"  {stamp}  {_short(change.previous[0].claim)}")
-            lines.append(f"             superseded by  {current}")
+            continue
+        if not change.previous:
+            # The first version of a document records memory; it does not replace
+            # any. A version can carry several answered claims, so record each.
+            if change.current:
+                for claim in change.current:
+                    lines.append(f"  {stamp}  recorded  {_sentence(claim.claim)}")
+            else:
+                lines.append(f"  {stamp}  recorded  {change.path}")
+        elif change.memory_changed and change.current:
+            if len(change.previous) == 1 and len(change.current) == 1:
+                lines.append(f"  {stamp}  {_short(change.previous[0].claim)}")
+                lines.append(f"             superseded by  {_sentence(change.current[0].claim)}")
+            else:
+                for claim in change.current:
+                    lines.append(f"  {stamp}  recorded  {_sentence(claim.claim)}")
         else:
             # A document edited without changing its memory: worth seeing, but not a
             # supersession, and not dressed up as one.

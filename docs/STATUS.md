@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **1996 passed, 0 failed, 2 skipped** (as of `bd3cfc2`); 1998 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| tests | **2002 passed, 0 failed, 2 skipped** (as of `46bc91c`); 2004 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -479,6 +479,22 @@ them, and the response is 7,233 of the 8,000 characters with nothing dropped.
 Nothing else moved. The frozen M006.75 set is identical on all sixty
 questions, field for field, and the 202-question development set flips no
 question.
+
+### A corpus that goes stale, and the two ways out of it
+
+**A file removed from a curated directory stayed active in the corpus
+forever.** Its claims kept answering questions, and nothing reported that the
+source was gone. `mindpalace ingest-repo` hardcoded `delete_removed=False`, so
+the service could retire a document and the CLI never asked for it. The flag
+is `--delete-removed`, and the default is unchanged: a sync that retires
+documents is a decision, and the flag is how the caller makes it.
+
+**A corpus that had collected a test claim needed a clean slate**, and the way
+out of that was to drop the whole PostgreSQL database through `podman exec`,
+which took every other corpus in it with the one that was dirty.
+`mindpalace corpus reset` erases one corpus and re-initialises it under the
+same name and the same id, with its grants intact. It asks for `--yes`,
+because the erasure cannot be undone.
 
 ## Correctness
 

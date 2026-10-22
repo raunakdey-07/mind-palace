@@ -31,6 +31,21 @@
       "seconds": 585.51,
       "skipped": "2"
     },
+    "1d00c53: full suite: delete-removed and corpus reset, on top of the chunk-vector work": {
+      "collected": "2000",
+      "commit": "1d00c531a295a48f39f7d00642b6cbc586f560d3",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: delete-removed and corpus reset, on top of the chunk-vector work",
+      "passed": "1998",
+      "seconds": 836.9,
+      "skipped": "2"
+    },
     "3108404: full suite, run A (trust round)": {
       "collected": "1621",
       "commit": "3108404e1708e46cacf6b5e06b9478ea0bf8ffc9",
@@ -84,6 +99,21 @@
       "passed": "1600",
       "seconds": 547.5,
       "skipped": "1"
+    },
+    "46bc91c: full suite: delete-removed and corpus reset, on top of the chunk-vector and ranking work": {
+      "collected": "2004",
+      "commit": "46bc91cba94cdad2d7e4f729df45072d35b12c53",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: delete-removed and corpus reset, on top of the chunk-vector and ranking work",
+      "passed": "2002",
+      "seconds": 832.26,
+      "skipped": "2"
     },
     "526f326: full suite, after the ingestion-truthfulness change": {
       "collected": "1618",
@@ -309,6 +339,21 @@
       "note": "The six tests/test_ingestion_statistics.py tests that skipped on every runner for four sessions now pass: SQLAlchemy 2.1 resolves a bare postgresql:// to psycopg (v3), which this project does not install, and _db_available() swallowed the ModuleNotFoundError. 1637 = 1625 + those 6 + 12 new tests in tests/test_skip_gate_and_runner_evidence.py. The 2 remaining skips are the two allowlisted opt-in ones.",
       "passed": "1637",
       "seconds": 1387.91,
+      "skipped": "2"
+    },
+    "e832b50: full suite: delete-removed and corpus reset": {
+      "collected": "1989",
+      "commit": "e832b50ffd98782fe6e1044210d6a49c4f939b49",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: delete-removed and corpus reset",
+      "passed": "1987",
+      "seconds": 793.7,
       "skipped": "2"
     },
     "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {

@@ -679,6 +679,7 @@ def relevance(
     chosen = {}
     ranked_scores: dict[str, float] = {}
     scored: dict[str, float] = {}
+    topic_winners: list[str | None] = [None] * len(interpreted.topics)
     for i in range(len(interpreted.topics)):
         by_key = {}
         ranked_by_key: dict[str, float] = {}
@@ -775,6 +776,10 @@ def relevance(
             # corpus has never used: "How does Mind Palace use Kubernetes?"
             # There is nothing to answer it with.
             continue
+        if ranked_by_key:
+            topic_winners[i] = sorted(ranked_by_key.items(), key=lambda item: (-item[1], item[0]))[
+                0
+            ][0]
         top = max(by_key.values(), default=0)
         for key, value in by_key.items():
             if value >= top * policy.relative:
@@ -796,5 +801,8 @@ def relevance(
             # The same ranking, ordered by how much of the question each claim
             # answers. The shortlist the caller is shown is in this order.
             "ranked": ranked_scores,
+            # The claim key that won each topic (whole question first, then sub-parts).
+            "topic_winners": topic_winners,
+            "subpart_winners": topic_winners[1:],
         },
     )

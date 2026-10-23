@@ -19,17 +19,17 @@
     "normalized": true,
     "metric": "cosine"
   },
-  "source_files": [
-    "api/services/memory_relevance.py",
-    "api/services/memory_query.py",
-    "api/services/memory_public.py",
-    "api/services/memory_query_benchmark.py",
-    "api/services/memory_benchmark.py",
-    "api/models/memory.py"
-  ],
-  "source_revision": "92168f302455308a133a75c4c49d70169943bd1a",
-  "source_fingerprint": "b8e2bc82c289ab604abca04b36f89e655fdd5d7253338211a3665610b505453f",
-  "result_sha256": "881530c7c6e7ba29fb38eb5b27609071463f733c6a8cd173aeff04173a5d8dc8",
+  "source_files": {
+    "api/models/memory.py": "97af748c62378a2258be0db9479f03d53453c968180a74e8f4a05502a34c094b",
+    "api/services/memory_benchmark.py": "3b2636962117e4a5d34c88e35e14ac449fd8bbfea4442d1dedc4adaf31f131da",
+    "api/services/memory_public.py": "8f3d2a1780f7985d9f0d58c5ae079d669b012764c20f2a220bf3e5f337274821",
+    "api/services/memory_query.py": "dde2c53537c0326ebad8bc96cc21946034046def1f52d5db892174030340a617",
+    "api/services/memory_query_benchmark.py": "966706c074905e5163850482b325ef9014ddb2fadf326811e224318ade5c4174",
+    "api/services/memory_relevance.py": "42f9eb2e43d6fd425e0aa0ce0d23fea7b866ac72562b9c7b107b8ea7a368ef64"
+  },
+  "source_revision": "5ee2a5b1c3d8d5d17e9f778eb298a188d714eb2c",
+  "source_fingerprint": "08b02e3e0cb64c48acd2152f74a0cd6e5072e6e30372c21b623db9fcdbb30535",
+  "result_sha256": "ad4c29156f2be2352b4edc71898881fd82c67f890a0a0aea139ee2b292fd8011",
   "result": "eval/m00675/result.json",
   "command": "./scripts/benchmark/m00675.sh"
 }

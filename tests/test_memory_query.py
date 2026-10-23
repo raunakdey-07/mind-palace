@@ -537,6 +537,8 @@ async def test_lexical_scorer_never_embeds_and_reports_itself(offline_embedder):
         # The same ranking in the order the shortlist is shown: the score and
         # how much of the question the claim answers, together.
         "ranked": {"architecture.database": 1.0},
+        "topic_winners": ["architecture.database"],
+        "subpart_winners": [],
     }
     assert scores == {"architecture.database": 1.0}
 

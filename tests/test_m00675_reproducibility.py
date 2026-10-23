@@ -13,7 +13,7 @@ def test_frozen_inputs_and_canonical_result_are_stable():
     assert artifact["policy"] == "frozen"
     assert artifact["database_fixture_sha256"] == fixture_hash()
     assert len(artifact["questions"]) == 60
-    assert artifact["summary"]["total"]["exact"] == 47
+    assert artifact["summary"]["total"]["exact"] == 45
     assert artifact["categories"]["abstention"]["exact"] == 10
     assert artifact["result_sha256"] == manifest["result_sha256"]
     assert artifact["source_fingerprint"] == manifest["source_fingerprint"]

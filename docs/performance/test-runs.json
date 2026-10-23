@@ -340,6 +340,20 @@
       "seconds": 837.39,
       "skipped": "2"
     },
+    "c65ffb2: full suite": {
+      "collected": "2034",
+      "commit": "c65ffb295927b2d63438858ca5b1f4663c283be9",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite",
+      "passed": "2032",
+      "skipped": "2"
+    },
     "d1a4612: full suite, workstation, disposable PG 15.4 at 15434, Session 8": {
       "collected": "1639",
       "commit": "d1a461230a47db2b236c85f0af449792605f54de",

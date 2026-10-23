@@ -43,6 +43,20 @@ def pytest_sessionstart(session) -> None:
 
     base_url = os.environ.get("DATABASE_URL") or os.environ.get("MEMORY_TEST_DATABASE_URL")
     if not base_url:
+        # Zero-config probe: if both variables are unset, try the default local
+        # development instance, auto-starting a stopped local container if one
+        # is present. This is what makes `pytest` work out-of-the-box right
+        # after `mindpalace init`, without manual env var exports.
+        default_url = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+        try:
+            from cli import postgres as _postgres
+
+            if _postgres.ensure_local_postgres():
+                base_url = default_url
+        except Exception:  # noqa: BLE001 - probing is best-effort
+            base_url = None
+
+    if not base_url:
         # Previously this returned quietly and every database-backed test skipped.
         # The suite then exited 0 having run nothing: 1645 skipped in 9.75 s, and
         # a green build that proved nothing. `check_skips.py` validates that the

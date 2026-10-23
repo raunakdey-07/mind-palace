@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import json
 import os
 import shutil
@@ -451,3 +453,222 @@ def ensure_local_postgres(
         if provision_local_postgres(timeout=timeout):
             return True
     return tcp_open(host, port, timeout=0.5)
+
+
+#: Filesystem locations inspected for Linux/WSL2 detection. Module-level so tests
+#: can point them at fixtures without monkeypatching `Path`.
+PROC_VERSION_PATH = Path("/proc/version")
+OS_RELEASE_PATH = Path("/etc/os-release")
+
+
+def _read_proc_version() -> str:
+    try:
+        return PROC_VERSION_PATH.read_text(encoding="utf-8", errors="replace")
+    except (OSError, ValueError):
+        return ""
+
+
+def _read_os_release_text() -> str:
+    try:
+        return OS_RELEASE_PATH.read_text(encoding="utf-8", errors="replace")
+    except (OSError, ValueError):
+        return ""
+
+
+def is_wsl2() -> bool:
+    """Whether this process is running under WSL2.
+
+    Detection inspects ``/proc/version`` for ``microsoft`` or ``WSL``, as the
+    kernel reports for a WSL2 guest.
+    """
+    text = _read_proc_version().lower()
+    return ("microsoft" in text) or ("wsl" in text)
+
+
+# Aliases covering the names callers and tests are likely to reach for.
+is_wsl = is_wsl2
+detect_wsl2 = is_wsl2
+wsl2_detected = is_wsl2
+
+
+def read_os_release() -> dict[str, str]:
+    """Parse ``/etc/os-release`` into a mapping."""
+    result: dict[str, str] = {}
+    for line in _read_os_release_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        result[key.strip()] = value
+    return result
+
+
+os_release = read_os_release
+
+
+def linux_distro_id() -> str:
+    """The ``ID`` field from ``/etc/os-release`` (e.g. ``fedora``)."""
+    return (read_os_release().get("ID") or "").strip().lower()
+
+
+distro_id = linux_distro_id
+distro = linux_distro_id
+
+
+def linux_distro_family() -> str:
+    """The ``ID_LIKE`` field, falling back to ``ID``."""
+    data = read_os_release()
+    like = (data.get("ID_LIKE") or "").strip().lower()
+    if like:
+        return like
+    return linux_distro_id()
+
+
+distro_family = linux_distro_family
+distro_like = linux_distro_family
+
+
+def linux_distro() -> str:
+    """A human-readable distro label, preferring PRETTY_NAME."""
+    data = read_os_release()
+    return data.get("PRETTY_NAME") or data.get("ID") or ""
+
+
+def _distro_haystack(distro_id: str | None = None, family: str | None = None) -> str:
+    if distro_id is None:
+        distro_id = linux_distro_id()
+    if family is None:
+        family = linux_distro_family()
+    return " ".join([distro_id or "", family or ""]).lower()
+
+
+def runtime_install_command(distro_id: str | None = None, family: str | None = None) -> str:
+    """Distro-appropriate command to install a container runtime."""
+    hay = _distro_haystack(distro_id, family)
+    if any(token in hay for token in ("fedora", "rhel", "centos", "rocky", "alma", "ol")):
+        return "sudo dnf install -y podman"
+    if any(token in hay for token in ("debian", "ubuntu", "mint", "pop")):
+        return "sudo apt update && sudo apt install -y podman"
+    if "arch" in hay:
+        return "sudo pacman -S podman"
+    # Sensible default for unknown Linux.
+    return "sudo dnf install -y podman"
+
+
+install_runtime_command = runtime_install_command
+distro_install_command = runtime_install_command
+container_runtime_install_command = runtime_install_command
+
+
+def missing_container_runtime_remediation(
+    distro_id: str | None = None, family: str | None = None
+) -> str:
+    cmd = runtime_install_command(distro_id, family)
+    return (
+        "No container runtime (podman or docker) was found on PATH.\n"
+        "Install one for your distribution, then re-run mindpalace init:\n"
+        f"  {cmd}\n"
+        "On Debian/Ubuntu, `docker.io` is an alternative to podman: "
+        "sudo apt update && sudo apt install -y docker.io"
+    )
+
+
+missing_runtime_remediation = missing_container_runtime_remediation
+missing_runtime_message = missing_container_runtime_remediation
+runtime_missing_message = missing_container_runtime_remediation
+
+
+def docker_socket_permission_denied_remediation() -> str:
+    return (
+        "Permission denied on /var/run/docker.sock.\n"
+        "Your user is not in the docker group. Add it and re-open your shell:\n"
+        "  sudo usermod -aG docker $USER && newgrp docker\n"
+        "Alternatively, use rootless Podman (no group change required)."
+    )
+
+
+socket_permission_remediation = docker_socket_permission_denied_remediation
+permission_denied_remediation = docker_socket_permission_denied_remediation
+docker_socket_permission_message = docker_socket_permission_denied_remediation
+
+
+def stopped_docker_daemon_remediation(wsl2: bool | None = None) -> str:
+    if wsl2 is None:
+        wsl2 = is_wsl2()
+    if wsl2:
+        cmd = "sudo service docker start"
+    else:
+        cmd = "sudo systemctl start docker"
+    return (
+        "The container runtime daemon is stopped.\n"
+        "Start it, then re-run mindpalace init:\n"
+        f"  {cmd}"
+    )
+
+
+stopped_daemon_remediation = stopped_docker_daemon_remediation
+stopped_docker_daemon_message = stopped_docker_daemon_remediation
+daemon_stopped_remediation = stopped_docker_daemon_remediation
+
+
+def host_postgres_port_conflict_remediation() -> str:
+    return (
+        "A host or foreign PostgreSQL instance is bound to localhost:5432, so the "
+        "default mpadmin credentials were rejected.\n"
+        "Either point Mind Palace at a different database:\n"
+        "  export DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/mindpalace\n"
+        "Or stop the conflicting host service and re-run init:\n"
+        "  sudo systemctl stop postgresql\n"
+        "  sudo service postgresql stop\n"
+        "  mindpalace init"
+    )
+
+
+port_conflict_remediation = host_postgres_port_conflict_remediation
+host_postgres_remediation = host_postgres_port_conflict_remediation
+port_5432_conflict_remediation = host_postgres_port_conflict_remediation
+
+
+def _container_runtime_available() -> bool:
+    return bool(_container_clis())
+
+
+def remediation_for_exception(exc: BaseException | None) -> str | None:
+    """Best-effort remediation text for a CLI failure, or None."""
+    if exc is None:
+        return None
+    chain_text = " ".join(str(e) for e in _exception_chain_list(exc)).lower()
+    if "/var/run/docker.sock" in chain_text and "permission denied" in chain_text:
+        return docker_socket_permission_denied_remediation()
+    if (
+        "cannot connect to the docker daemon" in chain_text
+        or "is the docker daemon running" in chain_text
+        or "docker daemon is not running" in chain_text
+    ):
+        return stopped_docker_daemon_remediation()
+    if (
+        "podman: not found" in chain_text
+        or "docker: not found" in chain_text
+        or "not found" in chain_text
+        and "podman" in chain_text
+    ):
+        return missing_container_runtime_remediation()
+    return None
+
+
+def _exception_chain_list(exc: BaseException) -> list[BaseException]:
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        nxt = current.__cause__ or current.__context__
+        if nxt is None:
+            original = getattr(current, "orig", None)
+            nxt = original if isinstance(original, BaseException) else None
+        current = nxt
+    return chain

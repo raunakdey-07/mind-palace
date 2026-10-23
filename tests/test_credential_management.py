@@ -1029,6 +1029,13 @@ def test_no_request_serving_surface_reads_a_raw_file():
             "reads /proc/cpuinfo, which is the machine's own processor list and "
             "not caller input. It decides how many threads the ONNX session uses"
         ),
+        ("cli/postgres.py", "_read_proc_version"): (
+            "reads /proc/version to detect WSL2; machine's own kernel string, " "not caller input"
+        ),
+        ("cli/postgres.py", "_read_os_release_text"): (
+            "reads /etc/os-release to detect the Linux distribution; machine's "
+            "own configuration, not caller input"
+        ),
     }
     #: Files that are not request-serving paths at all.
     OFF_SURFACE = {

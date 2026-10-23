@@ -319,6 +319,7 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
         match_status=full.match_status,
         match_margin=full.match_margin,
         candidates=list(full.candidates),
+        unmatched_subparts=list(full.unmatched_subparts),
         truncated=True,
     )
     if len(result.canonical_json()) > budget:

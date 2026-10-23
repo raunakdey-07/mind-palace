@@ -1,6 +1,6 @@
 {
   "algorithm": "sha256",
-  "count": 41,
+  "count": 32,
   "files": {
     "docs/performance/baseline-packs.json": "47b6da2ad65eac1165d4239da636952ec5538cf12977e69b2de6b7352d698842",
     "docs/performance/downstream-eval-protocol.freeze.json": "d982d926ebbf2e9de3e366ed7c9a07b7274d00121e3ea0bc420281d30869cad2",
@@ -13,8 +13,8 @@
     "eval/EVALUATION.md": "534131b7001e867e62e9076bc168665bdbd655a54316e556183e8a61df23b67b",
     "eval/baseline.json": "76a6b341b5788e7e75f84bdb3690c0866d4540e1ada789695b4904421f3ada04",
     "eval/m00675/README.md": "821fde76f346b9b3753c01614099e7c7550d6a071929215173186f590a4257bd",
-    "eval/m00675/manifest.json": "ece2d23a03ac0bce5c5532575ffd8228b166066a45996f945091ed6eca36b3ec",
-    "eval/m00675/result.json": "6ef168c4b8188c8afa433f26777ae2ec503a96fc4769b3c4d6a0e780ab8b2591",
+    "eval/m00675/manifest.json": "b964c9ce2f980ca22ac3b6bab5ca0c5931be2af7af6949afcfb9e576daa6fa17",
+    "eval/m00675/result.json": "736881bfa654d9281a64b43b3f0bc8a2ab5a3a792c6ffe03d99b43c6664f1481",
     "eval/m007/adjudication/README.md": "3ae809afb45b1815a15df7bf3731583e8db42dc8a4ce37236c0c639660f0542c",
     "eval/m007/adjudication/REVIEWER_GUIDE.md": "90a757caf41ac15c40744c29ccf3f43a5400738cf27195207c2a5b9b99d58a37",
     "eval/m007/adjudication/adjudication_template.jsonl": "cbb9916c41b0a1c61967f4a5f5ad5f6854e74a7b6aaa630f920eac44b3124590",

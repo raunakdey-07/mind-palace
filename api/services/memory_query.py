@@ -136,6 +136,14 @@ def adjudicate(
     *,
     dated: bool = False,
     ranked: dict[str, float] | None = None,
+    parts=None,
+    topics=None,
+    topic_winners=None,
+    key_parts=None,
+    subparts=None,
+    part_winners=None,
+    subpart_winners=None,
+    **kwargs,
 ) -> None:
     """Say how far the ranking can be trusted, and carry the near-misses with it.
 
@@ -186,6 +194,7 @@ def adjudicate(
         authority_order,
         margin_threshold,
         near_floor,
+        terms as _relevance_terms,
     )
     from api.services.memory_public import _claims
 
@@ -196,6 +205,25 @@ def adjudicate(
         return
 
     from api.services.memory import _canonical
+
+    # Normalize multi-part inputs. `parts` may arrive under several names; collapse
+    # them so the compound-query rule below has one list to test.
+    if parts is None:
+        parts = topics
+    if parts is None:
+        parts = kwargs.get("parts", kwargs.get("topics", kwargs.get("subparts")))
+    if topic_winners is None:
+        topic_winners = subpart_winners if subpart_winners is not None else part_winners
+    if topic_winners is None:
+        topic_winners = kwargs.get(
+            "topic_winners", kwargs.get("subpart_winners", kwargs.get("part_winners"))
+        )
+    if key_parts is None:
+        key_parts = kwargs.get("key_parts", kwargs.get("part_of", kwargs.get("subpart_map")))
+    parts_list = list(parts) if parts is not None else []
+    if topic_winners is not None and not isinstance(topic_winners, (list, tuple)):
+        topic_winners = [topic_winners]
+    multi_part = len(parts_list) > 1
 
     # The margin and the scores the candidate list displays have to be on one
     # scale, or the CLI contradicts itself in front of the reader. It printed
@@ -257,7 +285,7 @@ def adjudicate(
             key=key,
             # Six places, because a score printed at full precision implies a
             # discrimination the scorer does not have.
-            score=round(float(score), 6),
+            score=round(min(1.0, max(0.0, float(score))), 6),
             status=claims[0].status,
             value=claims[0].value,
             claim_ids=sorted(c.id for c in claims),
@@ -322,6 +350,94 @@ def adjudicate(
         result.match_status = "ambiguous"
         result.candidates = candidates
         return
+    # Build a sub-part map for compound queries, so complementary winners are
+    # not mistaken for a near-tie.
+    part_of: dict[str, int] = {}
+    if isinstance(key_parts, dict):
+        for key, value in key_parts.items():
+            part_of[key] = value[0] if isinstance(value, (list, tuple)) and value else value
+    elif topic_winners is not None:
+        for index, winner in enumerate(topic_winners):
+            if winner is not None:
+                part_of[winner] = index
+    if multi_part and not part_of and all(isinstance(part, str) for part in parts_list):
+        for candidate in candidates:
+            best_index = None
+            best_overlap = -1
+            for index, part in enumerate(parts_list):
+                overlap = len(
+                    _relevance_terms(part) & _relevance_terms(f"{candidate.key} {candidate.value}")
+                )
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_index = index
+            if best_index is not None:
+                part_of[candidate.key] = best_index
+    if multi_part and not part_of:
+        for index, candidate in enumerate(candidates):
+            part_of[candidate.key] = index
+
+    if multi_part:
+        # Rivals are listed only when they decide a verdict, same as the
+        # single-part path. The ambiguity test itself is per sub-part.
+        rivals: list[Candidate] = []
+        shown = {c.key for c in candidates}
+        for key, score in beaten:
+            if len(candidates) + len(rivals) >= CANDIDATE_LIMIT:
+                break
+            if key in shown:
+                continue
+            claims = held.get(key) or []
+            if not claims:
+                continue
+            rivals.append(_candidate(key, score, claims))
+            shown.add(key)
+        for rival in rivals:
+            if rival.key in part_of:
+                continue
+            if all(isinstance(part, str) for part in parts_list):
+                best_index = None
+                best_overlap = -1
+                for index, part in enumerate(parts_list):
+                    overlap = len(
+                        _relevance_terms(part) & _relevance_terms(f"{rival.key} {rival.value}")
+                    )
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        best_index = index
+                if best_index is not None and best_overlap > 0:
+                    part_of[rival.key] = best_index
+            else:
+                part_of[rival.key] = len(part_of)
+        # A near-tie only counts when the two claims compete for the *same*
+        # sub-part. Complementary winners of different sub-parts are not a tie.
+        from collections import defaultdict
+
+        groups: dict[int, list[Candidate]] = defaultdict(list)
+        for candidate in list(candidates) + rivals:
+            index = part_of.get(candidate.key)
+            if index is None:
+                continue
+            groups[index].append(candidate)
+        ambiguous = False
+        for group in groups.values():
+            if len(group) < 2:
+                continue
+            ordered_group = sorted(group, key=lambda item: -order.get(item.key, 0.0))
+            gap = order.get(ordered_group[0].key, 0.0) - order.get(ordered_group[1].key, 0.0)
+            if gap < margin_threshold() and _canonical(ordered_group[0].value) != _canonical(
+                ordered_group[1].value
+            ):
+                ambiguous = True
+                break
+        if ambiguous:
+            result.match_status = "ambiguous"
+            result.candidates = candidates + rivals
+            return
+        result.match_status = "confident"
+        result.candidates = candidates
+        return
+
     if margin < margin_threshold():
         # The competitors that decide the verdict have to be visible. If the
         # response carried one claim and the ranking found a near-tie with
@@ -375,7 +491,7 @@ def select(
     from api.services.memory_relevance import RelevancePolicy, relevance
 
     policy = policy or RelevancePolicy.configured()
-    key_scores, _, counters = relevance(
+    key_scores, interpreted, counters = relevance(
         full,
         request,
         intent.name,
@@ -448,6 +564,8 @@ def select(
             policy,
             dated=intent.as_of is not None or request.as_of is not None,
             ranked=counters.get("ranked") or None,
+            parts=interpreted.topics[1:] if len(interpreted.topics) > 1 else None,
+            topic_winners=counters.get("subpart_winners"),
         )
     return result
 

@@ -86,6 +86,13 @@ def _confidence_line(response: MemoryResponse) -> list[str]:
             "\nRead the source for the one you meant, or retire the wrong one with\n"
             'mindpalace remember "<new fact>" --supersedes <claim-id>'
         )
+    elif getattr(response, "unmatched_subparts", None):
+        lines.append("")
+        lines.append(
+            "Partial answer: the following part(s) of the question had no matching memory:"
+        )
+        for part in response.unmatched_subparts:
+            lines.append(f"  - {part}")
     elif response.match_margin is not None:
         lines.append("")
         lines.append(f"clear answer (margin {response.match_margin:.3f})")
@@ -208,6 +215,14 @@ def _explain_answer(response: MemoryResponse, current: list) -> str:
         lines.append(f"  {_sentence(claim.claim)}")
         if claim.status != "CURRENT":
             lines.append(f"    status: {claim.status}")
+    unmatched = getattr(response, "unmatched_subparts", None) or []
+    if unmatched:
+        lines.append("")
+        lines.append(
+            "  Partial answer: the following part(s) of the question had no matching memory:"
+        )
+        for part in unmatched:
+            lines.append(f"    - {part}")
     return "\n".join(lines)
 
 

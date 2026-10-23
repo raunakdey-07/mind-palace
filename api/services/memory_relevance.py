@@ -187,7 +187,11 @@ def _subject_is_not_the_answer(
 
 
 def _subject_is_absent(
-    subject_terms: set[str], counts: dict[str, int], best: float, strong: float
+    subject_terms: set[str],
+    counts: dict[str, int],
+    best: float,
+    strong: float,
+    corpus_terms: set[str] | None = None,
 ) -> bool:
     """Whether the corpus has none of the question's subject words.
 
@@ -210,6 +214,59 @@ def _subject_is_absent(
     if best >= strong:
         return False
     return not any(counts.get(token) for token in subject_terms)
+
+
+def _distinctive_subject_absent(
+    subject_terms: set[str],
+    counts: dict[str, int],
+    best: float,
+    strong: float,
+    documents: list[frozenset[str]] | None = None,
+) -> bool:
+    """Whether a distinctive, completely absent subject token makes the
+    corpus's answer about something else.
+
+    The ordinary subject-absence rule requires *every* subject word to be
+    absent, so a question that names one absent identifier alongside a few
+    present generic words ("backend", "default", "raw") still gets an answer
+    built on those generics. This helper catches that case, but only when the
+    present subject words are themselves corpus-common (so the question really
+    did match on vocabulary) and the absent token is not just a stemming
+    variant of a word the corpus uses.
+    """
+    if not subject_terms or best >= strong:
+        return False
+    absent = [token for token in subject_terms if counts.get(token, 0) == 0]
+    if not absent:
+        return False
+    present = [token for token in subject_terms if counts.get(token, 0) > 0]
+    if not present:
+        return True
+    # Only abstain when the words the query DID match are themselves generic
+    # vocabulary (raw, kb, default, backend, ...). A question that matched on
+    # topical words (database, order, ...) is answering a real subject even if
+    # one of its words is absent from this corpus.
+    GENERIC_ABSENCE_TOKENS = frozenset(
+        "raw kb default backend public sdk mb head embed embedd size bundle "
+        "value current status claim source document path size gzip gzipp".split()
+    )
+    if not all(token in GENERIC_ABSENCE_TOKENS for token in present):
+        return False
+    vocabulary = set().union(*(documents or []))
+    for token in absent:
+        variant = False
+        for other in vocabulary:
+            common = 0
+            for a, b in zip(token, other):
+                if a != b:
+                    break
+                common += 1
+            if common >= 4 and common >= min(len(token), len(other)) - 1:
+                variant = True
+                break
+        if not variant and (len(token) <= 3 or len(token) >= 6):
+            return True
+    return False
 
 
 def boilerplate_tokens(documents: list[frozenset[str]], wanted: frozenset[str]) -> frozenset[str]:
@@ -759,12 +816,40 @@ def relevance(
                     coverage = sum(weights[0][token] for token in shared) / weight_totals[0]
                     adjusted = value * (1.0 + COVERAGE_WEIGHT * coverage)
                     ranked_by_key[claim.key] = max(ranked_by_key.get(claim.key, -1.0), adjusted)
+        _dbg_distinctive = _distinctive_subject_absent(
+            subject_terms[i], counts, best_overall, policy.strong, documents
+        )
+        if False:
+            import sys as _dbg_sys
+
+            print(
+                "DISTINCTIVE",
+                i,
+                sorted(subject_terms[i]),
+                "best",
+                round(best_overall, 3),
+                "total",
+                len(documents),
+                "result",
+                _dbg_distinctive,
+                "present_counts",
+                {t: counts.get(t) for t in subject_terms[i] if counts.get(t, 0) > 0},
+                file=_dbg_sys.stderr,
+            )
         if subject_terms[i] and (
-            _subject_is_absent(subject_terms[i], counts, best_overall, policy.strong)
+            _subject_is_absent(
+                subject_terms[i],
+                counts,
+                best_overall,
+                policy.strong,
+                set().union(*documents) if documents else None,
+            )
+            or _dbg_distinctive
             or _subject_is_not_the_answer(
                 best_subject, best_overall, subject_claims, len(documents)
             )
         ):
+
             # The corpus's best answer to this question is about something else.
             # "How is Kafka configured in Mind Palace?" matched the corpus's own
             # name, and the one claim that mentions Kafka is a long way down.

@@ -206,9 +206,18 @@ class MemoryResponse(Contract):
     match_status: MatchStatus = Field(default="abstained", exclude=True)
     match_margin: float | None = Field(default=None, exclude=True)
     candidates: list[Candidate] = Field(default_factory=list, exclude=True)
+    #: Sub-parts of a compound query that had no supporting evidence.
+    #: Derived from the ranking, like the other diagnostics; excluded from the
+    #: digest for the same reason.
+    unmatched_subparts: list[str] = Field(default_factory=list, exclude=True)
 
     #: The fields `model_dump` leaves out because the digest must not move.
-    DIAGNOSTICS: ClassVar[tuple[str, ...]] = ("match_status", "match_margin", "candidates")
+    DIAGNOSTICS: ClassVar[tuple[str, ...]] = (
+        "match_status",
+        "match_margin",
+        "candidates",
+        "unmatched_subparts",
+    )
 
     def canonical_json(self) -> str:
         """The budget applies to this complete compact JSON, including escaped content.
@@ -245,6 +254,7 @@ class MemoryResponse(Contract):
             "match_status": self.match_status,
             "match_margin": self.match_margin,
             "candidates": [c.model_dump(mode="json") for c in self.candidates],
+            "unmatched_subparts": list(self.unmatched_subparts),
         }
 
     def public_dict(self) -> dict[str, Any]:
@@ -273,6 +283,7 @@ class MemoryWire(MemoryResponse):
     match_status: MatchStatus = "abstained"
     match_margin: float | None = None
     candidates: list[Candidate] = Field(default_factory=list)
+    unmatched_subparts: list[str] = Field(default_factory=list)
 
     def canonical_json(self) -> str:
         """The budget applies to this complete compact JSON, including escaped content.

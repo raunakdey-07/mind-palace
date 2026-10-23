@@ -201,7 +201,18 @@ def adjudicate(
     result.match_status = "abstained"
     result.match_margin = None
     result.candidates = []
+    result.unmatched_subparts = []
     if not scored or not _claims(result):
+        # A compound query that returned nothing left every sub-part
+        # unanswered; record them so the caller can see which parts had no
+        # evidence rather than only an undifferentiated abstention.
+        parts_for_absence = parts if parts is not None else topics
+        if parts_for_absence is not None:
+            parts_list_for_absence = list(parts_for_absence)
+            if len(parts_list_for_absence) > 1:
+                result.unmatched_subparts = [
+                    str(p).strip().rstrip("?").strip() for p in parts_list_for_absence
+                ]
         return
 
     from api.services.memory import _canonical
@@ -419,6 +430,24 @@ def adjudicate(
             if index is None:
                 continue
             groups[index].append(candidate)
+        # Which sub-parts of a compound query had no supporting evidence.
+        # A topic winner of None means relevance found no accepted claim for
+        # that sub-part, so it is explicitly reported as unmatched instead of
+        # being folded into an unqualified "clear answer".
+        if topic_winners is not None:
+            tw = list(topic_winners)
+            unmatched_indices = [
+                index for index in range(len(parts_list)) if index >= len(tw) or tw[index] is None
+            ]
+        else:
+            matched_indices = set(groups.keys())
+            unmatched_indices = [
+                index for index in range(len(parts_list)) if index not in matched_indices
+            ]
+        result.unmatched_subparts = [
+            str(parts_list[index]).strip().rstrip("?").strip() for index in unmatched_indices
+        ]
+
         ambiguous = False
         for group in groups.values():
             if len(group) < 2:

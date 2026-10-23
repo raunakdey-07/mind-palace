@@ -136,6 +136,32 @@ def _is_database_connection_error(exc: Exception) -> bool:
     return False
 
 
+def _exception_chain_text(exc: Exception) -> str:
+    return " ".join(str(e) for e in _exception_chain(exc)).lower()
+
+
+def _uses_default_local_credentials() -> bool:
+    """Whether DATABASE_URL is the documented local default."""
+    import os
+
+    url = os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    lowered = url.lower()
+    return (
+        "mpadmin:secret@" in lowered
+        and ("localhost" in lowered or "127.0.0.1" in lowered)
+        and ":5432" in lowered
+    )
+
+
+def _container_clis_available() -> bool:
+    try:
+        from cli import postgres as _postgres
+
+        return bool(_postgres._container_clis())
+    except Exception:  # noqa: BLE001
+        return True
+
+
 def explain(exc: Exception) -> Advice:
     """Turn any failure the product surfaces into actionable text."""
     from pydantic import ValidationError
@@ -147,17 +173,77 @@ def explain(exc: Exception) -> Advice:
     status = int(getattr(exc, "status_code", 1) or 1)
     detail = str(getattr(exc, "message", None) or exc)
 
+    chain_text = _exception_chain_text(exc)
+
+    # Container runtime remediation, before the generic taxonomy: these failures
+    # are about the tooling around PostgreSQL, not about PostgreSQL itself.
+    if "/var/run/docker.sock" in chain_text and "permission denied" in chain_text:
+        try:
+            from cli import postgres as _postgres
+
+            remediation = _postgres.docker_socket_permission_denied_remediation()
+        except Exception:  # noqa: BLE001
+            remediation = "sudo usermod -aG docker $USER && newgrp docker"
+        return Advice(
+            "container_runtime_unavailable",
+            "The container runtime could not be reached.",
+            "Permission was denied on /var/run/docker.sock.",
+            remediation,
+            503,
+        )
+    if (
+        "cannot connect to the docker daemon" in chain_text
+        or "is the docker daemon running" in chain_text
+        or "docker daemon is not running" in chain_text
+    ):
+        try:
+            from cli import postgres as _postgres
+
+            remediation = _postgres.stopped_docker_daemon_remediation()
+        except Exception:  # noqa: BLE001
+            remediation = "sudo systemctl start docker"
+        return Advice(
+            "container_runtime_unavailable",
+            "The container runtime daemon is stopped.",
+            "Mind Palace could not talk to the container runtime.",
+            remediation,
+            503,
+        )
+    if "not found" in chain_text and ("podman" in chain_text or "docker" in chain_text):
+        try:
+            from cli import postgres as _postgres
+
+            remediation = _postgres.missing_container_runtime_remediation()
+        except Exception:  # noqa: BLE001
+            remediation = "sudo dnf install -y podman"
+        return Advice(
+            "container_runtime_unavailable",
+            "No container runtime is installed.",
+            "Mind Palace could not find podman or docker on PATH.",
+            remediation,
+            503,
+        )
+
     # A rejected credential is checked before the taxonomy's own codes, because
     # the service translates every driver failure into the one code
     # `database_unavailable` -- including a wrong password, which is a
     # different problem with a different fix. The code cannot tell them
     # apart; the exception chain still can.
     if _is_authentication_error(exc):
+        if _uses_default_local_credentials():
+            try:
+                from cli import postgres as _postgres
+
+                remediation = _postgres.host_postgres_port_conflict_remediation()
+            except Exception:  # noqa: BLE001
+                remediation = _CHECK_PASSWORD
+        else:
+            remediation = _CHECK_PASSWORD
         return Advice(
             "authentication_failed",
             "The database rejected the credentials.",
             f"Mind Palace could not authenticate to PostgreSQL at {database_hint()}.",
-            _CHECK_PASSWORD,
+            remediation,
             503,
         )
     # The taxonomy's own codes next: they say which condition this is, and
@@ -185,11 +271,20 @@ def explain(exc: Exception) -> Advice:
     # SDK re-raises it untouched because a driver's exception is not a service
     # error.
     if _is_database_connection_error(exc):
+        if not _container_clis_available():
+            try:
+                from cli import postgres as _postgres
+
+                remediation = _postgres.missing_container_runtime_remediation()
+            except Exception:  # noqa: BLE001
+                remediation = _START_DATABASE
+        else:
+            remediation = _START_DATABASE
         return Advice(
             "database_unavailable",
             "The memory database is unavailable.",
             f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
-            _START_DATABASE,
+            remediation,
             503,
         )
     if isinstance(exc, OSError) and getattr(exc, "filename", None) is None and ":" in str(exc):

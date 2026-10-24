@@ -6,9 +6,9 @@
 
 [Current release: v0.9.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-> **The path below installs `0.9.1` from this branch, not `0.9.0` from PyPI.**
-> `v0.9.1` is prepared but not tagged or published. To install the last tagged
-> release instead, clone the `v0.9.0` tag rather than the default branch.
+> **The path below installs `0.9.1`, the current tagged and published release.**
+> `v0.9.1` is tagged on `main` and published as a GitHub Release. To install
+> the previous tagged release instead, clone the `v0.9.0` tag.
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**

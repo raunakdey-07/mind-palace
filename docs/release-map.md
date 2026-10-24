@@ -68,13 +68,14 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-**The latest tagged public release is `v0.9.0`** (`git ls-remote --tags origin` stops
-there; the newest tag in the repository is `v0.9.0` at `b0e516e`).
+**The latest tagged public release is `v0.9.1`** (tagged on `main` at `be1931a`,
+published as a GitHub Release).
 
-`v0.9.1` is **prepared but not released**. `pyproject.toml` says `0.9.1` and
-`CHANGELOG.md` has a `[v0.9.1]` entry, but no `v0.9.1` tag exists and nothing has
-been published under that version. Do not `pip install mindpalace==0.9.1`; the
-installable release is `v0.9.0`.
+`v0.9.1` is **released**. `pyproject.toml` says `0.9.1`, `CHANGELOG.md` has a
+`[v0.9.1]` entry, the `v0.9.1` tag exists on `origin`, and the release is
+published. `pip install mindpalace==0.9.1` resolves to it.
+
+`v0.9.0` remains the previous tagged release at `b0e516e`.
 
 `v0.9.0` is therefore the release in which a developer can adopt Mind Palace —
 seven commands that take a statement and a question, answers that arrive fast, outputs

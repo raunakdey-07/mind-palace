@@ -339,6 +339,20 @@
       "seconds": 825.43,
       "skipped": "2"
     },
+    "be1931a: full suite: revalidate receipts and packs": {
+      "commit": "be1931a8da80db511285d7052e2a3f6c0ca46f61",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 20
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: revalidate receipts and packs",
+      "passed": "2022",
+      "seconds": 541.6,
+      "skipped": "20"
+    },
     "c61ce10: full suite: lazy chunk embeddings, ONNX session tuning": {
       "collected": "1994",
       "commit": "c61ce1033cb707df17d3c94f4c7cc9b371a47d29",

@@ -411,7 +411,8 @@ def check_markdown_links() -> tuple[list[str], list[str]]:
     pattern = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
     checked = 0
     for doc in sorted(ROOT.rglob("*.md")):
-        if any(part in {".git", "venvmp", "build", "dist", "node_modules"} for part in doc.parts):
+        skipped_parts = {".git", "venvmp", ".venv", "build", "dist", "node_modules"}
+        if any(part in skipped_parts for part in doc.parts):
             continue
         for raw in pattern.findall(doc.read_text(encoding="utf-8", errors="ignore")):
             if raw.startswith(("http://", "https://", "mailto:", "#")):

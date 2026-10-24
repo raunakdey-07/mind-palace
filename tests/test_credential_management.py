@@ -1041,6 +1041,10 @@ def test_no_request_serving_surface_reads_a_raw_file():
             "reads /etc/os-release to detect the Linux distribution; machine's "
             "own configuration, not caller input"
         ),
+        ("mindpalace_sdk.py", "_load"): (
+            "reads a caller-supplied receipt or Memory Pack artifact, like the "
+            "CLI revalidate exception"
+        ),
     }
     #: Files that are not request-serving paths at all.
     OFF_SURFACE = {

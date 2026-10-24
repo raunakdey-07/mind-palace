@@ -477,6 +477,110 @@ async def memory_pack(request: MemoryRequest) -> MemoryToolResult:
     return await _execute_memory("pack", request)
 
 
+def _load_artifact(value):
+    """Load a receipt/pack from a dict, JSON string, or file path."""
+    import json
+    from pathlib import Path
+
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        p = Path(value)
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                pass
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return None
+    return None
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
+)
+async def memory_revalidate(
+    corpus: str | None = None,
+    receipt: str | dict | None = None,
+    pack: str | dict | None = None,
+    claim_ids: list[str] | None = None,
+    valid_at: str | None = None,
+    include_drift: bool = True,
+) -> CallToolResult:
+    """Revalidate a Receipt, Memory Pack, or claim ids against the live corpus.
+
+    Returns overall status (CURRENT/STALE), per-claim freshness, and drift summary.
+    """
+    from api.services.authz import AuthorizationError, require_corpus
+    from api.services.db import current_principal, principal_scope, session_scope
+    from api.services.revalidate import revalidate_claims, revalidate_pack, revalidate_receipt
+
+    receipt_data = _load_artifact(receipt)
+    pack_data = _load_artifact(pack)
+
+    # resolve corpus
+    if receipt_data is not None:
+        resolved_corpus = (
+            (receipt_data.get("response") or {}).get("corpus")
+            if isinstance(receipt_data, dict)
+            else None
+        )
+        resolved_corpus = resolved_corpus or corpus
+    elif pack_data is not None:
+        resolved_corpus = pack_data.get("corpus") if isinstance(pack_data, dict) else None
+        resolved_corpus = resolved_corpus or corpus
+    else:
+        resolved_corpus = corpus
+
+    if not resolved_corpus:
+        return _refusal("invalid_request", "corpus is required")
+
+    try:
+        principal = await _resolved_principal()
+    except Exception as exc:  # noqa: BLE001
+        return _refusal("forbidden", str(exc))
+
+    with principal_scope(principal):
+        try:
+            require_corpus(current_principal(), resolved_corpus, write=False)
+        except AuthorizationError as exc:
+            return _refusal("forbidden", str(exc))
+
+        try:
+            async with session_scope() as db:
+                if receipt_data is not None:
+                    result = await revalidate_receipt(db, receipt_data, include_drift=include_drift)
+                elif pack_data is not None:
+                    result = await revalidate_pack(db, pack_data, include_drift=include_drift)
+                else:
+                    if not claim_ids:
+                        return _refusal("invalid_request", "claim_ids is required")
+                    result = await revalidate_claims(
+                        db,
+                        resolved_corpus,
+                        list(claim_ids),
+                        include_drift=include_drift,
+                        valid_at=valid_at,
+                    )
+        except ValueError as exc:
+            return _refusal("invalid_request", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            return _refusal("revalidate_failed", str(exc))
+
+    verdict = result.get("verdict") or result.get("status") or "STALE"
+    if verdict not in ("CURRENT", "STALE"):
+        verdict = "STALE" if verdict != "CURRENT" else "CURRENT"
+    result["verdict"] = verdict
+    result["status"] = verdict
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
+    )
+
+
 MCP_USAGE = """\
 mindpalace-mcp -- Mind Palace over the Model Context Protocol
 

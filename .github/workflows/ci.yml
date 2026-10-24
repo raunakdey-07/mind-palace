@@ -990,7 +990,7 @@ jobs:
           assert init["serverInfo"]["name"] == "mind-palace", init
           tools = replies[2]["result"]["tools"]
           names = sorted(tool["name"] for tool in tools)
-          assert len(tools) == 16, names
+          assert len(tools) == 17, names
           for required in ("memory_recall", "memory_explain", "memory_evidence",
                            "memory_replay", "memory_pack"):
               assert required in names, f"{required} missing from tools/list"

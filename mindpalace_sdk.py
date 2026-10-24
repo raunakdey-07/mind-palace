@@ -472,6 +472,150 @@ class MemoryClient:
             key=written.key,
         )
 
+    def revalidate(
+        self,
+        artifact=None,
+        *,
+        receipt=None,
+        pack=None,
+        claim_ids=None,
+        corpus: str | None = None,
+        valid_at=None,
+        include_drift: bool = True,
+        path=None,
+    ):
+        """Revalidate a Receipt, Memory Pack, or claim ids against the live corpus.
+
+        Accepts a receipt/pack dict, a file path (str/Path), or explicit
+        ``claim_ids``. Returns the structured revalidation result (dict).
+        """
+        import json
+        from pathlib import Path
+
+        def _load(value):
+            if value is None:
+                return None
+            if isinstance(value, (str, Path)):
+                p = Path(value)
+                if p.exists():
+                    try:
+                        return json.loads(p.read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError) as exc:
+                        raise MemoryClientError(
+                            "invalid_request", f"cannot read artifact: {exc}", 422
+                        ) from exc
+                # try as JSON string
+                try:
+                    return json.loads(str(value))
+                except json.JSONDecodeError:
+                    raise MemoryClientError(
+                        "invalid_request", f"not a valid artifact or path: {value}", 422
+                    )
+            return value
+
+        receipt_data = receipt if receipt is not None else None
+        pack_data = pack if pack is not None else None
+        if receipt_data is None and pack_data is None and artifact is not None:
+            loaded = _load(artifact)
+            if isinstance(loaded, dict):
+                if "receipt" in loaded and "response" in loaded:
+                    receipt_data = loaded
+                elif "schema_version" in loaded and "corpus" in loaded and "state" in loaded:
+                    pack_data = loaded
+                else:
+                    # maybe contains claim ids?
+                    if "claim_ids" in loaded:
+                        claim_ids = loaded.get("claim_ids")
+                        corpus = loaded.get("corpus", corpus)
+                    else:
+                        # default: treat as receipt if has response
+                        if "response" in loaded:
+                            receipt_data = loaded
+                        else:
+                            pack_data = loaded
+        if path is not None:
+            loaded = _load(path)
+            if isinstance(loaded, dict):
+                if "receipt" in loaded and "response" in loaded:
+                    receipt_data = loaded
+                elif "schema_version" in loaded and "corpus" in loaded and "state" in loaded:
+                    pack_data = loaded
+                else:
+                    receipt_data = loaded
+
+        # normalise valid_at
+        if hasattr(valid_at, "isoformat"):
+            valid_at = valid_at.isoformat()
+
+        # resolve corpus for claim_ids
+        if claim_ids is not None:
+            corpus_name = self._corpus_name(corpus)
+        else:
+            corpus_name = corpus  # may be None, inferred server-side
+
+        if self._client.base_url is None:
+            _require_sync()
+            from api.services.db import session_scope
+            from api.services import revalidate as revalidate_service
+
+            async def run():
+                async with session_scope() as db:
+                    if receipt_data is not None:
+                        return await revalidate_service.revalidate_receipt(
+                            db, receipt_data, include_drift=include_drift
+                        )
+                    if pack_data is not None:
+                        return await revalidate_service.revalidate_pack(
+                            db, pack_data, include_drift=include_drift
+                        )
+                    return await revalidate_service.revalidate_claims(
+                        db,
+                        corpus_name,
+                        list(claim_ids or []),
+                        include_drift=include_drift,
+                        valid_at=valid_at,
+                    )
+
+            try:
+                with self._client._as_caller():
+                    return MindPalace._run(run())
+            except Exception as exc:  # noqa: BLE001
+                raise _as_client_error(exc) from exc
+
+        import httpx
+
+        payload = {}
+        if receipt_data is not None:
+            payload["receipt"] = receipt_data
+        elif pack_data is not None:
+            payload["pack"] = pack_data
+        else:
+            payload["claim_ids"] = list(claim_ids or [])
+            if corpus_name is not None:
+                payload["corpus"] = corpus_name
+            if valid_at is not None:
+                payload["valid_at"] = valid_at
+        payload["include_drift"] = include_drift
+        try:
+            response = httpx.post(
+                f"{self._client.base_url}/api/memory/revalidate",
+                json=payload,
+                headers=self._client.headers,
+                timeout=self._client.timeout,
+            )
+        except httpx.TimeoutException as exc:
+            raise MemoryClientError("timeout", "Revalidation timed out", 504) from exc
+        except httpx.RequestError as exc:
+            raise MemoryClientError(
+                "transport_error", "Memory service is unavailable", 503
+            ) from exc
+        if not response.is_success:
+            raise _remote_error(response, f"Revalidation failed (HTTP {response.status_code})")
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise MemoryClientError("invalid_response", "Invalid response", 502) from exc
+
     def _remember_via_runtime(
         self,
         name: str,
@@ -978,6 +1122,29 @@ class MindPalace:
             file=file,
             supersedes_claim_id=supersedes_claim_id,
             topic_key=topic_key,
+        )
+
+    def revalidate(
+        self,
+        artifact=None,
+        *,
+        receipt=None,
+        pack=None,
+        claim_ids=None,
+        corpus: str | None = None,
+        valid_at=None,
+        include_drift: bool = True,
+        path=None,
+    ):
+        return self.memory.revalidate(
+            artifact=artifact,
+            receipt=receipt,
+            pack=pack,
+            claim_ids=claim_ids,
+            corpus=corpus or self.name,
+            valid_at=valid_at,
+            include_drift=include_drift,
+            path=path,
         )
 
     def recall(

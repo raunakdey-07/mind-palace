@@ -76,10 +76,10 @@ whether it connected. `opencode mcp list` in OpenCode, or Settings, AI, MCP
 Servers in Zed, and a failed server usually means a `command` that is not on the
 path the client sees.
 
-Sixteen tools are advertised. `memory_recall`, `memory_query`, `memory_explain`,
+Seventeen tools are advertised. `memory_recall`, `memory_query`, `memory_explain`,
 `memory_current`, `memory_history`, `memory_changes`, `memory_evidence`,
 `memory_as_of`, `memory_replay`, `memory_pack`, `memory_snapshot`,
-`memory_remember`, `list_corpora`, `search`, `sync` and `context`.
+`memory_remember`, `memory_revalidate`, `list_corpora`, `search`, `sync` and `context`.
 
 ## What comes back
 

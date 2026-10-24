@@ -56,7 +56,7 @@ async def test_tools_are_async_typed_and_preserve_legacy_tools():
     # `memory_` namespace as this family would fail on it for being different,
     # which is the wrong reason. It is named explicitly below so that it cannot
     # be dropped, and so that a seventeenth tool still fails here.
-    flat_writes = {"memory_remember"}
+    flat_writes = {"memory_remember", "memory_revalidate"}
     family = {name for name in tools if name.startswith("memory_")} - flat_writes
     assert family == {tool_name(operation) for operation in explained}
     assert flat_writes <= tools.keys()

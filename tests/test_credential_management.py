@@ -1000,6 +1000,11 @@ def test_no_request_serving_surface_reads_a_raw_file():
             "documented exception: `verify` reads a receipt the caller produced, "
             "and bounding it would defeat offline verification on a foreign machine"
         ),
+        ("cli/main.py", "revalidate"): (
+            "documented exception: `revalidate` reads a receipt or Memory Pack the "
+            "caller produced, and bounding it would defeat revalidation of an "
+            "artifact on a foreign machine"
+        ),
         ("cli/main.py", "ingest"): (
             "reads the path `require_permitted` returned, on the line above"
         ),

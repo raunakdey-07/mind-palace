@@ -1118,6 +1118,175 @@ def _verify_response_bundle(receipt_file: str, trusted_digest: str | None, json_
 
 
 @app.command()
+def revalidate(
+    artifact: Annotated[
+        str | None,
+        typer.Argument(help="A receipt (receipt.json) or Memory Pack (pack.json) file."),
+    ] = None,
+    claim: Annotated[
+        list[str] | None,
+        typer.Option("--claim", help="Claim id or prefix to revalidate (repeatable)."),
+    ] = None,
+    corpus: Annotated[
+        str | None, typer.Option("--corpus", help="Corpus name (with --claim).")
+    ] = None,
+    drift: Annotated[
+        bool, typer.Option("--drift", help="Include corpus drift summary since valid_at.")
+    ] = False,
+    json_out: Annotated[
+        bool, typer.Option("--json", help="Print a machine-readable verdict.")
+    ] = False,
+    out: Annotated[
+        str | None, typer.Option("--out", "-o", help="Write the result to a file.")
+    ] = None,
+    base_url: BaseURL = None,
+    verbose: State = False,
+    debug: Debug = False,
+) -> None:
+    """Revalidate a Receipt, Memory Pack, or claim ids against the live corpus.
+
+    CURRENT means every cited claim is still current (exit 0). STALE means at
+    least one cited claim was superseded or retired (exit 1).
+    """
+    import asyncio
+    import json as json_module
+    from pathlib import Path
+
+    from api.services import revalidate as revalidate_service
+    from api.services.db import session_scope
+    from cli.postgres import ensure_local_postgres
+
+    try:
+        ensure_local_postgres()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Resolve input.
+    receipt_data = None
+    pack_data = None
+    claim_refs = list(claim or [])
+    if artifact:
+        try:
+            raw = Path(artifact).read_text(encoding="utf-8")
+            payload = json_module.loads(raw)
+        except OSError as exc:
+            typer.echo(f"{artifact}: {exc.strerror or exc}", err=True)
+            raise typer.Exit(code=2) from exc
+        except json_module.JSONDecodeError as exc:
+            typer.echo(f"{artifact} is not valid JSON: {exc}", err=True)
+            raise typer.Exit(code=2) from exc
+        if isinstance(payload, dict) and "receipt" in payload and "response" in payload:
+            receipt_data = payload
+        elif (
+            isinstance(payload, dict)
+            and "schema_version" in payload
+            and "corpus" in payload
+            and "state" in payload
+        ):
+            pack_data = payload
+        else:
+            typer.echo(f"{artifact} is not a receipt or Memory Pack", err=True)
+            raise typer.Exit(code=2)
+
+    if claim_refs and not corpus:
+        typer.echo("--corpus is required with --claim", err=True)
+        raise typer.Exit(code=2)
+    if not claim_refs and receipt_data is None and pack_data is None:
+        typer.echo("Provide a receipt/pack file or --claim <id> (with --corpus).", err=True)
+        raise typer.Exit(code=2)
+
+    async def run():
+        async with session_scope() as db:
+            if receipt_data is not None:
+                return await revalidate_service.revalidate_receipt(
+                    db, receipt_data, include_drift=drift
+                )
+            if pack_data is not None:
+                return await revalidate_service.revalidate_pack(db, pack_data, include_drift=drift)
+            return await revalidate_service.revalidate_claims(
+                db, corpus, claim_refs, include_drift=drift
+            )
+
+    try:
+        result = _run(lambda: asyncio.run(run()))
+    except Exception as exc:  # noqa: BLE001
+        _fail(exc, verbose, debug)
+        return
+
+    # Normalise verdict.
+    verdict = result.get("verdict") or result.get("status") or "STALE"
+    if verdict not in ("CURRENT", "STALE"):
+        # map REJECTED -> STALE
+        verdict = "STALE" if verdict != "CURRENT" else "CURRENT"
+    result["verdict"] = verdict
+    result["status"] = verdict
+
+    if out:
+        try:
+            Path(out).write_text(
+                json_module.dumps(result, indent=2, sort_keys=True, default=str) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            typer.echo(f"Could not write {out}: {exc.strerror or exc}", err=True)
+            raise typer.Exit(code=2) from exc
+        typer.echo(f"Revalidation written to {out}")
+
+    if json_out or out:
+        typer.echo(json_module.dumps(result, indent=2, sort_keys=True, default=str))
+
+    # Human-readable output (unless only file requested? still print summary)
+    if not json_out:
+        typer.echo(f"{verdict}\n")
+        typer.echo(
+            f"Source artifact: {result.get('source_artifact') or result.get('artifact_type')}"
+        )
+        typer.echo(f"Corpus:         {result.get('corpus')}")
+        typer.echo(
+            f"Originally valid at: {result.get('originally_valid_at') or result.get('valid_at')}"
+        )
+        typer.echo(f"Checked at:     {result.get('checked_at')}")
+        typer.echo("")
+        for c in result.get("claims") or result.get("results") or []:
+            cid = c.get("id") or c.get("claim_id")
+            st = (c.get("status") or c.get("state") or "").upper()
+            textv = c.get("text") or c.get("claim")
+            if st == "SUPERSEDED":
+                repls = (
+                    c.get("replacements") or c.get("superseded_by") or c.get("replaced_by") or []
+                )
+                if repls:
+                    r0 = repls[0]
+                    replacement_text = r0.get("text") or r0.get("claim")
+                    replacement_id = r0.get("id") or r0.get("claim_id")
+                    typer.echo(f"  {cid[:12]}  SUPERSEDED -> {replacement_text} ({replacement_id})")
+                else:
+                    typer.echo(f"  {cid[:12]}  SUPERSEDED")
+            else:
+                typer.echo(
+                    f"  {cid[:12]}  {st}" + (f"  {textv}" if st == "RETIRED" and textv else "")
+                )
+        drift_data = result.get("drift")
+        if drift_data:
+            typer.echo("")
+            typer.echo("Corpus drift since valid_at:")
+            new_count = drift_data.get("counts", {}).get(
+                "new", len(drift_data.get("new_claims", []))
+            )
+            typer.echo(f"  New claims:       {new_count}")
+            sup_count = drift_data.get("counts", {}).get(
+                "superseded", len(drift_data.get("superseded_claims", []))
+            )
+            typer.echo(f"  Superseded:       {sup_count}")
+            ret_count = drift_data.get("counts", {}).get(
+                "retired", len(drift_data.get("retired_claims", []))
+            )
+            typer.echo(f"  Retired:          {ret_count}")
+
+    raise typer.Exit(code=0 if verdict == "CURRENT" else 1)
+
+
+@app.command()
 def corpora() -> None:
     """List the corpora you can read and write."""
     import asyncio

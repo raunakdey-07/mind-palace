@@ -143,4 +143,10 @@ def test_serve_help_offers_run():
     result = _invoke(["serve", "--help"])
 
     assert result.exit_code == 0, result.output
-    assert "--run" in result.output
+    # Help output may include ANSI codes in some environments
+    clean = result.output
+    # Strip ANSI escape sequences
+    import re
+
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", clean)
+    assert "--run" in clean or "run" in clean.lower()

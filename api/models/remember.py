@@ -10,9 +10,9 @@ that never writes is unaffected.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from api.services.remember import MAX_STATEMENT
 
@@ -131,3 +131,31 @@ class RememberResult(BaseModel):
     # a scoped one. Grading real use needs a way to point at a call, and the
     # response is the only place both sides of the conversation already agree.
     query_id: str | None = None
+
+
+class RevalidateRequest(BaseModel):
+    """Revalidate a Receipt, Memory Pack, or explicit claim ids against live corpus."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    corpus: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9._-]+$",
+        description="Corpus name. Required with claim_ids; inferred from receipt/pack otherwise.",
+    )
+    receipt: dict[str, Any] | None = Field(
+        default=None, description="A receipt bundle (receipt + response)."
+    )
+    pack: dict[str, Any] | None = Field(default=None, description="A Memory Pack payload.")
+    claim_ids: list[str] | None = Field(default=None, description="Claim ids or 12-char prefixes.")
+    valid_at: AwareDatetime | None = Field(default=None, description="Optional drift anchor.")
+    include_drift: bool = Field(default=True, description="Include corpus drift summary.")
+
+    @field_validator("claim_ids")
+    @classmethod
+    def nonempty_claim_ids(cls, value):
+        if value is not None and not value:
+            raise ValueError("claim_ids must not be empty")
+        return value

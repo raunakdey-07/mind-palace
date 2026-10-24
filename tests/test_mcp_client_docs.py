@@ -106,13 +106,13 @@ def test_every_tool_the_document_advertises_actually_exists():
     tools = tools.tools if hasattr(tools, "tools") else tools
     live = {t.name for t in tools}
     text = DOC.read_text()
-    section = text[text.index("Sixteen tools are advertised") :]
+    section = text[text.index("Seventeen tools are advertised") :]
     section = section[: section.index("## What comes back")]
     named = set(re.findall(r"`(memory_\w+|list_corpora|search|sync|context)`", section))
     assert named, "no tool names found in the advertisement paragraph"
     missing = named - live
     assert not missing, f"documented but not served: {sorted(missing)}"
-    assert len(live) == 16, sorted(live)
+    assert len(live) == 17, sorted(live)
     # Every read tool's schema must carry the diagnostics the doc describes.
     recall = next(t for t in tools if t.name == "memory_recall")
     properties = (recall.output_schema or {}).get("properties", {})

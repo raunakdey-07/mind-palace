@@ -23,7 +23,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.models.memory import FeedResponse, MemoryRequest, MemoryResponse, MemoryWire
-from api.models.remember import RememberRequest, RememberResult
+from api.models.remember import RevalidateRequest, RememberRequest, RememberResult
 
 logger = logging.getLogger("mindpalace.ops")
 
@@ -168,7 +168,7 @@ async def feed(
     from api.services.authz import require_corpus
     from api.services.db import current_principal, session_scope
     from api.services.memory_feed import feed as get_feed
-    from api.services.memory_public import MemoryError, translate_database_error
+    from api.services.memory_public import translate_database_error
 
     # The feed is a corpus-named query parameter, so it needs the same check the
     # body-carrying routes get. A signed cursor binds one corpus, but it does not
@@ -245,3 +245,92 @@ async def replay(request: MemoryRequest) -> MemoryResponse:
 async def pack(request: MemoryRequest) -> MemoryResponse:
     """Build canonical evidence context bounded in Unicode characters."""
     return await execute_memory("pack", request)
+
+
+@router.post("/revalidate")
+async def revalidate(request: RevalidateRequest) -> dict:
+    """Revalidate a Receipt, Memory Pack, or claim ids against the live corpus."""
+    from api.services.authz import require_corpus
+    from api.services.db import current_principal, session_scope
+    from api.services.memory_public import translate_database_error
+    from api.services.revalidate import (
+        revalidate_claims,
+        revalidate_pack,
+        revalidate_receipt,
+    )
+    from sqlalchemy.exc import SQLAlchemyError
+
+    if request.receipt is not None:
+        corpus = (
+            (request.receipt.get("response") or {}).get("corpus")
+            if isinstance(request.receipt, dict)
+            else None
+        )
+        corpus = corpus or request.corpus
+        if not corpus:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_request", "message": "receipt: missing corpus"},
+            )
+    elif request.pack is not None:
+        corpus = request.pack.get("corpus") if isinstance(request.pack, dict) else None
+        corpus = corpus or request.corpus
+        if not corpus:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_request", "message": "pack: missing corpus"},
+            )
+    else:
+        corpus = request.corpus
+        if not corpus:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_request", "message": "corpus is required with claim_ids"},
+            )
+        if not request.claim_ids:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_request", "message": "claim_ids is required"},
+            )
+
+    require_corpus(current_principal(), corpus, write=False)
+
+    try:
+        async with session_scope() as db:
+            if request.receipt is not None:
+                result = await revalidate_receipt(
+                    db,
+                    request.receipt,
+                    include_drift=request.include_drift,
+                )
+            elif request.pack is not None:
+                result = await revalidate_pack(
+                    db,
+                    request.pack,
+                    include_drift=request.include_drift,
+                )
+            else:
+                result = await revalidate_claims(
+                    db,
+                    corpus,
+                    request.claim_ids or [],
+                    include_drift=request.include_drift,
+                    valid_at=request.valid_at,
+                )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail={"code": "invalid_request", "message": str(exc)}
+        ) from exc
+    except (SQLAlchemyError, OSError, TimeoutError) as exc:
+        translated = translate_database_error(exc)
+        raise HTTPException(
+            status_code=translated.status_code,
+            detail={"code": translated.code, "message": translated.message},
+        ) from exc
+    # normalise verdict/status
+    verdict = result.get("verdict") or result.get("status") or "STALE"
+    if verdict not in ("CURRENT", "STALE"):
+        verdict = "CURRENT" if verdict == "CURRENT" else "STALE"
+    result["verdict"] = verdict
+    result["status"] = verdict
+    return result

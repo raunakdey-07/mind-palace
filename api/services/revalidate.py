@@ -278,16 +278,30 @@ async def revalidate_claims(
 
 
 def _extract_receipt_claims(receipt_data: dict) -> tuple[str, Any, list[str]]:
-    response = receipt_data.get("response") if isinstance(receipt_data, dict) else None
-    if not isinstance(response, dict):
+    if not isinstance(receipt_data, dict):
         raise ValueError("receipt: missing response")
-    corpus = response.get("corpus")
-    state = response.get("state") or {}
-    valid_at = state.get("valid_at") or state.get("as_of")
-    claims: list[str] = []
-    for c in response.get("current_memories") or []:
-        if isinstance(c, dict) and c.get("id"):
-            claims.append(c["id"])
+
+    # A full receipt bundle as written by `mindpalace receipt` carries both the
+    # receipt and the response it describes.
+    response = receipt_data.get("response") if "response" in receipt_data else None
+    if isinstance(response, dict):
+        corpus = response.get("corpus")
+        state = response.get("state") or {}
+        valid_at = state.get("valid_at") or state.get("as_of")
+        claims: list[str] = []
+        for c in response.get("current_memories") or []:
+            if isinstance(c, dict) and c.get("id"):
+                claims.append(c["id"])
+    elif "claim_ids" in receipt_data and "corpus" in receipt_data:
+        # A bare receipt bundle (e.g. `result.receipt` from the SDK/MCP) carries
+        # the claim ids and corpus at the top level.
+        corpus = receipt_data.get("corpus")
+        state = receipt_data.get("state") or {}
+        valid_at = state.get("valid_at") or state.get("as_of")
+        claims = [c for c in (receipt_data.get("claim_ids") or []) if c]
+    else:
+        raise ValueError("receipt: missing response")
+
     # de-dupe
     seen: set[str] = set()
     unique: list[str] = []

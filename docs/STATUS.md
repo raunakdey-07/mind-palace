@@ -183,7 +183,7 @@ disabled, were `recall` 1.571 s, `explain` 1.789 s, `history` 0.975 s and
 `memory pack` 0.949 s through `.venv/bin/mindpalace`; `uv run --no-sync` medians
 were 1.627 s, 1.783 s, 1.041 s and 0.967 s, so the lockfile path adds no
 re-resolution cost. Evidence:
-`docs/performance/in-process-cli.json` <- key: summary.venv.recall.median_s.
+`docs/performance/in-process-cli.json` <- key: summary.venv.recall.median_s
 
 All of them are held by tests rather than by inspection, as is every property in
 [product/first-use-audit.md](product/first-use-audit.md).

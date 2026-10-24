@@ -45,7 +45,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | `v0.9.1` state | prepared but not released: the package version and the changelog entry exist, nothing is tagged or published |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `010_bind_unrestricted_scope`, additive and reversible |
-| tests | **2032 passed, 0 failed, 2 skipped** (as of `c65ffb2`); 2034 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips are opt-in and named**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| tests | **2022 passed, 0 failed, 20 skipped** (as of `3f52cb6`); 2042 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips that are opt-in and named remain allowlisted**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. The additional skips are from `tests/test_embedder_backend_equivalence.py` (18) and `tests/test_search_semantics.py` (1), with reasons for missing optional dependencies (`[torch]`/both backends); `check_skips.py` accounts for them under the default-dependency set. Previous head at `c65ffb2` produced **2032 passed, 0 failed, 2 skipped** (as of `c65ffb2`, 2034 collected); see the recorded run at `c65ffb2` in `docs/performance/test-runs.json`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -163,6 +163,27 @@ Five behaviour changes, all deliberate and measured:
   terms still cannot discriminate between candidates, so ranking is unchanged; but
   they are not evidence that a question is off-topic. The frozen memory benchmark
   holds at 1.000 on every metric with zero safety failures, before and after.
+
+### The `memory` commands need no server either
+
+`mindpalace memory pack` used to default to `http://127.0.0.1:8000`, while
+`recall`, `explain`, `history`, `receipt` and `ingest-repo` all ran in-process.
+The quickstart's bounded-context command was therefore the one core command that
+failed with a connection refusal unless a server had been started by hand. Every
+`memory` subcommand now uses the same in-process client as those commands when
+neither `--base-url` nor `MIND_PALACE_BASE_URL` names a remote service; either one
+still selects the HTTP client unchanged. `mindpalace serve --run` starts the HTTP
+API for REST, the HTTP SDK, MCP over a network or another process, and without
+`--run` it prints that command and says the CLI commands run in-process.
+
+`uv.lock` is ignored: `uv run` writes it on first use, and a lockfile that is
+re-resolved on every invocation is a local-development artifact rather than a
+shipped input. Warm medians over five runs with no server listening, runtime
+disabled, were `recall` 1.571 s, `explain` 1.789 s, `history` 0.975 s and
+`memory pack` 0.949 s through `.venv/bin/mindpalace`; `uv run --no-sync` medians
+were 1.627 s, 1.783 s, 1.041 s and 0.967 s, so the lockfile path adds no
+re-resolution cost. Evidence:
+`docs/performance/in-process-cli.json` <- key: summary.venv.recall.median_s
 
 All of them are held by tests rather than by inspection, as is every property in
 [product/first-use-audit.md](product/first-use-audit.md).

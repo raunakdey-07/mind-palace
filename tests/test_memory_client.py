@@ -578,8 +578,22 @@ def test_cli_dispatch(contract, transport, command, args, operation, fields):
     from cli.main import app
 
     calls, reply = transport
+    # `--base-url` is explicit here because these cases are about the HTTP
+    # client. Without it the command runs in-process, which is the default
+    # covered by tests/test_cli_memory_in_process.py.
     result = CliRunner().invoke(
-        app, ["memory", command, "--corpus", "test", "--query", "auth", *args]
+        app,
+        [
+            "memory",
+            command,
+            "--corpus",
+            "test",
+            "--query",
+            "auth",
+            "--base-url",
+            "http://127.0.0.1:8000",
+            *args,
+        ],
     )
     assert result.exit_code == 0, result.output
     assert (

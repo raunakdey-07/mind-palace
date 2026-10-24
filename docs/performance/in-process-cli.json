@@ -1,0 +1,57 @@
+{
+  "note": "Warm CLI latency for in-process commands, measured at the head of dx/in-process-memory-pack-and-uv-lock on 2026-10-24. Five runs per command after the database and model cache were warm. MIND_PALACE_RUNTIME=0 so the measurement is the in-process path and not a background runtime. No HTTP server listened on :8000. `uv run --no-sync` was measured separately to show that a present uv.lock adds no re-resolution cost.",
+  "query": "What is the default embedding backend?",
+  "runs": 5,
+  "host": "hp-245-g8",
+  "loadavg_at_start": [
+    0.77,
+    0.99,
+    0.53
+  ],
+  "summary": {
+    "venv": {
+      "recall": {
+        "median_s": 1.571,
+        "min_s": 1.542,
+        "max_s": 2.567
+      },
+      "explain": {
+        "median_s": 1.789,
+        "min_s": 1.725,
+        "max_s": 1.874
+      },
+      "history": {
+        "median_s": 0.975,
+        "min_s": 0.964,
+        "max_s": 1.057
+      },
+      "memory_pack": {
+        "median_s": 0.949,
+        "min_s": 0.905,
+        "max_s": 0.976
+      }
+    },
+    "uv_run_no_sync": {
+      "recall": {
+        "median_s": 1.627,
+        "min_s": 1.613,
+        "max_s": 1.74
+      },
+      "explain": {
+        "median_s": 1.783,
+        "min_s": 1.753,
+        "max_s": 1.838
+      },
+      "history": {
+        "median_s": 1.041,
+        "min_s": 0.966,
+        "max_s": 1.069
+      },
+      "memory_pack": {
+        "median_s": 0.967,
+        "min_s": 0.947,
+        "max_s": 1.069
+      }
+    }
+  }
+}

@@ -91,6 +91,20 @@
       "passed": "1619",
       "skipped": "8"
     },
+    "3f52cb6: full suite: in-process memory pack, uv.lock ignored, serve DX": {
+      "collected": "2042",
+      "commit": "3f52cb601814988f3d30d4d05c93586793dd7c9f",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 20
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: in-process memory pack, uv.lock ignored, serve DX",
+      "passed": "2022",
+      "skipped": "20"
+    },
     "4166e08: full suite, run 2, immediately after run 1": {
       "commit": "4166e0841de5abbab2c579fd5f01205bc5ef0f16",
       "failed": "0",
@@ -384,6 +398,19 @@
       "passed": "1987",
       "seconds": 793.7,
       "skipped": "2"
+    },
+    "fbf1ffb: full suite: in-process memory pack, uv.lock ignored, serve DX": {
+      "collected": "2042",
+      "commit": "fbf1ffb0a63c339c8e15f10c6950045a569cf340",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": false,
+        "reason": "no absolute checkout path present"
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: in-process memory pack, uv.lock ignored, serve DX",
+      "passed": "2022",
+      "skipped": "20"
     },
     "fd53840: tests/test_corpus_isolation.py tests/test_corpus_scope.py": {
       "commit": "fd53840f17e960a7cd7b9f58055fe672405bf345",

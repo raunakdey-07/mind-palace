@@ -1,10 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Remote-only memory commands; validation and semantics live in the central API."""
+"""Memory subcommands; validation and semantics live in the central API.
+
+These run in-process by default, against the same local database as `recall`,
+`explain`, `history`, `receipt` and `ingest-repo`. `--base-url` (or
+`MIND_PALACE_BASE_URL`) switches the command to the HTTP client for a service
+someone else runs.
+"""
 
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
 import typer
@@ -37,19 +44,51 @@ app = typer.Typer(
 
 Corpus = Annotated[str, typer.Option("--corpus", help="Corpus name (required).")]
 Query = Annotated[str, typer.Option("--query")]
-BaseURL = Annotated[str, typer.Option("--base-url")]
+BaseURL = Annotated[
+    str | None,
+    typer.Option(
+        "--base-url",
+        help=(
+            "Use a running Mind Palace service instead of the local database, "
+            "for example http://127.0.0.1:8000. Omit to run in-process."
+        ),
+    ),
+]
 AsOf = Annotated[str | None, typer.Option("--as-of", help="Aware ISO-8601 observation cutoff.")]
 ValidAt = Annotated[str | None, typer.Option("--valid-at", help="Aware ISO-8601 validity time.")]
 Path = Annotated[str | None, typer.Option("--path")]
-DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+
+#: A remote service can also be named for the process, so a shell or a CI job
+#: that talks to one host does not have to repeat `--base-url` on every command.
+#: The flag wins when both are present, because it is the more specific intent.
+BASE_URL_ENV = "MIND_PALACE_BASE_URL"
 
 
-def _dispatch(method: str, corpus: str, query: str, base_url: str, **fields) -> None:
-    from mindpalace_sdk import MemoryClientError, MindPalace
+def _base_url(base_url: str | None) -> str | None:
+    """The remote service to use, or None to run in-process.
+
+    Only a remote URL -- an explicit flag or an explicit environment variable --
+    selects HTTP. A missing value is the local database, not a default server on
+    port 8000: that default was the reason this command needed a server that no
+    other core command needed.
+    """
+    return base_url or os.getenv(BASE_URL_ENV) or None
+
+
+def _dispatch(method: str, corpus: str, query: str, base_url: str | None, **fields) -> None:
+    # Reuse the CLI's one local/remote client builder: it applies the same local
+    # Postgres recovery, lexical-mode handling and warm-runtime choice as
+    # `recall` and `explain`, so these commands cannot drift from them.
+    from cli.main import _client, _fail, _run
+    from mindpalace_sdk import MemoryClientError
 
     try:
-        memory = MindPalace(base_url=base_url).memory
-        response = getattr(memory, method)(corpus=corpus, query=query, **fields)
+        client = _client(_base_url(base_url))
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
+        _fail(exc, False)
+        return
+    try:
+        response = _run(getattr(client.memory, method), corpus=corpus, query=query, **fields)
         typer.echo(response.canonical_json())
     except MemoryClientError as exc:
         typer.echo(f"{exc.code}: {exc.message}", err=True)
@@ -57,6 +96,8 @@ def _dispatch(method: str, corpus: str, query: str, base_url: str, **fields) -> 
     except ValueError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
+        _fail(exc, False)
 
 
 @app.command("query")
@@ -74,7 +115,7 @@ def query_memory(
     as_of: AsOf = None,
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
     claim_id: Annotated[str | None, typer.Option("--claim-id")] = None,
     snapshot_id: Annotated[str | None, typer.Option("--snapshot-id")] = None,
 ) -> None:
@@ -100,7 +141,7 @@ def current(
     query: Query = "",
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Read current memory."""
     _dispatch("current", corpus, query, base_url, valid_at=valid_at, path=path)
@@ -113,7 +154,7 @@ def history(
     as_of: AsOf = None,
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Read historical memory."""
     _dispatch("history", corpus, query, base_url, as_of=as_of, valid_at=valid_at, path=path)
@@ -126,7 +167,7 @@ def changes(
     as_of: AsOf = None,
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Read memory changes."""
     _dispatch("changes", corpus, query, base_url, as_of=as_of, valid_at=valid_at, path=path)
@@ -139,19 +180,25 @@ def feed(
         int, typer.Option("--page-size", "--limit", min=1, max=500, help="Items per page (1-500).")
     ] = 50,
     cursor: Annotated[str | None, typer.Option("--cursor")] = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Consume the durable corpus-scoped change feed."""
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from cli.main import _client, _fail, _run
+    from mindpalace_sdk import MemoryClientError
 
     try:
-        response = MindPalace(base_url=base_url).memory.feed(
-            corpus=corpus, page_size=page_size, cursor=cursor
-        )
+        client = _client(_base_url(base_url))
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
+        _fail(exc, False)
+        return
+    try:
+        response = _run(client.memory.feed, corpus=corpus, page_size=page_size, cursor=cursor)
         typer.echo(response.canonical_json())
     except MemoryClientError as exc:
         typer.echo(f"{exc.code}: {exc.message}", err=True)
         raise typer.Exit(code=1) from exc
+    except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
+        _fail(exc, False)
 
 
 @app.command()
@@ -162,7 +209,7 @@ def evidence(
     as_of: AsOf = None,
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Read evidence for a claim."""
     _dispatch(
@@ -184,7 +231,7 @@ def as_of(
     query: Query = "",
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Read memory at an observation cutoff."""
     _dispatch("as_of", corpus, query, base_url, timestamp=timestamp, valid_at=valid_at, path=path)
@@ -197,7 +244,7 @@ def snapshot(
     as_of: AsOf = None,
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
 ) -> None:
     """Create a memory snapshot."""
     _dispatch("snapshot", corpus, query, base_url, as_of=as_of, valid_at=valid_at, path=path)
@@ -208,7 +255,7 @@ def replay(
     corpus: Corpus,
     snapshot_id: Annotated[str, typer.Option("--snapshot-id")],
     query: Query = "",
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
     path: Path = None,
 ) -> None:
     """Replay a saved snapshot."""
@@ -223,7 +270,7 @@ def pack(
     as_of: AsOf = None,
     valid_at: ValidAt = None,
     path: Path = None,
-    base_url: BaseURL = DEFAULT_BASE_URL,
+    base_url: BaseURL = None,
     snapshot_id: Annotated[str | None, typer.Option("--snapshot-id")] = None,
 ) -> None:
     """Pack memory into a budgeted response."""

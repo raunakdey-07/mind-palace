@@ -2292,14 +2292,55 @@ def posture() -> None:
 
 
 @app.command()
-def serve() -> None:
-    """Start the local development server."""
-    typer.echo("Run: uvicorn api.main:app --reload")
+def serve(
+    run: Annotated[
+        bool,
+        typer.Option(
+            "--run",
+            help="Start the HTTP server in this process instead of printing the command.",
+        ),
+    ] = False,
+    host: Annotated[
+        str, typer.Option("--host", help="Interface to bind when --run is given.")
+    ] = "127.0.0.1",
+    port: Annotated[
+        int, typer.Option("--port", min=1, max=65535, help="Port to bind when --run is given.")
+    ] = 8000,
+    reload: Annotated[
+        bool,
+        typer.Option("--reload", help="Restart the server when code changes (development)."),
+    ] = False,
+) -> None:
+    """Start an HTTP API for clients that are not this CLI.
+
+    The core commands -- `recall`, `explain`, `history`, `receipt`, `verify`,
+    `ingest-repo` and the `memory` subcommands -- run in-process against the
+    local database. No server is needed for them, and starting one does not
+    change their answers. `serve` exists for a different caller: REST, the SDK
+    over HTTP, an MCP server across a network, or another process on this
+    machine.
+
+    With `--run` this process starts the server; without it, it prints the
+    command to run. Both forms are here so the boundary is visible before
+    anything is bound to a port.
+    """
+    if run:
+        import uvicorn
+
+        typer.echo(f"Serving the HTTP API on http://{host}:{port}")
+        typer.echo(f"Docs: http://{host}:{port}/docs")
+        uvicorn.run("api.main:app", host=host, port=port, reload=reload)
+        return
+    typer.echo("Start the HTTP API with: mindpalace serve --run")
+    typer.echo("Equivalent: uvicorn api.main:app --reload")
     typer.echo("Then visit http://localhost:8000/docs")
+    typer.echo("")
+    typer.echo("The CLI commands themselves run in-process; this server is for")
+    typer.echo("REST, the HTTP SDK, MCP over a network, or another process.")
     typer.echo("")
     typer.echo("That is a local server. Before exposing one to a network:")
     typer.echo("  MIND_PALACE_DEPLOYMENT=server MIND_PALACE_AUTH_MODE=required \\")
-    typer.echo("      uvicorn api.main:app --host 0.0.0.0")
+    typer.echo("      mindpalace serve --run --host 0.0.0.0")
     typer.echo("In that mode the app refuses to start if authentication is off.")
 
 

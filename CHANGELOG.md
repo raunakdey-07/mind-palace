@@ -44,6 +44,16 @@ A security change, and a change to one documented claim. No memory semantics,
 temporal behaviour, evidence rule, supersession behaviour, receipt schema or
 Memory Pack version changed, and no benchmark input was touched.
 
+### Changed
+
+- **`mindpalace memory ...` no longer needs a server.** `memory pack` used to
+  default to `http://127.0.0.1:8000` while `recall`, `explain`, `history`,
+  `receipt` and `ingest-repo` ran in-process. Every `memory` subcommand now uses
+  the same local client by default. `--base-url` (or `MIND_PALACE_BASE_URL`)
+  still selects the HTTP client unchanged. `mindpalace serve --run` starts the
+  HTTP API for clients that need one; the CLI does not. `uv.lock` is ignored, so
+  `uv run` keeps the working tree clean.
+
 ### Fixed
 
 - **A question about the SDK's bundle size was answered with two other

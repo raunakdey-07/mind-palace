@@ -149,4 +149,4 @@ def test_serve_help_offers_run():
     import re
 
     clean = re.sub(r"\x1b\[[0-9;]*m", "", clean)
-    assert "--run" in clean or "run" in clean.lower()
+    assert "--run" in clean

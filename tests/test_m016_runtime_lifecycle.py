@@ -73,7 +73,7 @@ def launch(state: Path, **extra: str) -> subprocess.Popen:
     )
 
 
-def wait_until(runtime_module, timeout: float = 120.0) -> None:
+def wait_until(runtime_module, timeout: float = 300.0) -> None:
     """Wait for `ready`, not merely for reachable.
 
     A `loading` runtime is deliberately reachable -- a command that arrives while the

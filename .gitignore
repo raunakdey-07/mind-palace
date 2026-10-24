@@ -51,6 +51,11 @@ coverage.xml
 .pytest_cache/
 .env
 .venv
+# `uv run` writes this on first use. Leaving it untracked dirties every
+# `git status` in local QA and the version is already constrained by
+# `pyproject.toml` and `requirements*.txt`; the lock is a dev-machine
+# artifact, not a shipped input.
+uv.lock
 env/
 venv/
 # Self-ignoring via the `.gitignore` a uv venv writes inside itself, so it shows

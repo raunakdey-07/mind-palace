@@ -446,6 +446,11 @@ mindpalace memory pack        --corpus C                 # bounded context for a
 mindpalace memory feed        --corpus C                 # durable change feed
 ```
 
+These commands read the local database in-process, like the five commands above.
+Pass `--base-url http://host:8000` (or set `MIND_PALACE_BASE_URL`) only when a
+separate Mind Palace service holds the memory. `mindpalace serve --run` starts
+that service.
+
 `mindpalace memory query` exposes the full operation: intent selection, an
 explicit budget, and selectors such as `--claim-id` and `--snapshot-id`.
 

@@ -209,6 +209,19 @@ tokenizer or threshold, and that is measured: all 60 canonical per-question
 decisions are identical to `v0.8.0`. [The reproducibility report](docs/evaluation/m00675-reproducibility.md)
 records one discrepancy this release found and did not paper over.
 
+## Head-to-head stale-fact benchmark
+
+A reproducible comparison between Mind Palace and a plain top-k chunk RAG baseline
+using the same ONNX embedding model. Run with:
+
+```
+DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace python scripts/benchmark_stale_facts.py
+```
+
+The script ingests a multi-evolution ADR and spec corpus, runs both systems over
+33 questions across supersession, spec updates, half-absent compounds, and cached
+answer revalidation, and prints a comparison table.
+
 ## Reading order
 
 Three documents, and then stop.

@@ -248,6 +248,17 @@ def project(
             prior = by_version.get(v["predecessor_id"], {})
             before = [claims[c["id"]] for c in prior.get("claims", [])]
             after = [claims[c["id"]] for c in v["claims"]]
+            # Cross-document supersession leaves no version predecessor, because
+            # the retiring document is a new document rather than a new version of
+            # the old one. Surface the retired claims as the "before" half so a
+            # reader sees the supersession instead of a bare "recorded" line.
+            if not before:
+                seen_targets: set[str] = set()
+                for claim in after:
+                    target_id = getattr(claim, "supersedes_id", None)
+                    if target_id and target_id in claims and target_id not in seen_targets:
+                        seen_targets.add(target_id)
+                        before.append(claims[target_id])
             if request.path and v["path"] != request.path:
                 continue
             if request.query and not any(c.id in matched_ids for c in before + after):

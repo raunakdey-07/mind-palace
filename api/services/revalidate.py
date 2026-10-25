@@ -86,7 +86,29 @@ async def _fetch_claims(db: AsyncSession, corpus_id: str) -> list[dict]:
     return rows
 
 
-def _build_graph(rows: list[dict]) -> dict[str, Any]:
+async def _fetch_latest_versions(
+    db: AsyncSession, corpus_id: str
+) -> dict[str, tuple[str, str, int]]:
+    result = await db.execute(
+        text("""
+            SELECT memory_document_id, id, event, version_number
+            FROM memory_versions
+            WHERE corpus_id = :c
+            """),
+        {"c": corpus_id},
+    )
+    out: dict[str, tuple[str, str, int]] = {}
+    for r in result.mappings():
+        doc = r["memory_document_id"]
+        vn = r["version_number"] or 0
+        if doc not in out or vn > out[doc][2]:
+            out[doc] = (r["id"], r["event"], vn)
+    return out
+
+
+def _build_graph(
+    rows: list[dict], latest_versions: dict[str, tuple[str, str, int]] | None = None
+) -> dict[str, Any]:
     by_id = {r["id"]: r for r in rows}
     superseded_ids = {r["supersedes_id"] for r in rows if r["supersedes_id"]}
     successors: dict[str, list[dict]] = {}
@@ -95,23 +117,18 @@ def _build_graph(rows: list[dict]) -> dict[str, Any]:
             successors.setdefault(r["supersedes_id"], []).append(r)
 
     latest_version_by_doc: dict[str, str] = {}
-    for r in rows:
-        doc = r["memory_document_id"]
-        current = latest_version_by_doc.get(doc)
-        if current is None:
-            latest_version_by_doc[doc] = r["version_id"]
-        else:
-            # need max version_number; recompute below
-            pass
-    # recompute properly using version_number
-    latest_version_by_doc = {}
     latest_vn_by_doc: dict[str, int] = {}
-    for r in rows:
-        doc = r["memory_document_id"]
-        vn = r["version_number"] or 0
-        if doc not in latest_vn_by_doc or vn > latest_vn_by_doc[doc]:
+    if latest_versions:
+        for doc, (vid, _event, vn) in latest_versions.items():
             latest_vn_by_doc[doc] = vn
-            latest_version_by_doc[doc] = r["version_id"]
+            latest_version_by_doc[doc] = vid
+    else:
+        for r in rows:
+            doc = r["memory_document_id"]
+            vn = r["version_number"] or 0
+            if doc not in latest_vn_by_doc or vn > latest_vn_by_doc[doc]:
+                latest_vn_by_doc[doc] = vn
+                latest_version_by_doc[doc] = r["version_id"]
 
     def active(claim_id: str) -> bool:
         r = by_id.get(claim_id)
@@ -122,7 +139,12 @@ def _build_graph(rows: list[dict]) -> dict[str, Any]:
         doc = r["memory_document_id"]
         if r["version_id"] != latest_version_by_doc.get(doc):
             return False
-        if r["event"] == "DELETED":
+        # event of the latest version for this document
+        if latest_versions:
+            _vid, ev, _vn = latest_versions.get(doc, (None, None, None))
+            if ev == "DELETED":
+                return False
+        elif r["event"] == "DELETED":
             return False
         return True
 
@@ -253,7 +275,8 @@ async def revalidate_claims(
 ) -> dict:
     corpus_id = await _corpus_id(db, corpus_name)
     rows = await _fetch_claims(db, corpus_id)
-    graph = _build_graph(rows)
+    latest_versions = await _fetch_latest_versions(db, corpus_id)
+    graph = _build_graph(rows, latest_versions)
     claims_out = [_classify(graph, ref) for ref in claim_refs]
     verdict = "CURRENT" if all(c["status"] == "current" for c in claims_out) else "STALE"
     checked_at = datetime.now(timezone.utc).isoformat()
@@ -427,7 +450,8 @@ async def compute_drift(
     since: datetime,
 ) -> dict:
     rows = await _fetch_claims(db, corpus_id)
-    graph = _build_graph(rows)
+    latest_versions = await _fetch_latest_versions(db, corpus_id)
+    graph = _build_graph(rows, latest_versions)
     checked_at = datetime.now(timezone.utc)
 
     new_claims: list[dict] = []

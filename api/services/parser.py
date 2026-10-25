@@ -154,6 +154,18 @@ def parse_markdown(
         result = ({}, body)
         return (*result, warnings) if collect_warnings else result
 
+    # Title fallback: a Markdown file may carry YAML frontmatter for other keys
+    # (e.g. `supersedes:`) while naming itself only through its first `# H1`
+    # heading. Treat that heading as the title rather than rejecting the
+    # document with `frontmatter_missing_title`.
+    if not raw_metadata.get("title"):
+        for line in body.splitlines():
+            match = re.match(r"^#\s+(.+?)\s*#*\s*$", line.strip())
+            if match:
+                raw_metadata = dict(raw_metadata)
+                raw_metadata["title"] = match.group(1).strip()
+                break
+
     try:
         validated = FrontmatterSchema(**raw_metadata)
         # Drop keys the author did not write. `model_dump()` materialises every

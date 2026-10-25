@@ -313,7 +313,7 @@ def _explain_verification(response: MemoryResponse) -> str:
     return "\n".join(lines)
 
 
-def _chain_tail(changes):
+def _chain_tail(changes, response=None):
     """The claim the chain ends on: one that nothing in the chain replaced.
 
     The last version in the timeline is not always the one holding the claim
@@ -322,10 +322,22 @@ def _chain_tail(changes):
     because a superseded claim printed under "current now" states the opposite
     of what the archive knows.
     """
+    relevant_ids = None
+    if response is not None:
+        relevant_ids = {
+            claim.id
+            for claim in (
+                list(getattr(response, "current_memories", []) or [])
+                + list(getattr(response, "historical_memories", []) or [])
+                + list(getattr(response, "uncertain_memories", []) or [])
+            )
+        }
     timeline = []
     for change in changes:
         timeline.extend(change.previous)
         timeline.extend(change.current)
+    if relevant_ids:
+        timeline = [claim for claim in timeline if claim.id in relevant_ids]
     if not timeline:
         return None
     replaced = {claim.supersedes_id for claim in timeline if claim.supersedes_id}
@@ -356,7 +368,7 @@ def render_history(response: MemoryResponse) -> str:
         else:
             lines.append(f"{stamp}  {change.event} {change.path} (memory unchanged)")
 
-    tail = _chain_tail(changes)
+    tail = _chain_tail(changes, response)
     lines.append("")
     lines.append(f"current now: {_sentence(tail.claim) if tail else 'nothing recorded'}")
     return "\n".join(lines)

@@ -356,15 +356,54 @@ def render_history(response: MemoryResponse) -> str:
     if not changes:
         return "No recorded history for that memory."
 
+    # Only the claims on the matched lineage belong in this timeline. A version
+    # can carry several claims, and without this filter an unrelated sibling
+    # claim that happens to sit at ordinal 0 of the superseding document is
+    # printed as the transition for the claim the question actually named.
+    relevant_ids = None
+    if response is not None:
+        relevant_ids = {
+            claim.id
+            for claim in (
+                list(getattr(response, "current_memories", []) or [])
+                + list(getattr(response, "historical_memories", []) or [])
+                + list(getattr(response, "uncertain_memories", []) or [])
+            )
+        }
+    if not relevant_ids:
+        relevant_ids = None
+
     lines = []
     for change in changes:
+        previous = (
+            [claim for claim in change.previous if relevant_ids is None or claim.id in relevant_ids]
+            if getattr(change, "previous", None)
+            else []
+        )
+        current = (
+            [claim for claim in change.current if relevant_ids is None or claim.id in relevant_ids]
+            if getattr(change, "current", None)
+            else []
+        )
+        if not previous and not current:
+            continue
         stamp = f"{change.observed_at:%Y-%m-%d %H:%M} UTC"
-        current = _sentence(change.current[0].claim) if change.current else None
-        if not change.previous:
-            lines.append(f"{stamp}  recorded  {current or change.path}")
+        if not previous:
+            for claim in current:
+                lines.append(f"{stamp}  recorded  {_sentence(claim.claim)}")
+            if not current:
+                lines.append(f"{stamp}  recorded  {change.path}")
         elif change.memory_changed and current:
-            lines.append(f"{stamp}  {_sentence(change.previous[0].claim)}")
-            lines.append(f"            superseded by  {current}")
+            by_id = {claim.id: claim for claim in previous}
+            for claim in current:
+                target = by_id.get(getattr(claim, "supersedes_id", None))
+                if target is None and len(previous) == 1 and len(current) == 1:
+                    target = previous[0]
+                if target is not None:
+                    lines.append(f"{stamp}  {_sentence(target.claim)}")
+                    lines.append(f"            superseded by  {_sentence(claim.claim)}")
+                else:
+                    lines.append(f"{stamp}  recorded  {_sentence(claim.claim)}")
         else:
             lines.append(f"{stamp}  {change.event} {change.path} (memory unchanged)")
 

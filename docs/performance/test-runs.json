@@ -91,6 +91,21 @@
       "passed": "1619",
       "skipped": "8"
     },
+    "3b0562e: full suite: history claim-lineage filtering": {
+      "collected": "2050",
+      "commit": "3b0562e9659278cb1e3b15119752c7c4b0113709",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite: history claim-lineage filtering",
+      "passed": "2048",
+      "seconds": 619.19,
+      "skipped": "2"
+    },
     "3f52cb6: full suite: in-process memory pack, uv.lock ignored, serve DX": {
       "collected": "2042",
       "commit": "3f52cb601814988f3d30d4d05c93586793dd7c9f",

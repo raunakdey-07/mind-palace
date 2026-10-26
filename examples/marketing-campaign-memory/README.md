@@ -23,6 +23,24 @@ deterministic stand-in for a model. No model is called, no network is used and n
 paid service is involved, so the security assertions do not depend on a remote
 service being reachable or on a model behaving the same way twice.
 
+**What the deterministic generator proves** (integration and governance): corpus
+mapping, authorization decisions, role matrix, archive/receipts/query surfaces,
+tenant isolation, and the rule that generated content never becomes
+authoritative memory without explicit approval. It proves these because they are
+properties of the memory layer, not of model behaviour.
+
+**What a real LLM evaluation harness tests** (output quality): whether an actual
+model, given the Mind Palace context package, produces on-brand, constraint-
+adherent copy. That is measured separately by the agency-readiness benchmark
+(`benchmarks/agency_readiness/`) with a pluggable LLM evaluator; it is not what
+this example asserts.
+
+**Execution mode:** the example reaches Mind Palace over HTTP through the public
+REST contract. It can run against an externally started service
+(`MIND_PALACE_URL` / `MIND_PALACE_BASE_URL`) or against an in-process mounted
+application (no socket, no port). Both paths exercise the same middleware,
+authorization choke point and database policies; only the transport differs.
+
 **Real:** the corpus mapping, the authorization decisions, the role matrix, the
 archive, receipts and the query surfaces. Memory is reached over **HTTP, through
 the public REST contract** — `httpx`, a bearer credential and a JSON body, to a

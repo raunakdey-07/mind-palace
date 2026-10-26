@@ -20,15 +20,19 @@ that corpus.
 | Plain Markdown, no frontmatter | **0** | **0** | **abstains** |
 | A conversation transcript, five sessions | **0** | **0** | **abstains** |
 
-**Unstructured text currently yields no claims, and recall abstains on it.**
-Not "answers less well" — abstains. The transcript in the inventory contains the
-sentence *"Checkout retries a failed payment twice before giving up."* verbatim.
-It was asked *"How many times does checkout retry a failed payment?"* The
-document was chunked into six chunks and stored, and the product returned
-nothing, because it ranks **claims**, and the document had none.
+**Unstructured prose is now extracted, not just stored.** Mind Palace reads
+ordinary paragraphs for normative and declarative sentences (modal signals such
+as must/avoid/never/should, plus declarative entity-attribute statements) and
+records them as claims with exact verbatim evidence spans. Each extracted
+record carries a provenance state — `direct_claim` when the sentence is a
+verbatim normative statement, `candidate_interpretation` when an external
+semantic provider proposes it — so unverified inference never masquerades as an
+authoritative fact.
 
-There is no extractor. A document becomes memory because a person wrote the
-memory into it.
+The historical note below is retained for context: before the structural
+extractor (M016) and the prose path (M017), unstructured text yielded zero
+claims and `query` abstained. That is no longer the case for prose that
+contains normative or declarative statements.
 
 ---
 

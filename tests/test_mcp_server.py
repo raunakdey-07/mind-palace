@@ -54,13 +54,18 @@ def test_mcp_context_tool_returns_attributed_pack(tmp_path, monkeypatch):
                         "(SELECT id FROM corpora WHERE name = 'mcp-test-corpus')"
                     )
                 )
-                for tbl in ("memory_versions", "memory_claims",
-                            "memory_evidence", "memory_documents"):
-                    conn.execute(sa.text(
-                        "DELETE FROM " + tbl +
-                        " WHERE corpus_id IN (SELECT id FROM corpora "
-                        "WHERE name = 'mcp-test-corpus')"
-                    ))
+                for tbl in (
+                    "memory_versions",
+                    "memory_claims",
+                    "memory_evidence",
+                    "memory_documents",
+                ):
+                    conn.execute(
+                        sa.text(
+                            "DELETE FROM " + tbl + " WHERE corpus_id IN (SELECT id FROM corpora "
+                            "WHERE name = 'mcp-test-corpus')"
+                        )
+                    )
                 conn.execute(sa.text("DELETE FROM corpora WHERE name = 'mcp-test-corpus'"))
         finally:
             engine.dispose()

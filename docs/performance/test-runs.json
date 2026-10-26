@@ -179,6 +179,22 @@
       "seconds": 583.53,
       "skipped": "2"
     },
+    "6001ede: full suite": {
+      "collected": "2061",
+      "commit": "6001edef5502b170f3748f28b9b4a14c12d54077",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 2
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite",
+      "note": "release v0.9.2",
+      "passed": "2059",
+      "seconds": 565.7,
+      "skipped": "2"
+    },
     "671a892: full suite, run A, after the install fixes": {
       "commit": "671a8925cb98f39bace587584c3a18b1d34dbed4",
       "failed": "0",

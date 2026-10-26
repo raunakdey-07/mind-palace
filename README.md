@@ -4,11 +4,11 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/mind-palace/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Current release: v0.9.1](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.9.2](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-> **The path below installs `0.9.1`, the current tagged and published release.**
-> `v0.9.1` is tagged on `main` and published as a GitHub Release. To install
-> the previous tagged release instead, clone the `v0.9.0` tag.
+> **The path below installs `0.9.2`, the current tagged and published release.**
+> `v0.9.2` is tagged on `main` and published as a GitHub Release. To install
+> the previous tagged release instead, clone the `v0.9.1` tag.
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**
@@ -94,6 +94,23 @@ for OpenCode, Zed and Claude Code is in [connecting an agent](docs/mcp.md).
 
 `recall` and `remember` also report a `query_id`. Grade a wrong answer; it appends
 to `~/.mind-palace/logs/queries.jsonl` and changes nothing else.
+
+## Managing corpora and credentials
+
+- `mindpalace ingest-repo <path> --delete-removed` retires documents whose source file is gone.
+- `mindpalace corpus reset <name> --yes` erases and re-initialises one corpus, with its grants intact.
+- `mindpalace corpus delete <name> --yes` removes a corpus entirely.
+- `mindpalace posture` reports whether the database role actually enforces row-level security.
+- `mindpalace credential issue|list|grant|ungrant|revoke` manages access without changing a secret.
+
+## Out-of-the-box Linux and WSL2
+
+On Linux and WSL2, `mindpalace init` starts a stopped local PostgreSQL container
+publishing the configured port and provisions a `pgvector` container when nothing
+is running; a remote database is never touched. Connection and authentication
+failures print the specific remediation (start the service, fix the password)
+instead of a traceback. `pytest` auto-detects a local development Postgres, so the
+suite runs with no `DATABASE_URL`.
 
 ```bash
 mindpalace feedback <query_id> --verdict wrong --note "meant the cache"

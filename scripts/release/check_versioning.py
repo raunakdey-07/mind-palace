@@ -37,7 +37,8 @@ def main() -> None:
     m0065 = (ROOT / "docs/evaluation/m0065.md").read_text(encoding="utf-8")
     m00675 = (ROOT / "docs/evaluation/m00675-reproducibility.md").read_text(encoding="utf-8")
 
-    require(pyproject, r'^version = "0\.9\.1"$', "package version is v0.9.1")
+    require(pyproject, r'^version = "0\.9\.2"$', "package version is v0.9.2")
+    require(changelog, r"^## \[v0\.9\.2\]", "v0.9.2 changelog entry")
     require(changelog, r"^## \[v0\.9\.1\]", "v0.9.1 changelog entry")
     # v0.9.0 shipped M015.2 + M016 and must keep its entry. A patch release may not
     # erase the minor release it follows.
@@ -49,7 +50,7 @@ def main() -> None:
     )
     require(
         readme,
-        r"\[Current release: v0\.9\.1\]\(docs/release-map\.md\)",
+        r"\[Current release: v0\.9\.2\]\(docs/release-map\.md\)",
         "README release-map link",
     )
     # v0.10.0 was staged during M016 and then folded into v0.9.0. Nothing may *claim*

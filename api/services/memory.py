@@ -832,8 +832,13 @@ def _pair_supersession_claims(keys, key_claim, targets):
         if ":" in text:
             prefix = text.split(":", 1)[0].strip()
             return prefix.casefold() if prefix else None
-        # No structural delimiter: do not guess from prose openings.
-        return None
+        words = text.split()
+        if not words:
+            return None
+        # Prose claim: use the opening words as a subject so a rewritten
+        # document whose claims share a topic can still be paired. Deterministic:
+        # the same five words always map to the same subject.
+        return " ".join(words[:5]).casefold()
 
     for target in targets:
         if target["key"] in unmatched_keys:

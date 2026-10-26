@@ -31,6 +31,15 @@ The first `recall` downloads the embedding model, about 90 MB, once. After that
 it works offline. To never download it, set `MIND_PALACE_LEXICAL=1` before step 4
 — see [runtime.md](runtime.md#model-free-lexical-mode).
 
+On Linux and WSL2, `mindpalace init` starts a stopped local PostgreSQL container
+publishing the configured port and provisions a `pgvector` container when nothing
+is running; `pytest` auto-detects a local development Postgres. Connection and
+authentication failures print a remediation hint instead of a traceback.
+
+Corpus management: `mindpalace ingest-repo <path> --delete-removed`,
+`mindpalace corpus reset <name> --yes`, `mindpalace corpus delete <name> --yes`,
+and `mindpalace posture`.
+
 ## Getting a document in
 
 `remember` is for facts. Documents need a `claims:` block in their frontmatter,

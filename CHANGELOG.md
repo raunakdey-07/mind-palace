@@ -4,24 +4,14 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [Unreleased]
+
 ## [v0.9.2] - 2026-10-26
 
 Remediation pass: hardened revalidation, deterministic supersession pairing,
 real stale-fact benchmark metrics, and release documentation reconciliation.
 
-### Fixed
-- Revalidation now fails closed on malformed/integrity-failed receipts.
-- `include_drift` is honoured; raw claim ids without a temporal anchor return a
-  structured diagnostic instead of `drift: null`.
-- Cross-corpus authorization gap closed in REST and MCP revalidation.
-- MCP `_load_artifact` enforces ingest-root path confinement.
-- `walk_heads` guards against cyclic supersession graphs.
-- Supersession pairing no longer guesses by ordinal position.
-
-### Changed
-- Benchmark metrics are computed dynamically with fair baselines.
-
-## [Unreleased]
+### Upgrade notes
 
 > ### Upgrade notes — read before upgrading
 >
@@ -63,7 +53,119 @@ A security change, and a change to one documented claim. No memory semantics,
 temporal behaviour, evidence rule, supersession behaviour, receipt schema or
 Memory Pack version changed, and no benchmark input was touched.
 
+### Added
+
+- **`mindpalace ingest-repo --delete-removed`.** A document whose source file
+  is no longer in the directory stayed active in the corpus forever: its
+  claims kept answering questions and nothing reported that the source was
+  gone. The service could retire a document and the CLI never asked for it,
+  because `ingest-repo` hardcoded `delete_removed=False`. The flag is how the
+  caller makes that decision, and the default is unchanged.
+- **`mindpalace corpus reset <name>`.** A scratch corpus that has collected a
+  test claim needs a clean slate, and the way out of that used to be dropping
+  the whole PostgreSQL database, which took every other corpus with it. The
+  corpus is erased and re-initialised under the same name and the same id,
+  with its grants intact, and no other corpus is touched. It asks for `--yes`,
+  because the erasure cannot be undone.
+- **`mindpalace ingest-repo --embed-chunks`.** A caller who wants the legacy
+  chunk-level search over a whole corpus asks for the chunk vectors
+  explicitly. The flag is on the CLI, on `MindPalace.sync()`, and on
+  `POST /api/corpora/{name}/sync`. Without it, a document that produced claims
+  is archived without chunk vectors, because the claim archive is what every
+  read path queries.
+
+- **Corpus erasure** (migration `009_permission_and_erasure`). `DELETE
+  /api/corpora/{name}` used to return `409` whenever the archive referenced the
+  corpus, so a corpus that had ever recorded a fact could never be removed. It is
+  now one `SECURITY DEFINER` function that re-checks the caller's transaction-local
+  tenant scope, takes the same advisory lock every writer takes, and deletes all
+  nine archive tables in dependency order plus the live projection and every
+  credential's grant. `mindpalace corpus delete` is the local equivalent.
+  Authorization is `manage_corpus`, and another tenant's corpus is a `404` so the
+  refusal does not confirm it exists. The result reports table names and row
+  counts and nothing else: an erasure audit trail that reproduced the content it
+  erased would defeat the erasure, so there is no field in which to put one.
+- **Permissions finer than read/write.** `corpus_admin` (write, plus erasing the
+  corpora it holds grants on) and `principal_admin` (everything, including issuing
+  and revoking credentials) join `read_only` and `read_write`. Cumulative and
+  deny-by-default. A workspace credential can no longer mint authority, so a
+  compromised tenant credential is not a foothold on the next tenant. Creating a
+  corpus still requires the unrestricted administrative identity: a corpus row is
+  only insertable inside the caller's own tenant scope, and a principal cannot
+  hold a grant to something that does not exist yet.
+- **A credential lookup the application role cannot enumerate.** Authentication
+  resolves through `mindpalace_resolve_credential`, and `SELECT` on
+  `memory_principals` and `memory_principal_corpora` is revoked from
+  `mindpalace_runtime`. One query used to return every tenant's credential hashes,
+  roles and grants, which a memory service has no reason to be able to do. The
+  identity and its corpus scope now arrive in one round trip rather than two.
+  Administrative commands (`credential issue|list|grant|ungrant|revoke`,
+  `corpus create|delete`) run on `MIND_PALACE_ADMIN_DATABASE_URL`.
+- **`mindpalace credential grant` / `ungrant`**, so access can be widened or
+  narrowed without changing a credential's secret — reissuing breaks every running
+  deployment of the caller, so it is only ever the rotation step. Removing the
+  last corpus leaves a credential that resolves to nothing and is refused on every
+  request, which makes `ungrant` a safe suspension.
+- **`mindpalace posture` now checks privilege shape**, not just policy flags: the
+  role's privileges beyond DML, whether it can enumerate credential hashes,
+  whether it holds `DELETE` on any archive table, and whether it can `SET ROLE`
+  into a privileged role. `server` mode refuses to start on any of them, in the
+  application lifespan — after the process has its connection, before uvicorn
+  reports itself as accepting traffic.
+- **Authorization is implemented, and off by default.** `MIND_PALACE_AUTH_MODE=required`
+  makes every request present a bearer credential bound to a role and an explicit set
+  of corpora. Opaque random secrets, stored only as SHA-256 hashes; rotation is
+  issue-then-revoke; revocation takes effect on the next request. `off` remains the
+  default because the documented five-minute path is a local single-user workflow.
+  `/health/ready` reports the mode, so a deployment cannot be tenant-safe by
+  accident.
+- **Row-level security on every tenant-owned table** (migration
+  `008_tenant_scoped_access`, additive, reversible). The archive was already
+  `(corpus_id, ...)`-keyed with composite foreign keys, so this needed no schema
+  change: `ENABLE` + `FORCE` + a `USING`/`WITH CHECK` predicate. `chunks` has no
+  corpus column, so its policy reaches the corpus through the document it belongs
+  to. The predicate fails closed when no tenant scope is present.
+- **`scripts/db/runtime_roles.sql`**, which creates the separation the policies
+  depend on: a `BYPASSRLS` maintenance role that owns the schema, and a
+  `NOSUPERUSER NOBYPASSRLS` runtime role that owns nothing, holds no `DELETE` on
+  any archive table, and is granted `EXECUTE` on named functions rather than
+  `ALL FUNCTIONS`.
+- **A tenant-isolation suite** on real PostgreSQL with that least-privileged role:
+  two organisations, three roles each, canary content, every memory operation plus
+  search, context, the query surface, the feed, ingestion, corpus administration,
+  snapshots, replay, receipts and parent/child id mixing — plus connection reuse,
+  concurrency, cancellation and rollback. A negative suite removes each control in
+  turn and asserts what it was holding, so the isolation tests cannot pass
+  vacuously.
+- **`examples/marketing-campaign-memory/`**, a thin reference integration: two
+  simulated organisations, brand and per-campaign memory, four platform variants,
+  draft/review/edit/approve/reject/regenerate, and a server-enforced role matrix.
+  Content generation is a deterministic stand-in, and says so.
+
+
+- **`mindpalace credential issue|list|revoke` and `mindpalace corpus create`.** The
+  bootstrap was a Python snippet, which meant the first step of every deployment was
+  copying code that imports internals. These are local administrative commands on
+  purpose: a network route that mints a tenant boundary or a credential is the thing
+  the design exists to avoid. `revoke` accepts the id prefix that `list` prints.
+- **`mindpalace posture`.** Whether the current database role actually enforces the
+  row-level policies, printed and non-zero on a problem. `MIND_PALACE_AUTH_MODE` is an
+  application switch and says nothing about the role; a service could report itself
+  tenant-scoped while running as a superuser with migration `008` inert. The same
+  facts appear in `/health/ready` under `database_posture`, and a check that cannot
+  query `pg_roles`/`pg_class` reports the tables as unprotected rather than fine.
+- **`MIND_PALACE_DEPLOYMENT=local|server`** as an explicit setting rather than a
+  heuristic. `server` requires `required`, a set of ingest roots, and a database
+  role that actually enforces the policies — checked in the application lifespan,
+  before the process accepts a request. An unrecognised value is refused.
+- **`tests/test_operator_cli.py`**, which drives `mindpalace corpus` and
+  `mindpalace credential` through their real entry point. The service functions
+  they call were all tested; the wiring around them was not, and it broke.
+
 ### Changed
+
+- Benchmark metrics are computed dynamically with fair baselines.
+
 
 - **`mindpalace memory ...` no longer needs a server.** `memory pack` used to
   default to `http://127.0.0.1:8000` while `recall`, `explain`, `history`,
@@ -73,7 +175,118 @@ Memory Pack version changed, and no benchmark input was touched.
   HTTP API for clients that need one; the CLI does not. `uv.lock` is ignored, so
   `uv run` keeps the working tree clean.
 
+
+- **A sync no longer computes vectors for an index nothing reads.** `recall`,
+  `history`, `explain` and `receipt` all read `memory_claim_embeddings`; none
+  of them reads `chunks.embedding`. A document that produced claims was
+  encoded twice, once as claims and once as 1,200-character chunks at 256
+  tokens each, and the second half was the larger of the two. A document that
+  produced no claims keeps its vectors, because the chunk index is the only
+  index such a document has. `mindpalace ingest-repo --embed-chunks` asks for
+  the vectors anyway, and `mindpalace reindex` rebuilds them from the archive.
+  Measured over two corpora, 2,097 chunks and 3,907 claims: **147.0 s to 59.7
+  s**, with the chunk-embedding phase going from 72.8 s to 0.6 s. Every claim
+  vector is byte-for-byte identical before and after.
+- **A chunk search gives the chunks it needs a vector before it looks.** A
+  corpus synced without chunk vectors used to answer the chunk-level search
+  with nothing, for a corpus full of text. The search now fills the gap with
+  the vectors an ingest would have computed -- the chunk's own text, through
+  the same embedder -- so it answers instead of returning nothing.
+- **The ONNX session gets one thread per physical core.** onnxruntime's
+  default is one thread per logical processor, and on a machine with SMT the
+  two halves of a core fight for the same execution units. On the 4-core/
+  8-thread machine this was measured on, a batch of eight claim
+  representations took 58.9 ms with the default and 38.7 ms with one thread
+  per physical core. The vectors are bit-identical either way, and
+  `MIND_PALACE_ONNX_THREADS` overrides the choice.
+- **Batches are formed from token lengths rather than character lengths.** A
+  key like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4` is a
+  different number of tokens than it is characters, and sorting by characters
+  put the representations into the wrong order: over the 2,178 claim
+  representations of one corpus, sorting by tokens padded 63,093 positions
+  where sorting by characters padded 71,989, and encoded them 13% faster. One
+  unusually long text no longer pads the batch it shares to its own length.
+
+- **A sync opens one connection instead of two per document.** The engine is
+  `NullPool`, because a pooled connection cannot cross an event loop and the
+  SDK and the CLI create a short-lived loop per operation. `sync_repo` opened
+  two sessions per document anyway -- one to ask whether the path was already
+  indexed, one to ingest it -- so a 78-document repository paid for 156
+  PostgreSQL connections. The cost is per connection, so it scales with the
+  distance to the database: 4.4 s of a 34.3 s ingest against a container-local
+  database, and 11.8 s against a remote one. The run now holds one connection
+  for its whole length. The transaction boundary does not move -- each document
+  still opens and commits its own transaction, so a document that fails is
+  rolled back on its own, the connection stays usable and the run carries on --
+  and the tenant scope is written per transaction and is transaction-local, so
+  a reused connection cannot carry one document's scope into the next.
+  Measured over this repository's `docs/` and a second repository's `docs/`:
+  **42.7 s to 33.9 s**, with the connections opened going from 174 to 4. Every
+  claim, chunk and claim vector is identical before and after, by digest.
+- **`scripts/benchmark/ingest_profile.py` cannot erase a live corpus.** It
+  wrote into the corpus its command line named, and `--reset` erased it, so a
+  benchmark run over `--corpus mind-palace=docs` wiped the live `mind-palace`
+  corpus outright. The name on the command line is a report label now; the run
+  writes into a corpus whose name begins with `_profile_` and deletes it when
+  the run ends.
+
+- **A bare `mindpalace` prints where to start.** It used to print
+  "Missing command." and a usage line — a statement about the person's typing
+  rather than about the product, on the run with the least context. It now
+  prints the first three commands, in the order a newcomer needs them, and
+  points at `mindpalace --help` for the rest. `mindpalace --help` is unchanged.
+
+- **`/health/ready` answers `503` only in `server` mode.** In `local` there is no
+  second tenant to isolate from, the documented workflow is a developer
+  connecting as their own superuser, and reporting `not_ready` there would break
+  the convenient path for a problem that cannot occur — the same reasoning that
+  gates every other `server` requirement, including refusing to start.
+
+- **A previously reported claim was wrong and is now corrected.** The previous
+  report said a compromised application process was "bounded to the credentials
+  that process holds". It was not: the same `{*}` forge gave it every corpus.
+  That is now closed for the sentinel. A *named* scope remains forgeable — a
+  corpus id is `sha256("corpus:" + name)` — so a compromised process can still
+  reach any corpus whose name it can obtain. `docs/security.md` states this, and
+  `tests/test_scope_forgery.py` pins it so a change in either direction is
+  noticed.
+- **`MIND_PALACE_INGEST_ROOTS=none`** disables the two filesystem ingestion
+  routes and satisfies the `server` profile's precondition. `server` previously
+  could not start at all without a root list, which coupled *starting the
+  service* to *having a filesystem ingestion surface* and blocked an API-only
+  deployment that never touches those routes. The risk belongs to the routes, not
+  to the process. Without either a root list or `none`, it still refuses to start.
+- **`/health/ready` answers `503` when row-level security cannot be verified.**
+  An unverifiable guarantee is not a guarantee.
+
+
+- **The reference integration no longer imports Mind Palace internals.** It called
+  `api.services.memory_public.execute` in-process and described that as public. It was
+  not: an adopter needing those imports could not be pointed at a different
+  deployment. It now speaks the public REST contract over `httpx`, through the real
+  middleware and the real policies, and a test fails if any file under the example
+  imports one. The one exception is onboarding, where creating a corpus and issuing a
+  credential are administrative and have no HTTP route by design.
+- **A corpus name is no longer described as a tenant boundary.** It is a namespace;
+  whether a caller may address one is decided by its credential. `README.md`,
+  `deployment.md` and `docs/STATUS.md` are corrected, and `docs/security.md`
+  documents the threat model, the deployment modes, the database roles, the five
+  access surfaces, the tenant scope and the known limitations.
+
+- **PR #33: zero-config `pytest` local Postgres probe.** The test suite auto-detects a local development Postgres, so `pytest` runs without a manually exported `DATABASE_URL`.
+
+- **PR #33: Linux/WSL2 guided remediation nudges.** Connection and container failures now print actionable remediation hints for Linux and WSL2 instead of a raw traceback.
+
 ### Fixed
+
+- Revalidation now fails closed on malformed/integrity-failed receipts.
+- `include_drift` is honoured; raw claim ids without a temporal anchor return a
+  structured diagnostic instead of `drift: null`.
+- Cross-corpus authorization gap closed in REST and MCP revalidation.
+- MCP `_load_artifact` enforces ingest-root path confinement.
+- `walk_heads` guards against cyclic supersession graphs.
+- Supersession pairing no longer guesses by ordinal position.
+
 
 - **A question about the SDK's bundle size was answered with two other
   chunks' bundle sizes.** The question is split into parts before it is
@@ -355,181 +568,6 @@ Memory Pack version changed, and no benchmark input was touched.
   and not the wording is not the claim's chunk. A claim whose wording is in no
   chunk that holds the quote is still refused.
 
-### Changed
-
-- **A sync no longer computes vectors for an index nothing reads.** `recall`,
-  `history`, `explain` and `receipt` all read `memory_claim_embeddings`; none
-  of them reads `chunks.embedding`. A document that produced claims was
-  encoded twice, once as claims and once as 1,200-character chunks at 256
-  tokens each, and the second half was the larger of the two. A document that
-  produced no claims keeps its vectors, because the chunk index is the only
-  index such a document has. `mindpalace ingest-repo --embed-chunks` asks for
-  the vectors anyway, and `mindpalace reindex` rebuilds them from the archive.
-  Measured over two corpora, 2,097 chunks and 3,907 claims: **147.0 s to 59.7
-  s**, with the chunk-embedding phase going from 72.8 s to 0.6 s. Every claim
-  vector is byte-for-byte identical before and after.
-- **A chunk search gives the chunks it needs a vector before it looks.** A
-  corpus synced without chunk vectors used to answer the chunk-level search
-  with nothing, for a corpus full of text. The search now fills the gap with
-  the vectors an ingest would have computed -- the chunk's own text, through
-  the same embedder -- so it answers instead of returning nothing.
-- **The ONNX session gets one thread per physical core.** onnxruntime's
-  default is one thread per logical processor, and on a machine with SMT the
-  two halves of a core fight for the same execution units. On the 4-core/
-  8-thread machine this was measured on, a batch of eight claim
-  representations took 58.9 ms with the default and 38.7 ms with one thread
-  per physical core. The vectors are bit-identical either way, and
-  `MIND_PALACE_ONNX_THREADS` overrides the choice.
-- **Batches are formed from token lengths rather than character lengths.** A
-  key like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4` is a
-  different number of tokens than it is characters, and sorting by characters
-  put the representations into the wrong order: over the 2,178 claim
-  representations of one corpus, sorting by tokens padded 63,093 positions
-  where sorting by characters padded 71,989, and encoded them 13% faster. One
-  unusually long text no longer pads the batch it shares to its own length.
-
-- **A sync opens one connection instead of two per document.** The engine is
-  `NullPool`, because a pooled connection cannot cross an event loop and the
-  SDK and the CLI create a short-lived loop per operation. `sync_repo` opened
-  two sessions per document anyway -- one to ask whether the path was already
-  indexed, one to ingest it -- so a 78-document repository paid for 156
-  PostgreSQL connections. The cost is per connection, so it scales with the
-  distance to the database: 4.4 s of a 34.3 s ingest against a container-local
-  database, and 11.8 s against a remote one. The run now holds one connection
-  for its whole length. The transaction boundary does not move -- each document
-  still opens and commits its own transaction, so a document that fails is
-  rolled back on its own, the connection stays usable and the run carries on --
-  and the tenant scope is written per transaction and is transaction-local, so
-  a reused connection cannot carry one document's scope into the next.
-  Measured over this repository's `docs/` and a second repository's `docs/`:
-  **42.7 s to 33.9 s**, with the connections opened going from 174 to 4. Every
-  claim, chunk and claim vector is identical before and after, by digest.
-- **`scripts/benchmark/ingest_profile.py` cannot erase a live corpus.** It
-  wrote into the corpus its command line named, and `--reset` erased it, so a
-  benchmark run over `--corpus mind-palace=docs` wiped the live `mind-palace`
-  corpus outright. The name on the command line is a report label now; the run
-  writes into a corpus whose name begins with `_profile_` and deletes it when
-  the run ends.
-
-- **A bare `mindpalace` prints where to start.** It used to print
-  "Missing command." and a usage line — a statement about the person's typing
-  rather than about the product, on the run with the least context. It now
-  prints the first three commands, in the order a newcomer needs them, and
-  points at `mindpalace --help` for the rest. `mindpalace --help` is unchanged.
-
-- **`/health/ready` answers `503` only in `server` mode.** In `local` there is no
-  second tenant to isolate from, the documented workflow is a developer
-  connecting as their own superuser, and reporting `not_ready` there would break
-  the convenient path for a problem that cannot occur — the same reasoning that
-  gates every other `server` requirement, including refusing to start.
-
-- **A previously reported claim was wrong and is now corrected.** The previous
-  report said a compromised application process was "bounded to the credentials
-  that process holds". It was not: the same `{*}` forge gave it every corpus.
-  That is now closed for the sentinel. A *named* scope remains forgeable — a
-  corpus id is `sha256("corpus:" + name)` — so a compromised process can still
-  reach any corpus whose name it can obtain. `docs/security.md` states this, and
-  `tests/test_scope_forgery.py` pins it so a change in either direction is
-  noticed.
-- **`MIND_PALACE_INGEST_ROOTS=none`** disables the two filesystem ingestion
-  routes and satisfies the `server` profile's precondition. `server` previously
-  could not start at all without a root list, which coupled *starting the
-  service* to *having a filesystem ingestion surface* and blocked an API-only
-  deployment that never touches those routes. The risk belongs to the routes, not
-  to the process. Without either a root list or `none`, it still refuses to start.
-- **`/health/ready` answers `503` when row-level security cannot be verified.**
-  An unverifiable guarantee is not a guarantee.
-
-### Added
-
-- **`mindpalace ingest-repo --delete-removed`.** A document whose source file
-  is no longer in the directory stayed active in the corpus forever: its
-  claims kept answering questions and nothing reported that the source was
-  gone. The service could retire a document and the CLI never asked for it,
-  because `ingest-repo` hardcoded `delete_removed=False`. The flag is how the
-  caller makes that decision, and the default is unchanged.
-- **`mindpalace corpus reset <name>`.** A scratch corpus that has collected a
-  test claim needs a clean slate, and the way out of that used to be dropping
-  the whole PostgreSQL database, which took every other corpus with it. The
-  corpus is erased and re-initialised under the same name and the same id,
-  with its grants intact, and no other corpus is touched. It asks for `--yes`,
-  because the erasure cannot be undone.
-- **`mindpalace ingest-repo --embed-chunks`.** A caller who wants the legacy
-  chunk-level search over a whole corpus asks for the chunk vectors
-  explicitly. The flag is on the CLI, on `MindPalace.sync()`, and on
-  `POST /api/corpora/{name}/sync`. Without it, a document that produced claims
-  is archived without chunk vectors, because the claim archive is what every
-  read path queries.
-
-- **Corpus erasure** (migration `009_permission_and_erasure`). `DELETE
-  /api/corpora/{name}` used to return `409` whenever the archive referenced the
-  corpus, so a corpus that had ever recorded a fact could never be removed. It is
-  now one `SECURITY DEFINER` function that re-checks the caller's transaction-local
-  tenant scope, takes the same advisory lock every writer takes, and deletes all
-  nine archive tables in dependency order plus the live projection and every
-  credential's grant. `mindpalace corpus delete` is the local equivalent.
-  Authorization is `manage_corpus`, and another tenant's corpus is a `404` so the
-  refusal does not confirm it exists. The result reports table names and row
-  counts and nothing else: an erasure audit trail that reproduced the content it
-  erased would defeat the erasure, so there is no field in which to put one.
-- **Permissions finer than read/write.** `corpus_admin` (write, plus erasing the
-  corpora it holds grants on) and `principal_admin` (everything, including issuing
-  and revoking credentials) join `read_only` and `read_write`. Cumulative and
-  deny-by-default. A workspace credential can no longer mint authority, so a
-  compromised tenant credential is not a foothold on the next tenant. Creating a
-  corpus still requires the unrestricted administrative identity: a corpus row is
-  only insertable inside the caller's own tenant scope, and a principal cannot
-  hold a grant to something that does not exist yet.
-- **A credential lookup the application role cannot enumerate.** Authentication
-  resolves through `mindpalace_resolve_credential`, and `SELECT` on
-  `memory_principals` and `memory_principal_corpora` is revoked from
-  `mindpalace_runtime`. One query used to return every tenant's credential hashes,
-  roles and grants, which a memory service has no reason to be able to do. The
-  identity and its corpus scope now arrive in one round trip rather than two.
-  Administrative commands (`credential issue|list|grant|ungrant|revoke`,
-  `corpus create|delete`) run on `MIND_PALACE_ADMIN_DATABASE_URL`.
-- **`mindpalace credential grant` / `ungrant`**, so access can be widened or
-  narrowed without changing a credential's secret — reissuing breaks every running
-  deployment of the caller, so it is only ever the rotation step. Removing the
-  last corpus leaves a credential that resolves to nothing and is refused on every
-  request, which makes `ungrant` a safe suspension.
-- **`mindpalace posture` now checks privilege shape**, not just policy flags: the
-  role's privileges beyond DML, whether it can enumerate credential hashes,
-  whether it holds `DELETE` on any archive table, and whether it can `SET ROLE`
-  into a privileged role. `server` mode refuses to start on any of them, in the
-  application lifespan — after the process has its connection, before uvicorn
-  reports itself as accepting traffic.
-- **Authorization is implemented, and off by default.** `MIND_PALACE_AUTH_MODE=required`
-  makes every request present a bearer credential bound to a role and an explicit set
-  of corpora. Opaque random secrets, stored only as SHA-256 hashes; rotation is
-  issue-then-revoke; revocation takes effect on the next request. `off` remains the
-  default because the documented five-minute path is a local single-user workflow.
-  `/health/ready` reports the mode, so a deployment cannot be tenant-safe by
-  accident.
-- **Row-level security on every tenant-owned table** (migration
-  `008_tenant_scoped_access`, additive, reversible). The archive was already
-  `(corpus_id, ...)`-keyed with composite foreign keys, so this needed no schema
-  change: `ENABLE` + `FORCE` + a `USING`/`WITH CHECK` predicate. `chunks` has no
-  corpus column, so its policy reaches the corpus through the document it belongs
-  to. The predicate fails closed when no tenant scope is present.
-- **`scripts/db/runtime_roles.sql`**, which creates the separation the policies
-  depend on: a `BYPASSRLS` maintenance role that owns the schema, and a
-  `NOSUPERUSER NOBYPASSRLS` runtime role that owns nothing, holds no `DELETE` on
-  any archive table, and is granted `EXECUTE` on named functions rather than
-  `ALL FUNCTIONS`.
-- **A tenant-isolation suite** on real PostgreSQL with that least-privileged role:
-  two organisations, three roles each, canary content, every memory operation plus
-  search, context, the query surface, the feed, ingestion, corpus administration,
-  snapshots, replay, receipts and parent/child id mixing — plus connection reuse,
-  concurrency, cancellation and rollback. A negative suite removes each control in
-  turn and asserts what it was holding, so the isolation tests cannot pass
-  vacuously.
-- **`examples/marketing-campaign-memory/`**, a thin reference integration: two
-  simulated organisations, brand and per-campaign memory, four platform variants,
-  draft/review/edit/approve/reject/regenerate, and a server-enforced role matrix.
-  Content generation is a deterministic stand-in, and says so.
-
-### Fixed
 
 - **The entire administrative CLI was broken.** `_authz_session` built a context
   manager from the session helper and then called it again, so every
@@ -618,41 +656,13 @@ Memory Pack version changed, and no benchmark input was touched.
   is refused rather than resolved arbitrarily.
 - **`deployment.md` still said the API had no authentication.** It does.
 
-### Added
+- **PR #31: table/prose ordinal key-space separation.** Ordinal keys for table rows and prose statements no longer share a key space, so a table row can no longer collide with or overwrite the prose claim it sits beside.
 
-- **`mindpalace credential issue|list|revoke` and `mindpalace corpus create`.** The
-  bootstrap was a Python snippet, which meant the first step of every deployment was
-  copying code that imports internals. These are local administrative commands on
-  purpose: a network route that mints a tenant boundary or a credential is the thing
-  the design exists to avoid. `revoke` accepts the id prefix that `list` prints.
-- **`mindpalace posture`.** Whether the current database role actually enforces the
-  row-level policies, printed and non-zero on a problem. `MIND_PALACE_AUTH_MODE` is an
-  application switch and says nothing about the role; a service could report itself
-  tenant-scoped while running as a superuser with migration `008` inert. The same
-  facts appear in `/health/ready` under `database_posture`, and a check that cannot
-  query `pg_roles`/`pg_class` reports the tables as unprotected rather than fine.
-- **`MIND_PALACE_DEPLOYMENT=local|server`** as an explicit setting rather than a
-  heuristic. `server` requires `required`, a set of ingest roots, and a database
-  role that actually enforces the policies — checked in the application lifespan,
-  before the process accepts a request. An unrecognised value is refused.
-- **`tests/test_operator_cli.py`**, which drives `mindpalace corpus` and
-  `mindpalace credential` through their real entry point. The service functions
-  they call were all tested; the wiring around them was not, and it broke.
+- **PR #31: per-claim `explain` `HISTORY`.** `explain` now reports the per-claim history timeline rather than a single aggregate, so each claim's lineage is visible on its own.
 
-### Changed
+- **PR #32: `[0.0, 1.0]` candidate score cap.** Candidate scores are clamped to `[0.0, 1.0]`, so an out-of-range score can no longer distort the margin or the verdict.
 
-- **The reference integration no longer imports Mind Palace internals.** It called
-  `api.services.memory_public.execute` in-process and described that as public. It was
-  not: an adopter needing those imports could not be pointed at a different
-  deployment. It now speaks the public REST contract over `httpx`, through the real
-  middleware and the real policies, and a test fails if any file under the example
-  imports one. The one exception is onboarding, where creating a corpus and issuing a
-  credential are administrative and have no HTTP route by design.
-- **A corpus name is no longer described as a tenant boundary.** It is a namespace;
-  whether a caller may address one is decided by its credential. `README.md`,
-  `deployment.md` and `docs/STATUS.md` are corrected, and `docs/security.md`
-  documents the threat model, the deployment modes, the database roles, the five
-  access surfaces, the tenant scope and the known limitations.
+- **PR #32: compound-query per-subpart ambiguity adjudication.** A compound query is adjudicated per sub-part, so ambiguity in one part no longer cancels a clear answer in another.
 
 ### Compatibility
 
@@ -682,7 +692,6 @@ Memory Pack version changed, and no benchmark input was touched.
 - `scripts/db/runtime_roles.sql` now requires `-v runtime_password=<password>` (or
   `-v runtime_password_skip=on`). Running it without either fails with the reason
   instead of creating a role that cannot log in.
-
 ## [v0.9.1] - 2026-10-08
 
 A release on `v0.9.0`. It landed migrations `008`-`012` (tenant-scoped access,

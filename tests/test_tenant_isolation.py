@@ -162,6 +162,13 @@ def _reset(conn) -> None:
         sa.text("DELETE FROM memory_principals WHERE name = ANY(:names)"),
         {"names": list(OWNED_PRINCIPALS)},
     )
+    for stmt in (
+        "DELETE FROM memory_versions WHERE corpus_id = ANY(:ids)",
+        "DELETE FROM memory_claims WHERE corpus_id = ANY(:ids)",
+        "DELETE FROM memory_evidence WHERE corpus_id = ANY(:ids)",
+        "DELETE FROM memory_documents WHERE corpus_id = ANY(:ids)",
+    ):
+        conn.execute(sa.text(stmt), {"ids": ids or [""]})
     conn.execute(sa.text("DELETE FROM corpora WHERE id = ANY(:ids)"), {"ids": ids or [""]})
 
 

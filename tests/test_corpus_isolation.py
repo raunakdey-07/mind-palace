@@ -86,6 +86,14 @@ def _clean_corpora():
                         ),
                         {"n": name},
                     )
+                for stmt in (
+                    "DELETE FROM memory_versions WHERE corpus_id IN (SELECT id FROM corpora WHERE name IN (:a, :b))",
+                    "DELETE FROM memory_claims WHERE corpus_id IN (SELECT id FROM corpora WHERE name IN (:a, :b))",
+                    "DELETE FROM memory_evidence WHERE corpus_id IN (SELECT id FROM corpora WHERE name IN (:a, :b))",
+                    "DELETE FROM memory_documents WHERE corpus_id IN (SELECT id FROM corpora WHERE name IN (:a, :b))",
+                    "DELETE FROM documents WHERE corpus_id IN (SELECT id FROM corpora WHERE name IN (:a, :b))",
+                ):
+                    conn.execute(sa.text(stmt), {"a": CORPUS_A_NAME, "b": CORPUS_B_NAME})
                 conn.execute(
                     sa.text("DELETE FROM corpora WHERE name IN (:a, :b)"),
                     {"a": CORPUS_A_NAME, "b": CORPUS_B_NAME},

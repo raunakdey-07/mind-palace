@@ -673,7 +673,16 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
         if key in seen_claims:
             return
         seen_claims.add(key)
-        claims.append({"key": key, "claim": text, "value": value, "evidence": _limit_quote(raw)})
+        claims.append(
+            {
+                "key": key,
+                "claim": text,
+                "value": value,
+                "evidence": _limit_quote(raw),
+                "extraction_mode": "deterministic",
+                "provenance_state": "direct_claim",
+            }
+        )
 
     for number, raw, kind in _scan(_HTML_COMMENT.sub("", body)):
         if kind == "heading":
@@ -793,7 +802,16 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
         if key in seen_claims:
             continue
         seen_claims.add(key)
-        claims.append({"key": key, "claim": sent, "value": sent, "evidence": _limit_quote(sent)})
+        claims.append(
+            {
+                "key": key,
+                "claim": sent,
+                "value": sent,
+                "evidence": _limit_quote(sent),
+                "extraction_mode": "prose",
+                "provenance_state": "direct_claim",
+            }
+        )
 
 
 def claims_for(metadata: dict, body: str, chunks: list[dict], *, path: str = ""):

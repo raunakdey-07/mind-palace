@@ -299,6 +299,8 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
                 "claim": claim["claim"],
                 "valid_from": valid_from,
                 "valid_until": valid_until,
+                "extraction_mode": claim.get("extraction_mode", "deterministic"),
+                "provenance_state": claim.get("provenance_state", "direct_claim"),
                 **(references[0] if isinstance(evidence, str) else {"evidence": references}),
             }
         )

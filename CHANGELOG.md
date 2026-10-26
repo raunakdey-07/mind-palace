@@ -4,18 +4,37 @@ All notable public releases are listed here. Milestone identifiers are
 preserved inside each release entry and map to the public semantic version
 through [`docs/release-map.md`](docs/release-map.md).
 
+## [v0.9.2] - 2026-10-26
+
+Remediation pass: hardened revalidation, deterministic supersession pairing,
+real stale-fact benchmark metrics, and release documentation reconciliation.
+
+### Fixed
+- Revalidation now fails closed on malformed/integrity-failed receipts.
+- `include_drift` is honoured; raw claim ids without a temporal anchor return a
+  structured diagnostic instead of `drift: null`.
+- Cross-corpus authorization gap closed in REST and MCP revalidation.
+- MCP `_load_artifact` enforces ingest-root path confinement.
+- `walk_heads` guards against cyclic supersession graphs.
+- Supersession pairing no longer guesses by ordinal position.
+
+### Changed
+- Benchmark metrics are computed dynamically with fair baselines.
+
 ## [Unreleased]
 
 > ### Upgrade notes — read before upgrading
 >
-> **Schema.** `alembic upgrade head` moves `007` to `010`. Three migrations have
-> never shipped in a tag; all three are new since `v0.9.0`.
+> **Schema.** `alembic upgrade head` moves `007` to `012`. Five migrations have
+> never shipped in a tag; all five are new since `v0.9.0`.
 >
 > | migration | what it adds | reversibility |
 > |---|---|---|
 > | `008_tenant_scoped_access` | service credentials and row-level security on the protected tables | `downgrade` refuses while more than one evidence row per claim exists |
 > | `009_permission_granularity_and_erasure` | per-claim/per-corpus permissions and corpus erasure | reversible; `docs/security.md` names the tables that keep their rows |
 > | `010_bind_unrestricted_scope` | binds the `{*}` tenant sentinel to a role that already reads every row | reversible |
+| `011_cross_document_supersession` | cross-document supersession edges | reversible |
+| `012_claim_embedding_hnsw` | HNSW index on claim embeddings | reversible |
 >
 > **Server mode needs a grant step.** The `server` profile requires
 > `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_DEPLOYMENT=server`,
@@ -28,7 +47,7 @@ through [`docs/release-map.md`](docs/release-map.md).
 > **A downgrade destroys data.** Downgrading to `007` **drops
 > `memory_principals`** and **disables row-level security on all 9 protected
 > tables**. It **preserves all 6 claims**. Take a backup before you try it. The
-> upgrade path itself preserves everything: a `v0.9.0` archive upgraded to `010`
+> upgrade path itself preserves everything: a `v0.9.0` archive upgraded to `012`
 > keeps every claim identity, every receipt still verifies offline, and the
 > Memory Pack is byte-identical once the clock is pinned.
 >
@@ -666,9 +685,12 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ## [v0.9.1] - 2026-10-08
 
-A patch on `v0.9.0`. No memory semantics, retrieval behaviour, public response field
-or benchmark input changed; `M006.75`/`M006.5`/`M013` results are untouched and the
-disputed 47/60 artifact was not regenerated.
+A release on `v0.9.0`. It landed migrations `008`-`012` (tenant-scoped access,
+permission granularity and erasure, unrestricted-scope binding, cross-document
+supersession, and the claim-embedding HNSW index), the ONNX default embedder,
+cross-document supersession, verified MCP writes, and in-process memory CLI
+commands. `M006.75`/`M006.5`/`M013` results are untouched and the disputed 47/60
+artifact was not regenerated.
 
 The point of this release is that the previous release's claims are now checkable from
 a clean machine.

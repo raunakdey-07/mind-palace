@@ -261,20 +261,31 @@ async def revalidate(request: RevalidateRequest) -> dict:
     from sqlalchemy.exc import SQLAlchemyError
 
     if request.receipt is not None:
-        corpus = (
-            (request.receipt.get("response") or {}).get("corpus")
-            if isinstance(request.receipt, dict)
-            else None
-        )
-        corpus = corpus or request.corpus
+        if isinstance(request.receipt, dict):
+            embedded = (request.receipt.get("response") or {}).get("corpus")
+            if embedded is None:
+                embedded = request.receipt.get("corpus")
+        else:
+            embedded = None
+        corpus = embedded or request.corpus
+        if request.corpus is not None and embedded is not None and request.corpus != embedded:
+            from api.services.authz import AuthorizationError
+
+            raise AuthorizationError(
+                "forbidden", "corpus mismatch between request and receipt", 403
+            )
         if not corpus:
             raise HTTPException(
                 status_code=422,
                 detail={"code": "invalid_request", "message": "receipt: missing corpus"},
             )
     elif request.pack is not None:
-        corpus = request.pack.get("corpus") if isinstance(request.pack, dict) else None
-        corpus = corpus or request.corpus
+        embedded = request.pack.get("corpus") if isinstance(request.pack, dict) else None
+        if request.corpus is not None and embedded is not None and request.corpus != embedded:
+            from api.services.authz import AuthorizationError
+
+            raise AuthorizationError("forbidden", "corpus mismatch between request and pack", 403)
+        corpus = embedded or request.corpus
         if not corpus:
             raise HTTPException(
                 status_code=422,

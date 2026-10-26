@@ -813,6 +813,64 @@ async def _targets_for_reference(db, corpus_id: str, identity: str, reference: s
     return [c for c in candidates if c["memory_document_id"] == document]
 
 
+def _trailing_ordinal(value: str) -> int:
+    """Parse a trailing `:N` ordinal from a claim key/id string."""
+    import re as _re
+
+    match = _re.search(r":(\d+)$", value or "")
+    return int(match.group(1)) if match else 0
+
+
+def _pair_supersession_claims(keys, key_claim, targets):
+    """Pure deterministic pairing of authored claim keys to supersession targets."""
+    pairs: dict[str, tuple[str, str]] = {}
+    unmatched_keys = list(keys)
+    paired_target_ids: set[str] = set()
+
+    def _subject(text: str) -> str | None:
+        text = (text or "").strip()
+        if ":" in text:
+            prefix = text.split(":", 1)[0].strip()
+            return prefix.casefold() if prefix else None
+        # No structural delimiter: do not guess from prose openings.
+        return None
+
+    for target in targets:
+        if target["key"] in unmatched_keys:
+            pairs[target["key"]] = (target["id"], "explicit_claim_id")
+            unmatched_keys.remove(target["key"])
+            paired_target_ids.add(target["id"])
+
+    remaining_targets = [t for t in targets if t["id"] not in paired_target_ids]
+    remaining_keys = list(unmatched_keys)
+
+    changed = True
+    while changed and remaining_targets and remaining_keys:
+        changed = False
+        for target in list(remaining_targets):
+            tsubject = _subject(target["claim"])
+            if not tsubject:
+                continue
+            matches = [k for k in remaining_keys if _subject(key_claim.get(k, "")) == tsubject]
+            if len(matches) == 1:
+                k = matches[0]
+                pairs[k] = (target["id"], "explicit_claim_id")
+                remaining_keys.remove(k)
+                remaining_targets.remove(target)
+                paired_target_ids.add(target["id"])
+                changed = True
+
+    if remaining_targets and remaining_keys:
+        orphans = [t["id"] for t in remaining_targets]
+        remaining_count = len(remaining_targets)
+        raise ValueError(
+            f"ambiguous supersession pairing: {remaining_count} target(s) "
+            f"could not be matched unambiguously. Retire explicitly with "
+            f"--supersedes: {', '.join(o[:16] for o in orphans[:4])}."
+        )
+    return pairs
+
+
 async def _declared_supersessions(
     db, corpus_id: str, identity: str, references: list[str], claims: list[dict]
 ) -> tuple[dict[str, tuple[str, str]], list[UnresolvedSupersession]]:
@@ -858,70 +916,7 @@ async def _declared_supersessions(
 
     key_claim = {claim["key"]: claim["claim"] for claim in claims}
 
-    def _subject(text: str) -> str:
-        text = (text or "").strip()
-        if ":" in text:
-            return text.split(":", 1)[0].strip().casefold()
-        words = text.split()
-        return " ".join(words[:5]).casefold()
-
-    def _trailing_ordinal(value: str) -> int:
-        match = re.search(r":(\\d+)$", value or "")
-        return int(match.group(1)) if match else 0
-
-    unmatched_keys = list(keys)
-    paired_target_ids: set[str] = set()
-    for target in targets:
-        if target["key"] in unmatched_keys:
-            pairs[target["key"]] = (target["id"], "explicit_claim_id")
-            unmatched_keys.remove(target["key"])
-            paired_target_ids.add(target["id"])
-
-    remaining_targets = [t for t in targets if t["id"] not in paired_target_ids]
-    remaining_keys = list(unmatched_keys)
-
-    # Subject match: a rewritten ADR keeps its section headings, so claim
-    # subjects line up even when the positional keys do not.
-    changed = True
-    while changed and remaining_targets and remaining_keys:
-        changed = False
-        for target in list(remaining_targets):
-            tsubject = _subject(target["claim"])
-            matches = [k for k in remaining_keys if _subject(key_claim.get(k, "")) == tsubject]
-            if len(matches) == 1:
-                k = matches[0]
-                pairs[k] = (target["id"], "explicit_claim_id")
-                remaining_keys.remove(k)
-                remaining_targets.remove(target)
-                paired_target_ids.add(target["id"])
-                changed = True
-
-    if remaining_targets and remaining_keys:
-        if len(remaining_targets) == len(remaining_keys):
-            # Ordinal fallback: equal counts mean the two documents have the
-            # same shape, so pair in claim order rather than by guesswork.
-            sorted_keys = sorted(
-                remaining_keys,
-                key=lambda k: (_subject(key_claim.get(k, "")), _trailing_ordinal(k)),
-            )
-            sorted_targets = sorted(
-                remaining_targets,
-                key=lambda t: (_subject(t["claim"]), _trailing_ordinal(t["key"])),
-            )
-            for key, target in zip(sorted_keys, sorted_targets):
-                pairs[key] = (target["id"], "explicit_claim_id")
-                remaining_targets.remove(target)
-                remaining_keys.remove(key)
-        else:
-            orphans = [t["id"] for t in remaining_targets]
-            remaining_count = len(remaining_targets)
-            raise ValueError(
-                f"this document supersedes {len(targets)} claim(s) but authors "
-                f"{len(keys)} claim(s), and {remaining_count} of the superseded "
-                f"claims share no key with any of them. Refusing to pair by "
-                f"guesswork. Retire the remainder explicitly with --supersedes: "
-                f"{', '.join(o[:16] for o in orphans[:4])}."
-            )
+    pairs = _pair_supersession_claims(keys, key_claim, targets)
     return pairs, unresolved
 
 

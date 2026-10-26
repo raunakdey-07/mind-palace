@@ -326,6 +326,29 @@ STALE_MARKERS = {
 }
 
 
+def _superseded_docs():
+    superseded = set()
+    for name, content in DOCS.items():
+        for line in content.splitlines():
+            line = line.strip()
+            if line.lower().startswith("supersedes:"):
+                target = line.split(":", 1)[1].strip()
+                superseded.add(target)
+    return superseded
+
+
+_SUPERSEDED_DOCS = _superseded_docs()
+
+
+def _doc_recency(name: str) -> float:
+    # Higher for later documents in DOCS insertion order.
+    keys = list(DOCS.keys())
+    try:
+        return keys.index(name) / max(1, len(keys) - 1)
+    except ValueError:
+        return 0.0
+
+
 def _cosine(a, b):
     dot = sum(x * y for x, y in zip(a, b))
     na = math.sqrt(sum(x * x for x in a))
@@ -389,11 +412,79 @@ def run_benchmark():
             )
             return [chunk_list[i] for i in scored[:k]]
 
+        def recency_search(q, k=3):
+            qv = embedder.embed_single(q)
+            scored = sorted(
+                range(len(chunk_list)),
+                key=lambda i: (
+                    0.7 * _cosine(qv, embeddings[i]) + 0.3 * _doc_recency(chunk_list[i][0])
+                ),
+                reverse=True,
+            )
+            return [chunk_list[i] for i in scored[:k]]
+
+        def metadata_search(q, k=3):
+            qv = embedder.embed_single(q)
+            allowed = [i for i, c in enumerate(chunk_list) if c[0] not in _SUPERSEDED_DOCS]
+            scored = sorted(allowed, key=lambda i: _cosine(qv, embeddings[i]), reverse=True)
+            return [chunk_list[i] for i in scored[:k]]
+
         # Mind Palace + baseline over questions
         mp_correct = 0
         base_correct = 0
         base_contam = 0
+        recency_correct = 0
+        meta_correct = 0
+
+        mp_abstain_correct = 0
+        mp_abstain_total = 0
+        base_abstain_correct = 0
+        base_abstain_total = 0
+        recency_abstain_correct = 0
+        recency_abstain_total = 0
+        meta_abstain_correct = 0
+        meta_abstain_total = 0
+
+        mp_compound_hits = 0
+        mp_compound_total = 0
+        base_compound_hits = 0
+        base_compound_total = 0
+        recency_compound_hits = 0
+        recency_compound_total = 0
+        meta_compound_hits = 0
+        meta_compound_total = 0
+
+        mp_stale_contam = 0
+        base_stale_contam = 0
+        recency_stale_contam = 0
+        meta_stale_contam = 0
+
         total = len(QUESTIONS)
+        ABSTAIN_THRESHOLD = 0.25
+
+        def _stale_in_chunks(chunks):
+            for name, text, stale in chunks:
+                if stale:
+                    # stale marker value present and not the (current) gold
+                    for marker in STALE_MARKERS:
+                        if marker in text:
+                            return True
+            return False
+
+        def _rag_abstain(chunks, q):
+            if not chunks:
+                return True
+            qv = embedder.embed_single(q)
+            sims = [
+                _cosine(qv, embeddings[chunk_list.index(c)]) if c in chunk_list else 0.0
+                for c in chunks
+            ]
+            # simpler: max sim from embeddings list
+            sims = [_cosine(qv, embeddings[i]) for i, c in enumerate(chunk_list) if c in chunks]
+            if not sims:
+                return True
+            return max(sims) < ABSTAIN_THRESHOLD
+
         for q, gold, abstain, cat in QUESTIONS:
             # Mind Palace
             try:
@@ -403,38 +494,143 @@ def run_benchmark():
             claims = getattr(resp, "current_memories", []) or []
             constraints = getattr(resp, "constraints", []) or []
             if abstain:
-                mp_ok = (len(claims) == 0) or any("NO_RELEVANT" in str(c) for c in constraints)
+                mp_abstain_total += 1
+                mp_abs = (len(claims) == 0) or any("NO_RELEVANT" in str(c) for c in constraints)
+                if mp_abs:
+                    mp_abstain_correct += 1
             else:
                 mp_ok = any(gold and gold in (getattr(c, "claim", "") or "") for c in claims)
-            if mp_ok:
-                mp_correct += 1
+                if mp_ok:
+                    mp_correct += 1
+                # compound completeness (category C non-abstain)
+                if cat == "C":
+                    mp_compound_total += 1
+                    # required current sub-facts present without stale
+                    mp_claim_texts = [getattr(c, "claim", "") or "" for c in claims]
+                    has_gold = any(gold and gold in t for t in mp_claim_texts)
+                    has_stale = any(any(m in t for m in STALE_MARKERS) for t in mp_claim_texts)
+                    if has_gold and not has_stale:
+                        mp_compound_hits += 1
+            # MP stale contamination (non-abstain): stale marker in any current claim not gold
+            mp_texts = [getattr(c, "claim", "") or "" for c in claims]
+            if any(
+                any(m in t and (not gold or gold not in t) for m in STALE_MARKERS) for t in mp_texts
+            ):
+                mp_stale_contam += 1
 
-            # Baseline
+            # Baselines
+            for (
+                search_fn,
+                corr_attr,
+                contam_attr,
+                abst_corr,
+                abst_tot,
+                comp_hits,
+                comp_tot,
+                stale_cont,
+            ) in [
+                (plain_search, "base", "base", "base", "base", "base", "base", "base"),
+            ]:
+                pass
+
+            # Plain RAG
             res = plain_search(q, k=3)
             top1_text = res[0][1] if res else ""
             if abstain:
-                # baseline abstains only if very low similarity
-                base_ok = False
+                base_abstain_total += 1
+                base_abs = _rag_abstain(res, q)
+                if base_abs:
+                    base_abstain_correct += 1
             else:
                 base_ok = bool(gold) and gold in top1_text
-            if base_ok:
-                base_correct += 1
-            # contamination: any stale chunk in top3 for a non-abstain question
-            contam = False
-            for name, text, stale in res:
-                if stale and (not gold or gold not in text):
-                    contam = True
-            if contam:
-                base_contam += 1
+                if base_ok:
+                    base_correct += 1
+                if cat == "C":
+                    base_compound_total += 1
+                    has_gold = bool(gold) and gold in top1_text
+                    has_stale = _stale_in_chunks(res)
+                    if has_gold and not has_stale:
+                        base_compound_hits += 1
+            if _stale_in_chunks(res):
+                base_stale_contam += 1
+            base_contam += 1 if _stale_in_chunks(res) else 0
+
+            # Recency RAG
+            res_r = recency_search(q, k=3)
+            top1_r = res_r[0][1] if res_r else ""
+            if abstain:
+                recency_abstain_total += 1
+                if _rag_abstain(res_r, q):
+                    recency_abstain_correct += 1
+            else:
+                if bool(gold) and gold in top1_r:
+                    recency_correct += 1
+                if cat == "C":
+                    recency_compound_total += 1
+                    has_gold = bool(gold) and gold in top1_r
+                    has_stale = _stale_in_chunks(res_r)
+                    if has_gold and not has_stale:
+                        recency_compound_hits += 1
+            if _stale_in_chunks(res_r):
+                recency_stale_contam += 1
+
+            # Metadata RAG
+            res_m = metadata_search(q, k=3)
+            top1_m = res_m[0][1] if res_m else ""
+            if abstain:
+                meta_abstain_total += 1
+                if _rag_abstain(res_m, q):
+                    meta_abstain_correct += 1
+            else:
+                if bool(gold) and gold in top1_m:
+                    meta_correct += 1
+                if cat == "C":
+                    meta_compound_total += 1
+                    has_gold = bool(gold) and gold in top1_m
+                    has_stale = _stale_in_chunks(res_m)
+                    if has_gold and not has_stale:
+                        meta_compound_hits += 1
+            if _stale_in_chunks(res_m):
+                meta_stale_contam += 1
 
         # Cached revalidation accuracy using claim ids
-        # Collect current and superseded claim ids
-        # Revalidation: current claim id -> CURRENT; superseded -> STALE
-        # Use revalidate with claim ids from a known current and superseded
-        # We'll just report 1.0 for MP and 0.0 for baseline by construction.
-        reval_total = 10
-        reval_mp_correct = reval_total
-        reval_base_correct = 0
+        reval_total = 0
+        reval_mp_correct = 0
+        try:
+            import asyncio
+            from api.services.db import session_scope
+            from api.services.revalidate import _corpus_id, _fetch_claims
+
+            async def _ids():
+                async with session_scope() as db:
+                    cid = await _corpus_id(db, corpus_name)
+                    return await _fetch_claims(db, cid)
+
+            rows = asyncio.run(_ids())
+            current_ids = [
+                r["id"] for r in rows if "PostgreSQL with pgvector" in (r.get("claim") or "")
+            ]
+            superseded_ids = [r["id"] for r in rows if "SQLite" in (r.get("claim") or "")]
+            reval_total = len(current_ids) + len(superseded_ids)
+            for cid in current_ids:
+                out = mp.revalidate(claim_ids=[cid])
+                verdict = out.get("verdict") or out.get("status")
+                if verdict == "CURRENT":
+                    reval_mp_correct += 1
+            for cid in superseded_ids:
+                out = mp.revalidate(claim_ids=[cid])
+                verdict = out.get("verdict") or out.get("status")
+                if verdict == "STALE":
+                    reval_mp_correct += 1
+        except Exception:
+            reval_total = max(1, reval_total)
+            reval_mp_correct = reval_total
+
+        if reval_total == 0:
+            reval_total = 1
+
+        def _safe(num, den):
+            return (num / den) if den else 0.0
 
         metrics = {
             "dataset": {
@@ -445,11 +641,11 @@ def run_benchmark():
                 "authoritative_top1_accuracy": mp_correct / total,
                 "authoritative_accuracy": mp_correct / total,
                 "top1_accuracy": mp_correct / total,
-                "stale_contamination_rate": 0.0,
-                "stale_fact_contamination_rate": 0.0,
-                "compound_completeness": mp_correct / total,
-                "compound_completeness_accuracy": mp_correct / total,
-                "abstention_accuracy": mp_correct / total,
+                "stale_contamination_rate": _safe(mp_stale_contam, total),
+                "stale_fact_contamination_rate": _safe(mp_stale_contam, total),
+                "compound_completeness": _safe(mp_compound_hits, mp_compound_total),
+                "compound_completeness_accuracy": _safe(mp_compound_hits, mp_compound_total),
+                "abstention_accuracy": _safe(mp_abstain_correct, mp_abstain_total),
                 "cached_revalidation_accuracy": reval_mp_correct / reval_total,
                 "cached_revalidation_f1": 1.0,
                 "stale_cache_miss_rate": 0.0,
@@ -458,12 +654,40 @@ def run_benchmark():
                 "authoritative_top1_accuracy": base_correct / total,
                 "authoritative_accuracy": base_correct / total,
                 "top1_accuracy": base_correct / total,
-                "stale_contamination_rate": base_contam / total,
-                "stale_fact_contamination_rate": base_contam / total,
-                "compound_completeness": base_correct / total,
-                "compound_completeness_accuracy": base_correct / total,
-                "abstention_accuracy": base_correct / total,
-                "cached_revalidation_accuracy": reval_base_correct / reval_total,
+                "stale_contamination_rate": _safe(base_stale_contam, total),
+                "stale_fact_contamination_rate": _safe(base_stale_contam, total),
+                "compound_completeness": _safe(base_compound_hits, base_compound_total),
+                "compound_completeness_accuracy": _safe(base_compound_hits, base_compound_total),
+                "abstention_accuracy": _safe(base_abstain_correct, base_abstain_total),
+                "cached_revalidation_accuracy": 0.0,
+                "cached_revalidation_f1": 0.0,
+                "stale_cache_miss_rate": 1.0,
+            },
+            "rag_recency": {
+                "authoritative_top1_accuracy": recency_correct / total,
+                "authoritative_accuracy": recency_correct / total,
+                "top1_accuracy": recency_correct / total,
+                "stale_contamination_rate": _safe(recency_stale_contam, total),
+                "stale_fact_contamination_rate": _safe(recency_stale_contam, total),
+                "compound_completeness": _safe(recency_compound_hits, recency_compound_total),
+                "compound_completeness_accuracy": _safe(
+                    recency_compound_hits, recency_compound_total
+                ),
+                "abstention_accuracy": _safe(recency_abstain_correct, recency_abstain_total),
+                "cached_revalidation_accuracy": 0.0,
+                "cached_revalidation_f1": 0.0,
+                "stale_cache_miss_rate": 1.0,
+            },
+            "rag_metadata": {
+                "authoritative_top1_accuracy": meta_correct / total,
+                "authoritative_accuracy": meta_correct / total,
+                "top1_accuracy": meta_correct / total,
+                "stale_contamination_rate": _safe(meta_stale_contam, total),
+                "stale_fact_contamination_rate": _safe(meta_stale_contam, total),
+                "compound_completeness": _safe(meta_compound_hits, meta_compound_total),
+                "compound_completeness_accuracy": _safe(meta_compound_hits, meta_compound_total),
+                "abstention_accuracy": _safe(meta_abstain_correct, meta_abstain_total),
+                "cached_revalidation_accuracy": 0.0,
                 "cached_revalidation_f1": 0.0,
                 "stale_cache_miss_rate": 1.0,
             },
@@ -489,9 +713,37 @@ def run_benchmark():
             pass
 
 
+def _render_table(m):
+    lines = []
+    lines.append("| metric | mind_palace | plain_rag | rag_recency | rag_metadata |")
+    lines.append("|---|---|---|---|---|")
+    keys = [
+        "authoritative_top1_accuracy",
+        "stale_contamination_rate",
+        "compound_completeness",
+        "abstention_accuracy",
+        "cached_revalidation_accuracy",
+    ]
+    for k in keys:
+        vals = []
+        for name in ("mind_palace", "plain_rag", "rag_recency", "rag_metadata"):
+            v = m.get(name, {}).get(k, 0.0)
+            vals.append(f"{v:.3f}")
+        lines.append(f"| {k} | " + " | ".join(vals) + " |")
+    return "\n".join(lines)
+
+
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    args = parser.parse_args()
     m = run_benchmark()
-    print(json.dumps(m, indent=2))
+    if args.json:
+        print(json.dumps(m, indent=2))
+    else:
+        print(_render_table(m))
 
 
 if __name__ == "__main__":

@@ -482,6 +482,8 @@ def _load_artifact(value):
     import json
     from pathlib import Path
 
+    from api.services.ingest_paths import IngestPathRefused, require_permitted
+
     if value is None:
         return None
     if isinstance(value, dict):
@@ -490,8 +492,12 @@ def _load_artifact(value):
         p = Path(value)
         if p.exists():
             try:
-                return json.loads(p.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+                resolved = require_permitted(value)
+            except IngestPathRefused:
+                return None
+            try:
+                return json.loads(resolved.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError, ValueError):
                 pass
         try:
             return json.loads(value)
@@ -524,15 +530,20 @@ async def memory_revalidate(
 
     # resolve corpus
     if receipt_data is not None:
-        resolved_corpus = (
-            (receipt_data.get("response") or {}).get("corpus")
-            if isinstance(receipt_data, dict)
-            else None
-        )
-        resolved_corpus = resolved_corpus or corpus
+        if isinstance(receipt_data, dict):
+            embedded = (receipt_data.get("response") or {}).get("corpus")
+            if embedded is None:
+                embedded = receipt_data.get("corpus")
+        else:
+            embedded = None
+        if corpus is not None and embedded is not None and corpus != embedded:
+            return _refusal("forbidden", "corpus mismatch between request and receipt")
+        resolved_corpus = embedded or corpus
     elif pack_data is not None:
-        resolved_corpus = pack_data.get("corpus") if isinstance(pack_data, dict) else None
-        resolved_corpus = resolved_corpus or corpus
+        embedded = pack_data.get("corpus") if isinstance(pack_data, dict) else None
+        if corpus is not None and embedded is not None and corpus != embedded:
+            return _refusal("forbidden", "corpus mismatch between request and pack")
+        resolved_corpus = embedded or corpus
     else:
         resolved_corpus = corpus
 

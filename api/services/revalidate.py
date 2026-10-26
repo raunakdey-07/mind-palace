@@ -148,23 +148,51 @@ def _build_graph(
             return False
         return True
 
+    _cycle_state = {"found": False}
+    _graph_holder: dict[str, Any] = {}
+
     def walk_heads(start_id: str) -> list[str]:
-        succ = successors.get(start_id, [])
-        if not succ:
-            return [start_id]
-        out: list[str] = []
-        for s in succ:
-            out.extend(walk_heads(s["id"]))
+        nonlocal_cycle = _cycle_state
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def _dfs(cid: str) -> list[str]:
+            if cid in visiting:
+                nonlocal_cycle["found"] = True
+                return []
+            if cid in visited:
+                return []
+            visiting.add(cid)
+            succ = successors.get(cid, [])
+            if not succ:
+                result = [cid]
+            else:
+                result = []
+                for s in succ:
+                    result.extend(_dfs(s["id"]))
+            visiting.discard(cid)
+            visited.add(cid)
+            return result
+
+        raw = _dfs(start_id)
         # de-dupe preserving order
         seen: set[str] = set()
         unique: list[str] = []
-        for cid in out:
+        for cid in raw:
             if cid not in seen:
                 seen.add(cid)
                 unique.append(cid)
+        if nonlocal_cycle["found"]:
+            _cycle_state["found"] = True
+            _graph_holder.get("graph", {}).update(
+                {
+                    "cycle_detected": True,
+                }
+            )
         return unique
 
-    return {
+    _cycle_state.setdefault("found", False)
+    _graph = {
         "rows": rows,
         "by_id": by_id,
         "superseded_ids": superseded_ids,
@@ -172,7 +200,11 @@ def _build_graph(
         "active": active,
         "walk_heads": walk_heads,
         "latest_version_by_doc": latest_version_by_doc,
+        "cycle_detected": _cycle_state["found"],
+        "_cycle_state": _cycle_state,
     }
+    _graph_holder["graph"] = _graph
+    return _graph
 
 
 def _claim_ref_row(graph: dict[str, Any], ref: str) -> dict | None:
@@ -208,12 +240,8 @@ def _replacement_details(graph: dict[str, Any], claim_id: str) -> list[dict]:
         out.append(
             {
                 "id": r["id"],
-                "claim_id": r["id"],
-                "text": r["claim"],
                 "claim": r["claim"],
-                "source": r["path"],
                 "path": r["path"],
-                "timestamp": _iso(r["observed_at"]),
                 "observed_at": _iso(r["observed_at"]),
                 "key": r["key"],
             }
@@ -226,18 +254,12 @@ def _classify(graph: dict[str, Any], ref: str) -> dict:
     if row is None:
         return {
             "id": ref,
-            "claim_id": ref,
-            "text": None,
             "claim": None,
             "status": "missing",
-            "state": "missing",
             "path": None,
-            "source": None,
-            "timestamp": None,
             "observed_at": None,
-            "replacements": [],
+            "key": None,
             "superseded_by": [],
-            "replaced_by": [],
         }
     cid = row["id"]
     if cid in graph["superseded_ids"]:
@@ -249,19 +271,12 @@ def _classify(graph: dict[str, Any], ref: str) -> dict:
     repls = _replacement_details(graph, cid) if status == "superseded" else []
     return {
         "id": cid,
-        "claim_id": cid,
-        "text": row["claim"],
         "claim": row["claim"],
         "key": row["key"],
         "status": status,
-        "state": status,
         "path": row["path"],
-        "source": row["path"],
-        "timestamp": _iso(row["observed_at"]),
         "observed_at": _iso(row["observed_at"]),
-        "replacements": repls,
         "superseded_by": repls,
-        "replaced_by": repls,
     }
 
 
@@ -273,6 +288,7 @@ async def revalidate_claims(
     include_drift: bool = False,
     valid_at: Any = None,
 ) -> dict:
+    include_drift = True if include_drift is None else bool(include_drift)
     corpus_id = await _corpus_id(db, corpus_name)
     rows = await _fetch_claims(db, corpus_id)
     latest_versions = await _fetch_latest_versions(db, corpus_id)
@@ -290,13 +306,22 @@ async def revalidate_claims(
         "valid_at": _iso(valid_at) if valid_at is not None else None,
         "checked_at": checked_at,
         "claims": claims_out,
-        "results": claims_out,
         "drift": None,
     }
     ts = _parse(valid_at)
-    if include_drift or ts is not None:
+    if include_drift:
         if ts is not None:
             result["drift"] = await compute_drift(db, corpus_id, ts)
+        else:
+            result["drift"] = {
+                "status": "unavailable",
+                "reason": "drift requires a baseline timestamp (valid_at) for raw claim ids",
+                "since": None,
+                "checked_at": checked_at,
+                "counts": {"new": 0, "superseded": 0, "retired": 0},
+            }
+    else:
+        result["drift"] = None
     return result
 
 
@@ -374,34 +399,31 @@ async def revalidate_receipt(
     include_drift: bool = False,
     verify_integrity: bool = True,
 ) -> dict:
+    include_drift = True if include_drift is None else bool(include_drift)
     # Optional integrity check using memory_receipt if available.
     if verify_integrity:
-        try:
-            from memory_receipt import verify_response_receipt
+        from memory_receipt import verify_response_receipt
 
-            bundle = receipt_data.get("receipt") if isinstance(receipt_data, dict) else None
-            artifact = receipt_data.get("response") if isinstance(receipt_data, dict) else None
-            if isinstance(bundle, dict) and isinstance(artifact, dict):
-                result = verify_response_receipt(bundle, artifact)
-                if not result.get("verified", False):
-                    checked_at = datetime.now(timezone.utc).isoformat()
-                    return {
-                        "verdict": "STALE",
-                        "status": "REJECTED",
-                        "rejected": True,
-                        "source_artifact": "receipt",
-                        "artifact_type": "receipt",
-                        "corpus": (artifact.get("corpus") if isinstance(artifact, dict) else None),
-                        "originally_valid_at": None,
-                        "valid_at": None,
-                        "checked_at": checked_at,
-                        "claims": [],
-                        "results": [],
-                        "drift": None,
-                        "integrity": result,
-                    }
-        except Exception:
-            pass
+        bundle = receipt_data.get("receipt") if isinstance(receipt_data, dict) else None
+        artifact = receipt_data.get("response") if isinstance(receipt_data, dict) else None
+        if isinstance(bundle, dict) and isinstance(artifact, dict):
+            result = verify_response_receipt(bundle, artifact)
+            if not result.get("verified", False):
+                checked_at = datetime.now(timezone.utc).isoformat()
+                return {
+                    "verdict": "STALE",
+                    "status": "INVALID_RECEIPT",
+                    "rejected": True,
+                    "source_artifact": "receipt",
+                    "artifact_type": "receipt",
+                    "corpus": (artifact.get("corpus") if isinstance(artifact, dict) else None),
+                    "originally_valid_at": None,
+                    "valid_at": None,
+                    "checked_at": checked_at,
+                    "claims": [],
+                    "drift": None,
+                    "integrity": result,
+                }
 
     corpus_name, valid_at, claim_refs = _extract_receipt_claims(receipt_data)
     if not corpus_name:
@@ -410,13 +432,12 @@ async def revalidate_receipt(
         db,
         corpus_name,
         claim_refs,
-        include_drift=include_drift or True,
+        include_drift=include_drift,
         valid_at=valid_at,
     )
     res["source_artifact"] = "receipt"
     res["artifact_type"] = "receipt"
-    # drift included when artifact carries valid_at (already). Respect flag.
-    if not (include_drift or valid_at):
+    if not include_drift:
         res["drift"] = None
     return res
 
@@ -427,6 +448,7 @@ async def revalidate_pack(
     *,
     include_drift: bool = False,
 ) -> dict:
+    include_drift = True if include_drift is None else bool(include_drift)
     corpus_name, valid_at, claim_refs = _extract_pack_claims(pack_data)
     if not corpus_name:
         raise ValueError("pack: missing corpus")
@@ -434,12 +456,12 @@ async def revalidate_pack(
         db,
         corpus_name,
         claim_refs,
-        include_drift=include_drift or True,
+        include_drift=include_drift,
         valid_at=valid_at,
     )
     res["source_artifact"] = "pack"
     res["artifact_type"] = "pack"
-    if not (include_drift or valid_at):
+    if not include_drift:
         res["drift"] = None
     return res
 
@@ -458,6 +480,9 @@ async def compute_drift(
     superseded_events: list[dict] = []
     retired_events: list[dict] = []
 
+    def _norm(text: Any) -> str:
+        return " ".join(str(text or "").split()).casefold()
+
     for r in rows:
         obs = r["observed_at"]
         if obs is None:
@@ -466,20 +491,36 @@ async def compute_drift(
             obs = _parse(obs)
         if obs is None:
             continue
-        if obs > since:
-            new_claims.append(
-                {
-                    "id": r["id"],
-                    "claim_id": r["id"],
-                    "key": r["key"],
-                    "claim": r["claim"],
-                    "text": r["claim"],
-                    "path": r["path"],
-                    "source": r["path"],
-                    "observed_at": _iso(r["observed_at"]),
-                    "timestamp": _iso(r["observed_at"]),
-                }
-            )
+        if obs <= since:
+            continue
+        # Do not count re-versioned claims with identical normalized content
+        # as net-new drift unless authoritative state actually changed.
+        prior_identical = False
+        for other in rows:
+            if other["id"] == r["id"]:
+                continue
+            other_obs = other["observed_at"]
+            if isinstance(other_obs, str):
+                other_obs = _parse(other_obs)
+            if other_obs is None or other_obs > since:
+                continue
+            if other.get("key") != r.get("key"):
+                continue
+            if _norm(other.get("claim")) != _norm(r.get("claim")):
+                continue
+            prior_identical = True
+            break
+        if prior_identical:
+            continue
+        new_claims.append(
+            {
+                "id": r["id"],
+                "claim": r["claim"],
+                "key": r["key"],
+                "path": r["path"],
+                "observed_at": _iso(r["observed_at"]),
+            }
+        )
 
     # superseded claims: claims that introduced a supersession edge, observed after since
     for r in rows:
@@ -569,9 +610,3 @@ async def compute_drift(
         },
     }
     return drift
-
-
-# Backwards/alias names that hidden tests might import.
-revalidate = revalidate_claims
-revalidate_receipts = revalidate_receipt
-revalidate_packs = revalidate_pack

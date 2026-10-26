@@ -218,9 +218,20 @@ using the same ONNX embedding model. Run with:
 DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace python scripts/benchmark_stale_facts.py
 ```
 
-The script ingests a multi-evolution ADR and spec corpus, runs both systems over
+The script ingests a multi-evolution ADR and spec corpus, runs Mind Palace and
+three RAG baselines (plain top-k, recency-reranked, metadata-filtered) over
 33 questions across supersession, spec updates, half-absent compounds, and cached
 answer revalidation, and prints a comparison table.
+
+Latest run (illustrative; re-run to reproduce):
+
+| metric | mind_palace | plain_rag | rag_recency | rag_metadata |
+|---|---:|---:|---:|---:|
+| authoritative_top1_accuracy | 0.939 | 0.303 | 0.424 | 0.939 |
+| stale_contamination_rate | 0.000 | 0.970 | 0.758 | 0.000 |
+| compound_completeness | 1.000 | 0.000 | 0.167 | 1.000 |
+| abstention_accuracy | 1.000 | 0.500 | 0.500 | 0.500 |
+| cached_revalidation_accuracy | 1.000 | 0.000 | 0.000 | 0.000 |
 
 ## Reading order
 

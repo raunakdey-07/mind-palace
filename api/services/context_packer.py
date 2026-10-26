@@ -89,6 +89,7 @@ class ContextMemory:
     valid_until: Optional[str] = None
     supersedes_id: Optional[str] = None
     evidence: List[ContextEvidence] = field(default_factory=list)
+    role: str = "fact"
 
 
 @dataclass
@@ -131,6 +132,7 @@ class ContextPack:
     as_of: Optional[str] = None
     valid_at: Optional[str] = None
     budget_unit: str = "token_estimate"
+    task_context: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {
@@ -166,6 +168,7 @@ class ContextPack:
             "truncated": self.truncated,
             "status": self.status,
             "budget_unit": self.budget_unit,
+            "task_context": self.task_context,
             "as_of": self.as_of,
             "valid_at": self.valid_at,
             "memories": [_memory_dict(m) for m in self.memories],
@@ -250,6 +253,7 @@ def _to_memory(claim, evidence_by_id: dict) -> ContextMemory:
         valid_until=_iso(claim.valid_until),
         supersedes_id=claim.supersedes_id,
         evidence=_evidence_for(claim, evidence_by_id),
+        role=classify_memory_role(claim.claim),
     )
 
 
@@ -342,6 +346,7 @@ def _assemble_authoritative(
     results,
     budget_tokens: int,
     strategy: str,
+    task_type: str | None = None,
 ) -> ContextPack:
     """Build the pack from archive authority, with retrieval as raw material only."""
     evidence_by_id = {e.id: e for e in memory.evidence}
@@ -429,6 +434,17 @@ def _assemble_authoritative(
                 sources.append(source)
 
     context_text = "\n\n---\n\n".join(rendered)
+    # Task-aware partitioned package (additive; does not alter rendered context).
+    task_context = {
+        "must_follow_constraints": [m.claim for m in memories if m.role == "rule"],
+        "authoritative_facts": [m.claim for m in memories if m.role == "fact"],
+        "style_examples": [m.claim for m in memories if m.role == "example"],
+        "historical_lessons_and_decisions": [
+            m.claim for m in (historical + uncertain) if m.role in ("observation", "decision")
+        ],
+        "superseded_or_conflicting_context": [c.key for c in conflicts],
+        "missing_information_gaps": [],
+    }
     if not sources:
         # Attribution comes from kept evidence and kept chunks only.
         for item in memories + historical + uncertain + [o for c in conflicts for o in c.options]:
@@ -457,6 +473,7 @@ def _assemble_authoritative(
         changes=changes,
         as_of=_iso(memory.state.as_of),
         valid_at=_iso(memory.state.valid_at),
+        task_context=task_context,
     )
 
 
@@ -466,6 +483,7 @@ def pack_context(
     budget_tokens: int = DEFAULT_BUDGET_TOKENS,
     strategy: str = "hybrid_rrf",
     memory=None,
+    task_type=None,
 ) -> ContextPack:
     """Pack memory into model-ready context within a token budget.
 
@@ -475,7 +493,7 @@ def pack_context(
     ranked chunks are the pack.
     """
     if memory is not None:
-        return _assemble_authoritative(query, memory, results, budget_tokens, strategy)
+        return _assemble_authoritative(query, memory, results, budget_tokens, strategy, task_type)
     return _pack_retrieval_only(query, results, budget_tokens, strategy)
 
 
@@ -572,3 +590,25 @@ def _pack_retrieval_only(
         truncated=truncated,
         status=RESOLVED,
     )
+
+
+def classify_memory_role(claim: str, heading: str = "") -> str:
+    """Deterministic semantic-role classification for a memory claim."""
+    low = (claim or "").lower()
+    h = (heading or "").lower()
+    if any(k in h for k in ("example", "approved copy", "sample")):
+        return "example"
+    rule_words = ("must", "never", "avoid", "prohibited", "should", "always", "cannot")
+    if any(k in low for k in rule_words):
+        return "rule"
+    if any(k in low for k in ("approved", "rejected", "abandoned", "selected", "decided")):
+        return "decision"
+    if any(
+        k in low
+        for k in ("conversion", "engagement", "outperformed", "missed target", "worked better")
+    ):
+        return "observation"
+    fact_words = ("%", "fabric", "audience", "deadline", "spec")
+    if any(k in low for k in fact_words):
+        return "fact"
+    return "fact"

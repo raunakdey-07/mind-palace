@@ -75,6 +75,7 @@ async def build_context(
     strategy: str = "hybrid_rrf",
     as_of=None,
     intent: str | None = None,
+    task_type: str | None = None,
 ) -> tuple[ContextPack, dict]:
     """Return the pack plus a timing/decision trace for observability.
 
@@ -143,7 +144,12 @@ async def build_context(
         trace["semantic"] = True
 
     pack = pack_context(
-        query, results, budget_tokens=budget_tokens, strategy=strategy, memory=memory
+        query,
+        results,
+        budget_tokens=budget_tokens,
+        strategy=strategy,
+        memory=memory,
+        task_type=task_type,
     )
     trace["status"] = pack.status
     trace["returned_count"] = len(pack.memories) + len(pack.conflicts)

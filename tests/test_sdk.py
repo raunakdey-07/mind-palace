@@ -72,13 +72,13 @@ def _cleanup_sdk_corpus():
                         "(SELECT id FROM corpora WHERE name = 'sdk-test-corpus')"
                     )
                 )
-                for stmt in (
-                    "DELETE FROM memory_versions WHERE corpus_id IN (SELECT id FROM corpora WHERE name = 'sdk-test-corpus')",
-                    "DELETE FROM memory_claims WHERE corpus_id IN (SELECT id FROM corpora WHERE name = 'sdk-test-corpus')",
-                    "DELETE FROM memory_evidence WHERE corpus_id IN (SELECT id FROM corpora WHERE name = 'sdk-test-corpus')",
-                    "DELETE FROM memory_documents WHERE corpus_id IN (SELECT id FROM corpora WHERE name = 'sdk-test-corpus')",
-                ):
-                    conn.execute(sa.text(stmt))
+                for tbl in ("memory_versions", "memory_claims",
+                            "memory_evidence", "memory_documents"):
+                    conn.execute(sa.text(
+                        "DELETE FROM " + tbl +
+                        " WHERE corpus_id IN (SELECT id FROM corpora "
+                        "WHERE name = 'sdk-test-corpus')"
+                    ))
                 conn.execute(sa.text("DELETE FROM corpora WHERE name = 'sdk-test-corpus'"))
         finally:
             engine.dispose()

@@ -737,8 +737,63 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
             pending.append((number, raw))
     close()
 
+    # Prose path: when the structural reader found nothing, fall back to
+    # extracting normative/declarative sentences from ordinary paragraphs.
+    # Every claim still carries an exact verbatim evidence span.
+    if not claims:
+        _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals)
+
     claims.sort(key=lambda claim: claim["key"])
     return claims, warnings
+
+
+#: Modal/normative signals that mark a sentence as a policy/constraint/fact.
+_PROSE_SIGNALS = frozenset(
+    "must avoid never should believes prefers positions targets prohibit require "
+    "cannot can't won't don't do not always never".split()
+)
+
+
+def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals):
+    haystacks = [c.get("text") or "" for c in chunks]
+    # Collect sentences from prose paragraphs.
+    sentences = []
+    for line in body.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("|") or line.startswith(">"):
+            continue
+        if (
+            line.startswith("-")
+            or line.startswith("*")
+            or line.startswith("+")
+            or re.match(r"^\d", line)
+        ):
+            continue
+        # split into sentences
+        for part in re.split(r"(?<=[.!?])\s+", line):
+            part = part.strip()
+            if len(part) < MIN_CLAIM_CHARS:
+                continue
+            low = part.lower()
+            if not any(re.search(r"\b" + re.escape(sig) + r"\b", low) for sig in _PROSE_SIGNALS):
+                continue
+            sentences.append(part)
+    for sent in sentences:
+        if not any(sent in hay for hay in haystacks):
+            # try to find a chunk containing a substring
+            continue
+        sig = ("prose", sent)
+        if sig in seen_quotes:
+            continue
+        seen_quotes.add(sig)
+        key_base = "md:prose"
+        ordinal = ordinals.get(key_base, 0)
+        ordinals[key_base] = ordinal + 1
+        key = "%s:%d" % (key_base, ordinal)
+        if key in seen_claims:
+            continue
+        seen_claims.add(key)
+        claims.append({"key": key, "claim": sent, "value": sent, "evidence": _limit_quote(sent)})
 
 
 def claims_for(metadata: dict, body: str, chunks: list[dict], *, path: str = ""):

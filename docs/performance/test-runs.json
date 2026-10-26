@@ -340,6 +340,22 @@
       "seconds": 550.3,
       "skipped": "1"
     },
+    "adcf1fe: full suite": {
+      "collected": "2061",
+      "commit": "adcf1fe50def11f65b4b8e703d4b8ecddfef00ce",
+      "failed": "0",
+      "junit_normalisation": {
+        "normalised": true,
+        "replaced_with": ".",
+        "replacements": 20
+      },
+      "junitxml": "docs/performance/evidence/pytest-head.xml",
+      "label": "full suite",
+      "note": "release v0.9.2 default dependency",
+      "passed": "2041",
+      "seconds": 514.2,
+      "skipped": "20"
+    },
     "b6d4852: full suite: one connection per sync, on top of the corpus-reset work": {
       "collected": "2009",
       "commit": "b6d4852e43e9bf9d0aba56363a7801e5895f419f",

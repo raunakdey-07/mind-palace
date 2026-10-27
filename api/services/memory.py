@@ -301,6 +301,7 @@ def _prepare(metadata: dict, chunks: list[dict]) -> tuple[dict, list[dict], list
                 "valid_until": valid_until,
                 "extraction_mode": claim.get("extraction_mode", "deterministic"),
                 "provenance_state": claim.get("provenance_state", "direct_claim"),
+                "info_state": claim.get("info_state", "approved"),
                 **(references[0] if isinstance(evidence, str) else {"evidence": references}),
             }
         )
@@ -1163,9 +1164,11 @@ async def record_version(
         await db.execute(
             text("""
             INSERT INTO memory_claims (corpus_id, memory_document_id, version_id, id,
-                key, value, claim, valid_from, valid_until, supersedes_id, supersession_basis)
+                key, value, claim, valid_from, valid_until, supersedes_id, supersession_basis,
+                info_state, extraction_mode, provenance_state)
             VALUES (:c, :d, :v, :id, :key, CAST(:value AS jsonb), :claim,
-                    :valid_from, :valid_until, :supersedes, :basis)
+                    :valid_from, :valid_until, :supersedes, :basis,
+                    :info_state, :extraction_mode, :provenance_state)
         """),
             claim_rows,
         )

@@ -814,6 +814,35 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
         )
 
 
+def detect_info_state(metadata: dict, body: str = "") -> str:
+    """Classify the authority state of a document/section. Defaults to 'approved'."""
+    text = " ".join(str(v) for v in (metadata or {}).values()).lower()
+    tags = metadata.get("tags", []) if isinstance(metadata, dict) else []
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",")]
+    tag_text = " ".join(str(t).lower() for t in tags)
+    combined = text + " " + tag_text + " " + (body or "").lower()[:500]
+    if any(k in combined for k in ("rejected", "do not use", "prohibited strategy")):
+        return "rejected"
+    if any(k in combined for k in ("draft", "brainstorm", "unapproved", "work in progress")):
+        return "draft"
+    if any(k in combined for k in ("superseded", "deprecated", "obsolete")):
+        return "superseded"
+    if any(
+        k in combined
+        for k in (
+            "historical observation",
+            "performance report",
+            "past campaign",
+            "lessons learned",
+        )
+    ):
+        return "historical_observation"
+    if any(k in combined for k in ("inferred", "candidate interpretation", "unreviewed")):
+        return "inferred_insight"
+    return "approved"
+
+
 def claims_for(metadata: dict, body: str, chunks: list[dict], *, path: str = ""):
     """The claims a document should archive: its own, or the ones its structure gives.
 

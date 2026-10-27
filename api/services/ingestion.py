@@ -446,6 +446,11 @@ class IngestionService:
                 # the ingestion report reads one list instead of two.
                 frontmatter_warnings.append(warning)
             if derived and derived["claims"]:
+                from api.services import markdown_claims as _mc
+
+                _state = _mc.detect_info_state(metadata, body)
+                for _c in derived["claims"]:
+                    _c.setdefault("info_state", _state)
                 # Re-validate against the augmented metadata. The extractor only
                 # emits evidence it has already located in an archived chunk, so
                 # this cannot fail on the quote rule -- but the archive is the

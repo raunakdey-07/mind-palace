@@ -72,18 +72,14 @@ def _cleanup_sdk_corpus():
                         "(SELECT id FROM corpora WHERE name = 'sdk-test-corpus')"
                     )
                 )
-                for tbl in (
-                    "memory_versions",
-                    "memory_claims",
-                    "memory_evidence",
-                    "memory_documents",
-                ):
-                    conn.execute(
-                        sa.text(
-                            "DELETE FROM " + tbl + " WHERE corpus_id IN (SELECT id FROM corpora "
-                            "WHERE name = 'sdk-test-corpus')"
-                        )
+                conn.execute(
+                    sa.text(
+                        "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
+                        "SELECT set_config('mindpalace.erasure', 'on', true); "
+                        "SELECT mindpalace_erase_corpus(id) FROM corpora "
+                        "WHERE name = 'sdk-test-corpus'"
                     )
+                )
                 conn.execute(sa.text("DELETE FROM corpora WHERE name = 'sdk-test-corpus'"))
         finally:
             engine.dispose()

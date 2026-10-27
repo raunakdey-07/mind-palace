@@ -389,6 +389,15 @@
       "seconds": 585.85,
       "skipped": "2"
     },
+    "bb7ee66: full suite": {
+      "collected": "2067",
+      "commit": "bb7ee66ce1d34c0988b26519aabbe1add519adc9",
+      "failed": "0",
+      "label": "full suite",
+      "passed": "2047",
+      "seconds": 533.0,
+      "skipped": "20"
+    },
     "bd3cfc2: full suite: the coverage measured against the question, on top of the chunk-vector work": {
       "collected": "1998",
       "commit": "bd3cfc2f688aa38a55d13b4b4bec30bcc9604a53",

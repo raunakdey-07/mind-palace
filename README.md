@@ -4,11 +4,11 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/mind-palace/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Current release: v0.9.2](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.9.3](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-> **The path below installs `0.9.2`, the current tagged and published release.**
-> `v0.9.2` is tagged on `main` and published as a GitHub Release. To install
-> the previous tagged release instead, clone the `v0.9.1` tag.
+> **The path below installs `0.9.3`, the current tagged and published release.**
+> `v0.9.3` is tagged on `main` and published as a GitHub Release. To install
+> the previous tagged release instead, clone the `v0.9.2` tag.
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**

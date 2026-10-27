@@ -25,6 +25,7 @@ relationship between the two numbering systems.
 | M015.2 | The five-minute memory path | `v0.9.0` |
 | M016 | Instant recall, explicit model-free mode, real-project dogfooding | `v0.9.0` |
 | M016.1 | Final limitation audit: reproducible CI, a smaller wheel, Python 3.15 evaluated | `v0.9.1` |
+| M017 | Prose ingestion, authority states, task-aware retrieval, tenant hardening, benchmark | `v0.9.3` |
 
 ### The trust boundary, stated here
 
@@ -68,14 +69,21 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-**The latest tagged public release is `v0.9.2`** (tagged on `main` at `19863d8`,
-published as a GitHub Release).
+**The latest tagged public release is `v0.9.3`** (tagged on `main` at
+`039c541`, published as a GitHub Release).
 
-`v0.9.2` is **released**. `pyproject.toml` says `0.9.2`, `CHANGELOG.md` has a
-`[v0.9.2]` entry, the `v0.9.2` tag exists on `origin`, and the release is
-published. `pip install mindpalace==0.9.2` resolves to it.
+`v0.9.3` is **released**. `pyproject.toml` says `0.9.3`, `CHANGELOG.md` has a
+`[v0.9.3]` entry, the `v0.9.3` tag exists on `origin`, and the release is
+published. `pip install mindpalace==0.9.3` resolves to it.
 
-`v0.9.1` remains the previous tagged release at `be1931a`.
+`v0.9.2` remains the previous tagged release at `61500a8`.
+
+`v0.9.0` is therefore the release in which a developer can adopt Mind Palace —
+seven commands that take a statement and a question, answers that arrive fast, outputs
+that can be inspected and proved afterwards, and a decision log that works on a real
+project. `v0.9.1` is what is meant to make that claim checkable from a clean
+machine, and `v0.9.3` adds the M017 readiness work: prose ingestion, authority states,
+task-aware retrieval, tenant hardening, and the 4-way agency benchmark.
 
 `v0.9.0` is therefore the release in which a developer can adopt Mind Palace —
 seven commands that take a statement and a question, answers that arrive fast, outputs

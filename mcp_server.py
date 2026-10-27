@@ -115,14 +115,16 @@ def _caller():
 
 
 @mcp.tool()
-def context(query: str, corpus: str, budget_tokens: int = 4096) -> str:
+def context(query: str, corpus: str, budget_tokens: int = 4096, task_type: str | None = None,
+           include_drafts: bool = False, standing_rules: str = "pinned") -> str:
     """Retrieve model-ready context for a query from a named corpus.
 
     Returns bounded text with source attribution. Prefer this over raw
     search when feeding an LLM.
     """
     with _caller():
-        pack = _client(corpus).context(query, budget_tokens=budget_tokens)
+        pack = _client(corpus).context(query, budget_tokens=budget_tokens, task_type=task_type,
+                                      include_drafts=include_drafts, standing_rules=standing_rules)
     return json.dumps(pack.to_dict(), indent=2)
 
 

@@ -58,6 +58,9 @@ async def get_context(
             "Inferred from the question when omitted."
         ),
     ),
+    task_type: Optional[str] = Query(None, description="Task type for budget weights"),
+    include_drafts: bool = Query(False, description="Re-include draft claims/chunks"),
+    standing_rules: str = Query("pinned", description="pinned or auto"),
     db: DbSession = None,
 ) -> ContextPackResponse:
     """Assemble bounded, evidence-backed context for ``q``.
@@ -111,6 +114,9 @@ async def get_context(
             strategy=strategy,
             as_of=cutoff,
             intent=intent,
+            task_type=task_type,
+            include_drafts=include_drafts,
+            standing_rules=standing_rules,
         )
     except ContextError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

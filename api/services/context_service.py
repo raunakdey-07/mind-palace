@@ -76,6 +76,8 @@ async def build_context(
     as_of=None,
     intent: str | None = None,
     task_type: str | None = None,
+    include_drafts: bool = False,
+    standing_rules: str = "pinned",
 ) -> tuple[ContextPack, dict]:
     """Return the pack plus a timing/decision trace for observability.
 
@@ -150,6 +152,8 @@ async def build_context(
         strategy=strategy,
         memory=memory,
         task_type=task_type,
+        include_drafts=include_drafts,
+        standing_rules=standing_rules,
     )
     trace["status"] = pack.status
     trace["returned_count"] = len(pack.memories) + len(pack.conflicts)

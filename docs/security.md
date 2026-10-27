@@ -1099,3 +1099,18 @@ against a different database was answered — confidently, from the wrong archiv
 Fixed: the handshake now carries a digest of scheme, host, port, database and
 user (never the password), and a runtime that disagrees is discarded and
 replaced, exactly as one built from stale code already was.
+
+## Scope-token enforcement (Migration 015)
+
+Enforcement defaults to **off**. Until the operator runs
+`SELECT mp_set_scope_token_enforcement(true)` (as `mindpalace_owner`), the
+bypass is NOT closed. Verify with:
+
+```sql
+SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
+```
+
+`mindpalace secret rotate` must be run as the owner role. The DB row and
+`MIND_PALACE_SCOPE_SECRET` must change together or every query returns 0 rows.
+Safe order: update the DB row first, then roll the env var, expecting a brief
+outage. Use `--out FILE` (mode 0600) to avoid terminal history.

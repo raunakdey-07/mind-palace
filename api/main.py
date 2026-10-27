@@ -118,6 +118,17 @@ async def enforce_startup_posture() -> None:
     # is gated; local deployments are exempt, matching the posture check above.
     if mode == authz.DEPLOYMENT_SERVER:
         if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "").lower() == "off":
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "MIND_PALACE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
+                "tenant scope can be forged. Run mp_set_scope_token_enforcement(true) to close it."
+            )
+            if os.getenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "") != "1":
+                raise RuntimeError(
+                    "refusing to start: scope-token enforcement is disabled (off). "
+                    "Set MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1 to acknowledge, "
+                    "or run mp_set_scope_token_enforcement(true)."
+                )
             return
         secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
         probe_scope = "{*}"

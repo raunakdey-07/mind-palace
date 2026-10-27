@@ -32,7 +32,7 @@ properties of the memory layer, not of model behaviour.
 **What a real LLM evaluation harness tests** (output quality): whether an actual
 model, given the Mind Palace context package, produces on-brand, constraint-
 adherent copy. That is measured separately by the agency-readiness benchmark
-(`benchmarks/agency_readiness/`) with a pluggable LLM evaluator; it is not what
+(`benchmarks/agency_readiness/`); it is not what
 this example asserts.
 
 **Execution mode:** the example reaches Mind Palace over HTTP through the public

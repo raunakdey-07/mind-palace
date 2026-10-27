@@ -1217,6 +1217,11 @@ async def test_every_tenant_bearing_table_is_policy_protected():
         # through SECURITY DEFINER functions -- asserted in test_scope_forgery.py.
         "memory_principals",
         "memory_principal_corpora",
+        # Server secret material, not tenant content: the HMAC key used to
+        # verify `mindpalace.scope_token`, held by `mp_verify_scope_token`
+        # (SECURITY DEFINER, maintenance-owned). The runtime role holds no
+        # privileges on it at all, so it cannot read or probe the secret.
+        "memory_server_secrets",
         # Migration bookkeeping. Holds one row and no tenant data.
         "alembic_version",
     }

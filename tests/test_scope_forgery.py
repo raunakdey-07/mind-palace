@@ -27,12 +27,24 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import hmac
 
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import text
 
 from tenant_harness import apply_as_runtime, requires_tenant_db, runtime_url
+
+#: Shared with `api/services/db.py`: the server secret used to compute and
+#: verify scope tokens. Tests use the same default the application falls back
+#: to, so a legitimate token verifies and a forged one does not.
+SCOPE_SECRET = "dev-scope-secret"
+
+
+def scope_token_for(scope: str) -> str:
+    """The token the application would set for a given tenant scope."""
+    return hmac.new(SCOPE_SECRET.encode(), scope.encode(), hashlib.sha256).hexdigest()
+
 
 pytestmark = [pytest.mark.asyncio, requires_tenant_db]
 
@@ -215,8 +227,47 @@ async def test_the_residual_forge_is_measured_not_hidden(two_tenants):
     )
 
 
-async def _runtime_scalar(statement: str, params: dict | None = None, *, scope: str):
-    return await _scalar(statement, params, scope=scope, role="runtime")
+async def test_forged_scope_token_fails_closed(two_tenants):
+    """A non-empty but forged scope token returns zero rows.
+
+    The token does not verify against the server secret held in
+    `memory_server_secrets`, so `mp_verify_scope_token` returns FALSE and every
+    row-level predicate rejects the row -- a forged non-empty token fails closed.
+    """
+    beta = two_tenants["forge-beta"]
+    leaked = await _runtime_scalar(
+        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c",
+        {"c": beta},
+        scope=beta,
+        scope_token="forged-non-empty-string",
+    )
+    assert leaked == 0, (
+        f"a forged scope token read {leaked} rows it holds no grant for; the "
+        "token is not HMAC-verified"
+    )
+
+
+async def test_legitimate_scope_token_still_reads_own_corpus(two_tenants):
+    """A token that verifies against the server secret still reads its corpus."""
+    alpha = two_tenants["forge-alpha"]
+    token = scope_token_for(alpha)
+    own = await _runtime_scalar(
+        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c",
+        {"c": alpha},
+        scope=alpha,
+        scope_token=token,
+    )
+    assert own >= 1, "a principal with a valid token must read its own corpus"
+
+
+async def _runtime_scalar(
+    statement: str,
+    params: dict | None = None,
+    *,
+    scope: str,
+    scope_token: str | None = None,
+):
+    return await _scalar(statement, params, scope=scope, role="runtime", scope_token=scope_token)
 
 
 async def _runtime_rows(statement: str):
@@ -249,12 +300,24 @@ async def _runtime_call(statement: str, params: dict | None = None, *, scope: st
     return await _call(statement, params, scope=scope, role="runtime")
 
 
-async def _scalar(statement: str, params: dict | None, *, scope: str, role: str):
+async def _scalar(
+    statement: str,
+    params: dict | None,
+    *,
+    scope: str,
+    role: str,
+    scope_token: str | None = None,
+):
     async with _session(role) as conn:
         await conn.execute(  # noqa: E501
             sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
             {"s": scope},
         )
+        if scope_token is not None:
+            await conn.execute(
+                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                {"t": scope_token},
+            )
         result = await conn.execute(sa.text(statement), params or {})
         return result.scalar()
 

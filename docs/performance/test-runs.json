@@ -1,6 +1,15 @@
 {
   "note": "Written only by an actual pytest run. See scripts/record_test_run.py.",
   "runs": {
+    "0bf31c5: full suite": {
+      "collected": "2062",
+      "commit": "0bf31c5b070da6c16f1dfeaba69d4f840be57892",
+      "failed": "0",
+      "label": "full suite",
+      "passed": "2042",
+      "seconds": 782.4,
+      "skipped": "20"
+    },
     "13bf26b: full suite: job-scoped skip gate, torch-dependent tests moved to the job that has torch": {
       "collected": "1832",
       "commit": "13bf26bfe8c1efa2b1c0dbdbc66088e050b96f1e",

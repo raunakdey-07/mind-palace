@@ -162,6 +162,14 @@ def _reset(conn) -> None:
         sa.text("DELETE FROM memory_principals WHERE name = ANY(:names)"),
         {"names": list(OWNED_PRINCIPALS)},
     )
+    conn.execute(
+        sa.text(
+            "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
+            "SELECT set_config('mindpalace.erasure', 'on', true); "
+            "SELECT mindpalace_erase_corpus(id) FROM corpora WHERE id = ANY(:ids)"
+        ),
+        {"ids": ids or [""]},
+    )
     conn.execute(sa.text("DELETE FROM corpora WHERE id = ANY(:ids)"), {"ids": ids or [""]})
 
 

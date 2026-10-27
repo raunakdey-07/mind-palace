@@ -477,6 +477,10 @@ class IngestionService:
                 "document_id": live,
                 "chunk_count": 0,
                 "claim_count": len(claims),
+                "direct_claims": sum(
+                    1 for c in claims if c.get("extraction_mode") == "deterministic"
+                ),
+                "prose_claims": sum(1 for c in claims if c.get("extraction_mode") == "prose"),
                 "version_id": previous["id"],
                 "event": "UNCHANGED",
                 "message": "Document unchanged, skipped",
@@ -557,6 +561,8 @@ class IngestionService:
             "document_id": doc_id,
             "chunk_count": count,
             "claim_count": len(claims),
+            "direct_claims": sum(1 for c in claims if c.get("extraction_mode") == "deterministic"),
+            "prose_claims": sum(1 for c in claims if c.get("extraction_mode") == "prose"),
             "version_id": version["id"],
             "event": version["event"],
             "message": f"Ingested {count} chunks with version history",
@@ -698,6 +704,8 @@ class IngestionService:
         added = changed = unchanged = deleted = failed = 0
         total_chunks = 0
         total_claims = 0
+        total_direct = 0
+        total_prose = 0
         warnings: list[dict] = []
         # One entry per document, always. A summary that only counts successes
         # cannot answer "did my document land?", which is the question somebody
@@ -776,6 +784,8 @@ class IngestionService:
                     claims_for_doc = int(result.get("claim_count") or 0)
                     total_claims += claims_for_doc
                     total_chunks += result.get("chunk_count", 0)
+                    total_direct += int(result.get("direct_claims") or 0)
+                    total_prose += int(result.get("prose_claims") or 0)
                     entry = {
                         "path": rel_path,
                         "outcome": outcome,
@@ -845,6 +855,9 @@ class IngestionService:
             "failed": failed,
             "documents": len(documents),
             "claim_count": total_claims,
+            "direct_claims": total_direct,
+            "prose_claims": total_prose,
+            "pending_review_count": 0,
             "without_claims": sum(1 for d in documents if d["reason"] == "no_claims_declared"),
             "document_results": documents,
             "warnings": warnings,

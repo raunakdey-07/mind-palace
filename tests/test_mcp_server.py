@@ -54,6 +54,14 @@ def test_mcp_context_tool_returns_attributed_pack(tmp_path, monkeypatch):
                         "(SELECT id FROM corpora WHERE name = 'mcp-test-corpus')"
                     )
                 )
+                conn.execute(
+                    sa.text(
+                        "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
+                        "SELECT set_config('mindpalace.erasure', 'on', true); "
+                        "SELECT mindpalace_erase_corpus(id) FROM corpora "
+                        "WHERE name = 'mcp-test-corpus'"
+                    )
+                )
                 conn.execute(sa.text("DELETE FROM corpora WHERE name = 'mcp-test-corpus'"))
         finally:
             engine.dispose()

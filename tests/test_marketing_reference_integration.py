@@ -244,6 +244,14 @@ def _purge_example_corpora() -> None:
                 )
             )
             conn.execute(sa.text("DELETE FROM memory_principals WHERE name LIKE 'service-ws-%'"))
+            conn.execute(
+                sa.text(
+                    "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
+                    "SELECT set_config('mindpalace.erasure', 'on', true); "
+                    "SELECT mindpalace_erase_corpus(id) FROM corpora WHERE id = ANY(:ids)"
+                ),
+                {"ids": ids or [""]},
+            )
             conn.execute(sa.text("DELETE FROM corpora WHERE id = ANY(:ids)"), {"ids": ids or [""]})
     finally:
         engine.dispose()

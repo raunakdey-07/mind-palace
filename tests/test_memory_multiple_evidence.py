@@ -294,6 +294,8 @@ async def test_single_string_prepared_shape_and_ids_unchanged(multiple_db):
             "claim": "Color is blue",
             "valid_from": None,
             "valid_until": None,
+            "extraction_mode": "deterministic",
+            "provenance_state": "direct_claim",
             "quote": "blue",
             "order_index": 0,
             "start_offset": 9,

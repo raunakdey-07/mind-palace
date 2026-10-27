@@ -87,6 +87,22 @@ def _clean_corpora():
                         {"n": name},
                     )
                 conn.execute(
+                    sa.text(
+                        "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
+                        "SELECT set_config('mindpalace.erasure', 'on', true); "
+                        "SELECT mindpalace_erase_corpus(id) FROM corpora "
+                        "WHERE name IN (:a, :b)"
+                    ),
+                    {"a": CORPUS_A_NAME, "b": CORPUS_B_NAME},
+                )
+                conn.execute(
+                    sa.text(
+                        "DELETE FROM documents WHERE corpus_id IN "
+                        "(SELECT id FROM corpora WHERE name IN (:a, :b))"
+                    ),
+                    {"a": CORPUS_A_NAME, "b": CORPUS_B_NAME},
+                )
+                conn.execute(
                     sa.text("DELETE FROM corpora WHERE name IN (:a, :b)"),
                     {"a": CORPUS_A_NAME, "b": CORPUS_B_NAME},
                 )
@@ -142,7 +158,7 @@ summary: "Lives only in corpus A"
 
 # Corpus A
 
-Quokka fusion reactors require beryllium shielding.
+Quokka fusion reactors use beryllium shielding.
 """
 
 DOC_B = """---

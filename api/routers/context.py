@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.models.schemas import ContextPackResponse
 from api.services.context_packer import ContextPack
 from api.services.context_service import ContextError, build_context
+from api.services.check import check_draft
 from api.services.corpora import (
     CorpusScopeNotFound,
     CorpusScopeRequired,
@@ -133,3 +134,24 @@ async def get_context(
     trace_out.mark_pack(pack.token_estimate, pack.truncated)
     trace_out.emit()
     return _as_response(pack)
+
+
+@router.post("/check")
+async def check_endpoint(
+    corpus: str | None = Query(None),
+    db: DbSession = None,
+    payload: dict = None,
+):
+    from fastapi import Body
+    draft_text = ""
+    if payload and isinstance(payload, dict):
+        draft_text = payload.get("draft_text", "")
+    corpus_id = None
+    try:
+        corpus_id, selected = await __import__("api.services.corpora", fromlist=["resolve_corpus_scope"]).resolve_corpus_scope(db, corpus)
+    except Exception:
+        selected = corpus
+    if selected is None:
+        selected = corpus
+    result = await check_draft(db, selected, draft_text)
+    return result

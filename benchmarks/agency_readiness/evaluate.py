@@ -339,13 +339,12 @@ async def setup_brand_corpora(tmp_path: Path) -> dict[str, BrandFixture]:
     """Ingest every brand fixture into its own corpus in all four formats.
 
     Ingestion order matters for versioning: superseded content is ingested
-    first (version 1), then current content (version 2) on the same paths, so
+    first (version 1), then current content (version 2) on the same path, so
     the archive marks the old voice / fabric spec as superseded and the new
     one as current.
     """
     svc = IngestionService(memory_enabled=True, require_embeddings=False, embed_chunks=False)
     svc.embedder = DeterministicEmbedder()
-    os.environ["MIND_PALACE_INGEST_ROOTS"] = str(tmp_path)
 
     fixtures: dict[str, BrandFixture] = {}
     for fixture in BRAND_FIXTURES:

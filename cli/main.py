@@ -2211,6 +2211,75 @@ corpora_app = typer.Typer(
     help="Create and inspect corpora. Administrative: a corpus is a tenant boundary.",
     no_args_is_help=True,
 )
+secret_app = typer.Typer(name="secret", help="Manage server secrets (scope HMAC).")
+app.add_typer(secret_app)
+
+
+@secret_app.command("rotate")
+def secret_rotate(
+    secret: Optional[str] = typer.Option(
+        None, "--secret", help="New 32-byte hex secret. Generated if omitted."
+    ),
+    database_url: Optional[str] = typer.Option(
+        None, "--database-url", help="Admin DATABASE_URL. Defaults to env."
+    ),
+    out: Optional[Path] = typer.Option(
+        None, "--out", help="Write the rotated secret to FILE (mode 0600)."
+    ),
+) -> None:
+    """Rotate the scope HMAC secret in memory_server_secrets.
+
+    Connects with admin/maintenance credentials. Prints the rotated value and
+    the steps to update MIND_PALACE_SCOPE_SECRET in the service environment.
+    """
+    import secrets as _secrets
+    import sqlalchemy as sa
+
+    url = database_url or os.getenv("DATABASE_URL")
+    if not url:
+        typer.echo("DATABASE_URL is not set.", err=True)
+        raise typer.Exit(1)
+    if secret is None:
+        secret = _secrets.token_hex(32)
+    # validate hex-ish 32 bytes
+    try:
+        if len(bytes.fromhex(secret)) != 32:
+            raise ValueError("not 32 bytes")
+    except ValueError:
+        typer.echo("Secret must be 32 bytes (64 hex chars).", err=True)
+        raise typer.Exit(1)
+
+    sync_url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace(
+        "postgresql+asyncpg", "postgresql+psycopg2"
+    )
+    if sync_url.startswith("postgresql://"):
+        sync_url = sync_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+    engine = sa.create_engine(sync_url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO memory_server_secrets (name, value) VALUES "
+                    "('scope_hmac_secret', :v) "
+                    "ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value"
+                ),
+                {"v": secret},
+            )
+    finally:
+        engine.dispose()
+
+    typer.echo(f"Rotated scope secret: {secret}")
+    if out is not None:
+        out.write_text(secret + "\n")
+        os.chmod(out, 0o600)
+    typer.echo("")
+    typer.echo("Update the service environment:")
+    typer.echo(f"  export MIND_PALACE_SCOPE_SECRET={secret}")
+    typer.echo("Then restart the service. Re-run mp_set_scope_token_enforcement(true)")
+    typer.echo("if enforcement should remain enabled.")
+
+
 app.add_typer(corpora_app)
 
 

@@ -61,6 +61,7 @@ FROZEN_FILES = (
     "docs/performance/heldout-v3-freeze.json",
     "docs/performance/retrieval-lab-protocol.freeze.json",
     "docs/performance/downstream-eval-protocol.freeze.json",
+    "benchmarks/agency_readiness/sealed_spec.json",
 )
 
 

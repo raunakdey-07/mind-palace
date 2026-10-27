@@ -75,6 +75,10 @@ async def enforce_startup_posture() -> None:
     reads, and serves every tenant to every caller is the failure this whole
     mechanism exists to prevent.
     """
+    import hashlib
+    import hmac
+    import os
+
     from api.services import authz
     from api.services.db import session_scope
     from api.services.posture import inspect
@@ -109,6 +113,63 @@ async def enforce_startup_posture() -> None:
             + "; ".join(unsafe)
             + ". See docs/security.md for what a network deployment must set."
         )
+
+    # Scope-token enforcement (Migration 015). Only the server/production profile
+    # is gated; local deployments are exempt, matching the posture check above.
+    if mode == authz.DEPLOYMENT_SERVER:
+        if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "").lower() == "off":
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "MIND_PALACE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
+                "tenant scope can be forged. Run mp_set_scope_token_enforcement(true) to close it."
+            )
+            if os.getenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "") != "1":
+                raise RuntimeError(
+                    "refusing to start: scope-token enforcement is disabled (off). "
+                    "Set MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1 to acknowledge, "
+                    "or run mp_set_scope_token_enforcement(true)."
+                )
+            return
+        secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
+        probe_scope = "{*}"
+        if secret == "" or secret == "dev-scope-secret":
+            raise RuntimeError(
+                "refusing to start: MIND_PALACE_SCOPE_SECRET is unset or uses the "
+                "default dev value. See docs/security.md."
+            )
+        try:
+            async with session_scope() as db:
+                from sqlalchemy import text as _text
+
+                probe_token = hmac.new(
+                    secret.encode(), probe_scope.encode(), hashlib.sha256
+                ).hexdigest()
+                row = (
+                    await db.execute(
+                        _text(
+                            "SELECT enforced, using_default_secret, secret_matches "
+                            "FROM mp_scope_enforcement_status(:t, :s)"
+                        ),
+                        {"t": probe_token, "s": probe_scope},
+                    )
+                ).first()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                "refusing to start: could not verify scope enforcement " f"({type(exc).__name__})."
+            ) from exc
+        if row is None or not row[0]:
+            raise RuntimeError(
+                "refusing to start: scope-token enforcement is disabled. "
+                "Run mp_set_scope_token_enforcement(true) as mindpalace_owner."
+            )
+        if row[1]:
+            raise RuntimeError(
+                "refusing to start: the database still uses the default scope secret."
+            )
+        if not row[2]:
+            raise RuntimeError(
+                "refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the " "database row."
+            )
 
 
 @contextlib.asynccontextmanager

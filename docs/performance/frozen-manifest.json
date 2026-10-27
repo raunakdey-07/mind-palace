@@ -1,7 +1,8 @@
 {
   "algorithm": "sha256",
-  "count": 32,
+  "count": 33,
   "files": {
+    "benchmarks/agency_readiness/sealed_spec.json": "0d75792b22f28f1cd2b747de58191720f27365cad84ed5bd6ad9146c1a61df9f",
     "docs/performance/baseline-packs.json": "47b6da2ad65eac1165d4239da636952ec5538cf12977e69b2de6b7352d698842",
     "docs/performance/downstream-eval-protocol.freeze.json": "d982d926ebbf2e9de3e366ed7c9a07b7274d00121e3ea0bc420281d30869cad2",
     "docs/performance/heldout-v2-freeze.json": "bc0b28a25f7ba214e7bb33bf1f5d94bef1e48c428c99abd1eb8e28e1eda2145a",

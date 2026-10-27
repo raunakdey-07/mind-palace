@@ -65,13 +65,23 @@ removes them one at a time).
    exists is not the caller's business. Creating a corpus and granting a
    credential are administrative operations and need an unrestricted identity.
 
-3. **Row-level security — migration `008`.** Every tenant-owned table carries a
-   policy keyed on `corpus_id`, with `ENABLE` and `FORCE`. `chunks` has no
-   corpus column, so its policy reaches the corpus through the document it
+3. **Row-level security — migrations `008`, `010` and `014`.** Every tenant-owned
+   table carries a policy keyed on `corpus_id`, with `ENABLE` and `FORCE`. `chunks`
+   has no corpus column, so its policy reaches the corpus through the document it
    belongs to, whose own policy already applies inside the sub-query. The
    predicate reads one transaction-local setting and returns `false` when it is
    absent, so a query that runs without a tenant scope sees no rows and writes
-   none.
+   none. Migration `010` binds the unrestricted `{*}` sentinel to roles that
+   already read every row, so it cannot be self-asserted by the runtime role.
+   Migration `014` adds a companion `mindpalace.scope_token` setting: the
+   application sets it to an HMAC-SHA-256 of the tenant scope under
+   `MIND_PALACE_SCOPE_SECRET` (default `dev-scope-secret`), and the row-level
+   policy verifies it inside `mp_verify_scope_token`, a `SECURITY DEFINER`
+   function owned by the maintenance role. The server secret lives in
+   `memory_server_secrets`, a table the runtime role cannot read. A non-empty but
+   forged token therefore fails closed and returns zero rows; an absent or empty
+   token falls back to plain scope membership (the residual scope forge remains
+   documented below).
 
 ## Every surface reaches the same boundary
 
@@ -523,6 +533,14 @@ enumerating every credential is exactly what the application role is denied.
 Revocation takes effect on the next request: nothing caches a resolved principal
 across requests in the HTTP path, and the in-process SDK re-establishes its scope
 per operation.
+
+The scope-token secret (`MIND_PALACE_SCOPE_SECRET`, default `dev-scope-secret`)
+is shared between the application and the database: the application computes
+`HMAC-SHA-256(secret, tenant_scope)` as `mindpalace.scope_token`, and the row-level
+policy verifies it against `memory_server_secrets`. Rotate it like a credential —
+issue the new value, deploy it to both the application and
+`memory_server_secrets`, then revoke the old — because any scope token issued
+under the old secret stops verifying the moment the stored secret changes.
 
 ## Tenant onboarding and offboarding
 

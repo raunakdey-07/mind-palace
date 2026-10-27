@@ -282,6 +282,15 @@
       "seconds": 584.98,
       "skipped": "2"
     },
+    "75cf133: full suite": {
+      "collected": "2066",
+      "commit": "75cf133d0b3559e85b1d253cc78f0ba0c7c81fb3",
+      "failed": "0",
+      "label": "full suite",
+      "passed": "2046",
+      "seconds": 775.2,
+      "skipped": "20"
+    },
     "880cffd: full suite, workstation, disposable PG 15.4 at 15440, Session 10": {
       "collected": "1645",
       "commit": "880cffd0048400f036c2f3b5059c677f75fb27b5",

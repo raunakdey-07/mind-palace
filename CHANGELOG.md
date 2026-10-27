@@ -6,6 +6,37 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+## [v0.9.3] - 2026-10-27
+
+M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.
+
+### Prose ingestion (Phase 2, #52, PR #59)
+- stdlib `.docx`/`.pptx`/`.pdf` parsing alongside Markdown (multi-format ingestion).
+- Normative-sentence extraction from prose paragraphs (modal signals only; broad declarative fallback removed).
+- Ingestion coverage reporting: `direct_claims`, `prose_claims`, `pending_review_count`.
+- `extraction_mode`/`provenance_state`/`info_state` propagated to `memory_claims`; migrations `013` and `014`.
+
+### Authority states & adversarial supersession (Phase 3, #53, PR #60)
+- Canonical authority states: `approved`, `draft`, `superseded`, `rejected`, `historical_observation`, `inferred_insight` (default `approved`).
+- `detect_info_state()` classifies authority state from metadata/tags/body; wired through `_prepare`/`record_version`/ingestion.
+- Adversarial supersession suite: top-of-list insertions, mid-list deletions, reorderings, section moves — zero false supersession links.
+
+### Task-aware context packaging (Phase 4, #54, PR #61)
+- Typed memory roles: `rule`, `fact`, `example`, `decision`, `observation`.
+- `ContextPack.task_context` with `must_follow_constraints`, `authoritative_facts`, `style_examples`, `historical_lessons_and_decisions`, `superseded_or_conflicting_context`, `missing_information_gaps`.
+- `task_type` passthrough from `build_context` through `pack_context` to `_assemble_authoritative`.
+- Frozen-60 and Dev-202: 0 negative flips.
+
+### Grant-bound RLS hardening (Phase 5, #55, PR #62)
+- `mindpalace.scope_token` is HMAC-SHA-256 of the tenant scope under `MIND_PALACE_SCOPE_SECRET`, set on every `after_begin`.
+- `mp_verify_scope_token()` SECURITY DEFINER verifies non-empty tokens against `memory_server_secrets` (unreadable by the runtime role); forged tokens fail closed (0 rows).
+- Migration `014` replaces the presence-only scope check with real cryptographic verification.
+
+### 4-way agency benchmark (Phase 6, #56, PR #63)
+- 3 brand corpora (Northstar, VoltEdge, Hearth & Loom) in `.md`/`.docx`/`.pdf`/`.pptx`.
+- Conditions: A No Memory, B Static Context, C Conventional RAG, D Mind Palace.
+- Acceptance metrics: critical brand-rule recall >= 95% (11/11); prohibited-claim violations = 0; superseded-policy errors = 0; unapproved brainstorming leak = 0; cross-brand leakage = 0; relevant evidence availability >= 90% (11/11).
+
 ## [v0.9.2] - 2026-10-26
 
 Remediation pass: hardened revalidation, deterministic supersession pairing,

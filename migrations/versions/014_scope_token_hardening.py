@@ -84,19 +84,23 @@ def upgrade() -> None:
         "INSERT INTO memory_server_secrets (name, value) VALUES "
         f"('{SERVER_SECRET_NAME}', '{DEFAULT_SERVER_SECRET}')"
     )
-    op.execute("ALTER TABLE memory_server_secrets OWNER TO mindpalace_owner")
-    # `mindpalace_runtime` is provisioned by scripts/db/runtime_roles.sql, which
-    # runs after migrations in CI, so guard on its existence here.
+    # `mindpalace_owner` and `mindpalace_runtime` are provisioned by
+    # scripts/db/runtime_roles.sql, which runs after migrations in CI, so
+    # guard both on existence here.
     op.execute(
         "DO $$\n"
         "BEGIN\n"
+        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_owner') THEN\n"
+        "        EXECUTE 'ALTER TABLE memory_server_secrets OWNER TO mindpalace_owner';\n"
+        "    END IF;\n"
         "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_runtime') THEN\n"
-        "        EXECUTE 'REVOKE ALL ON memory_server_secrets FROM mindpalace_runtime';\n"
-        "        EXECUTE ('GRANT EXECUTE ON FUNCTION mp_verify_scope_token(CHAR(64), TEXT) ' \n"
-        "            || ' TO mindpalace_runtime');\n"
+        "        REVOKE ALL ON memory_server_secrets FROM mindpalace_runtime;\n"
+        "        GRANT EXECUTE ON FUNCTION mp_verify_scope_token(CHAR(64), TEXT)\n"
+        "            TO mindpalace_runtime;\n"
         "    END IF;\n"
         "END $$;\n"
     )
+    op.execute("REVOKE ALL ON memory_server_secrets FROM PUBLIC")
     op.execute("REVOKE ALL ON memory_server_secrets FROM PUBLIC")
 
     op.execute("""
@@ -130,6 +134,24 @@ def upgrade() -> None:
         END
         $$
     """)
+
+    # `mindpalace_owner` and `mindpalace_runtime` are provisioned by
+    # scripts/db/runtime_roles.sql, which runs after migrations in CI, so
+    # guard both on existence here.
+    op.execute(
+        "DO $$\n"
+        "BEGIN\n"
+        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_owner') THEN\n"
+        "        EXECUTE 'ALTER TABLE memory_server_secrets OWNER TO mindpalace_owner';\n"
+        "    END IF;\n"
+        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_runtime') THEN\n"
+        "        REVOKE ALL ON memory_server_secrets FROM mindpalace_runtime;\n"
+        "        GRANT EXECUTE ON FUNCTION mp_verify_scope_token(CHAR(64), TEXT)\n"
+        "            TO mindpalace_runtime;\n"
+        "    END IF;\n"
+        "END $$;\n"
+    )
+    op.execute("REVOKE ALL ON memory_server_secrets FROM PUBLIC")
 
     op.execute(_predicate())
 

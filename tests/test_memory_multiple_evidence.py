@@ -296,6 +296,7 @@ async def test_single_string_prepared_shape_and_ids_unchanged(multiple_db):
             "valid_until": None,
             "extraction_mode": "deterministic",
             "provenance_state": "direct_claim",
+            "info_state": "approved",
             "quote": "blue",
             "order_index": 0,
             "start_offset": 9,

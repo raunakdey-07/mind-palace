@@ -252,6 +252,24 @@ async def memory_db():
                             f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS "
                             "owner_principal_id CHAR(64)"
                         )
+                    # Migration `013` adds `info_state`, `extraction_mode` and
+                    # `provenance_state` to `memory_claims`, and
+                    # `record_version` writes them on every archive row. The
+                    # fixture stops the migration chain at `004`/`007`/`011`,
+                    # so add the three columns here -- the same deliberate,
+                    # visible duplication the comment above describes.
+                    sync_conn.exec_driver_sql(
+                        "ALTER TABLE memory_claims ADD COLUMN IF NOT EXISTS "
+                        "info_state TEXT NOT NULL DEFAULT 'approved'"
+                    )
+                    sync_conn.exec_driver_sql(
+                        "ALTER TABLE memory_claims ADD COLUMN IF NOT EXISTS "
+                        "extraction_mode TEXT NOT NULL DEFAULT 'deterministic'"
+                    )
+                    sync_conn.exec_driver_sql(
+                        "ALTER TABLE memory_claims ADD COLUMN IF NOT EXISTS "
+                        "provenance_state TEXT NOT NULL DEFAULT 'direct_claim'"
+                    )
 
                 await conn.run_sync(upgrade)
                 async with AsyncSession(bind=conn, expire_on_commit=False) as db:

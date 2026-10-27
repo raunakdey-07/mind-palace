@@ -469,6 +469,15 @@
       "seconds": 793.7,
       "skipped": "2"
     },
+    "f182e8f: full suite": {
+      "collected": "2064",
+      "commit": "f182e8f9832e57a00659086dc30822a4b00bed33",
+      "failed": "0",
+      "label": "full suite",
+      "passed": "2044",
+      "seconds": 544.8,
+      "skipped": "20"
+    },
     "fbf1ffb: full suite: in-process memory pack, uv.lock ignored, serve DX": {
       "collected": "2042",
       "commit": "fbf1ffb0a63c339c8e15f10c6950045a569cf340",

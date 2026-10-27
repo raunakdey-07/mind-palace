@@ -362,3 +362,83 @@ async def _session(role: str):
             yield conn
     finally:
         await engine.dispose()
+
+
+async def test_only_one_mindpalace_allowed_corpus_overload_and_policies_updated():
+    """Migration 015 keeps a single CHAR(64) overload and updates all policies."""
+    rows = await _maintenance_rows(
+        "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace "
+        "WHERE n.nspname='public' AND p.proname='mindpalace_allowed_corpus'"
+    )
+    assert rows[0][0] == 1
+    defs = await _maintenance_rows(
+        "SELECT pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace n "
+        "ON n.oid=p.pronamespace WHERE n.nspname='public' "
+        "AND p.proname='mindpalace_allowed_corpus'"
+    )
+    assert "mp_verified_scope_corpora" in defs[0][0]
+    policies = await _maintenance_rows(
+        "SELECT count(*) FROM pg_policies "
+        "WHERE (coalesce(qual,'') || ' ' || coalesce(with_check,'')) "
+        "LIKE '%mindpalace_allowed_corpus%'"
+    )
+    assert policies[0][0] >= 9
+
+
+async def test_enforcement_on_empty_token_returns_zero_rows(two_tenants):
+    """With enforcement on, an empty token yields zero rows."""
+    beta = two_tenants["forge-beta"]
+    # enable enforcement as maintenance
+    async with _session("maintenance") as db:
+        await db.execute(
+            __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(true)")
+        )
+        await db.commit()
+    try:
+        leaked = await _runtime_scalar(
+            "SELECT count(*) FROM memory_claims WHERE corpus_id = :c",
+            {"c": beta},
+            scope=beta,
+            scope_token=None,
+        )
+        assert leaked == 0
+    finally:
+        async with _session("maintenance") as db:
+            await db.execute(
+                __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(false)")
+            )
+            await db.commit()
+
+
+async def test_enforcement_on_valid_token_reads_own_corpus(two_tenants):
+    """With enforcement on, a valid token reads its corpus."""
+    alpha = two_tenants["forge-alpha"]
+    token = scope_token_for(alpha)
+    async with _session("maintenance") as db:
+        await db.execute(
+            __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(true)")
+        )
+        await db.commit()
+    try:
+        own = await _runtime_scalar(
+            "SELECT count(*) FROM memory_claims WHERE corpus_id = :c",
+            {"c": alpha},
+            scope=alpha,
+            scope_token=token,
+        )
+        assert own >= 1
+    finally:
+        async with _session("maintenance") as db:
+            await db.execute(
+                __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(false)")
+            )
+            await db.commit()
+
+
+async def test_runtime_cannot_change_enforcement():
+    """The runtime role must not be able to toggle enforcement."""
+    import sqlalchemy as sa
+
+    with pytest.raises(Exception):
+        async with _session("runtime") as conn:
+            await conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))

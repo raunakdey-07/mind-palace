@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "token_budget": 1200,
+  "conditions": ["A_no_memory", "B_static_truncated", "C_raw_rag", "C_plus_filtered_raw_rag", "D_mind_palace"],
+  "required_fixture_traps": [
+    "approved_prohibition_do_not_use_curated",
+    "approved_prose_we_draft_emails_in_plain_language",
+    "descriptive_mustard_yellow_packaging",
+    "v2_top_of_list_rule_insertion",
+    "hard_wrapped_prose_paragraphs",
+    "mixed_bullet_prose_table_document",
+    "descriptive_voice_no_modal_verb_warm_dry_confident",
+    "unapproved_september_brainstorm_draft"
+  ],
+  "brands": {
+    "northstar": {
+      "standing_prohibitions": ["curated", "carbon-neutral", "100% eco-friendly", "revolutionary", "guilt-free"],
+      "superseded_v1_markers": ["enthusiastic, playful tone", "65% recycled polyester", "Instagram is the primary channel"],
+      "unapproved_draft_markers": ["try a playful tone again", "50% flash sale countdown", "TikTok meme giveaway"],
+      "required_voice_descriptors": ["warm, a little dry, and confident", "plain language"],
+      "approved_specs": ["80% GRS-certified recycled polyester", "first-time buyers aged 20-30"]
+    },
+    "voltedge": {
+      "standing_prohibitions": ["effortless", "miracle recovery", "clinically proven cure"],
+      "superseded_v1_markers": ["casual weekend jogger tone", "12mm heel drop"],
+      "unapproved_draft_markers": ["crypto athlete sponsorship", "overnight muscle gain"],
+      "required_voice_descriptors": ["high-cadence, kinetic, and precise"],
+      "approved_specs": ["8mm heel drop", "Pebax supercritical foam"]
+    },
+    "hearth_and_loom": {
+      "standing_prohibitions": ["hotel-grade luxury", "stain-proof forever", "fast-fashion home"],
+      "superseded_v1_markers": ["machine-washable on hot", "synthetic microfiber blend"],
+      "unapproved_draft_markers": ["influencer unboxing blitz", "BOGO clearance weekend"],
+      "required_voice_descriptors": ["tactile, unhurried, and rooted in craft"],
+      "approved_specs": ["100% long-staple Belgian flax", "cold gentle wash only"]
+    }
+  },
+  "prompts": [
+    {"id": "NS-01", "brand": "northstar", "task_type": "creative_generation", "prompt": "Write a 3-sentence Instagram launch caption for our Autumn jacket targeting first-time buyers aged 20-30."},
+    {"id": "NS-02", "brand": "northstar", "task_type": "creative_generation", "prompt": "Draft a welcome email subject line and opening paragraph for new newsletter subscribers introducing how we communicate."},
+    {"id": "NS-03", "brand": "northstar", "task_type": "creative_generation", "prompt": "Write product page copy describing the Autumn jacket fabric composition and our packaging color palette."},
+    {"id": "NS-04", "brand": "northstar", "task_type": "creative_generation", "prompt": "Propose a social media rollout plan across our primary and secondary channels for the recycled collection."},
+    {"id": "NS-05", "brand": "northstar", "task_type": "performance_analysis", "prompt": "Summarize lessons from our Q2 campaigns and advise whether we should run an aggressive discount promotion this month."},
+    {"id": "NS-06", "brand": "northstar", "task_type": "compliance_review", "prompt": "List all environmental and vocabulary claims our copywriters are forbidden from using in the upcoming launch."},
+    {"id": "NS-07", "brand": "northstar", "task_type": "creative_generation", "prompt": "Write a customer service delay notification email that matches our brand tone and shipping communication rules."},
+    {"id": "NS-08", "brand": "northstar", "task_type": "creative_generation", "prompt": "Create a full multi-channel campaign brief covering target audience, fabric specs, voice, channel priority, and historical conversion benchmarks."},
+    {"id": "VE-01", "brand": "voltedge", "task_type": "creative_generation", "prompt": "Write launch ad copy for the AeroPulse runner highlighting midsole material and heel-to-toe drop."},
+    {"id": "VE-02", "brand": "voltedge", "task_type": "creative_generation", "prompt": "Draft a product description for competitive marathoners that captures our brand voice without banned recovery claims."},
+    {"id": "VE-03", "brand": "voltedge", "task_type": "performance_analysis", "prompt": "Review past campaign metrics for VoltEdge and identify which creative angles were rejected or superseded."},
+    {"id": "VE-04", "brand": "voltedge", "task_type": "compliance_review", "prompt": "What medical, recovery, and sponsorship phrases are disallowed or unapproved in VoltEdge marketing?"},
+    {"id": "VE-05", "brand": "voltedge", "task_type": "creative_generation", "prompt": "Write a 4-slide pitch deck outline for retail buyers covering AeroPulse specs, tone, and target runner profile."},
+    {"id": "VE-06", "brand": "voltedge", "task_type": "creative_generation", "prompt": "Draft an Instagram reel script introducing the updated heel drop spec compared to our legacy model."},
+    {"id": "VE-07", "brand": "voltedge", "task_type": "creative_generation", "prompt": "Write an email announcement for track club members introducing our Fall training collection."},
+    {"id": "VE-08", "brand": "voltedge", "task_type": "creative_generation", "prompt": "Assemble a complete launch checklist with approved specs, voice examples, and prohibited terms for the agency copy team."},
+    {"id": "HL-01", "brand": "hearth_and_loom", "task_type": "creative_generation", "prompt": "Write product card copy and care instructions for our autumn linen duvet set."},
+    {"id": "HL-02", "brand": "hearth_and_loom", "task_type": "creative_generation", "prompt": "Draft a brand story paragraph for our homepage explaining our craft philosophy and voice."},
+    {"id": "HL-03", "brand": "hearth_and_loom", "task_type": "compliance_review", "prompt": "Which durability, hospitality, and promotional phrases are prohibited in Hearth & Loom copy?"},
+    {"id": "HL-04", "brand": "hearth_and_loom", "task_type": "performance_analysis", "prompt": "Evaluate previous seasonal promotional proposals and explain why clearance-led messaging was rejected."},
+    {"id": "HL-05", "brand": "hearth_and_loom", "task_type": "creative_generation", "prompt": "Write a printed care-card insert detailing fiber origin and washing rules."},
+    {"id": "HL-06", "brand": "hearth_and_loom", "task_type": "creative_generation", "prompt": "Create a Pinterest and newsletter campaign brief for first-time home textile buyers."},
+    {"id": "HL-07", "brand": "hearth_and_loom", "task_type": "creative_generation", "prompt": "Write an editorial lookbook caption pairing our flax bedding with seasonal table linens."},
+    {"id": "HL-08", "brand": "hearth_and_loom", "task_type": "creative_generation", "prompt": "Prepare a comprehensive onboarding brief for a freelance writer covering Hearth & Loom voice, specs, care rules, and banned phrases."}
+  ]
+}

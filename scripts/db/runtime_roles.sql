@@ -160,10 +160,13 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO mindpalace_runtime;
 -- shape as one provisioned after it.
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM mindpalace_runtime;
 REVOKE EXECUTE ON FUNCTION mindpalace_erase_corpus(CHAR(64)) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION mp_set_scope_token_enforcement(BOOLEAN) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION mindpalace_locate_credential(TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION mindpalace_resolve_credential(CHAR(64)) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION mindpalace_allowed_corpus(CHAR(64)) TO mindpalace_runtime;
+GRANT EXECUTE ON FUNCTION mp_verified_scope_corpora() TO mindpalace_runtime;
+GRANT EXECUTE ON FUNCTION mp_scope_enforcement_status(TEXT, TEXT) TO mindpalace_runtime;
 GRANT EXECUTE ON FUNCTION mindpalace_resolve_credential(CHAR(64)) TO mindpalace_runtime;
 GRANT EXECUTE ON FUNCTION mindpalace_locate_credential(TEXT) TO mindpalace_runtime;
 -- Erasure runs as the table owner and re-checks the *connecting* role's own
@@ -188,6 +191,11 @@ REVOKE SELECT, INSERT, UPDATE, DELETE ON memory_principal_corpora FROM mindpalac
 REVOKE DELETE ON memory_documents, memory_versions, memory_chunks, memory_claims,
     memory_evidence, memory_snapshots, memory_snapshot_versions,
     memory_snapshot_seals, memory_claim_embeddings FROM mindpalace_runtime;
+
+-- Operator step: enable scope-token enforcement. Off by default; an operator
+-- with mindpalace_owner runs this once a real MIND_PALACE_SCOPE_SECRET is set:
+--   SELECT mp_set_scope_token_enforcement(true);
+-- (callable by mindpalace_owner only).
 
 -- Default privileges, so a table added by a later migration is reachable by the
 -- runtime role without an extra manual step.

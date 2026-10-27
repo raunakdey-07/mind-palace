@@ -442,3 +442,30 @@ async def test_runtime_cannot_change_enforcement():
     with pytest.raises(Exception):
         async with _session("runtime") as conn:
             await conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
+
+
+async def test_verified_scope_corpora_call_count(two_tenants):
+    """mp_verified_scope_corpora is called at most twice for a 1000-row scan."""
+    alpha = two_tenants["forge-alpha"]
+    token = scope_token_for(alpha)
+    from sqlalchemy import text as _t
+
+    async with _session("maintenance") as db:
+        await db.execute(_t("SELECT set_config('track_functions', 'all', true)"))
+        await db.execute(_t("SELECT pg_stat_reset()"))
+    async with _session("runtime") as conn:
+        await conn.execute(
+            _t("SELECT set_config('mindpalace.tenant_scope', :s, true)"), {"s": alpha}
+        )
+        await conn.execute(
+            _t("SELECT set_config('mindpalace.scope_token', :t, true)"), {"t": token}
+        )
+        await conn.execute(_t("SELECT count(*) FROM memory_claims"))
+    async with _session("maintenance") as db:
+        r = await db.execute(
+            _t(
+                "SELECT calls FROM pg_stat_user_functions WHERE funcname='mp_verified_scope_corpora'"
+            )
+        )
+        calls = r.scalar() or 0
+    assert calls <= 2, calls

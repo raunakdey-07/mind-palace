@@ -2223,6 +2223,9 @@ def secret_rotate(
     database_url: Optional[str] = typer.Option(
         None, "--database-url", help="Admin DATABASE_URL. Defaults to env."
     ),
+    out: Optional[Path] = typer.Option(
+        None, "--out", help="Write the rotated secret to FILE (mode 0600)."
+    ),
 ) -> None:
     """Rotate the scope HMAC secret in memory_server_secrets.
 
@@ -2267,6 +2270,9 @@ def secret_rotate(
         engine.dispose()
 
     typer.echo(f"Rotated scope secret: {secret}")
+    if out is not None:
+        out.write_text(secret + "\n")
+        os.chmod(out, 0o600)
     typer.echo("")
     typer.echo("Update the service environment:")
     typer.echo(f"  export MIND_PALACE_SCOPE_SECRET={secret}")

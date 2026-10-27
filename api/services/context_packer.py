@@ -598,8 +598,10 @@ def classify_memory_role(claim: str, heading: str = "") -> str:
     h = (heading or "").lower()
     if any(k in h for k in ("example", "approved copy", "sample")):
         return "example"
+    import re as _re
+
     rule_words = ("must", "never", "avoid", "prohibited", "should", "always", "cannot")
-    if any(k in low for k in rule_words):
+    if any(_re.search(r"\b" + k + r"\b", low) for k in rule_words):
         return "rule"
     if any(k in low for k in ("approved", "rejected", "abandoned", "selected", "decided")):
         return "decision"

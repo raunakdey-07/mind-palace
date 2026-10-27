@@ -821,7 +821,12 @@ def detect_info_state(metadata: dict, body: str = "") -> str:
     if isinstance(tags, str):
         tags = [t.strip() for t in tags.split(",")]
     tag_text = " ".join(str(t).lower() for t in tags)
-    combined = text + " " + tag_text + " " + (body or "").lower()[:500]
+    headings = " ".join(
+        ln.lstrip("#").strip().lower()
+        for ln in (body or "").splitlines()
+        if ln.lstrip().startswith("#")
+    )
+    combined = text + " " + tag_text + " " + headings
     if any(k in combined for k in ("rejected", "do not use", "prohibited strategy")):
         return "rejected"
     if any(k in combined for k in ("draft", "brainstorm", "unapproved", "work in progress")):

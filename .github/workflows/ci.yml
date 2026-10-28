@@ -159,13 +159,25 @@ jobs:
       # The password is supplied here because the script refuses to provision a
       # role that cannot log in -- which reads as an RLS problem and is not one.
       - name: Provision the least-privileged runtime role
+        id: provision
         run: |
           psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
             -v runtime_password=ci-runtime-role-password \
             -f scripts/db/runtime_roles.sql
           # Rotate a real scope secret and enable enforcement as the owner role.
+          #
+          # The secret and the enforcement flag are rotated into the SHARED
+          # `mindpalace` database so the server-posture steps below can prove a
+          # secure deployment starts with enforcement on. They MUST NOT be
+          # exported to $GITHUB_ENV: every later step in this job inherits the
+          # job environment, and "Run tests" builds a fresh session database
+          # (seeded with the default dev secret by migration 014). A leaked
+          # rotated secret makes the product compute HMAC tokens that do not
+          # verify against the session DB, so `mp_verified_scope_corpora()`
+          # returns zero rows and every tenant-scoped read answers 404. The
+          # posture step that needs the secret reads it as a step output below.
           SCOPE_SECRET=$(openssl rand -hex 32)
-          echo "MIND_PALACE_SCOPE_SECRET=$SCOPE_SECRET" >> $GITHUB_ENV
+          echo "secret=$SCOPE_SECRET" >> $GITHUB_OUTPUT
           psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
             -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
 
@@ -256,6 +268,10 @@ jobs:
           MIND_PALACE_DEPLOYMENT: server
           MIND_PALACE_AUTH_MODE: required
           MIND_PALACE_INGEST_ROOTS: /content
+          # The rotated secret (provisioned above, exposed as a step output so it
+          # cannot leak into "Run tests" and other later steps) and enforcement
+          # on: this step really proves a secure server deployment starts up.
+          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
           MIND_PALACE_ENFORCE_SCOPE_TOKEN: on
         run: |
           python -c "from api.main import app; print('server profile accepted the runtime role')"

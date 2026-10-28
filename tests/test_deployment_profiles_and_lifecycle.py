@@ -1160,6 +1160,35 @@ async def test_the_startup_posture_check_agrees_with_the_profile(monkeypatch):
     assert "superuser" in message or "BYPASSRLS" in message, message
 
 
+async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
+    """Unset MIND_PALACE_ENFORCE_SCOPE_TOKEN must default to the off path.
+
+    Enforcement defaults to off (see docs/security.md). On the server profile an
+    unset env var must therefore take the enforcement-off path and require
+    `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1`, not fall through to the
+    scope-secret check and refuse with "MIND_PALACE_SCOPE_SECRET is unset".
+    """
+    from api.main import enforce_startup_posture
+    from api.services import posture
+
+    class _FakePosture:
+        def server_problems(self):
+            return []
+
+    async def _fake_inspect(db):
+        return _FakePosture()
+
+    monkeypatch.setattr(posture, "inspect", _fake_inspect, raising=True)
+    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
+    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.delenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", raising=False)
+    monkeypatch.delenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
+
+    with pytest.raises(RuntimeError, match="I_UNDERSTAND_SCOPE_FORGERY"):
+        await enforce_startup_posture()
+
+
 async def test_the_startup_guard_prefers_the_environment_error(monkeypatch):
     """A configuration error must be reported as itself, not as a posture one.
 

@@ -791,9 +791,6 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
             part = part.strip()
             if len(part) < MIN_CLAIM_CHARS:
                 continue
-            low = part.lower()
-            if not any(re.search(r"\b" + re.escape(sig) + r"\b", low) for sig in _PROSE_SIGNALS):
-                continue
             sentences.append(part)
     for sent in sentences:
         if not any(sent in hay for hay in haystacks):

@@ -377,7 +377,7 @@ def _assemble_authoritative(
             for eid in (c.evidence_ids if hasattr(c, "evidence_ids") else []):
                 ev = evidence_by_id.get(eid)
                 if ev is not None:
-                    withheld_evidence_texts.add(ev.quote)
+                    withheld_evidence_texts.add(getattr(ev, "text", None) or getattr(ev, "quote", ""))
 
     def _keep(obj):
         st = _state_of(obj)
@@ -662,7 +662,7 @@ def classify_memory_role(claim: str, heading: str = "") -> str:
     h = (heading or "").lower()
     if any(k in h for k in ("example", "approved copy", "sample")):
         return "example"
-    rule_words = ("must", "never", "avoid", "prohibited", "should", "always", "cannot")
+    rule_words = ("must", "never", "avoid", "prohibited", "should", "always", "cannot", "do not")
     if any(_re.search(r"\b" + k + r"\b", low) for k in rule_words):
         return "rule"
     if any(_re.search(r"\b" + k + r"\b", low) for k in ("approved", "rejected", "abandoned", "selected", "decided")):

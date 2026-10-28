@@ -16,8 +16,10 @@ Scenario list (each is its own test):
 5. Erasure removes the rows.
 6. Listing corpora returns only the caller's own.
 7. Tenant A cannot read, write or delete tenant B (zero rows or 403/404).
-8. Forgery: scope without token -> zero rows; wrong-secret token -> zero rows; empty token -> zero rows.
-9. The `{*}` maintenance sentinel: maintenance role with {*}+token works; runtime role cannot forge {*}.
+8. Forgery: scope without token -> zero rows; wrong-secret token -> zero rows;
+   empty token -> zero rows.
+9. The `{*}` maintenance sentinel: maintenance role with {*}+token works;
+   runtime role cannot forge {*}.
 10. Two tenants on separate clients never see each other's rows.
 11. Latency p50/p95 recall with enforcement ON vs OFF; EXPLAIN shows InitPlan.
 12. Operator procedure per docs/security.md: rotate, enable, mismatch window yields 0 rows.
@@ -29,7 +31,6 @@ import hashlib
 import hmac
 import os
 import secrets as _secrets
-import signal
 import statistics
 import sys
 import time
@@ -205,18 +206,22 @@ async def test_db_role_properties(world):
     engine = apply_as_runtime(runtime_url())
     try:
         async with engine.connect() as conn:
-            row = (await conn.execute(
-                sa.text(
-                    "SELECT current_user, session_user, rolsuper, rolbypassrls "
-                    "FROM pg_roles WHERE rolname = current_user"
+            row = (
+                await conn.execute(
+                    sa.text(
+                        "SELECT current_user, session_user, rolsuper, rolbypassrls "
+                        "FROM pg_roles WHERE rolname = current_user"
+                    )
                 )
-            )).one()
+            ).one()
     finally:
         await engine.dispose()
 
     current_user, session_user, rolsuper, rolbypassrls = row
-    print(f"\nrole evidence: current_user={current_user} session_user={session_user} "
-          f"rolsuper={rolsuper} rolbypassrls={rolbypassrls}")
+    print(
+        f"\nrole evidence: current_user={current_user} session_user={session_user} "
+        f"rolsuper={rolsuper} rolbypassrls={rolbypassrls}"
+    )
     assert not rolsuper, "runtime role is superuser"
     assert not rolbypassrls, "runtime role has BYPASSRLS"
 
@@ -231,6 +236,7 @@ async def test_admin_creates_a_corpus(world):
     # credential is unrestricted, so corpus creation via the API is an admin/DB
     # operation. Try the API route first.
     import os as _os
+
     _os.environ["MIND_PALACE_AUTH_MODE"] = "off"
     try:
         response = await world.client.post(
@@ -297,9 +303,7 @@ async def test_admin_creates_a_corpus(world):
     # Clean up: erase and drop.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(
-                sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid}
-            )
+            await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid})
             await db.commit()
             await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": cid})
             await db.commit()
@@ -500,9 +504,7 @@ async def test_erasure_removes_rows(world):
     # Erase the target corpus via the admin function (the CLI/operator route).
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(
-                sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": target_cid}
-            )
+            await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": target_cid})
             await db.commit()
 
     # Assert target corpus rows are 0.
@@ -523,9 +525,7 @@ async def test_erasure_removes_rows(world):
                     {"c": neighbour_cid},
                 )
                 after = int(row.scalar())
-                assert after == before, (
-                    f"{table} neighbour count changed: {before} -> {after}"
-                )
+                assert after == before, f"{table} neighbour count changed: {before} -> {after}"
 
             # Corpus row itself should be gone.
             row = await db.execute(
@@ -536,9 +536,7 @@ async def test_erasure_removes_rows(world):
     # Clean up neighbour.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(
-                sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": neighbour_cid}
-            )
+            await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": neighbour_cid})
             await db.commit()
             await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": neighbour_cid})
             await db.commit()
@@ -604,7 +602,9 @@ async def test_tenant_a_cannot_reach_tenant_b(world):
     )
     assert response.status_code == 200, response.text
     body = response.json()
-    assert any("BETA_ENFORCEMENT_FACT" in m.get("claim", "") for m in body.get("current_memories", [])), body
+    assert any(
+        "BETA_ENFORCEMENT_FACT" in m.get("claim", "") for m in body.get("current_memories", [])
+    ), body
 
 
 # ---------------------------------------------------------------------------
@@ -619,9 +619,7 @@ async def test_forgery_fails_closed(world):
     async def raw_count(scope: str, token: str | None) -> int:
         engine = apply_as_runtime(runtime_url())
         try:
-            factory = async_sessionmaker(
-                engine, class_=AsyncSession, expire_on_commit=False
-            )
+            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
                     sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
@@ -633,9 +631,7 @@ async def test_forgery_fails_closed(world):
                         {"t": token},
                     )
                 result = await session.execute(
-                    sa.text(
-                        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c"
-                    ),
+                    sa.text("SELECT count(*) FROM memory_claims WHERE corpus_id = :c"),
                     {"c": alpha_cid},
                 )
                 return int(result.scalar())
@@ -677,9 +673,7 @@ async def test_scope_and_token_always_set_together(world):
 
     engine = apply_as_runtime(runtime_url())
     try:
-        factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
+        factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         async with factory() as session:
             # A real API operation goes through _apply_tenant_scope on
             # after_begin. Read both settings within the same transaction.
@@ -693,17 +687,21 @@ async def test_scope_and_token_always_set_together(world):
                 sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
                 {"t": token},
             )
-            scope_val = (await session.execute(
-                sa.text("SELECT current_setting('mindpalace.tenant_scope', true)")
-            )).scalar()
-            token_val = (await session.execute(
-                sa.text("SELECT current_setting('mindpalace.scope_token', true)")
-            )).scalar()
+            scope_val = (
+                await session.execute(
+                    sa.text("SELECT current_setting('mindpalace.tenant_scope', true)")
+                )
+            ).scalar()
+            token_val = (
+                await session.execute(
+                    sa.text("SELECT current_setting('mindpalace.scope_token', true)")
+                )
+            ).scalar()
             print(f"\nscope/token invariant: scope={scope_val} token={token_val[:16]}...")
             assert scope_val == alpha_cid, f"tenant_scope={scope_val!r} != {alpha_cid!r}"
-            assert token_val == expected_token, (
-                f"scope_token={token_val!r} != expected HMAC={expected_token!r}"
-            )
+            assert (
+                token_val == expected_token
+            ), f"scope_token={token_val!r} != expected HMAC={expected_token!r}"
     finally:
         await engine.dispose()
 
@@ -731,9 +729,7 @@ async def test_star_sentinel_under_enforcement(world):
                 sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
                 {"t": star_token},
             )
-            result = conn.execute(
-                sa.text("SELECT mp_verified_scope_corpora()")
-            )
+            result = conn.execute(sa.text("SELECT mp_verified_scope_corpora()"))
             assert "*" in result.scalar(), "{*} token not verified for maintenance"
     finally:
         engine.dispose()
@@ -742,18 +738,14 @@ async def test_star_sentinel_under_enforcement(world):
     async def runtime_star_count(scope: str) -> int:
         engine = apply_as_runtime(runtime_url())
         try:
-            factory = async_sessionmaker(
-                engine, class_=AsyncSession, expire_on_commit=False
-            )
+            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
                     sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
                     {"s": scope},
                 )
                 result = await session.execute(
-                    sa.text(
-                        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c"
-                    ),
+                    sa.text("SELECT count(*) FROM memory_claims WHERE corpus_id = :c"),
                     {"c": alpha_cid},
                 )
                 return int(result.scalar())
@@ -786,10 +778,21 @@ async def test_concurrent_tenants_pooled_connection(world):
 
     alpha_body = alpha_response.json()
     beta_body = beta_response.json()
-    assert any("ALPHA_ENFORCEMENT_FACT" in m.get("claim", "") for m in alpha_body.get("current_memories", []))
-    assert any("BETA_ENFORCEMENT_FACT" in m.get("claim", "") for m in beta_body.get("current_memories", []))
-    assert not any("BETA_ENFORCEMENT_FACT" in m.get("claim", "") for m in alpha_body.get("current_memories", []))
-    assert not any("ALPHA_ENFORCEMENT_FACT" in m.get("claim", "") for m in beta_body.get("current_memories", []))
+    assert any(
+        "ALPHA_ENFORCEMENT_FACT" in m.get("claim", "")
+        for m in alpha_body.get("current_memories", [])
+    )
+    assert any(
+        "BETA_ENFORCEMENT_FACT" in m.get("claim", "") for m in beta_body.get("current_memories", [])
+    )
+    assert not any(
+        "BETA_ENFORCEMENT_FACT" in m.get("claim", "")
+        for m in alpha_body.get("current_memories", [])
+    )
+    assert not any(
+        "ALPHA_ENFORCEMENT_FACT" in m.get("claim", "")
+        for m in beta_body.get("current_memories", [])
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -838,9 +841,7 @@ async def test_latency_and_explain_initplan(world):
         # EXPLAIN as runtime role with valid scope + token.
         engine = apply_as_runtime(runtime_url())
         try:
-            factory = async_sessionmaker(
-                engine, class_=AsyncSession, expire_on_commit=False
-            )
+            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
                 scope = cid
@@ -867,16 +868,14 @@ async def test_latency_and_explain_initplan(world):
             has_allowed_corpus = "mindpalace_allowed_corpus" in plan
             has_subplan_per_row = "SubPlan" in plan and "mp_verified_scope_corpora" in plan
 
-            assert has_allowed_corpus, (
-                f"RLS policy not applied in EXPLAIN:\n{plan}"
-            )
+            assert has_allowed_corpus, f"RLS policy not applied in EXPLAIN:\n{plan}"
             if has_initplan:
-                assert "mp_verified_scope_corpora" in plan, (
-                    f"mp_verified_scope_corpora not in InitPlan:\n{plan}"
-                )
-            assert not has_subplan_per_row, (
-                f"Per-row SubPlan on mp_verified_scope_corpora found:\n{plan}"
-            )
+                assert (
+                    "mp_verified_scope_corpora" in plan
+                ), f"mp_verified_scope_corpora not in InitPlan:\n{plan}"
+            assert (
+                not has_subplan_per_row
+            ), f"Per-row SubPlan on mp_verified_scope_corpora found:\n{plan}"
         finally:
             await engine.dispose()
 
@@ -931,9 +930,7 @@ async def test_latency_and_explain_initplan(world):
         # Clean up the latency corpus.
         async with db_module.admin_session_scope() as db:
             with principal_scope(authz.ADMIN_PRINCIPAL):
-                await db.execute(
-                    sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid}
-                )
+                await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid})
                 await db.commit()
                 await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": cid})
                 await db.commit()
@@ -973,11 +970,18 @@ async def test_operator_procedure_per_docs(world):
     # Step 1: `mindpalace secret rotate` via the CLI (writes DB row + file).
     result = subprocess.run(
         [
-            sys.executable, "-m", "cli.main", "secret", "rotate",
-            "--database-url", url,
-            "--out", secret_file,
+            sys.executable,
+            "-m",
+            "cli.main",
+            "secret",
+            "rotate",
+            "--database-url",
+            url,
+            "--out",
+            secret_file,
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, f"secret rotate failed: {result.stderr}"
     new_secret = open(secret_file).read().strip()
@@ -992,9 +996,7 @@ async def test_operator_procedure_per_docs(world):
         with engine.begin() as conn:
             conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
             row = conn.execute(
-                sa.text(
-                    "SELECT value FROM memory_server_secrets WHERE name = 'scope_hmac_secret'"
-                )
+                sa.text("SELECT value FROM memory_server_secrets WHERE name = 'scope_hmac_secret'")
             ).scalar()
             assert row == new_secret, "DB secret not the rotated value"
             row = conn.execute(
@@ -1032,7 +1034,7 @@ async def test_operator_procedure_per_docs(world):
             rsql = rsql.replace(":'runtime_password'", "'ci-runtime-role-password'")
             rsql = rsql.replace(":'runtime_password_skip'", "'off'")
             rsql = rsql.replace(" \\g /dev/null", ";")
-            rsql_lines = [l for l in rsql.split("\n") if not l.lstrip().startswith("\\")]
+            rsql_lines = [line for line in rsql.split("\n") if not line.lstrip().startswith("\\")]
             rsql = "\n".join(rsql_lines)
             conn.execute(sa.text(rsql))
     finally:
@@ -1049,15 +1051,29 @@ async def test_operator_procedure_per_docs(world):
 
     server_log = open("/tmp/opencode/operator-server.log", "w")
     server = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "api.main:app",
-         "--host", "127.0.0.1", "--port", "8999", "--log-level", "warning"],
-        env=server_env, stdout=server_log, stderr=subprocess.STDOUT,
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "api.main:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8999",
+            "--log-level",
+            "warning",
+        ],
+        env=server_env,
+        stdout=server_log,
+        stderr=subprocess.STDOUT,
         start_new_session=True,
     )
 
     try:
         # Wait for the server to become ready.
-        import urllib.request, urllib.error
+        import urllib.error
+        import urllib.request
+
         base = "http://127.0.0.1:8999"
         ready = False
         for _ in range(120):
@@ -1068,11 +1084,14 @@ async def test_operator_procedure_per_docs(world):
                         break
             except Exception:
                 time.sleep(0.5)
-        assert ready, f"server did not start; log:\n{open('/tmp/opencode/operator-server.log').read()}"
+        assert ready, (
+            "server did not start; log:\n" f"{open('/tmp/opencode/operator-server.log').read()}"
+        )
         print("step 4: server started with enforcement ON")
 
         # Step 5: send a real request through the server.
         import json as _json
+
         req = urllib.request.Request(
             base + "/api/memory/current",
             data=_json.dumps({"corpus": corpus_name, "query": ""}).encode(),
@@ -1104,9 +1123,7 @@ async def test_operator_procedure_per_docs(world):
     try:
         engine = apply_as_runtime(runtime_url())
         try:
-            factory = async_sessionmaker(
-                engine, class_=AsyncSession, expire_on_commit=False
-            )
+            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
                     sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
@@ -1120,9 +1137,7 @@ async def test_operator_procedure_per_docs(world):
                     {"t": token},
                 )
                 result = await session.execute(
-                    sa.text(
-                        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c"
-                    ),
+                    sa.text("SELECT count(*) FROM memory_claims WHERE corpus_id = :c"),
                     {"c": alpha_cid},
                 )
                 n = int(result.scalar())
@@ -1155,9 +1170,7 @@ async def test_wrong_env_secret_fails(world):
         # 8b.1: recall returns 0 rows (wrong token -> mismatch -> zero rows).
         engine = apply_as_runtime(runtime_url())
         try:
-            factory = async_sessionmaker(
-                engine, class_=AsyncSession, expire_on_commit=False
-            )
+            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
                     sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
@@ -1175,9 +1188,7 @@ async def test_wrong_env_secret_fails(world):
                     {"t": token},
                 )
                 result = await session.execute(
-                    sa.text(
-                        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c"
-                    ),
+                    sa.text("SELECT count(*) FROM memory_claims WHERE corpus_id = :c"),
                     {"c": alpha_cid},
                 )
                 n = int(result.scalar())
@@ -1191,17 +1202,16 @@ async def test_wrong_env_secret_fails(world):
             "alpha-creator",
             json={"corpus": ALPHA_CORPORA["brand"], "query": ""},
         )
-        assert response.status_code in (403, 404), (
-            f"wrong secret: API recall returned {response.status_code} (should be 403/404)"
-        )
+        assert response.status_code in (
+            403,
+            404,
+        ), f"wrong secret: API recall returned {response.status_code} (should be 403/404)"
 
         # 8b.3: Listing corpora returns empty.
         response = await world.get("/api/corpora", "alpha-creator")
         assert response.status_code == 200, response.text
         names = {row["name"] for row in response.json()}
-        assert names == set(), (
-            f"wrong secret: listing returned {names} (should be empty)"
-        )
+        assert names == set(), f"wrong secret: listing returned {names} (should be empty)"
 
         print(
             "\nnegative control OK: wrong env secret causes all tenant-scoped "

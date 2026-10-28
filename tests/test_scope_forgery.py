@@ -464,7 +464,8 @@ async def test_verified_scope_corpora_call_count(two_tenants):
     async with _session("maintenance") as db:
         r = await db.execute(
             _t(
-                "SELECT calls FROM pg_stat_user_functions WHERE funcname='mp_verified_scope_corpora'"
+                "SELECT calls FROM pg_stat_user_functions "
+                "WHERE funcname='mp_verified_scope_corpora'"
             )
         )
         calls = r.scalar() or 0

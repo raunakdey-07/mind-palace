@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 1
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,9 @@ document_type: styleguide
 
 Do not use the word "hotel-grade luxury" in any customer-facing copy.
 
-Orders are processed within one business day and shipped with tracking
-information. Training materials include videos, quick-reference guides,
-and live webinars. The maintenance schedule recommends inspection every
-six months for optimal performance. How long does shipping take? Most
-orders arrive within three to five business days. The technical
-datasheet lists every certified component and its tolerance.
+The technical datasheet lists every certified component and its
+tolerance. Do you offer bulk pricing? Contact sales for volume and
+nonprofit discounts. How long does shipping take? Most orders arrive
+within three to five business days. Software updates are delivered
+automatically and require a restart to take effect. Orders are processed
+within one business day and shipped with tracking information.

@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 4
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,10 @@ document_type: styleguide
 
 Do not use the word "revolutionary" in any customer-facing copy.
 
-The mobile application syncs across devices using end-to-end encryption.
-The technical datasheet lists every certified component and its
-tolerance. Pricing varies by region and volume, with discounts for
-educational and nonprofit customers. The next review is scheduled for
-the first Tuesday of the following month. The compliance program
-addresses data retention, audit trails, and access controls.
+The specifications table lists dimensions, weight, power draw, and
+operating temperature. Orders are processed within one business day and
+shipped with tracking information. The technical datasheet lists every
+certified component and its tolerance. The product ships with a two-year
+limited warranty covering defects in materials and workmanship. The
+maintenance schedule recommends inspection every six months for optimal
+performance.

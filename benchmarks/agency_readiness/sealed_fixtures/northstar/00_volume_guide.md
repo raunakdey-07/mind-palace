@@ -1,71 +1,97 @@
 ---
+title: Volume guide
 status: approved
 document_type: guide
 ---
 ## Volume guide
 
-Installation requires a Phillips-head screwdriver and approximately
-twenty minutes. Software updates are delivered automatically and require
-a restart to take effect. Returns are accepted within thirty days of
-purchase with original packaging and receipt. Pricing varies by region
-and volume, with discounts for educational and nonprofit customers.
-Orders are processed within one business day and shipped with tracking
-information. Do you offer bulk pricing? Contact sales for volume and
-nonprofit discounts. The maintenance schedule recommends inspection
-every six months for optimal performance. Action items were assigned to
-engineering, design, and customer success. User feedback is collected
-through surveys and used to prioritize the roadmap. The specifications
-table lists dimensions, weight, power draw, and operating temperature.
-Customer support is available by email and phone during business hours,
-Monday to Friday. The team reviewed the quarterly roadmap and agreed on
-three priority initiatives. Compatibility charts show which accessories
-work with which model variant. The next review is scheduled for the
-first Tuesday of the following month. The mobile application syncs
-across devices using end-to-end encryption. Accessibility features
-include high-contrast mode, keyboard navigation, and screen-reader
-support. Our product line spans entry-level, mid-range, and professional
-configurations. Training materials include videos, quick-reference
-guides, and live webinars. What is the warranty period? It is two years
-from the date of purchase. The technical datasheet lists every certified
-component and its tolerance. Returns are accepted within thirty days of
-purchase with original packaging and receipt. Software updates are
-delivered automatically and require a restart to take effect. Training
-materials include videos, quick-reference guides, and live webinars. Our
-product line spans entry-level, mid-range, and professional
-configurations. How long does shipping take? Most orders arrive within
-three to five business days. Action items were assigned to engineering,
-design, and customer success. The compliance program addresses data
-retention, audit trails, and access controls. Do you offer bulk pricing?
-Contact sales for volume and nonprofit discounts. The specifications
-table lists dimensions, weight, power draw, and operating temperature.
-User feedback is collected through surveys and used to prioritize the
-roadmap. Orders are processed within one business day and shipped with
-tracking information. The next review is scheduled for the first Tuesday
-of the following month. Accessibility features include high-contrast
-mode, keyboard navigation, and screen-reader support. The product ships
-with a two-year limited warranty covering defects in materials and
-workmanship. Battery life depends on usage patterns and typically lasts
-a full day on a single charge. Compatibility charts show which
-accessories work with which model variant. The team reviewed the
-quarterly roadmap and agreed on three priority initiatives. Pricing
-varies by region and volume, with discounts for educational and
-nonprofit customers. Customer support is available by email and phone
-during business hours, Monday to Friday. Installation requires a
-Phillips-head screwdriver and approximately twenty minutes. Training
-materials include videos, quick-reference guides, and live webinars. Our
-product line spans entry-level, mid-range, and professional
-configurations. Customer support is available by email and phone during
-business hours, Monday to Friday. Installation requires a Phillips-head
-screwdriver and approximately twenty minutes. User feedback is collected
-through surveys and used to prioritize the roadmap. Software updates are
-delivered automatically and require a restart to take effect. The
+Compatibility charts show which accessories work with which model
+variant. Can I return an opened item? Yes, within thirty days with the
+original receipt. User feedback is collected through surveys and used to
+prioritize the roadmap. The specifications table lists dimensions,
+weight, power draw, and operating temperature. What is the warranty
+period? It is two years from the date of purchase. Do you offer bulk
+pricing? Contact sales for volume and nonprofit discounts. Orders are
+processed within one business day and shipped with tracking information.
+The team reviewed the quarterly roadmap and agreed on three priority
+initiatives. How long does shipping take? Most orders arrive within
+three to five business days. Training materials include videos,
+quick-reference guides, and live webinars. Each configuration is tested
+against the same quality standard before release. Customer support is
+available by email and phone during business hours, Monday to Friday.
+Our product line spans entry-level, mid-range, and professional
+configurations. Pricing varies by region and volume, with discounts for
+educational and nonprofit customers. The maintenance schedule recommends
+inspection every six months for optimal performance. Accessibility
+features include high-contrast mode, keyboard navigation, and
+screen-reader support. The next review is scheduled for the first
+Tuesday of the following month. Action items were assigned to
+engineering, design, and customer success. Returns are accepted within
+thirty days of purchase with original packaging and receipt. The
 compliance program addresses data retention, audit trails, and access
-controls. Battery life depends on usage patterns and typically lasts a
-full day on a single charge. How long does shipping take? Most orders
-arrive within three to five business days. The product ships with a
+controls. Installation requires a Phillips-head screwdriver and
+approximately twenty minutes. Software updates are delivered
+automatically and require a restart to take effect. Returns are accepted
+within thirty days of purchase with original packaging and receipt.
+Pricing varies by region and volume, with discounts for educational and
+nonprofit customers. Orders are processed within one business day and
+shipped with tracking information. Do you offer bulk pricing? Contact
+sales for volume and nonprofit discounts. The maintenance schedule
+recommends inspection every six months for optimal performance. Action
+items were assigned to engineering, design, and customer success. User
+feedback is collected through surveys and used to prioritize the
+roadmap. The specifications table lists dimensions, weight, power draw,
+and operating temperature. Customer support is available by email and
+phone during business hours, Monday to Friday. The team reviewed the
+quarterly roadmap and agreed on three priority initiatives.
+Compatibility charts show which accessories work with which model
+variant. The next review is scheduled for the first Tuesday of the
+following month. The mobile application syncs across devices using
+end-to-end encryption. Accessibility features include high-contrast
+mode, keyboard navigation, and screen-reader support. Our product line
+spans entry-level, mid-range, and professional configurations. Training
+materials include videos, quick-reference guides, and live webinars.
+What is the warranty period? It is two years from the date of purchase.
+The technical datasheet lists every certified component and its
+tolerance. Returns are accepted within thirty days of purchase with
+original packaging and receipt. Software updates are delivered
+automatically and require a restart to take effect. Training materials
+include videos, quick-reference guides, and live webinars. Our product
+line spans entry-level, mid-range, and professional configurations. How
+long does shipping take? Most orders arrive within three to five
+business days. Action items were assigned to engineering, design, and
+customer success. The compliance program addresses data retention, audit
+trails, and access controls. Do you offer bulk pricing? Contact sales
+for volume and nonprofit discounts. The specifications table lists
+dimensions, weight, power draw, and operating temperature. User feedback
+is collected through surveys and used to prioritize the roadmap. Orders
+are processed within one business day and shipped with tracking
+information. The next review is scheduled for the first Tuesday of the
+following month. Accessibility features include high-contrast mode,
+keyboard navigation, and screen-reader support. The product ships with a
 two-year limited warranty covering defects in materials and workmanship.
-Action items were assigned to engineering, design, and customer success.
-Each configuration is tested against the same quality standard before
+Battery life depends on usage patterns and typically lasts a full day on
+a single charge. Compatibility charts show which accessories work with
+which model variant. The team reviewed the quarterly roadmap and agreed
+on three priority initiatives. Pricing varies by region and volume, with
+discounts for educational and nonprofit customers. Customer support is
+available by email and phone during business hours, Monday to Friday.
+Installation requires a Phillips-head screwdriver and approximately
+twenty minutes. Training materials include videos, quick-reference
+guides, and live webinars. Our product line spans entry-level,
+mid-range, and professional configurations. Customer support is
+available by email and phone during business hours, Monday to Friday.
+Installation requires a Phillips-head screwdriver and approximately
+twenty minutes. User feedback is collected through surveys and used to
+prioritize the roadmap. Software updates are delivered automatically and
+require a restart to take effect. The compliance program addresses data
+retention, audit trails, and access controls. Battery life depends on
+usage patterns and typically lasts a full day on a single charge. How
+long does shipping take? Most orders arrive within three to five
+business days. The product ships with a two-year limited warranty
+covering defects in materials and workmanship. Action items were
+assigned to engineering, design, and customer success. Each
+configuration is tested against the same quality standard before
 release. Orders are processed within one business day and shipped with
 tracking information. The technical datasheet lists every certified
 component and its tolerance. Pricing varies by region and volume, with
@@ -602,27 +628,4 @@ inspection every six months for optimal performance. User feedback is
 collected through surveys and used to prioritize the roadmap. Returns
 are accepted within thirty days of purchase with original packaging and
 receipt. Each configuration is tested against the same quality standard
-before release. The maintenance schedule recommends inspection every six
-months for optimal performance. Do you offer bulk pricing? Contact sales
-for volume and nonprofit discounts. How long does shipping take? Most
-orders arrive within three to five business days. The specifications
-table lists dimensions, weight, power draw, and operating temperature.
-Software updates are delivered automatically and require a restart to
-take effect. Customer support is available by email and phone during
-business hours, Monday to Friday. The team reviewed the quarterly
-roadmap and agreed on three priority initiatives. The compliance program
-addresses data retention, audit trails, and access controls. Training
-materials include videos, quick-reference guides, and live webinars.
-Installation requires a Phillips-head screwdriver and approximately
-twenty minutes. Battery life depends on usage patterns and typically
-lasts a full day on a single charge. Can I return an opened item? Yes,
-within thirty days with the original receipt. Compatibility charts show
-which accessories work with which model variant. What is the warranty
-period? It is two years from the date of purchase. Each configuration is
-tested against the same quality standard before release. Action items
-were assigned to engineering, design, and customer success. User
-feedback is collected through surveys and used to prioritize the
-roadmap. The technical datasheet lists every certified component and its
-tolerance. Pricing varies by region and volume, with discounts for
-educational and nonprofit customers. Accessibility features include
-high-contrast mode, keyboard navigation, and screen-reader support.
+before release.

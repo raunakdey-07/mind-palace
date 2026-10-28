@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 2
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,9 @@ document_type: styleguide
 
 Do not use the word "stain-proof forever" in any customer-facing copy.
 
-Our product line spans entry-level, mid-range, and professional
-configurations. Orders are processed within one business day and shipped
-with tracking information. The technical datasheet lists every certified
-component and its tolerance. Customer support is available by email and
-phone during business hours, Monday to Friday. How long does shipping
-take? Most orders arrive within three to five business days.
+Do you offer bulk pricing? Contact sales for volume and nonprofit
+discounts. User feedback is collected through surveys and used to
+prioritize the roadmap. Software updates are delivered automatically and
+require a restart to take effect. How long does shipping take? Most
+orders arrive within three to five business days. Returns are accepted
+within thirty days of purchase with original packaging and receipt.

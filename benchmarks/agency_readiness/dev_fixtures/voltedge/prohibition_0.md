@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 1
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,9 @@ document_type: styleguide
 
 Do not use the word "effortless" in any customer-facing copy.
 
-The mobile application syncs across devices using end-to-end encryption.
+What is the warranty period? It is two years from the date of purchase.
 Compatibility charts show which accessories work with which model
 variant. Orders are processed within one business day and shipped with
-tracking information. The specifications table lists dimensions, weight,
-power draw, and operating temperature. Software updates are delivered
-automatically and require a restart to take effect.
+tracking information. Each configuration is tested against the same
+quality standard before release. The team reviewed the quarterly roadmap
+and agreed on three priority initiatives.

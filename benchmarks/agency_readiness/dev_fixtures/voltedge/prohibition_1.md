@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 2
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,10 @@ document_type: styleguide
 
 Do not use the word "miracle recovery" in any customer-facing copy.
 
-Can I return an opened item? Yes, within thirty days with the original
-receipt. Orders are processed within one business day and shipped with
-tracking information. Battery life depends on usage patterns and
-typically lasts a full day on a single charge. Training materials
-include videos, quick-reference guides, and live webinars. Installation
-requires a Phillips-head screwdriver and approximately twenty minutes.
+Installation requires a Phillips-head screwdriver and approximately
+twenty minutes. Compatibility charts show which accessories work with
+which model variant. Accessibility features include high-contrast mode,
+keyboard navigation, and screen-reader support. User feedback is
+collected through surveys and used to prioritize the roadmap. Pricing
+varies by region and volume, with discounts for educational and
+nonprofit customers.

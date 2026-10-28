@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 3
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,9 @@ document_type: styleguide
 
 Do not use the word "100% eco-friendly" in any customer-facing copy.
 
-User feedback is collected through surveys and used to prioritize the
-roadmap. Orders are processed within one business day and shipped with
-tracking information. Customer support is available by email and phone
-during business hours, Monday to Friday. Compatibility charts show which
-accessories work with which model variant. The mobile application syncs
-across devices using end-to-end encryption.
+Each configuration is tested against the same quality standard before
+release. Installation requires a Phillips-head screwdriver and
+approximately twenty minutes. How long does shipping take? Most orders
+arrive within three to five business days. Software updates are
+delivered automatically and require a restart to take effect. The team
+reviewed the quarterly roadmap and agreed on three priority initiatives.

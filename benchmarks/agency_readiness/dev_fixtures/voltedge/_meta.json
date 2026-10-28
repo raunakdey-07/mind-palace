@@ -1,46 +1,61 @@
 {
-  "voltedge/t3_mixed.md": {
-    "status": "approved",
-    "document_type": "guide"
+  "meta": {
+    "voltedge/t3_mixed.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "voltedge/t1_headings.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "voltedge/t2_policy.md": {
+      "status": "approved",
+      "document_type": "policy"
+    },
+    "voltedge/september_brainstorm.md": {
+      "status": "draft",
+      "document_type": "note"
+    },
+    "voltedge/00_volume_guide.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "voltedge/prohibition_0.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "voltedge/prohibition_1.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "voltedge/prohibition_2.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "voltedge/voice_0.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "voltedge/spec_0.md": {
+      "status": "approved",
+      "document_type": "spec"
+    },
+    "voltedge/spec_1.md": {
+      "status": "approved",
+      "document_type": "spec"
+    }
   },
-  "voltedge/t1_headings.md": {
-    "status": "approved",
-    "document_type": "guide"
-  },
-  "voltedge/t2_policy.md": {
-    "status": "approved",
-    "document_type": "policy"
-  },
-  "voltedge/september_brainstorm.md": {
-    "status": "draft",
-    "document_type": "note"
-  },
-  "voltedge/volume_guide.md": {
-    "status": "approved",
-    "document_type": "guide"
-  },
-  "voltedge/prohibition_0.md": {
-    "status": "approved",
-    "document_type": "styleguide"
-  },
-  "voltedge/prohibition_1.md": {
-    "status": "approved",
-    "document_type": "styleguide"
-  },
-  "voltedge/prohibition_2.md": {
-    "status": "approved",
-    "document_type": "styleguide"
-  },
-  "voltedge/voice_0.md": {
-    "status": "approved",
-    "document_type": "styleguide"
-  },
-  "voltedge/spec_0.md": {
-    "status": "approved",
-    "document_type": "spec"
-  },
-  "voltedge/spec_1.md": {
-    "status": "approved",
-    "document_type": "spec"
+  "template_of": {
+    "voltedge/t3_mixed.md": "T3",
+    "voltedge/t1_headings.md": "T1",
+    "voltedge/t2_policy.md": "T2",
+    "voltedge/september_brainstorm.md": "T1",
+    "voltedge/00_volume_guide.md": "volume",
+    "voltedge/prohibition_0.md": "prohibition",
+    "voltedge/prohibition_1.md": "prohibition",
+    "voltedge/prohibition_2.md": "prohibition",
+    "voltedge/voice_0.md": "voice",
+    "voltedge/spec_0.md": "spec",
+    "voltedge/spec_1.md": "spec"
   }
 }

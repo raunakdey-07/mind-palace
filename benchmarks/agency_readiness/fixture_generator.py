@@ -1,8 +1,16 @@
 """Deterministic fixture generator for the M018 sealed benchmark.
 
 Builds each brand's corpus from the sealed spec's gold data. Fixed seed,
-no Mind Palace imports, no tuning to Mind Palace vocabulary. Writes real
-YAML frontmatter (python-frontmatter parseable) at the top of each file.
+no Mind Palace imports, no tuning to Mind Palace vocabulary.
+
+Two output sets are produced:
+  * dev_fixtures/   -- dev seed (DEV_SET_SEED), filler variation, for iteration
+                    and the smoke test. NOT used by the sealed baseline run.
+  * sealed_fixtures/-- sealed seed (SEALED_SEED), used by the sealed baseline run.
+
+Every document carries a required `title` frontmatter field so the product's
+structural prose extractor runs (missing title -> frontmatter_missing_title
+warning -> extraction skipped -> zero claims).
 """
 
 from __future__ import annotations
@@ -12,10 +20,11 @@ import random
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC_PATH = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
-FIXTURE_DIR = ROOT / "benchmarks" / "agency_readiness" / "dev_fixtures"
+SEALED_SEED = 20261028
+DEV_SET_SEED = 777
 
-SEED = 20261028
+DEV_FIXTURE_DIR = ROOT / "benchmarks" / "agency_readiness" / "dev_fixtures"
+SEALED_FIXTURE_DIR = ROOT / "benchmarks" / "agency_readiness" / "sealed_fixtures"
 
 # Brand-neutral filler templates (contain none of the gold strings).
 FILLER_TEMPLATES = [
@@ -57,8 +66,8 @@ MEETING_NOTES = [
 ]
 
 
-def _rng(brand: str) -> random.Random:
-    return random.Random(f"{SEED}:{brand}")
+def _rng(seed: int, brand: str) -> random.Random:
+    return random.Random(f"{seed}:{brand}")
 
 
 def _fill(rng, n: int) -> str:
@@ -102,11 +111,12 @@ def _frontmatter(meta: dict) -> str:
     return "\n".join(lines)
 
 
-def generate_brand(brand: str, spec: dict) -> dict:
+def generate_brand(brand: str, spec: dict, seed: int) -> dict:
     data = spec["brands"][brand]
-    rng = _rng(brand)
+    rng = _rng(seed, brand)
     docs: dict[str, str] = {}  # path -> full content with frontmatter
     meta: dict[str, dict] = {}
+    template_of: dict[str, str] = {}
 
     prohibitions = list(data["standing_prohibitions"])
     voice = list(data["required_voice_descriptors"])
@@ -128,10 +138,12 @@ def generate_brand(brand: str, spec: dict) -> dict:
     mixed.append("| Channel | Instagram is the primary channel |")
     mixed.append("")
     mixed.append(_hard_wrap(_fill(rng, 12)))
-    docs[f"{brand}/t3_mixed.md"] = _frontmatter({"status": "approved", "document_type": "guide"}) + "\n".join(mixed)
-    meta[f"{brand}/t3_mixed.md"] = {"status": "approved", "document_type": "guide"}
+    t3_path = f"{brand}/t3_mixed.md"
+    docs[t3_path] = _frontmatter({"title": "Product specification", "status": "approved", "document_type": "guide"}) + "\n".join(mixed)
+    meta[t3_path] = {"status": "approved", "document_type": "guide"}
+    template_of[t3_path] = "T3"
 
-    # ---- T1: state conveyed by headings ----
+    # ---- T1: state conveyed by headings (vocabulary + non-vocabulary) ----
     t1 = []
     t1.append("## Current guidance")
     t1.append("")
@@ -156,19 +168,12 @@ def generate_brand(brand: str, spec: dict) -> dict:
     t1.append(_hard_wrap("65% recycled polyester was the old target."))
     t1.append("")
     t1.append(_hard_wrap(_fill(rng, 6)))
-    docs[f"{brand}/t1_headings.md"] = _frontmatter({"status": "approved", "document_type": "guide"}) + "\n".join(t1)
-    meta[f"{brand}/t1_headings.md"] = {"status": "approved", "document_type": "guide"}
+    t1_path = f"{brand}/t1_headings.md"
+    docs[t1_path] = _frontmatter({"title": "Current guidance", "status": "approved", "document_type": "guide"}) + "\n".join(t1)
+    meta[t1_path] = {"status": "approved", "document_type": "guide"}
+    template_of[t1_path] = "T1"
 
-    # ---- T2: state via frontmatter status/supersedes; SAME path, v1 then v2 ----
-    v1 = []
-    v1.append("## Current policy")
-    v1.append("")
-    v1.append(_hard_wrap("Instagram is the primary channel for launches."))
-    v1.append("")
-    v1.append(_hard_wrap(_fill(rng, 6)))
-    docs[f"{brand}/t2_policy.md"] = _frontmatter({"status": "superseded", "document_type": "policy"}) + "\n".join(v1)
-    meta[f"{brand}/t2_policy.md"] = {"status": "superseded", "document_type": "policy"}
-
+    # ---- T2: state via frontmatter status; v2 (approved) on disk ----
     v2 = []
     v2.append("## Current policy")
     v2.append("")
@@ -177,8 +182,10 @@ def generate_brand(brand: str, spec: dict) -> dict:
     v2.append(_hard_wrap("Instagram is the primary channel for launches."))
     v2.append("")
     v2.append(_hard_wrap(_fill(rng, 6)))
-    docs[f"{brand}/t2_policy.md"] = _frontmatter({"status": "approved", "document_type": "policy"}) + "\n".join(v2)
-    meta[f"{brand}/t2_policy.md"] = {"status": "approved", "document_type": "policy"}
+    t2_path = f"{brand}/t2_policy.md"
+    docs[t2_path] = _frontmatter({"title": "Current policy", "status": "approved", "document_type": "policy"}) + "\n".join(v2)
+    meta[t2_path] = {"status": "approved", "document_type": "policy"}
+    template_of[t2_path] = "T2"
 
     # ---- Draft file ----
     draft_content = []
@@ -189,10 +196,12 @@ def generate_brand(brand: str, spec: dict) -> dict:
     draft_content.append(_hard_wrap("Overnight muscle gain results are expected within weeks."))
     draft_content.append("")
     draft_content.append(_hard_wrap(_fill(rng, 6)))
-    docs[f"{brand}/september_brainstorm.md"] = _frontmatter({"status": "draft", "document_type": "note"}) + "\n".join(draft_content)
-    meta[f"{brand}/september_brainstorm.md"] = {"status": "draft", "document_type": "note"}
+    draft_path = f"{brand}/september_brainstorm.md"
+    docs[draft_path] = _frontmatter({"title": "September brainstorm", "status": "draft", "document_type": "note"}) + "\n".join(draft_content)
+    meta[draft_path] = {"status": "draft", "document_type": "note"}
+    template_of[draft_path] = "T1"
 
-    # ---- Volume: 6000+ tokens of current approved material ----
+    # ---- Volume: 6000+ tokens of current approved material (filler, sorts first) ----
     acc = ""
     while _tokens(acc) < 6000:
         acc += " " + _fill(rng, 20)
@@ -200,8 +209,10 @@ def generate_brand(brand: str, spec: dict) -> dict:
     volume.append("## Volume guide")
     volume.append("")
     volume.append(_hard_wrap(acc.strip()))
-    docs[f"{brand}/volume_guide.md"] = _frontmatter({"status": "approved", "document_type": "guide"}) + "\n".join(volume)
-    meta[f"{brand}/volume_guide.md"] = {"status": "approved", "document_type": "guide"}
+    vol_path = f"{brand}/00_volume_guide.md"  # sorts first so filler leads the concatenation
+    docs[vol_path] = _frontmatter({"title": "Volume guide", "status": "approved", "document_type": "guide"}) + "\n".join(volume)
+    meta[vol_path] = {"status": "approved", "document_type": "guide"}
+    template_of[vol_path] = "volume"
 
     # Prohibition docs spread across files with cues
     for i, p in enumerate(prohibitions):
@@ -212,8 +223,9 @@ def generate_brand(brand: str, spec: dict) -> dict:
         content.append("")
         content.append(_hard_wrap(_fill(rng, 5)))
         path = f"{brand}/prohibition_{i}.md"
-        docs[path] = _frontmatter({"status": "approved", "document_type": "styleguide"}) + "\n".join(content)
+        docs[path] = _frontmatter({"title": f"Prohibited vocabulary {i + 1}", "status": "approved", "document_type": "styleguide"}) + "\n".join(content)
         meta[path] = {"status": "approved", "document_type": "styleguide"}
+        template_of[path] = "prohibition"
 
     # Voice docs
     for i, v in enumerate(voice):
@@ -224,8 +236,9 @@ def generate_brand(brand: str, spec: dict) -> dict:
         content.append("")
         content.append(_hard_wrap(_fill(rng, 5)))
         path = f"{brand}/voice_{i}.md"
-        docs[path] = _frontmatter({"status": "approved", "document_type": "styleguide"}) + "\n".join(content)
+        docs[path] = _frontmatter({"title": f"Voice descriptor {i + 1}", "status": "approved", "document_type": "styleguide"}) + "\n".join(content)
         meta[path] = {"status": "approved", "document_type": "styleguide"}
+        template_of[path] = "voice"
 
     # Spec docs
     for i, s in enumerate(specs_list):
@@ -236,13 +249,16 @@ def generate_brand(brand: str, spec: dict) -> dict:
         content.append("")
         content.append(_hard_wrap(_fill(rng, 5)))
         path = f"{brand}/spec_{i}.md"
-        docs[path] = _frontmatter({"status": "approved", "document_type": "spec"}) + "\n".join(content)
+        docs[path] = _frontmatter({"title": f"Approved specification {i + 1}", "status": "approved", "document_type": "spec"}) + "\n".join(content)
         meta[path] = {"status": "approved", "document_type": "spec"}
+        template_of[path] = "spec"
 
     return {
         "brand": brand,
+        "seed": seed,
         "docs": docs,
         "meta": meta,
+        "template_of": template_of,
         "gold": {
             "standing_prohibitions": prohibitions,
             "required_voice_descriptors": voice,
@@ -253,29 +269,35 @@ def generate_brand(brand: str, spec: dict) -> dict:
     }
 
 
-def write_fixtures(spec: dict) -> dict:
-    FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
+def write_fixtures(spec: dict, seed: int, out_dir: Path) -> dict:
+    out_dir.mkdir(parents=True, exist_ok=True)
     summary = {}
     for brand in spec["brands"]:
-        result = generate_brand(brand, spec)
-        bdir = FIXTURE_DIR / brand
+        result = generate_brand(brand, spec, seed)
+        bdir = out_dir / brand
         bdir.mkdir(parents=True, exist_ok=True)
         for path, content in result["docs"].items():
-            # path already includes brand prefix; strip it for the file name
             fname = path.split("/", 1)[1]
             (bdir / fname).write_text(content, encoding="utf-8")
-        (bdir / "_meta.json").write_text(json.dumps(result["meta"], indent=2), encoding="utf-8")
+        (bdir / "_meta.json").write_text(
+            json.dumps({"meta": result["meta"], "template_of": result["template_of"]}, indent=2), encoding="utf-8"
+        )
         total_tokens = sum(_tokens(c) for c in result["docs"].values())
         summary[brand] = {
+            "seed": seed,
             "doc_count": len(result["docs"]),
             "total_tokens": total_tokens,
-            "approved_tokens": sum(_tokens(c) for p, c in result["docs"].items()
-                                   if (result["meta"].get(p) or {}).get("status") == "approved"),
+            "approved_tokens": sum(_tokens(c) for p, c in result["docs"].items() if (result["meta"].get(p) or {}).get("status") == "approved"),
         }
     return summary
 
 
 if __name__ == "__main__":
-    spec = json.loads(SPEC_PATH.read_text())
-    summary = write_fixtures(spec)
-    print(json.dumps(summary, indent=2))
+    import sys
+
+    spec_path = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
+    spec = json.loads(spec_path.read_text())
+    dev_summary = write_fixtures(spec, DEV_SET_SEED, DEV_FIXTURE_DIR)
+    sealed_summary = write_fixtures(spec, SEALED_SEED, SEALED_FIXTURE_DIR)
+    print("dev_fixtures:", json.dumps(dev_summary, indent=2))
+    print("sealed_fixtures:", json.dumps(sealed_summary, indent=2))

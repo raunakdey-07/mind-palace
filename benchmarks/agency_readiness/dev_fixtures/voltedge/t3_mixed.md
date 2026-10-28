@@ -1,4 +1,5 @@
 ---
+title: Product specification
 status: approved
 document_type: guide
 ---
@@ -13,18 +14,18 @@ First-time buyers aged 20-30 are the core audience for this launch.
 | Material | 80% GRS-certified recycled polyester |
 | Channel | Instagram is the primary channel |
 
-What is the warranty period? It is two years from the date of purchase.
+Installation requires a Phillips-head screwdriver and approximately
+twenty minutes. Training materials include videos, quick-reference
+guides, and live webinars. Pricing varies by region and volume, with
+discounts for educational and nonprofit customers. What is the warranty
+period? It is two years from the date of purchase. Customer support is
+available by email and phone during business hours, Monday to Friday.
 The technical datasheet lists every certified component and its
-tolerance. Can I return an opened item? Yes, within thirty days with the
-original receipt. Compatibility charts show which accessories work with
-which model variant. Orders are processed within one business day and
-shipped with tracking information. Our product line spans entry-level,
-mid-range, and professional configurations. Returns are accepted within
-thirty days of purchase with original packaging and receipt. The product
-ships with a two-year limited warranty covering defects in materials and
-workmanship. The team reviewed the quarterly roadmap and agreed on three
-priority initiatives. The maintenance schedule recommends inspection
-every six months for optimal performance. The specifications table lists
-dimensions, weight, power draw, and operating temperature. Customer
-support is available by email and phone during business hours, Monday to
-Friday.
+tolerance. Accessibility features include high-contrast mode, keyboard
+navigation, and screen-reader support. The compliance program addresses
+data retention, audit trails, and access controls. How long does
+shipping take? Most orders arrive within three to five business days.
+Orders are processed within one business day and shipped with tracking
+information. The team reviewed the quarterly roadmap and agreed on three
+priority initiatives. The next review is scheduled for the first Tuesday
+of the following month.

@@ -4,8 +4,8 @@
   "files": {
     "benchmarks/agency_readiness/METRICS.md": "6ef422c28eb6e3e2ff7869799829ba7d65158dc0af169844c4e5e90f5a6c8ac5",
     "benchmarks/agency_readiness/checker.py": "7f2f62947f32d3e92d1fb6c9823da867cc6abb05f9b77de46052fcd68eb3f961",
-    "benchmarks/agency_readiness/evaluate.py": "67f0315be71e181c51f76962dcf8983d278df3269ec50507cd34939ca7bb2513",
-    "benchmarks/agency_readiness/fixture_generator.py": "6d083208ae9423a732668dea11b59a089c40eac700bedc28cb86151ed1993a97",
+    "benchmarks/agency_readiness/evaluate.py": "255e6cc77dab48d42482d299c0bafca18cc39985fc9ff437069caee0270a93f6",
+    "benchmarks/agency_readiness/fixture_generator.py": "f07d95beffd5d5870ff3a776e50bd558d10c14b7e3e38727726f5fe984ee4ad1",
     "benchmarks/agency_readiness/sealed_spec.json": "0d75792b22f28f1cd2b747de58191720f27365cad84ed5bd6ad9146c1a61df9f",
     "docs/performance/baseline-packs.json": "47b6da2ad65eac1165d4239da636952ec5538cf12977e69b2de6b7352d698842",
     "docs/performance/downstream-eval-protocol.freeze.json": "d982d926ebbf2e9de3e366ed7c9a07b7274d00121e3ea0bc420281d30869cad2",

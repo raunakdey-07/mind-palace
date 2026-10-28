@@ -1,14 +1,39 @@
 ---
+title: Volume guide
 status: approved
 document_type: guide
 ---
 ## Volume guide
 
-The maintenance schedule recommends inspection every six months for
-optimal performance. Compatibility charts show which accessories work
-with which model variant. User feedback is collected through surveys and
-used to prioritize the roadmap. The team reviewed the quarterly roadmap
-and agreed on three priority initiatives. Pricing varies by region and
+Orders are processed within one business day and shipped with tracking
+information. Can I return an opened item? Yes, within thirty days with
+the original receipt. The next review is scheduled for the first Tuesday
+of the following month. The compliance program addresses data retention,
+audit trails, and access controls. Software updates are delivered
+automatically and require a restart to take effect. Customer support is
+available by email and phone during business hours, Monday to Friday.
+Installation requires a Phillips-head screwdriver and approximately
+twenty minutes. Compatibility charts show which accessories work with
+which model variant. How long does shipping take? Most orders arrive
+within three to five business days. Pricing varies by region and volume,
+with discounts for educational and nonprofit customers. The team
+reviewed the quarterly roadmap and agreed on three priority initiatives.
+Each configuration is tested against the same quality standard before
+release. Our product line spans entry-level, mid-range, and professional
+configurations. The specifications table lists dimensions, weight, power
+draw, and operating temperature. The maintenance schedule recommends
+inspection every six months for optimal performance. User feedback is
+collected through surveys and used to prioritize the roadmap. Training
+materials include videos, quick-reference guides, and live webinars. The
+product ships with a two-year limited warranty covering defects in
+materials and workmanship. Accessibility features include high-contrast
+mode, keyboard navigation, and screen-reader support. The technical
+datasheet lists every certified component and its tolerance. The
+maintenance schedule recommends inspection every six months for optimal
+performance. Compatibility charts show which accessories work with which
+model variant. User feedback is collected through surveys and used to
+prioritize the roadmap. The team reviewed the quarterly roadmap and
+agreed on three priority initiatives. Pricing varies by region and
 volume, with discounts for educational and nonprofit customers. The next
 review is scheduled for the first Tuesday of the following month.
 Installation requires a Phillips-head screwdriver and approximately
@@ -602,28 +627,4 @@ twenty minutes. How long does shipping take? Most orders arrive within
 three to five business days. The specifications table lists dimensions,
 weight, power draw, and operating temperature. Can I return an opened
 item? Yes, within thirty days with the original receipt. Action items
-were assigned to engineering, design, and customer success. Battery life
-depends on usage patterns and typically lasts a full day on a single
-charge. The technical datasheet lists every certified component and its
-tolerance. Action items were assigned to engineering, design, and
-customer success. Software updates are delivered automatically and
-require a restart to take effect. Our product line spans entry-level,
-mid-range, and professional configurations. Do you offer bulk pricing?
-Contact sales for volume and nonprofit discounts. Accessibility features
-include high-contrast mode, keyboard navigation, and screen-reader
-support. The compliance program addresses data retention, audit trails,
-and access controls. How long does shipping take? Most orders arrive
-within three to five business days. The next review is scheduled for the
-first Tuesday of the following month. Each configuration is tested
-against the same quality standard before release. Pricing varies by
-region and volume, with discounts for educational and nonprofit
-customers. The mobile application syncs across devices using end-to-end
-encryption. Can I return an opened item? Yes, within thirty days with
-the original receipt. Returns are accepted within thirty days of
-purchase with original packaging and receipt. The product ships with a
-two-year limited warranty covering defects in materials and workmanship.
-Orders are processed within one business day and shipped with tracking
-information. Training materials include videos, quick-reference guides,
-and live webinars. Customer support is available by email and phone
-during business hours, Monday to Friday. User feedback is collected
-through surveys and used to prioritize the roadmap.
+were assigned to engineering, design, and customer success.

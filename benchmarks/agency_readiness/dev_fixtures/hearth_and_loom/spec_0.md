@@ -1,4 +1,5 @@
 ---
+title: Approved specification 1
 status: approved
 document_type: spec
 ---
@@ -6,10 +7,9 @@ document_type: spec
 
 The material is 100% long-staple Belgian flax.
 
-The compliance program addresses data retention, audit trails, and
-access controls. Our product line spans entry-level, mid-range, and
-professional configurations. The mobile application syncs across devices
-using end-to-end encryption. Software updates are delivered
-automatically and require a restart to take effect. The product ships
-with a two-year limited warranty covering defects in materials and
-workmanship.
+The technical datasheet lists every certified component and its
+tolerance. Orders are processed within one business day and shipped with
+tracking information. The team reviewed the quarterly roadmap and agreed
+on three priority initiatives. Training materials include videos,
+quick-reference guides, and live webinars. Our product line spans
+entry-level, mid-range, and professional configurations.

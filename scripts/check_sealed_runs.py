@@ -26,17 +26,22 @@ def main() -> int:
         print("sealed_runs.log missing")
         return 1
     lines = [l for l in LOG.read_text().splitlines() if l.strip()]
+    valid = [l for l in lines if not l.startswith("INVALIDATED")]
+    for l in lines:
+        if l.startswith("INVALIDATED") and "reason:" not in l:
+            print(f"invalidated entry missing reason: {l}")
+            return 1
     try:
         tags = git("tag", "--list", "v0.10.0")
     except subprocess.CalledProcessError:
         tags = ""
     tagged = bool(tags)
-    if len(lines) > 2 and not tagged:
-        print(f"sealed_runs.log has {len(lines)} entries (>2) but v0.10.0 is not tagged")
-        for l in lines:
+    if len(valid) > 2 and not tagged:
+        print(f"sealed_runs.log has {len(valid)} valid entries (>2) but v0.10.0 is not tagged")
+        for l in valid:
             print("  ", l)
         return 1
-    print(f"sealed_runs.log: {len(lines)} entry/entries, v0.10.0 tagged={tagged}")
+    print(f"sealed_runs.log: {len(valid)} valid entry/entries ({len(lines)-len(valid)} invalidated), v0.10.0 tagged={tagged}")
     return 0
 
 

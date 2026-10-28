@@ -1,4 +1,5 @@
 ---
+title: Product specification
 status: approved
 document_type: guide
 ---
@@ -13,18 +14,18 @@ First-time buyers aged 20-30 are the core audience for this launch.
 | Material | 80% GRS-certified recycled polyester |
 | Channel | Instagram is the primary channel |
 
-The compliance program addresses data retention, audit trails, and
-access controls. Battery life depends on usage patterns and typically
-lasts a full day on a single charge. The mobile application syncs across
-devices using end-to-end encryption. User feedback is collected through
-surveys and used to prioritize the roadmap. Orders are processed within
-one business day and shipped with tracking information. The team
-reviewed the quarterly roadmap and agreed on three priority initiatives.
-Training materials include videos, quick-reference guides, and live
-webinars. Customer support is available by email and phone during
-business hours, Monday to Friday. Compatibility charts show which
-accessories work with which model variant. What is the warranty period?
-It is two years from the date of purchase. Returns are accepted within
-thirty days of purchase with original packaging and receipt.
-Installation requires a Phillips-head screwdriver and approximately
-twenty minutes.
+Do you offer bulk pricing? Contact sales for volume and nonprofit
+discounts. Orders are processed within one business day and shipped with
+tracking information. Software updates are delivered automatically and
+require a restart to take effect. Can I return an opened item? Yes,
+within thirty days with the original receipt. Accessibility features
+include high-contrast mode, keyboard navigation, and screen-reader
+support. Battery life depends on usage patterns and typically lasts a
+full day on a single charge. The technical datasheet lists every
+certified component and its tolerance. Returns are accepted within
+thirty days of purchase with original packaging and receipt. The product
+ships with a two-year limited warranty covering defects in materials and
+workmanship. The next review is scheduled for the first Tuesday of the
+following month. Customer support is available by email and phone during
+business hours, Monday to Friday. Installation requires a Phillips-head
+screwdriver and approximately twenty minutes.

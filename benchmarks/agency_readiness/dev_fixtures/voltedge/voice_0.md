@@ -1,4 +1,5 @@
 ---
+title: Voice descriptor 1
 status: approved
 document_type: styleguide
 ---
@@ -6,9 +7,9 @@ document_type: styleguide
 
 Our voice is high-cadence, kinetic, and precise.
 
-Compatibility charts show which accessories work with which model
-variant. The mobile application syncs across devices using end-to-end
-encryption. The compliance program addresses data retention, audit
-trails, and access controls. Training materials include videos,
-quick-reference guides, and live webinars. Battery life depends on usage
-patterns and typically lasts a full day on a single charge.
+What is the warranty period? It is two years from the date of purchase.
+The next review is scheduled for the first Tuesday of the following
+month. User feedback is collected through surveys and used to prioritize
+the roadmap. Installation requires a Phillips-head screwdriver and
+approximately twenty minutes. Accessibility features include
+high-contrast mode, keyboard navigation, and screen-reader support.

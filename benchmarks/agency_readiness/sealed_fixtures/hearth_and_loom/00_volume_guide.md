@@ -1,9 +1,34 @@
 ---
+title: Volume guide
 status: approved
 document_type: guide
 ---
 ## Volume guide
 
+The product ships with a two-year limited warranty covering defects in
+materials and workmanship. Pricing varies by region and volume, with
+discounts for educational and nonprofit customers. The maintenance
+schedule recommends inspection every six months for optimal performance.
+Can I return an opened item? Yes, within thirty days with the original
+receipt. Do you offer bulk pricing? Contact sales for volume and
+nonprofit discounts. Our product line spans entry-level, mid-range, and
+professional configurations. Training materials include videos,
+quick-reference guides, and live webinars. How long does shipping take?
+Most orders arrive within three to five business days. Installation
+requires a Phillips-head screwdriver and approximately twenty minutes.
+The technical datasheet lists every certified component and its
+tolerance. What is the warranty period? It is two years from the date of
+purchase. Action items were assigned to engineering, design, and
+customer success. Returns are accepted within thirty days of purchase
+with original packaging and receipt. User feedback is collected through
+surveys and used to prioritize the roadmap. Software updates are
+delivered automatically and require a restart to take effect. The next
+review is scheduled for the first Tuesday of the following month.
+Battery life depends on usage patterns and typically lasts a full day on
+a single charge. Orders are processed within one business day and
+shipped with tracking information. Compatibility charts show which
+accessories work with which model variant. The compliance program
+addresses data retention, audit trails, and access controls.
 Compatibility charts show which accessories work with which model
 variant. The mobile application syncs across devices using end-to-end
 encryption. Each configuration is tested against the same quality
@@ -602,27 +627,4 @@ months for optimal performance. The technical datasheet lists every
 certified component and its tolerance. The specifications table lists
 dimensions, weight, power draw, and operating temperature. Accessibility
 features include high-contrast mode, keyboard navigation, and
-screen-reader support. Software updates are delivered automatically and
-require a restart to take effect. The product ships with a two-year
-limited warranty covering defects in materials and workmanship. The
-maintenance schedule recommends inspection every six months for optimal
-performance. Accessibility features include high-contrast mode, keyboard
-navigation, and screen-reader support. The next review is scheduled for
-the first Tuesday of the following month. User feedback is collected
-through surveys and used to prioritize the roadmap. Pricing varies by
-region and volume, with discounts for educational and nonprofit
-customers. Action items were assigned to engineering, design, and
-customer success. Customer support is available by email and phone
-during business hours, Monday to Friday. The mobile application syncs
-across devices using end-to-end encryption. What is the warranty period?
-It is two years from the date of purchase. Can I return an opened item?
-Yes, within thirty days with the original receipt. Battery life depends
-on usage patterns and typically lasts a full day on a single charge.
-Compatibility charts show which accessories work with which model
-variant. Our product line spans entry-level, mid-range, and professional
-configurations. The team reviewed the quarterly roadmap and agreed on
-three priority initiatives. The compliance program addresses data
-retention, audit trails, and access controls. Training materials include
-videos, quick-reference guides, and live webinars. Each configuration is
-tested against the same quality standard before release. The technical
-datasheet lists every certified component and its tolerance.
+screen-reader support.

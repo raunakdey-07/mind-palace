@@ -1,4 +1,5 @@
 ---
+title: September brainstorm
 status: draft
 document_type: note
 ---
@@ -8,11 +9,11 @@ We draft emails every Monday.
 
 Overnight muscle gain results are expected within weeks.
 
-The product ships with a two-year limited warranty covering defects in
-materials and workmanship. Pricing varies by region and volume, with
-discounts for educational and nonprofit customers. The maintenance
-schedule recommends inspection every six months for optimal performance.
-Can I return an opened item? Yes, within thirty days with the original
-receipt. Do you offer bulk pricing? Contact sales for volume and
-nonprofit discounts. Our product line spans entry-level, mid-range, and
-professional configurations.
+The team reviewed the quarterly roadmap and agreed on three priority
+initiatives. How long does shipping take? Most orders arrive within
+three to five business days. Do you offer bulk pricing? Contact sales
+for volume and nonprofit discounts. The product ships with a two-year
+limited warranty covering defects in materials and workmanship. Customer
+support is available by email and phone during business hours, Monday to
+Friday. The technical datasheet lists every certified component and its
+tolerance.

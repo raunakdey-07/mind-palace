@@ -1,4 +1,5 @@
 ---
+title: Approved specification 1
 status: approved
 document_type: spec
 ---
@@ -6,10 +7,9 @@ document_type: spec
 
 The material is 80% GRS-certified recycled polyester.
 
-Orders are processed within one business day and shipped with tracking
-information. Software updates are delivered automatically and require a
-restart to take effect. The maintenance schedule recommends inspection
-every six months for optimal performance. The specifications table lists
-dimensions, weight, power draw, and operating temperature. Customer
-support is available by email and phone during business hours, Monday to
-Friday.
+User feedback is collected through surveys and used to prioritize the
+roadmap. The next review is scheduled for the first Tuesday of the
+following month. Returns are accepted within thirty days of purchase
+with original packaging and receipt. Training materials include videos,
+quick-reference guides, and live webinars. Do you offer bulk pricing?
+Contact sales for volume and nonprofit discounts.

@@ -1,4 +1,5 @@
 ---
+title: September brainstorm
 status: draft
 document_type: note
 ---
@@ -8,10 +9,11 @@ We draft emails every Monday.
 
 Overnight muscle gain results are expected within weeks.
 
-Compatibility charts show which accessories work with which model
-variant. Can I return an opened item? Yes, within thirty days with the
-original receipt. User feedback is collected through surveys and used to
-prioritize the roadmap. The specifications table lists dimensions,
-weight, power draw, and operating temperature. What is the warranty
-period? It is two years from the date of purchase. Do you offer bulk
-pricing? Contact sales for volume and nonprofit discounts.
+Accessibility features include high-contrast mode, keyboard navigation,
+and screen-reader support. The specifications table lists dimensions,
+weight, power draw, and operating temperature. User feedback is
+collected through surveys and used to prioritize the roadmap. The
+maintenance schedule recommends inspection every six months for optimal
+performance. Orders are processed within one business day and shipped
+with tracking information. Action items were assigned to engineering,
+design, and customer success.

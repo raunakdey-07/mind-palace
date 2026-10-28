@@ -1,4 +1,5 @@
 ---
+title: Approved specification 1
 status: approved
 document_type: spec
 ---
@@ -6,10 +7,10 @@ document_type: spec
 
 The material is 8mm heel drop.
 
-Our product line spans entry-level, mid-range, and professional
-configurations. Training materials include videos, quick-reference
-guides, and live webinars. Returns are accepted within thirty days of
-purchase with original packaging and receipt. Customer support is
-available by email and phone during business hours, Monday to Friday.
-Can I return an opened item? Yes, within thirty days with the original
-receipt.
+Accessibility features include high-contrast mode, keyboard navigation,
+and screen-reader support. How long does shipping take? Most orders
+arrive within three to five business days. User feedback is collected
+through surveys and used to prioritize the roadmap. Pricing varies by
+region and volume, with discounts for educational and nonprofit
+customers. Orders are processed within one business day and shipped with
+tracking information.

@@ -1,4 +1,5 @@
 ---
+title: Approved specification 2
 status: approved
 document_type: spec
 ---
@@ -6,10 +7,9 @@ document_type: spec
 
 The material is Pebax supercritical foam.
 
-The product ships with a two-year limited warranty covering defects in
-materials and workmanship. Our product line spans entry-level,
-mid-range, and professional configurations. The specifications table
-lists dimensions, weight, power draw, and operating temperature. Returns
-are accepted within thirty days of purchase with original packaging and
-receipt. Customer support is available by email and phone during
-business hours, Monday to Friday.
+Customer support is available by email and phone during business hours,
+Monday to Friday. What is the warranty period? It is two years from the
+date of purchase. How long does shipping take? Most orders arrive within
+three to five business days. Can I return an opened item? Yes, within
+thirty days with the original receipt. The mobile application syncs
+across devices using end-to-end encryption.

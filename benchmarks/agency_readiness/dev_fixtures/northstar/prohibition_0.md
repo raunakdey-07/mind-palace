@@ -1,4 +1,5 @@
 ---
+title: Prohibited vocabulary 1
 status: approved
 document_type: styleguide
 ---
@@ -6,10 +7,9 @@ document_type: styleguide
 
 Do not use the word "curated" in any customer-facing copy.
 
-The team reviewed the quarterly roadmap and agreed on three priority
-initiatives. User feedback is collected through surveys and used to
-prioritize the roadmap. Accessibility features include high-contrast
-mode, keyboard navigation, and screen-reader support. How long does
-shipping take? Most orders arrive within three to five business days.
-Pricing varies by region and volume, with discounts for educational and
-nonprofit customers.
+Can I return an opened item? Yes, within thirty days with the original
+receipt. Action items were assigned to engineering, design, and customer
+success. How long does shipping take? Most orders arrive within three to
+five business days. Accessibility features include high-contrast mode,
+keyboard navigation, and screen-reader support. Our product line spans
+entry-level, mid-range, and professional configurations.

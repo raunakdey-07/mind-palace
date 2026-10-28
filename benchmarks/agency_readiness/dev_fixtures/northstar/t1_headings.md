@@ -1,4 +1,5 @@
 ---
+title: Current guidance
 status: approved
 document_type: guide
 ---
@@ -6,16 +7,16 @@ document_type: guide
 
 Do not use the words "curated" or "bespoke."
 
-Installation requires a Phillips-head screwdriver and approximately
-twenty minutes. Our product line spans entry-level, mid-range, and
-professional configurations. Battery life depends on usage patterns and
-typically lasts a full day on a single charge. The mobile application
-syncs across devices using end-to-end encryption. The compliance program
-addresses data retention, audit trails, and access controls. How long
-does shipping take? Most orders arrive within three to five business
-days. Compatibility charts show which accessories work with which model
-variant. The next review is scheduled for the first Tuesday of the
-following month.
+The next review is scheduled for the first Tuesday of the following
+month. Customer support is available by email and phone during business
+hours, Monday to Friday. Software updates are delivered automatically
+and require a restart to take effect. Orders are processed within one
+business day and shipped with tracking information. Compatibility charts
+show which accessories work with which model variant. How long does
+shipping take? Most orders arrive within three to five business days.
+The specifications table lists dimensions, weight, power draw, and
+operating temperature. User feedback is collected through surveys and
+used to prioritize the roadmap.
 
 ## Brainstorming
 
@@ -27,23 +28,22 @@ Try a playful tone again.
 
 TikTok meme giveaway.
 
-Each configuration is tested against the same quality standard before
-release. Returns are accepted within thirty days of purchase with
-original packaging and receipt. The next review is scheduled for the
-first Tuesday of the following month. The mobile application syncs
-across devices using end-to-end encryption. Accessibility features
-include high-contrast mode, keyboard navigation, and screen-reader
-support. Our product line spans entry-level, mid-range, and professional
-configurations.
+How long does shipping take? Most orders arrive within three to five
+business days. The mobile application syncs across devices using
+end-to-end encryption. User feedback is collected through surveys and
+used to prioritize the roadmap. Our product line spans entry-level,
+mid-range, and professional configurations. The next review is scheduled
+for the first Tuesday of the following month. Battery life depends on
+usage patterns and typically lasts a full day on a single charge.
 
 ## Superseded
 
 65% recycled polyester was the old target.
 
-User feedback is collected through surveys and used to prioritize the
-roadmap. Action items were assigned to engineering, design, and customer
-success. Do you offer bulk pricing? Contact sales for volume and
-nonprofit discounts. Each configuration is tested against the same
-quality standard before release. The mobile application syncs across
-devices using end-to-end encryption. Our product line spans entry-level,
-mid-range, and professional configurations.
+Our product line spans entry-level, mid-range, and professional
+configurations. The mobile application syncs across devices using
+end-to-end encryption. Customer support is available by email and phone
+during business hours, Monday to Friday. The technical datasheet lists
+every certified component and its tolerance. Do you offer bulk pricing?
+Contact sales for volume and nonprofit discounts. The maintenance
+schedule recommends inspection every six months for optimal performance.

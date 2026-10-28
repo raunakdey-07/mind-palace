@@ -251,6 +251,8 @@ jobs:
           MIND_PALACE_DEPLOYMENT: server
           MIND_PALACE_AUTH_MODE: required
           MIND_PALACE_INGEST_ROOTS: /content
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: off
+          MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY: "1"
         run: |
           python -c "from api.main import app; print('server profile accepted the runtime role')"
           python - <<'PYEOF'

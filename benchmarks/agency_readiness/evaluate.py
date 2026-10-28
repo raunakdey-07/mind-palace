@@ -373,13 +373,15 @@ def main():
                 vo_v = v.get("voice_recall", 0.0)
                 sp_v = v.get("spec_recall", 0.0)
                 rr.append(rr_v)
-                vl.append(vl_v)
                 vo.append(vo_v)
                 sp.append(sp_v)
                 brand_rr.append(rr_v)
-                brand_vl.append(vl_v)
                 brand_vo.append(vo_v)
                 brand_sp.append(sp_v)
+                # violation_rate is mean over non-history prompts only
+                if not m.get("history_allowed", False):
+                    vl.append(vl_v)
+                    brand_vl.append(vl_v)
             per_brand.setdefault(brand, {})[c] = {
                 "rule_recall": _agg_condition(brand_rr),
                 "violation_rate": _agg_condition(brand_vl),

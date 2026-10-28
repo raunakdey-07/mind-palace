@@ -1,7 +1,8 @@
-# BASELINE_pre_m018 — sealed agency-readiness benchmark (repaired harness)
+# BASELINE_pre_m018 — sealed agency-readiness benchmark (repaired harness, fair fixtures)
 
-This is the REPAIRED baseline (first valid sealed run). The previous run is archived as
-`results_baseline_INVALID.json`; see `sealed_runs.log` and `docs/m018-baseline-diagnosis.md`.
+This is the REPAIRED baseline (first valid sealed run). The previous runs are archived as
+`results_baseline_INVALID.json` and `results_baseline_INVALID2.json`; see `sealed_runs.log`
+and `docs/m018-baseline-diagnosis.md`.
 
 Token budget: 1200 words (one tokenizer for every condition). Tokenizer: whitespace words
 (`len(text.split())`; onnxruntime is not installed in this environment, so the embedder uses
@@ -11,7 +12,7 @@ NS-05, VE-03, HL-04, VE-06.
 Conditions: A (no memory), B (static dump, 5 orderings), B+ (approved-only static, 5 orderings),
 B* (brand-guide only), C (raw RAG over all docs), C+ (raw RAG + document-level filter),
 D (Mind Palace build_context after real ingestion).
-B and B+ report mean/min/max over 5 orderings (alphabetical, reverse, 3 seeded shuffles).
+B and B+ report mean/min/max over 5 orderings (neutral-name alphabetical, reverse, 3 seeded shuffles).
 Headline metrics: rule_recall, violation_rate. Guards: voice_recall, spec_recall.
 Statistics: Wilson 95% intervals for proportions; paired bootstrap (seed 20261028,
 10,000 resamples, percentile interval) for D minus C+.
@@ -39,10 +40,6 @@ northstar | 0.200 | 0.200 | 0.000 | False | 0.714 | 0.714 | 0.429
 voltedg | 0.000 | 0.000 | 0.000 | True | 0.000 | 0.000 | 0.000
 hearth_and_loom | 0.381 | 0.381 | 0.000 | False | 0.000 | 0.000 | 0.000
 
-## Per-brand B/B+ ordering spread (min/max over 5 orderings)
-brand | B rule [min-max] | B+ rule [min-max] | B viol [min-max] | B+ viol [min-max]
-(see per-brand summary in results_baseline.json for min/max over 5 orderings)
-
 ## Pre-registered criterion verdict
 > D_auto beats C+ if the paired-bootstrap interval of the difference excludes 0 in
 > the favourable direction on BOTH rule_recall and violation_rate, AND D >= C+ on both
@@ -59,3 +56,12 @@ Release-notes position: "no measured advantage over a metadata-filtered baseline
 Note: D returns empty/near-empty context on this baseline (main product without the Phase 3
 trap fixes and state read path), so its low violation_rate is an artefact of returning nothing,
 not better filtering. This is an honest baseline showing where D stands on v0.9.3 + migration 015.
+
+## Structural fixture check
+Under every B ordering, <=50% of each brand's gold items fall within the first 1200 words.
+Structural check passed on this run (no assertion failure).
+
+## Per-template gold coverage
+Each fixture document is tagged with a template (T1/T2/T3/prohibition/voice/spec/filler/draft).
+Gold items are spread: prohibitions in >=3 docs, voice in >=2 docs, specs in >=2 docs,
+each doc 300-800 words, 12 filler docs (>=6000 tokens), neutral names (no 00_/zz_/volume).

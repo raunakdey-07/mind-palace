@@ -4,7 +4,7 @@
   "tokenizer": "whitespace words (len(text.split()))",
   "seed": 20261028,
   "sealed": true,
-  "generated_at": "2026-10-28T06:46:44.263598+00:00",
+  "generated_at": "2026-10-28T09:08:49.202935+00:00",
   "conditions": [
     "A",
     "B",
@@ -32,7 +32,7 @@
         "mean": 0.0,
         "min": 0,
         "max": 0,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.0,
@@ -55,10 +55,10 @@
         "n": 24
       },
       "violation_rate": {
-        "mean": 0.3333333333333333,
+        "mean": 0.33999999999999997,
         "min": 0.2,
         "max": 0.6,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.0,
@@ -81,10 +81,10 @@
         "n": 24
       },
       "violation_rate": {
-        "mean": 0.19999999999999998,
+        "mean": 0.21000000000000002,
         "min": 0.0,
         "max": 0.6,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.0,
@@ -110,7 +110,7 @@
         "mean": 0.0,
         "min": 0,
         "max": 0,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.0,
@@ -133,10 +133,10 @@
         "n": 24
       },
       "violation_rate": {
-        "mean": 0.5416666666666666,
+        "mean": 0.6,
         "min": 0,
         "max": 1,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.5833333333333334,
@@ -159,10 +159,10 @@
         "n": 24
       },
       "violation_rate": {
-        "mean": 0.20833333333333334,
+        "mean": 0.25,
         "min": 0,
         "max": 1,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.5833333333333334,
@@ -185,10 +185,10 @@
         "n": 24
       },
       "violation_rate": {
-        "mean": 0.25,
+        "mean": 0.2,
         "min": 0,
         "max": 1,
-        "n": 24
+        "n": 20
       },
       "voice_recall": {
         "mean": 0.0,
@@ -217,7 +217,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -243,7 +243,7 @@
           "mean": 0.6,
           "min": 0.6,
           "max": 0.6,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -269,7 +269,7 @@
           "mean": 0.6,
           "min": 0.6,
           "max": 0.6,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -295,7 +295,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -318,10 +318,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.625,
+          "mean": 0.7142857142857143,
           "min": 0,
           "max": 1,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.25,
@@ -344,10 +344,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.625,
+          "mean": 0.7142857142857143,
           "min": 0,
           "max": 1,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.25,
@@ -370,10 +370,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.375,
+          "mean": 0.42857142857142855,
           "min": 0,
           "max": 1,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -401,7 +401,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.0,
@@ -424,10 +424,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.2,
+          "mean": 0.20000000000000004,
           "min": 0.2,
           "max": 0.2,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.0,
@@ -453,7 +453,7 @@
           "mean": 0.0,
           "min": 0.0,
           "max": 0.0,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.0,
@@ -479,7 +479,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.0,
@@ -502,10 +502,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.625,
+          "mean": 0.6666666666666666,
           "min": 0,
           "max": 1,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.875,
@@ -531,7 +531,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.875,
@@ -554,10 +554,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.375,
+          "mean": 0.16666666666666666,
           "min": 0,
           "max": 1,
-          "n": 8
+          "n": 6
         },
         "voice_recall": {
           "mean": 0.0,
@@ -585,7 +585,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -611,7 +611,7 @@
           "mean": 0.2,
           "min": 0.2,
           "max": 0.2,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -637,7 +637,7 @@
           "mean": 0.0,
           "min": 0.0,
           "max": 0.0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -663,7 +663,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,
@@ -686,10 +686,10 @@
           "n": 8
         },
         "violation_rate": {
-          "mean": 0.375,
+          "mean": 0.42857142857142855,
           "min": 0,
           "max": 1,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.625,
@@ -715,7 +715,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.625,
@@ -741,7 +741,7 @@
           "mean": 0.0,
           "min": 0,
           "max": 0,
-          "n": 8
+          "n": 7
         },
         "voice_recall": {
           "mean": 0.0,

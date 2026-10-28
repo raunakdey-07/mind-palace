@@ -4,7 +4,7 @@
   "files": {
     "benchmarks/agency_readiness/METRICS.md": "6ef422c28eb6e3e2ff7869799829ba7d65158dc0af169844c4e5e90f5a6c8ac5",
     "benchmarks/agency_readiness/checker.py": "c645b93464a75f34510828ced611a26adafaa3fd3806b4526778978935e62d50",
-    "benchmarks/agency_readiness/evaluate.py": "671caf6a82fc26c669f85d78bfbeaec6c8832de34d826864cc2418de24f35264",
+    "benchmarks/agency_readiness/evaluate.py": "bb70d54e8d75af50b5366a462daecb0350cb5603e3fbf671a831ac22e7725cd0",
     "benchmarks/agency_readiness/fixture_generator.py": "ec2736756ce4cc834cfdd449092b957b1d1965fc2bd6caf17c684aa28ea52e83",
     "benchmarks/agency_readiness/sealed_spec.json": "0d75792b22f28f1cd2b747de58191720f27365cad84ed5bd6ad9146c1a61df9f",
     "docs/performance/baseline-packs.json": "47b6da2ad65eac1165d4239da636952ec5538cf12977e69b2de6b7352d698842",

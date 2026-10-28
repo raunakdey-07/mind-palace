@@ -1,12 +1,13 @@
 # BASELINE_pre_m018 — sealed agency-readiness benchmark (repaired harness, fair fixtures)
 
-This is the REPAIRED baseline (first valid sealed run). The previous runs are archived as
-`results_baseline_INVALID.json` and `results_baseline_INVALID2.json`; see `sealed_runs.log`
-and `docs/m018-baseline-diagnosis.md`.
+This is the REPAIRED baseline (final valid sealed run). Previous runs archived as
+`results_baseline_INVALID.json`, `results_baseline_INVALID2.json`, `results_baseline_INVALID3.json`.
+See `sealed_runs.log` (1 valid entry, 3 invalidated).
 
-Token budget: 1200 words (one tokenizer for every condition). Tokenizer: whitespace words
-(`len(text.split())`; onnxruntime is not installed in this environment, so the embedder uses
-the torch sentence-transformers backend — still real MiniLM embeddings, not the SHA-256 stub).
+Token budget: 1200 words (one tokenizer for every condition).
+Tokenizer: whitespace words (`len(text.split())`).
+Embedder: {"class": "Embedder", "backend": "torch", "model_name": "all-MiniLM-L6-v2", "dimension": 384} (onnxruntime NOT installed; torch backend; real MiniLM, not SHA-256 stub).
+Sanity check: cos("warm friendly tone", "approachable voice")=0.4399 > cos("warm friendly tone", "quarterly tax filing")=-0.0479 by 0.4878 (>=0.2, PASS).
 Unit: prompt (24). History-allowed prompts (excluded from headline violation_rate):
 NS-05, VE-03, HL-04, VE-06.
 Conditions: A (no memory), B (static dump, 5 orderings), B+ (approved-only static, 5 orderings),
@@ -65,3 +66,4 @@ Structural check passed on this run (no assertion failure).
 Each fixture document is tagged with a template (T1/T2/T3/prohibition/voice/spec/filler/draft).
 Gold items are spread: prohibitions in >=3 docs, voice in >=2 docs, specs in >=2 docs,
 each doc 300-800 words, 12 filler docs (>=6000 tokens), neutral names (no 00_/zz_/volume).
+C and C+ index all current-version docs (incl. draft/superseded); C+ applies document-level filter.

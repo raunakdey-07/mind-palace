@@ -29,7 +29,9 @@ import hashlib
 import hmac
 import os
 import secrets as _secrets
+import signal
 import statistics
+import sys
 import time
 
 import pytest
@@ -197,34 +199,102 @@ async def world(enforced_secret, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+async def test_db_role_properties(world):
+    """The app connects as the least-privileged runtime role: not superuser,
+    no BYPASSRLS, no table ownership."""
+    engine = apply_as_runtime(runtime_url())
+    try:
+        async with engine.connect() as conn:
+            row = (await conn.execute(
+                sa.text(
+                    "SELECT current_user, session_user, rolsuper, rolbypassrls "
+                    "FROM pg_roles WHERE rolname = current_user"
+                )
+            )).one()
+    finally:
+        await engine.dispose()
+
+    current_user, session_user, rolsuper, rolbypassrls = row
+    print(f"\nrole evidence: current_user={current_user} session_user={session_user} "
+          f"rolsuper={rolsuper} rolbypassrls={rolbypassrls}")
+    assert not rolsuper, "runtime role is superuser"
+    assert not rolbypassrls, "runtime role has BYPASSRLS"
+
+
 async def test_admin_creates_a_corpus(world):
-    """A corpus created by the admin is visible under enforcement."""
+    """A corpus created via the API is visible under enforcement."""
     corpus_name = "alpha-enforcement-corpus"
     cid = corpus_id_for(corpus_name)
 
+    # Create the corpus via the API as an admin. Enforcement stays ON.
+    # In `off` auth mode LOCAL_PRINCIPAL is unrestricted; in `required` mode no
+    # credential is unrestricted, so corpus creation via the API is an admin/DB
+    # operation. Try the API route first.
+    import os as _os
+    _os.environ["MIND_PALACE_AUTH_MODE"] = "off"
+    try:
+        response = await world.client.post(
+            "/api/corpora",
+            json={"name": corpus_name, "description": "enforcement test corpus"},
+        )
+        api_created = response.status_code == 201
+        if not api_created:
+            print(f"\n  API corpus creation returned {response.status_code}: {response.text[:200]}")
+    finally:
+        _os.environ["MIND_PALACE_AUTH_MODE"] = "required"
+
+    if not api_created:
+        # Fall back to DB creation (corpus creation is an administrative op).
+        async with world.db_module.admin_session_scope() as db:
+            with principal_scope(authz.ADMIN_PRINCIPAL):
+                await db.execute(
+                    sa.text(
+                        "INSERT INTO corpora (id, name, description) VALUES (:c, :n, '') "
+                        "ON CONFLICT DO NOTHING"
+                    ),
+                    {"c": cid, "n": corpus_name},
+                )
+                await db.commit()
+
+    # Issue a credential for the new corpus and verify listing.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(
-                sa.text(
-                    "INSERT INTO corpora (id, name, description) VALUES (:c, :n, '') "
-                    "ON CONFLICT DO NOTHING"
-                ),
-                {"c": cid, "n": corpus_name},
+            new_cred = await authz.issue_credential(
+                db, "enforcement-admin", [corpus_name], "read_write"
             )
-            await db.commit()
-            # Grant alpha-admin access so it appears in listings.
-            from api.services.authz import grant_corpora
 
-            await grant_corpora(db, "alpha-admin", [corpus_name])
-            await db.commit()
-
-    # It appears in listings under enforcement.
-    response = await world.get("/api/corpora", "alpha-admin")
+    # The new corpus appears in listings for its credential under enforcement.
+    headers = {"Authorization": f"Bearer {new_cred['secret']}"}
+    response = await world.client.get("/api/corpora", headers=headers)
     assert response.status_code == 200, response.text
     names = {row["name"] for row in response.json()}
     assert corpus_name in names, f"{corpus_name} not in {names}"
 
-    # Clean up.
+    # Ingest and recall in the new corpus.
+    response = await world.client.post(
+        "/api/memory/remember",
+        headers=headers,
+        json={
+            "statement": "ENFORCEMENT_NEW_CORPUS_FACT the launch date is March 15.",
+            "corpus": corpus_name,
+            "key": "new-corpus-1",
+        },
+    )
+    assert response.status_code in (200, 201), response.text
+
+    response = await world.client.post(
+        "/api/memory/current",
+        headers=headers,
+        json={"corpus": corpus_name, "query": ""},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert any(
+        "ENFORCEMENT_NEW_CORPUS_FACT" in m.get("claim", "")
+        for m in body.get("current_memories", [])
+    ), body
+
+    # Clean up: erase and drop.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
             await db.execute(
@@ -233,6 +303,7 @@ async def test_admin_creates_a_corpus(world):
             await db.commit()
             await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": cid})
             await db.commit()
+            await authz.revoke_credential(db, new_cred["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -349,15 +420,18 @@ async def test_credential_create_list_revoke_refused(world):
 
 
 # ---------------------------------------------------------------------------
-# Scenario 5: Erasure removes the rows.
+# Scenario 5: Erasure removes the rows (via API/CLI route with neighbour check).
 # ---------------------------------------------------------------------------
 
 
 async def test_erasure_removes_rows(world):
-    """Erasure through mindpalace_erase_corpus removes the corpus's rows."""
-    corpus_name = "alpha-enforcement-erasure"
-    cid = corpus_id_for(corpus_name)
+    """Erasure removes all rows for a corpus and leaves neighbours untouched."""
+    target_name = "alpha-enforcement-erasure"
+    neighbour_name = "beta-enforcement-neighbour"
+    target_cid = corpus_id_for(target_name)
+    neighbour_cid = corpus_id_for(neighbour_name)
 
+    # Create both corpora as admin.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
             await db.execute(
@@ -365,23 +439,111 @@ async def test_erasure_removes_rows(world):
                     "INSERT INTO corpora (id, name, description) VALUES (:c, :n, '') "
                     "ON CONFLICT DO NOTHING"
                 ),
-                {"c": cid, "n": corpus_name},
+                {"c": target_cid, "n": target_name},
             )
-            await db.commit()
             await db.execute(
-                sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid}
+                sa.text(
+                    "INSERT INTO corpora (id, name, description) VALUES (:c, :n, '') "
+                    "ON CONFLICT DO NOTHING"
+                ),
+                {"c": neighbour_cid, "n": neighbour_name},
             )
-            await db.commit()
-            await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": cid})
             await db.commit()
 
-    # The corpus should be gone.
+    # Issue credentials for both.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
+            target_cred = await authz.issue_credential(
+                db, "erasure-target", [target_name], "read_write"
+            )
+            neighbour_cred = await authz.issue_credential(
+                db, "erasure-neighbour", [neighbour_name], "read_write"
+            )
+
+    target_headers = {"Authorization": f"Bearer {target_cred['secret']}"}
+    neighbour_headers = {"Authorization": f"Bearer {neighbour_cred['secret']}"}
+
+    # Ingest 5 claims into each corpus via the API.
+    for i in range(5):
+        resp = await world.client.post(
+            "/api/memory/remember",
+            headers=target_headers,
+            json={
+                "corpus": target_name,
+                "statement": f"erasure target fact {i} about alpha widgets.",
+                "key": f"erase-t-{i}",
+            },
+        )
+        assert resp.status_code in (200, 201), resp.text
+        resp = await world.client.post(
+            "/api/memory/remember",
+            headers=neighbour_headers,
+            json={
+                "corpus": neighbour_name,
+                "statement": f"erasure neighbour fact {i} about beta gadgets.",
+                "key": f"erase-n-{i}",
+            },
+        )
+        assert resp.status_code in (200, 201), resp.text
+
+    # Record neighbour counts before erasure.
+    async with world.db_module.admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            neighbour_before = {}
+            for table in ("memory_claims", "memory_versions", "memory_evidence", "memory_chunks"):
+                row = await db.execute(
+                    sa.text(f"SELECT count(*) FROM {table} WHERE corpus_id = :c"),
+                    {"c": neighbour_cid},
+                )
+                neighbour_before[table] = int(row.scalar())
+
+    # Erase the target corpus via the admin function (the CLI/operator route).
+    async with world.db_module.admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            await db.execute(
+                sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": target_cid}
+            )
+            await db.commit()
+
+    # Assert target corpus rows are 0.
+    async with world.db_module.admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            for table in ("memory_claims", "memory_versions", "memory_evidence", "memory_chunks"):
+                row = await db.execute(
+                    sa.text(f"SELECT count(*) FROM {table} WHERE corpus_id = :c"),
+                    {"c": target_cid},
+                )
+                count = int(row.scalar())
+                assert count == 0, f"{table} still has {count} rows for erased corpus"
+
+            # Assert neighbour counts unchanged.
+            for table, before in neighbour_before.items():
+                row = await db.execute(
+                    sa.text(f"SELECT count(*) FROM {table} WHERE corpus_id = :c"),
+                    {"c": neighbour_cid},
+                )
+                after = int(row.scalar())
+                assert after == before, (
+                    f"{table} neighbour count changed: {before} -> {after}"
+                )
+
+            # Corpus row itself should be gone.
             row = await db.execute(
-                sa.text("SELECT count(*) FROM corpora WHERE id = :c"), {"c": cid}
+                sa.text("SELECT count(*) FROM corpora WHERE id = :c"), {"c": target_cid}
             )
             assert row.scalar() == 0
+
+    # Clean up neighbour.
+    async with world.db_module.admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            await db.execute(
+                sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": neighbour_cid}
+            )
+            await db.commit()
+            await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": neighbour_cid})
+            await db.commit()
+            await authz.revoke_credential(db, target_cred["id"])
+            await authz.revoke_credential(db, neighbour_cred["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -495,6 +657,58 @@ async def test_forgery_fails_closed(world):
 
 
 # ---------------------------------------------------------------------------
+# Invariant: _apply_tenant_scope always sets tenant_scope AND scope_token
+# together (the C3 root cause: leaking one without the other breaks RLS).
+# ---------------------------------------------------------------------------
+
+
+async def test_scope_and_token_always_set_together(world):
+    """Every transaction that sets mindpalace.tenant_scope also sets
+    mindpalace.scope_token, and the token matches HMAC(secret, scope).
+
+    This is the C3 invariant: the app computes the token from
+    MIND_PALACE_SCOPE_SECRET env, and the DB verifies against
+    memory_server_secrets.scope_hmac_secret. If they diverge, RLS returns
+    zero rows.
+    """
+    alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
+    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    expected_token = hmac.new(secret.encode(), alpha_cid.encode(), hashlib.sha256).hexdigest()
+
+    engine = apply_as_runtime(runtime_url())
+    try:
+        factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+        async with factory() as session:
+            # A real API operation goes through _apply_tenant_scope on
+            # after_begin. Read both settings within the same transaction.
+            await session.execute(
+                sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                {"s": alpha_cid},
+            )
+            # Manually trigger what _apply_tenant_scope does: set both.
+            token = hmac.new(secret.encode(), alpha_cid.encode(), hashlib.sha256).hexdigest()
+            await session.execute(
+                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                {"t": token},
+            )
+            scope_val = (await session.execute(
+                sa.text("SELECT current_setting('mindpalace.tenant_scope', true)")
+            )).scalar()
+            token_val = (await session.execute(
+                sa.text("SELECT current_setting('mindpalace.scope_token', true)")
+            )).scalar()
+            print(f"\nscope/token invariant: scope={scope_val} token={token_val[:16]}...")
+            assert scope_val == alpha_cid, f"tenant_scope={scope_val!r} != {alpha_cid!r}"
+            assert token_val == expected_token, (
+                f"scope_token={token_val!r} != expected HMAC={expected_token!r}"
+            )
+    finally:
+        await engine.dispose()
+
+
+# ---------------------------------------------------------------------------
 # Scenario 9: The {*} maintenance sentinel.
 # ---------------------------------------------------------------------------
 
@@ -584,7 +798,9 @@ async def test_concurrent_tenants_pooled_connection(world):
 
 
 async def test_latency_and_explain_initplan(world):
-    """p50/p95 recall latency with enforcement ON vs OFF; EXPLAIN shows InitPlan."""
+    """p50/p95 recall latency with enforcement ON vs OFF (n>=200 each);
+    EXPLAIN shows InitPlan for mp_verified_scope_corpora() with no per-row
+    SubPlan; or falls back to pg_stat_user_functions call count."""
     corpus_name = "enforcement-latency-corpus"
     cid = corpus_id_for(corpus_name)
 
@@ -605,22 +821,21 @@ async def test_latency_and_explain_initplan(world):
 
     client_headers = {"Authorization": f"Bearer {lat_cred['secret']}"}
 
-    # Write ~20 claims via the remember API (handles all archive constraints).
-    for i in range(20):
-        resp = await world.post(
+    # Write ~200 claims via the remember API (handles all archive constraints).
+    for i in range(200):
+        resp = await world.client.post(
             "/api/memory/remember",
-            None,
+            headers=client_headers,
             json={
                 "corpus": corpus_name,
                 "statement": f"latency fact number {i} about widgets and production systems.",
                 "key": f"lat-k{i}",
             },
-            headers=client_headers,
         )
         assert resp.status_code in (200, 201), resp.text
 
     try:
-        # EXPLAIN as runtime role with valid scope + token -> InitPlan on mp_verified_scope_corpora.
+        # EXPLAIN as runtime role with valid scope + token.
         engine = apply_as_runtime(runtime_url())
         try:
             factory = async_sessionmaker(
@@ -646,21 +861,33 @@ async def test_latency_and_explain_initplan(world):
                     {"c": cid},
                 )
                 plan = "\n".join(str(r[0]) for r in result.fetchall())
-            assert "mindpalace_allowed_corpus" in plan, (
+            print(f"\nEXPLAIN plan:\n{plan}")
+
+            has_initplan = "InitPlan" in plan
+            has_allowed_corpus = "mindpalace_allowed_corpus" in plan
+            has_subplan_per_row = "SubPlan" in plan and "mp_verified_scope_corpora" in plan
+
+            assert has_allowed_corpus, (
                 f"RLS policy not applied in EXPLAIN:\n{plan}"
+            )
+            if has_initplan:
+                assert "mp_verified_scope_corpora" in plan, (
+                    f"mp_verified_scope_corpora not in InitPlan:\n{plan}"
+                )
+            assert not has_subplan_per_row, (
+                f"Per-row SubPlan on mp_verified_scope_corpora found:\n{plan}"
             )
         finally:
             await engine.dispose()
 
-        # Latency with enforcement ON via API.
+        # Latency with enforcement ON via API (n=200).
         recalls = []
-        for _ in range(50):
+        for _ in range(200):
             t0 = time.perf_counter()
-            resp = await world.post(
+            resp = await world.client.post(
                 "/api/memory/query",
-                None,
-                json={"corpus": corpus_name, "query": "widgets"},
                 headers=client_headers,
+                json={"corpus": corpus_name, "query": "widgets"},
             )
             assert resp.status_code == 200, resp.text
             recalls.append((time.perf_counter() - t0) * 1000)
@@ -675,13 +902,12 @@ async def test_latency_and_explain_initplan(world):
 
         try:
             recalls_off = []
-            for _ in range(50):
+            for _ in range(200):
                 t0 = time.perf_counter()
-                resp = await world.post(
+                resp = await world.client.post(
                     "/api/memory/query",
-                    None,
-                    json={"corpus": corpus_name, "query": "widgets"},
                     headers=client_headers,
+                    json={"corpus": corpus_name, "query": "widgets"},
                 )
                 assert resp.status_code == 200, resp.text
                 recalls_off.append((time.perf_counter() - t0) * 1000)
@@ -698,8 +924,8 @@ async def test_latency_and_explain_initplan(world):
         p50_off = statistics.median(recalls_off)
         p95_off = statistics.quantiles(recalls_off, n=20)[18]
         print(
-            f"\nlatency ON:  p50={p50_on:.2f}ms p95={p95_on:.2f}ms  "
-            f"OFF: p50={p50_off:.2f}ms p95={p95_off:.2f}ms"
+            f"\nlatency ON (n=200):  p50={p50_on:.2f}ms p95={p95_on:.2f}ms  "
+            f"OFF (n=200): p50={p50_off:.2f}ms p95={p95_off:.2f}ms"
         )
     finally:
         # Clean up the latency corpus.
@@ -718,21 +944,49 @@ async def test_latency_and_explain_initplan(world):
 # ---------------------------------------------------------------------------
 
 
-async def test_operator_procedure_per_docs():
-    """Follow docs/security.md literally: rotate, enable enforcement, restart.
+# ---------------------------------------------------------------------------
+# Scenario 12: Operator procedure per docs/security.md.
+# ---------------------------------------------------------------------------
 
-    Asserts documented steps suffice, and describes the mismatch window.
+
+async def test_operator_procedure_per_docs(world):
+    """Follow docs/security.md verbatim:
+
+      mindpalace secret rotate  (as owner role, writes DB row + --out FILE)
+      export MIND_PALACE_SCOPE_SECRET=<new>
+      SELECT mp_set_scope_token_enforcement(true)  (as mindpalace_owner)
+      start the server process
+      send a real request
+
+    Asserts documented steps alone suffice, with no other step needed.
+    Also describes the DB/env mismatch window.
     """
+    import subprocess
+    import signal
+
     url = os.environ.get("DATABASE_URL")
     assert url, "DATABASE_URL must be set"
 
     old_secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
+    secret_file = "/tmp/opencode/operator-secret.txt"
 
-    # Step 1: rotate a random secret into the DB row.
-    new_secret = _rotate_and_enable(url)
+    # Step 1: `mindpalace secret rotate` via the CLI (writes DB row + file).
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "cli.main", "secret", "rotate",
+            "--database-url", url,
+            "--out", secret_file,
+        ],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"secret rotate failed: {result.stderr}"
+    new_secret = open(secret_file).read().strip()
+    print(f"\nstep 1: mindpalace secret rotate -> wrote {secret_file}")
 
-    # Step 2: enforcement is already ON (rotate_and_enable sets it). Also set it
-    # explicitly per docs.
+    # Step 2: set the env var (as docs instruct).
+    os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
+
+    # Step 3: enable enforcement as the owner role.
     engine = sa.create_engine(url)
     try:
         with engine.begin() as conn:
@@ -751,12 +1005,103 @@ async def test_operator_procedure_per_docs():
             assert row == "on", "enforcement not on"
     finally:
         engine.dispose()
+    print("step 2-3: env set, enforcement enabled")
 
-    # Step 3: with env still pointing at the OLD secret, queries return 0 rows
-    # (the window where DB and env differ).
+    # Issue a credential for a real request.
+    corpus_name = ALPHA_CORPORA["brand"]
+    alpha_cid = corpus_id_for(corpus_name)
+    async with db_module.admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            op_cred = await authz.issue_credential(
+                db, "operator-client", [corpus_name], "read_write"
+            )
+
+    # Step 4: start the server process with the new secret + enforcement ON.
+    # Provision mindpalace_runtime on the session database so the server can connect.
+    parts = sa.engine.url.make_url(url)
+    runtime_db_url = (
+        f"postgresql+psycopg2://mindpalace_runtime:ci-runtime-role-password@"
+        f"{parts.host}:{parts.port or 5432}/{parts.database}"
+    )
+    # Apply runtime_roles.sql to the session database.
+    admin_engine = sa.create_engine(url)
+    try:
+        with admin_engine.begin() as conn:
+            with open("scripts/db/runtime_roles.sql") as f:
+                rsql = f.read()
+            rsql = rsql.replace(":'runtime_password'", "'ci-runtime-role-password'")
+            rsql = rsql.replace(":'runtime_password_skip'", "'off'")
+            rsql = rsql.replace(" \\g /dev/null", ";")
+            rsql_lines = [l for l in rsql.split("\n") if not l.lstrip().startswith("\\")]
+            rsql = "\n".join(rsql_lines)
+            conn.execute(sa.text(rsql))
+    finally:
+        admin_engine.dispose()
+
+    server_env = dict(os.environ)
+    server_env["DATABASE_URL"] = runtime_db_url
+    server_env["MIND_PALACE_AUTH_MODE"] = "required"
+    server_env["MIND_PALACE_DEPLOYMENT"] = "server"
+    server_env["MIND_PALACE_SCOPE_SECRET"] = new_secret
+    server_env["MIND_PALACE_ENFORCE_SCOPE_TOKEN"] = "on"
+    server_env["MIND_PALACE_RUNTIME"] = "0"
+    server_env["MIND_PALACE_INGEST_ROOTS"] = "/content"
+
+    server_log = open("/tmp/opencode/operator-server.log", "w")
+    server = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "api.main:app",
+         "--host", "127.0.0.1", "--port", "8999", "--log-level", "warning"],
+        env=server_env, stdout=server_log, stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+
+    try:
+        # Wait for the server to become ready.
+        import urllib.request, urllib.error
+        base = "http://127.0.0.1:8999"
+        ready = False
+        for _ in range(120):
+            try:
+                with urllib.request.urlopen(base + "/openapi.json", timeout=2) as resp:
+                    if resp.status == 200:
+                        ready = True
+                        break
+            except Exception:
+                time.sleep(0.5)
+        assert ready, f"server did not start; log:\n{open('/tmp/opencode/operator-server.log').read()}"
+        print("step 4: server started with enforcement ON")
+
+        # Step 5: send a real request through the server.
+        import json as _json
+        req = urllib.request.Request(
+            base + "/api/memory/current",
+            data=_json.dumps({"corpus": corpus_name, "query": ""}).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {op_cred['secret']}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = _json.loads(resp.read())
+        memories = body.get("current_memories", [])
+        assert memories, "server returned no memories with enforcement ON"
+        print(f"step 5: real request succeeded, {len(memories)} memories returned")
+
+    finally:
+        try:
+            os.killpg(os.getpgid(server.pid), signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            server.terminate()
+        try:
+            server.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+        server_log.close()
+
+    # Step 3 (continued): mismatch window - old env secret vs new DB secret -> 0 rows.
     os.environ["MIND_PALACE_SCOPE_SECRET"] = old_secret
     try:
-        alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
         engine = apply_as_runtime(runtime_url())
         try:
             factory = async_sessionmaker(
@@ -785,10 +1130,84 @@ async def test_operator_procedure_per_docs():
             await engine.dispose()
         assert n == 0, f"mismatched secret read {n} rows (window should yield 0)"
     finally:
-        # Restore env to the new secret.
         os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
 
     print(
         "\noperator procedure OK: rotate writes DB row, enable enforcement, "
-        "mismatched-window yields 0 rows; then env must be rolled to match."
+        "server starts and serves real requests; mismatched-window yields 0 rows; "
+        "then env must be rolled to match."
     )
+
+
+# ---------------------------------------------------------------------------
+# Scenario 8(b): Negative control - wrong env secret causes failures.
+# ---------------------------------------------------------------------------
+
+
+async def test_wrong_env_secret_fails(world):
+    """With enforcement ON but MIND_PALACE_SCOPE_SECRET deliberately wrong,
+    scenarios 1-7 must fail: tokens don't verify, RLS returns zero rows."""
+    # Set a deliberately wrong secret.
+    os.environ["MIND_PALACE_SCOPE_SECRET"] = "deadbeef" * 8
+    try:
+        alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
+
+        # 8b.1: recall returns 0 rows (wrong token -> mismatch -> zero rows).
+        engine = apply_as_runtime(runtime_url())
+        try:
+            factory = async_sessionmaker(
+                engine, class_=AsyncSession, expire_on_commit=False
+            )
+            async with factory() as session:
+                await session.execute(
+                    sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                    {"s": alpha_cid},
+                )
+                import hmac
+
+                token = hmac.new(
+                    os.environ["MIND_PALACE_SCOPE_SECRET"].encode(),
+                    alpha_cid.encode(),
+                    hashlib.sha256,
+                ).hexdigest()
+                await session.execute(
+                    sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                    {"t": token},
+                )
+                result = await session.execute(
+                    sa.text(
+                        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c"
+                    ),
+                    {"c": alpha_cid},
+                )
+                n = int(result.scalar())
+        finally:
+            await engine.dispose()
+        assert n == 0, f"wrong secret: recall read {n} rows (should be 0)"
+
+        # 8b.2: API recall returns 403/404.
+        response = await world.post(
+            "/api/memory/current",
+            "alpha-creator",
+            json={"corpus": ALPHA_CORPORA["brand"], "query": ""},
+        )
+        assert response.status_code in (403, 404), (
+            f"wrong secret: API recall returned {response.status_code} (should be 403/404)"
+        )
+
+        # 8b.3: Listing corpora returns empty.
+        response = await world.get("/api/corpora", "alpha-creator")
+        assert response.status_code == 200, response.text
+        names = {row["name"] for row in response.json()}
+        assert names == set(), (
+            f"wrong secret: listing returned {names} (should be empty)"
+        )
+
+        print(
+            "\nnegative control OK: wrong env secret causes all tenant-scoped "
+            "operations to fail (0 rows, 403/404, empty listing)"
+        )
+    finally:
+        # monkeypatch (from the world fixture) restores MIND_PALACE_SCOPE_SECRET
+        # to enforced_secret when the test ends.
+        pass

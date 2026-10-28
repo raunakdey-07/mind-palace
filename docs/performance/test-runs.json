@@ -153,6 +153,14 @@
       "seconds": 832.26,
       "skipped": "2"
     },
+    "49f7594: full suite": {
+      "commit": "49f7594453d198a8add9ee1a214db3faf3447410",
+      "failed": "11",
+      "label": "full suite",
+      "passed": "2049",
+      "seconds": 2393.0,
+      "skipped": "3"
+    },
     "526f326: full suite, after the ingestion-truthfulness change": {
       "collected": "1618",
       "commit": "526f326197449caa633b4dcfc93a4638463f49be",

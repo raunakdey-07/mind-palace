@@ -1410,11 +1410,25 @@ async def _predicate_source(database_url: str) -> str:
     engine = create_async_engine(make_url(database_url).set(drivername="postgresql+asyncpg"))
     try:
         async with engine.connect() as conn:
-            return (
-                await conn.execute(
-                    text("SELECT prosrc FROM pg_proc WHERE proname = 'mindpalace_allowed_corpus'")
+            # 015 moved the `session_user` restriction into mp_verified_scope_corpora()
+            # (InitPlan hoisting). Prefer it; fall back to mindpalace_allowed_corpus()
+            # for pre-015 (009) databases where the function does not exist.
+            res = await conn.execute(
+                text(
+                    "SELECT prosrc FROM pg_proc WHERE proname = 'mp_verified_scope_corpora' "
+                    "LIMIT 1"
                 )
-            ).scalar()
+            )
+            val = res.scalar()
+            if val is None:
+                res = await conn.execute(
+                    text(
+                        "SELECT prosrc FROM pg_proc WHERE proname = 'mindpalace_allowed_corpus' "
+                        "LIMIT 1"
+                    )
+                )
+                val = res.scalar()
+            return val if val is not None else ""
     finally:
         await engine.dispose()
 

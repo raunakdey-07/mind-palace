@@ -343,8 +343,45 @@ def _agg_condition(metric_values):
     }
 
 
+def _cos(a, b):
+    return sum(x * y for x, y in zip(a, b))
+
+
+def verify_embedder():
+    import importlib.util
+
+    from api.services.embedder import Embedder, backend_name
+
+    e = Embedder()
+    backend = backend_name()
+    identity = {
+        "class": type(e).__name__,
+        "backend": backend,
+        "model_name": e.model_name,
+        "dimension": e.dimension,
+    }
+    print("EMBEDDER IDENTITY:", json.dumps(identity))
+    ort_spec = importlib.util.find_spec("onnxruntime")
+    print("onnxruntime available:", ort_spec is not None)
+    if ort_spec is None:
+        print("NOTE: onnxruntime not installed; embedder uses torch backend (still real MiniLM, not SHA-256 stub).")
+    v1 = e.embed_single("warm friendly tone")
+    v2 = e.embed_single("approachable voice")
+    v3 = e.embed_single("quarterly tax filing")
+    cos_rel = _cos(v1, v2)
+    cos_unrel = _cos(v1, v3)
+    diff = cos_rel - cos_unrel
+    print(f"sanity: cos(rel)={cos_rel:.4f} cos(unrel)={cos_unrel:.4f} diff={diff:.4f} (need >=0.2)")
+    if diff < 0.2:
+        print("ABORT: embedder sanity check failed (diff < 0.2).")
+        sys.exit(1)
+    return identity
+
+
 def main():
     spec = load_spec()
+    embedder_identity = verify_embedder()
+    print("embedder_identity:", json.dumps(embedder_identity))
     # Regenerate sealed fixtures with the sealed seed (idempotent, same bytes).
     from benchmarks.agency_readiness.fixture_generator import write_fixtures
 
@@ -401,6 +438,7 @@ def main():
         "tokenizer": TOKENIZER,
         "seed": SEALED_SEED,
         "sealed": True,
+        "embedder_identity": embedder_identity,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "conditions": conditions,
         "history_allowed": sorted(HISTORY_ALLOWED),

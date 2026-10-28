@@ -1114,3 +1114,12 @@ SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
 `MIND_PALACE_SCOPE_SECRET` must change together or every query returns 0 rows.
 Safe order: update the DB row first, then roll the env var, expecting a brief
 outage. Use `--out FILE` (mode 0600) to avoid terminal history.
+
+
+## Default behaviour of the env var (M018 fix)
+
+`MIND_PALACE_ENFORCE_SCOPE_TOKEN` defaults to `off` when unset: an unset value is
+treated as `off` (enforcement off), which requires `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1`
+to proceed in the `server` profile. This matches "enforcement defaults to off".
+To enable enforcement, run `SELECT mp_set_scope_token_enforcement(true)` as
+`mindpalace_owner` and set `MIND_PALACE_SCOPE_SECRET` to match the DB row.

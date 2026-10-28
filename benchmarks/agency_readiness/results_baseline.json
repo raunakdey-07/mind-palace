@@ -4,7 +4,13 @@
   "tokenizer": "whitespace words (len(text.split()))",
   "seed": 20261028,
   "sealed": true,
-  "generated_at": "2026-10-28T09:08:49.202935+00:00",
+  "embedder_identity": {
+    "class": "Embedder",
+    "backend": "torch",
+    "model_name": "all-MiniLM-L6-v2",
+    "dimension": 384
+  },
+  "generated_at": "2026-10-28T09:32:59.841218+00:00",
   "conditions": [
     "A",
     "B",

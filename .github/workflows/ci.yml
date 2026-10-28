@@ -163,6 +163,11 @@ jobs:
           psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
             -v runtime_password=ci-runtime-role-password \
             -f scripts/db/runtime_roles.sql
+          # Rotate a real scope secret and enable enforcement as the owner role.
+          SCOPE_SECRET=$(openssl rand -hex 32)
+          echo "MIND_PALACE_SCOPE_SECRET=$SCOPE_SECRET" >> $GITHUB_ENV
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
 
       # The script must work on a database that has never had it applied. Running
       # it twice proves both that the grants are idempotent and that a rotation
@@ -251,8 +256,7 @@ jobs:
           MIND_PALACE_DEPLOYMENT: server
           MIND_PALACE_AUTH_MODE: required
           MIND_PALACE_INGEST_ROOTS: /content
-          MIND_PALACE_ENFORCE_SCOPE_TOKEN: off
-          MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY: "1"
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: on
         run: |
           python -c "from api.main import app; print('server profile accepted the runtime role')"
           python - <<'PYEOF'

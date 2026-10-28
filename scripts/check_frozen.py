@@ -62,6 +62,8 @@ FROZEN_FILES = (
     "docs/performance/retrieval-lab-protocol.freeze.json",
     "docs/performance/downstream-eval-protocol.freeze.json",
     "benchmarks/agency_readiness/sealed_spec.json",
+    "benchmarks/agency_readiness/METRICS.md",
+    "benchmarks/agency_readiness/checker.py",
 )
 
 

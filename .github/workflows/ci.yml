@@ -370,6 +370,20 @@ jobs:
         run: |
           pytest -q -rs --junitxml=/tmp/pytest-main.xml
 
+      # End-to-end proof that scope-token enforcement ON still works:
+      # a random secret is rotated into the session DB, enforcement is
+      # enabled, and every tenant-scoped operation still works through
+      # the real API paths as the least-privileged runtime role.
+      # The secret is set step-scoped inside the tests (never exported
+      # job-wide), so it cannot leak into later steps.
+      - name: End-to-end enforcement-on suite
+        env:
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          pytest -q tests/test_enforcement_e2e.py
+
       # A skip is invisible in a green build. Six tests skipped on every runner
       # for four sessions while carrying the reason "no reachable DATABASE_URL",
       # which was false: the database was reachable, and SQLAlchemy 2.1 had

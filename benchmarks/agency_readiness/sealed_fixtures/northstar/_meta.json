@@ -1,25 +1,5 @@
 {
   "meta": {
-    "northstar/t3_mixed.md": {
-      "status": "approved",
-      "document_type": "guide"
-    },
-    "northstar/t1_headings.md": {
-      "status": "approved",
-      "document_type": "guide"
-    },
-    "northstar/t2_policy.md": {
-      "status": "approved",
-      "document_type": "policy"
-    },
-    "northstar/september_brainstorm.md": {
-      "status": "draft",
-      "document_type": "note"
-    },
-    "northstar/00_volume_guide.md": {
-      "status": "approved",
-      "document_type": "guide"
-    },
     "northstar/prohibition_0.md": {
       "status": "approved",
       "document_type": "styleguide"
@@ -55,14 +35,77 @@
     "northstar/spec_1.md": {
       "status": "approved",
       "document_type": "spec"
+    },
+    "northstar/headings.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "northstar/t2_policy_v1.md": {
+      "status": "superseded",
+      "document_type": "policy"
+    },
+    "northstar/t2_policy_v2.md": {
+      "status": "approved",
+      "document_type": "policy"
+    },
+    "northstar/september_brainstorm.md": {
+      "status": "draft",
+      "document_type": "note"
+    },
+    "northstar/mixed.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "northstar/doc-001.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-002.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-003.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-004.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-005.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-006.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-007.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-008.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-009.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-010.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-011.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "northstar/doc-012.md": {
+      "status": "approved",
+      "document_type": "note"
     }
   },
   "template_of": {
-    "northstar/t3_mixed.md": "T3",
-    "northstar/t1_headings.md": "T1",
-    "northstar/t2_policy.md": "T2",
-    "northstar/september_brainstorm.md": "T1",
-    "northstar/00_volume_guide.md": "volume",
     "northstar/prohibition_0.md": "prohibition",
     "northstar/prohibition_1.md": "prohibition",
     "northstar/prohibition_2.md": "prohibition",
@@ -71,6 +114,23 @@
     "northstar/voice_0.md": "voice",
     "northstar/voice_1.md": "voice",
     "northstar/spec_0.md": "spec",
-    "northstar/spec_1.md": "spec"
+    "northstar/spec_1.md": "spec",
+    "northstar/headings.md": "T1",
+    "northstar/t2_policy_v1.md": "T2",
+    "northstar/t2_policy_v2.md": "T2",
+    "northstar/september_brainstorm.md": "draft",
+    "northstar/mixed.md": "T3",
+    "northstar/doc-001.md": "filler",
+    "northstar/doc-002.md": "filler",
+    "northstar/doc-003.md": "filler",
+    "northstar/doc-004.md": "filler",
+    "northstar/doc-005.md": "filler",
+    "northstar/doc-006.md": "filler",
+    "northstar/doc-007.md": "filler",
+    "northstar/doc-008.md": "filler",
+    "northstar/doc-009.md": "filler",
+    "northstar/doc-010.md": "filler",
+    "northstar/doc-011.md": "filler",
+    "northstar/doc-012.md": "filler"
   }
 }

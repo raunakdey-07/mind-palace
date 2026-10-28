@@ -1,24 +1,26 @@
-"""M018 sealed benchmark evaluation (repaired).
+"""M018 sealed benchmark evaluation (repaired for fairness).
 
 Conditions:
   A: no memory (prompt only)
-  B: static dump of all current docs, truncated to budget (5 seeded orderings)
-  B+: current-version approved docs only, truncated to budget (5 seeded orderings)
-  C: raw RAG (chunks, embed, top-k, no filtering)
+  B: static dump of ALL current documents, truncated to budget (5 seeded orderings)
+  B+: current-version APPROVED documents only, truncated to budget (5 orderings)
+  B*: operator-curated static: the brand-guide document only, truncated (outside criterion)
+  C: raw RAG over ALL indexed documents (all current versions, incl. draft/superseded)
   C+: raw RAG with document-level metadata filter
-      (current version only, frontmatter status not in {draft, rejected, superseded})
-  D: Mind Palace real build_context API after real ingestion of the fixtures
+      (current version, not superseded, frontmatter status not in {draft, rejected, superseded})
+  D: Mind Palace real build_context API after real ingestion
 
-All conditions share the spec's 1200-token budget and ONE tokenizer:
-  whitespace words, ``len(text.split())`` (tiktoken is not installed offline;
-  whitespace words are used and named in the output).
+All conditions share the spec's 1200-word budget and ONE tokenizer
+(whitespace words, ``len(text.split())``; onnxruntime is not installed here so
+the embedder falls back to the torch sentence-transformers backend -- still real
+MiniLM embeddings, not the SHA-256 stub).
 
-D's context is post-truncated to the same 1200-word budget with this function,
-and D's pre-truncation size is reported.
+D's context is post-truncated to the same budget; pre-truncation size is
+reported. Every condition asserts its max context size is at most the budget.
 
-`checker.py` imports no Mind Palace code. `evaluate.py` imports only the public
-`build_context` API for condition D. Blanket ``except`` blocks are removed:
-ingestion, retrieval, and D errors are surfaced loudly.
+A structural fixture check asserts that, under every B ordering, at most 50% of
+each brand's gold items fall within the first 1200 words -- so the static
+baseline cannot win by having the gold pasted at the front.
 """
 
 from __future__ import annotations
@@ -33,23 +35,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from benchmarks.agency_readiness.checker import score as score_context, normalize
-from benchmarks.agency_readiness.fixture_generator import (
+from api.services.retrieval import RetrievalService  # noqa: E402
+from api.services.embedder import Embedder  # noqa: E402
+from benchmarks.agency_readiness.checker import score as score_context  # noqa: E402
+from benchmarks.agency_readiness.fixture_generator import (  # noqa: E402
     SEALED_SEED,
     SEALED_FIXTURE_DIR,
-    DEV_SET_SEED,
-    DEV_FIXTURE_DIR,
 )
 
 SPEC_PATH = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
 BUDGET = 1200  # words
 TOKENIZER = "whitespace words (len(text.split()))"
 
-# Prompts allowed to surface historical markers (excluded from headline violation_rate).
 HISTORY_ALLOWED = {"NS-05", "VE-03", "HL-04", "VE-06"}
 
-# Seeds for the 5 B/B+ document orderings: fixed, reverse, and 3 shuffles.
+# Orderings for B/B+: neutral-name alphabetical, reverse, 3 seeded shuffles.
 ORDER_SEEDS = [0, 1, 2, 3, 4]
+MAX_GOLD_FRACTION_FIRST_BUDGET = 0.50
 
 
 def load_spec():
@@ -68,59 +70,72 @@ def truncate_words(text: str, budget: int = BUDGET) -> str:
     return " ".join(words[:budget])
 
 
+def assert_within_budget(label: str, text: str) -> int:
+    n = count_tokens(text)
+    assert n <= BUDGET, f"{label} context exceeds budget: {n} > {BUDGET}"
+    return n
+
+
 # ---------------------------------------------------------------------------
 # Conditions
 # ---------------------------------------------------------------------------
+
 
 async def condition_A(prompt: str) -> str:
     return prompt
 
 
-def _doc_texts(brand_dir, meta):
-    """Return list of (path, body_text, status) for current docs on disk.
-
-    `00_volume_guide.md` (the 6000-token filler) is ordered FIRST so that gold
-    items sit beyond the first 1200 words of the B/B+ concatenation.
-    """
+def _doc_entries(brand_dir, meta):
+    """List of (rel, body, status, template) for every on-disk doc (current version)."""
     out = []
-    md_files = sorted([p for p in brand_dir.glob("*.md") if p.name != "_meta.json"])
-    # filler first, then the rest alphabetical
-    filler = [p for p in md_files if p.name.startswith("00_")]
-    rest = [p for p in md_files if not p.name.startswith("00_")]
-    ordered = filler + rest
-    for fname in ordered:
+    for fname in sorted(brand_dir.glob("*.md")):
+        if fname.name == "_meta.json":
+            continue
         text = fname.read_text(encoding="utf-8")
         rel = f"{brand_dir.name}/{fname.name}"
         status = (meta.get(rel) or {}).get("status", "approved")
         body = text.split("---", 2)[-1] if text.startswith("---\n") else text
-        out.append((rel, body, status))
+        tmpl = (meta.get(rel) or {}).get("template", "?")
+        out.append((rel, body, status, tmpl))
     return out
 
 
-async def condition_B(docs_current, prompt):
-    dump = "\n\n".join(body for _rel, body, _status in docs_current)
+async def condition_B(docs, prompt):
+    dump = "\n\n".join(body for _rel, body, _status, _tmpl in docs)
     return prompt + "\n\n---\n\n" + truncate_words(dump)
 
 
-async def condition_B_plus(docs_approved, prompt):
-    dump = "\n\n---\n\n".join(body for _rel, body, status in docs_approved if status == "approved")
+async def condition_B_plus(docs, prompt):
+    dump = "\n\n---\n\n".join(body for _rel, body, status, _tmpl in docs if status == "approved")
+    return prompt + "\n\n---\n\n" + truncate_words(dump)
+
+
+async def condition_B_star(docs, prompt, brand):
+    # Brand-guide document only: the guide-typed doc (headings.md).
+    guide = [
+        body for rel, body, status, tmpl in docs if tmpl == "guide" and rel.endswith("headings.md")
+    ]
+    if not guide:
+        guide = [body for rel, body, status, tmpl in docs if tmpl == "guide"]
+    dump = guide[0] if guide else ""
     return prompt + "\n\n---\n\n" + truncate_words(dump)
 
 
 async def _retrieve_chunks(db, corpus_id: str, query: str, k: int = 50):
-    from api.services.embedder import Embedder
-    from api.services.retrieval import RetrievalService
-
     embedder = Embedder()
     vector = embedder.embed_single(query)
     return await RetrievalService(db, embedder=embedder).search(
-        vector, k=k, hybrid=True, rrf=True, query_text=query, corpus_id=corpus_id,
+        vector,
+        k=k,
+        hybrid=True,
+        rrf=True,
+        query_text=query,
+        corpus_id=corpus_id,
     )
 
 
 async def condition_C(results, prompt):
     kept = []
-    used = 0
     for r in results:
         body = (getattr(r, "text", None) or "").strip()
         if not body:
@@ -132,11 +147,8 @@ async def condition_C(results, prompt):
 
 
 async def condition_C_plus(results, prompt, path_status):
-    # document-level filter: status not in {draft, rejected, superseded}
     kept = []
-    used = 0
     for r in results:
-        # RetrievalResult carries source_path (documents.path); match against that.
         source_path = getattr(r, "source_path", None) or getattr(r, "doc_id", None)
         status = path_status.get(source_path, "approved")
         if status in {"draft", "rejected", "superseded"}:
@@ -154,42 +166,60 @@ async def condition_D(db, corpus: str, prompt: str, budget_tokens: int = BUDGET)
     from api.services.context_service import build_context
 
     pack, _trace = await build_context(
-        db, corpus, prompt, budget_tokens=budget_tokens, k=8, strategy="hybrid_rrf",
+        db,
+        corpus,
+        prompt,
+        budget_tokens=budget_tokens,
+        k=8,
+        strategy="hybrid_rrf",
     )
     return pack.context
 
 
-def _orderings(docs_current, docs_approved):
-    """Yield 5 (docs_current, docs_approved) orderings: fixed, reverse, 3 shuffles."""
-    base_cur = list(docs_current)
-    base_app = list(docs_approved)
-    yield base_cur, base_app
-    yield list(reversed(base_cur)), list(reversed(base_app))
+def _orderings(docs):
+    """Yield 5 (docs,) orderings: alphabetical, reverse, 3 seeded shuffles."""
+    base = list(docs)
+    yield base
+    yield list(reversed(base))
     rng = random.Random(991)
     for _ in range(3):
-        cur = list(base_cur); app = list(base_app)
-        rng.shuffle(cur); rng.shuffle(app)
-        yield cur, app
+        cur = list(base)
+        rng.shuffle(cur)
+        yield cur
 
 
-async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, sealed: bool) -> dict:
-    from api.services.db import session_scope
+def _gold_positions(docs, gold_items):
+    """Word offset of each gold item's first occurrence in the B dump."""
+    dump = "\n\n".join(body for _rel, body, _status, _tmpl in docs)
+    out = []
+    for cat, g in gold_items:
+        pos = dump.find(g)
+        words_before = count_tokens(dump[:pos]) if pos >= 0 else None
+        out.append((cat, g, words_before, pos >= 0))
+    return out, dump
+
+
+async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir) -> dict:
+    from api.services.db import session_scope as _ss
     from api.services.corpora import create_corpus, get_corpus_by_name
     from api.services.ingestion import IngestionService
 
     meta_raw = json.loads((brand_dir / "_meta.json").read_text())
     meta = meta_raw.get("meta", meta_raw)
-    template_of = meta_raw.get("template_of", {})
-    docs_current = _doc_texts(brand_dir, meta)  # (rel, body, status)
-    docs_approved = [(rel, body, status) for (rel, body, status) in docs_current]
+    docs = _doc_entries(brand_dir, meta)  # (rel, body, status, template)
 
-    # Build path->status map for C+ (keyed by document id used in retrieval results).
-    # RetrievalResult.doc_id is the documents.id (CHAR(64) hash). Map path->status then
-    # resolve path->id via the documents table at read time is complex; instead key by
-    # the relative path and match retrieval results by source_path when available.
-    path_status = {rel: status for (rel, _body, status) in docs_current}
+    gold = spec["brands"][brand]
+    gold_items = (
+        [("prohibition", p) for p in gold["standing_prohibitions"]]
+        + [("voice", p) for p in gold["required_voice_descriptors"]]
+        + [("spec", p) for p in gold["approved_specs"]]
+        + [("superseded", p) for p in gold["superseded_v1_markers"]]
+        + [("draft", p) for p in gold["unapproved_draft_markers"]]
+    )
 
-    async with session_scope() as db:
+    path_status = {rel: status for (rel, _body, status, _tmpl) in docs}
+
+    async with _ss() as db:
         existing = await get_corpus_by_name(db, brand)
         if existing is None:
             await create_corpus(db, brand, f"{brand} benchmark corpus")
@@ -209,9 +239,12 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, seal
                 raise RuntimeError(f"[{brand}] {fname.name} ingestion returned no claim_count")
         await db.commit()
 
-        # Sanity: corpus must have ingested documents
+        # Sanity: every doc indexed.
         from sqlalchemy import text as sa_text
-        r = await db.execute(sa_text("SELECT count(*) FROM documents WHERE corpus_id=:c"), {"c": corpus_id})
+
+        r = await db.execute(
+            sa_text("SELECT count(*) FROM documents WHERE corpus_id=:c"), {"c": corpus_id}
+        )
         n_docs = r.scalar()
         if n_docs == 0:
             raise RuntimeError(f"[{brand}] zero documents ingested")
@@ -222,18 +255,32 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, seal
                 continue
             pid = pr["id"]
             prompt = pr["prompt"]
-            gold = spec["brands"][brand]
 
             # A
             ctx_A = await condition_A(prompt)
 
-            # B and B+: 5 orderings -> mean and range
-            b_scores, bp_scores = [], []
-            for cur, app in _orderings(docs_current, docs_approved):
-                ctx_B = await condition_B(cur, prompt)
-                b_scores.append(score_context(ctx_B, gold))
-                ctx_Bp = await condition_B_plus(app, prompt)
-                bp_scores.append(score_context(ctx_Bp, gold))
+            # B / B+: 5 orderings, per-ordering scores + structural check
+            b_per, bp_per = [], []
+            for ordering in _orderings(docs):
+                ctx_B = await condition_B(ordering, prompt)
+                b_per.append(score_context(ctx_B, gold))
+                ctx_Bp = await condition_B_plus(ordering, prompt)
+                bp_per.append(score_context(ctx_Bp, gold))
+
+            # Structural fixture check: <=50% of gold within first 1200 words, every B ordering.
+            for ordering in _orderings(docs):
+                gold_positions, _dump = _gold_positions(ordering, gold_items)
+                n_within = sum(
+                    1
+                    for _c, _g, wb, present in gold_positions
+                    if present and wb is not None and wb < BUDGET
+                )
+                frac = n_within / len(gold_items) if gold_items else 0.0
+                assert frac <= MAX_GOLD_FRACTION_FIRST_BUDGET, (
+                    f"[{brand}] {pid}: {n_within}/{len(gold_items)} gold items "
+                    f"({frac:.0%}) within first {BUDGET} words of a B ordering "
+                    "-- fixtures not spread enough"
+                )
 
             def _agg(scores):
                 rr = [s["rule_recall"] for s in scores]
@@ -245,18 +292,13 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, seal
                     "violation_mean": sum(vl) / len(vl),
                     "violation_min": min(vl),
                     "violation_max": max(vl),
+                    "n_orderings": len(scores),
                 }
 
             # C and C+ need retrieval
             chunks = await _retrieve_chunks(db, corpus_id, prompt)
             ctx_C = await condition_C(chunks, prompt)
-            # C+ filter: map retrieval results to doc status via source_path
-            # RetrievalResult has source_path; fall back to doc_id lookup below.
-            path_status_by_source = {}
-            for (rel, _body, status) in docs_current:
-                # source_path in RetrievalResult is the documents.path
-                path_status_by_source[rel] = status
-            ctx_Cp = await condition_C_plus(chunks, prompt, path_status_by_source)
+            ctx_Cp = await condition_C_plus(chunks, prompt, path_status)
 
             # D via real public API
             ctx_D_raw = await condition_D(db, brand, prompt)
@@ -268,8 +310,9 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, seal
                 "task_type": pr["task_type"],
                 "history_allowed": pid in HISTORY_ALLOWED,
                 "A": score_context(ctx_A, gold),
-                "B": _agg(b_scores),
-                "B_plus": _agg(bp_scores),
+                "B": _agg(b_per),
+                "B_plus": _agg(bp_per),
+                "B_star": score_context(await condition_B_star(docs, prompt, brand), gold),
                 "C": score_context(ctx_C, gold),
                 "C_plus": score_context(ctx_Cp, gold),
                 "D": score_context(ctx_D, gold),
@@ -279,6 +322,7 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, seal
                     "A": ctx_A,
                     "B": ctx_B,
                     "B_plus": ctx_Bp,
+                    "B_star": "",
                     "C": ctx_C,
                     "C_plus": ctx_Cp,
                     "D": ctx_D,
@@ -288,28 +332,32 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir, seal
 
 
 def _agg_condition(metric_values):
-    """metric_values: list of floats across prompts/brands for one condition."""
     n = len(metric_values)
     if n == 0:
         return {"mean": 0.0, "min": 0.0, "max": 0.0, "n": 0}
-    return {"mean": sum(metric_values) / n, "min": min(metric_values), "max": max(metric_values), "n": n}
+    return {
+        "mean": sum(metric_values) / n,
+        "min": min(metric_values),
+        "max": max(metric_values),
+        "n": n,
+    }
 
 
 def main():
     spec = load_spec()
     # Regenerate sealed fixtures with the sealed seed (idempotent, same bytes).
     from benchmarks.agency_readiness.fixture_generator import write_fixtures
+
     write_fixtures(spec, SEALED_SEED, SEALED_FIXTURE_DIR)
 
     all_results = {}
     for brand in spec["brands"]:
         prompts = [p for p in spec["prompts"] if p["brand"] == brand]
         brand_dir = SEALED_FIXTURE_DIR / brand
-        brand_res = asyncio.run(run_brand(brand, spec, prompts, brand_dir, sealed=True))
+        brand_res = asyncio.run(run_brand(brand, spec, prompts, brand_dir))
         all_results[brand] = brand_res
 
-    # Summary tables: per condition, per brand, per template.
-    conditions = ["A", "B", "C", "C_plus", "D"]
+    conditions = ["A", "B", "B_plus", "B_star", "C", "C_plus", "D"]
     summary = {}
     per_brand = {}
     for c in conditions:
@@ -318,13 +366,20 @@ def main():
             brand_rr, brand_vl, brand_vo, brand_sp = [], [], [], []
             for pid, m in res.items():
                 v = m[c]
-                # B/B+ are dicts with _mean; others are plain dicts
-                rr_v = v["rule_recall_mean"] if isinstance(v, dict) and "rule_recall_mean" in v else v["rule_recall"]
-                vl_v = v["violation_mean"] if isinstance(v, dict) and "violation_mean" in v else v["violation"]
-                vo_v = v["voice_recall"] if "voice_recall" in v else 0.0
-                sp_v = v["spec_recall"] if "spec_recall" in v else 0.0
-                rr.append(rr_v); vl.append(vl_v); vo.append(vo_v); sp.append(sp_v)
-                brand_rr.append(rr_v); brand_vl.append(vl_v); brand_vo.append(vo_v); brand_sp.append(sp_v)
+                if isinstance(v, dict) and "rule_recall_mean" in v:
+                    rr_v, vl_v = v["rule_recall_mean"], v["violation_mean"]
+                else:
+                    rr_v, vl_v = v["rule_recall"], v["violation"]
+                vo_v = v.get("voice_recall", 0.0)
+                sp_v = v.get("spec_recall", 0.0)
+                rr.append(rr_v)
+                vl.append(vl_v)
+                vo.append(vo_v)
+                sp.append(sp_v)
+                brand_rr.append(rr_v)
+                brand_vl.append(vl_v)
+                brand_vo.append(vo_v)
+                brand_sp.append(sp_v)
             per_brand.setdefault(brand, {})[c] = {
                 "rule_recall": _agg_condition(brand_rr),
                 "violation_rate": _agg_condition(brand_vl),

@@ -1,0 +1,71 @@
+---
+title: Current guidance
+status: approved
+document_type: guide
+---
+## Current guidance
+
+The compliance program addresses data retention, audit trails, and
+access controls. The mobile application syncs across devices using
+end-to-end encryption. Warehouse staff perform cycle counts every Friday
+morning before opening. Orders are processed within one business day and
+shipped with tracking information. User feedback is collected through
+surveys and used to prioritize the roadmap. The design system defines
+colour, spacing, and typography for all product surfaces. The
+maintenance schedule recommends inspection every six months for optimal
+performance. The product ships with a two-year limited warranty covering
+defects in materials and workmanship. Accessibility features include
+high-contrast mode, keyboard navigation, and screen-reader support.
+Office hours run from nine to five, with a one-hour lunch at midday.
+Customer success holds a weekly review of open support tickets and
+feature requests. Software updates are delivered automatically and
+require a restart to take effect.
+
+## Brainstorming
+
+Battery life depends on usage patterns and typically lasts a full day on
+a single charge. Office hours run from nine to five, with a one-hour
+lunch at midday. The compliance program addresses data retention, audit
+trails, and access controls. The specifications table lists dimensions,
+weight, power draw, and operating temperature. Orders are processed
+within one business day and shipped with tracking information. The API
+documentation is published internally and updated with every release.
+Software updates are delivered automatically and require a restart to
+take effect. Installation requires a Phillips-head screwdriver and
+approximately twenty minutes. Warehouse staff perform cycle counts every
+Friday morning before opening. Training materials include videos,
+quick-reference guides, and live webinars. Employees may expense
+reasonable meals while travelling on company business. Returns are
+accepted within thirty days of purchase with original packaging and
+receipt.
+
+## Superseded
+
+The specifications table lists dimensions, weight, power draw, and
+operating temperature. Office hours run from nine to five, with a
+one-hour lunch at midday. Training materials include videos,
+quick-reference guides, and live webinars. The API documentation is
+published internally and updated with every release. Warehouse staff
+perform cycle counts every Friday morning before opening. The mobile
+application syncs across devices using end-to-end encryption. Customer
+support is available by email and phone during business hours, Monday to
+Friday. Pricing varies by region and volume, with discounts for
+educational and nonprofit customers. Returns are accepted within thirty
+days of purchase with original packaging and receipt. User feedback is
+collected through surveys and used to prioritize the roadmap. The
+compliance program addresses data retention, audit trails, and access
+controls. Remote employees connect through the virtual private network
+using multi-factor auth.
+
+## Ideas parking lot
+
+Orders are processed within one business day and shipped with tracking
+information. Office hours run from nine to five, with a one-hour lunch
+at midday. The design system defines colour, spacing, and typography for
+all product surfaces. Remote employees connect through the virtual
+private network using multi-factor auth. Customer support is available
+by email and phone during business hours, Monday to Friday. The API
+documentation is published internally and updated with every release.
+The product ships with a two-year limited warranty covering defects in
+materials and workmanship. The new office location is near the train
+station and a short walk from the bus stop.

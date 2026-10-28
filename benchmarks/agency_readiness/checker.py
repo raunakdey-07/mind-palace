@@ -10,7 +10,13 @@ def normalize(text: str) -> str:
     text = unicodedata.normalize("NFKC", text or "")
     text = text.casefold()
     # drop apostrophes and quotes
-    text = text.replace("'", "").replace("\u2019", "").replace('"', "").replace("\u201c", "").replace("\u201d", "")
+    text = (
+        text.replace("'", "")
+        .replace("\u2019", "")
+        .replace('"', "")
+        .replace("\u201c", "")
+        .replace("\u201d", "")
+    )
     # replace every other non-letter/digit/% with space
     out = []
     for ch in text:
@@ -37,7 +43,11 @@ def score(context: str, gold: dict) -> dict:
     superseded = gold.get("superseded_v1_markers", [])
     drafts = gold.get("unapproved_draft_markers", [])
 
-    rule_recall = (sum(1 for p in prohibitions if present(p, context)) / len(prohibitions)) if prohibitions else 1.0
+    rule_recall = (
+        (sum(1 for p in prohibitions if present(p, context)) / len(prohibitions))
+        if prohibitions
+        else 1.0
+    )
     voice_recall = (sum(1 for v in voice if present(v, context)) / len(voice)) if voice else 1.0
     spec_recall = (sum(1 for s in specs if present(s, context)) / len(specs)) if specs else 1.0
     violation = 1 if any(present(m, context) for m in (superseded + drafts)) else 0

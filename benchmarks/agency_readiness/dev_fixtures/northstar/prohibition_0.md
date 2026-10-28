@@ -3,13 +3,4 @@ title: Prohibited vocabulary 1
 status: approved
 document_type: styleguide
 ---
-## Prohibited vocabulary (1)
-
-Do not use the word "curated" in any customer-facing copy.
-
-Can I return an opened item? Yes, within thirty days with the original
-receipt. Action items were assigned to engineering, design, and customer
-success. How long does shipping take? Most orders arrive within three to
-five business days. Accessibility features include high-contrast mode,
-keyboard navigation, and screen-reader support. Our product line spans
-entry-level, mid-range, and professional configurations.
+Do not use the word "curated" in any customer-facing copy. Software updates are delivered automatically and require a restart to take effect. Customer success holds a weekly review of open support tickets and feature requests. Orders are processed within one business day and shipped with tracking information. Battery life depends on usage patterns and typically lasts a full day on a single charge. Employees may expense reasonable meals while travelling on company business. Office hours run from nine to five, with a one-hour lunch at midday. Accessibility features include high-contrast mode, keyboard navigation, and screen-reader support. The product ships with a two-year limited warranty covering defects in materials and workmanship. The mobile application syncs across devices using end-to-end encryption. Customer support is available by email and phone during business hours, Monday to Friday. Installation requires a Phillips-head screwdriver and approximately twenty minutes. The new office location is near the train station and a short walk from the bus stop. The design system defines colour, spacing, and typography for all product surfaces. The conference room has a whiteboard, a projector, and two video cameras. Returns are accepted within thirty days of purchase with original packaging and receipt. The specifications table lists dimensions, weight, power draw, and operating temperature. The compliance program addresses data retention, audit trails, and access controls. The maintenance schedule recommends inspection every six months for optimal performance. Warehouse staff perform cycle counts every Friday morning before opening. Remote employees connect through the virtual private network using multi-factor auth. Pricing varies by region and volume, with discounts for educational and nonprofit customers. The API documentation is published internally and updated with every release. Training materials include videos, quick-reference guides, and live webinars. User feedback is collected through surveys and used to prioritize the roadmap. Quarterly results will be presented at the all-hands meeting on the first Thursday.

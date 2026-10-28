@@ -1,0 +1,44 @@
+---
+title: Product specification
+status: approved
+document_type: guide
+---
+## Product specification
+
+Our voice is warm, a little dry, and confident.
+
+First-time buyers aged 20-30 are the core audience for this launch.
+
+- Primary colour: mustard-yellow.
+
+Warehouse staff perform cycle counts every Friday morning before
+opening. Returns are accepted within thirty days of purchase with
+original packaging and receipt. Employees may expense reasonable meals
+while travelling on company business. Office hours run from nine to
+five, with a one-hour lunch at midday. Software updates are delivered
+automatically and require a restart to take effect. Quarterly results
+will be presented at the all-hands meeting on the first Thursday.
+Customer support is available by email and phone during business hours,
+Monday to Friday. Battery life depends on usage patterns and typically
+lasts a full day on a single charge. Orders are processed within one
+business day and shipped with tracking information. The mobile
+application syncs across devices using end-to-end encryption.
+
+| Attribute | Value |
+|---|---|
+| Material | 80% GRS-certified recycled polyester |
+| Channel | Instagram is the primary channel |
+
+Returns are accepted within thirty days of purchase with original
+packaging and receipt. Employees may expense reasonable meals while
+travelling on company business. Warehouse staff perform cycle counts
+every Friday morning before opening. The product ships with a two-year
+limited warranty covering defects in materials and workmanship. User
+feedback is collected through surveys and used to prioritize the
+roadmap. Installation requires a Phillips-head screwdriver and
+approximately twenty minutes. The API documentation is published
+internally and updated with every release. Training materials include
+videos, quick-reference guides, and live webinars. Customer success
+holds a weekly review of open support tickets and feature requests.
+Software updates are delivered automatically and require a restart to
+take effect. The new office location is near the train station and a short walk from the bus stop. The mobile application syncs across devices using end-to-end encryption. User feedback is collected through surveys and used to prioritize the roadmap. Accessibility features include high-contrast mode, keyboard navigation, and screen-reader support. Battery life depends on usage patterns and typically lasts a full day on a single charge. Remote employees connect through the virtual private network using multi-factor auth. Returns are accepted within thirty days of purchase with original packaging and receipt. Software updates are delivered automatically and require a restart to take effect. Warehouse staff perform cycle counts every Friday morning before opening. The design system defines colour, spacing, and typography for all product surfaces. Customer support is available by email and phone during business hours, Monday to Friday. The product ships with a two-year limited warranty covering defects in materials and workmanship. The specifications table lists dimensions, weight, power draw, and operating temperature. The compliance program addresses data retention, audit trails, and access controls. The maintenance schedule recommends inspection every six months for optimal performance.

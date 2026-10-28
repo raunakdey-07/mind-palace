@@ -606,10 +606,10 @@ def _table_claims(
             )
             continue
         seen_quotes.add(signature)
-        key_base = f"md:{_slug(heading_path)}:table"
-        ordinal = ordinals.get(key_base, 0)
-        ordinals[key_base] = ordinal + 1
-        key = f"{key_base}:{ordinal}"
+        key_base = f"md:{_slug(heading_path)}"
+        claim_type = "table"
+        content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        key = f"{key_base}:{claim_type}:{content_hash[:16]}"
         if key in seen_claims:
             continue
         seen_claims.add(key)
@@ -667,9 +667,9 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
         seen_quotes.add(signature)
 
         key_base = f"md:{_slug(pending_path)}"
-        ordinal = ordinals.get(key_base, 0)
-        ordinals[key_base] = ordinal + 1
-        key = f"{key_base}:{ordinal}"
+        claim_type = "statement"
+        content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        key = f"{key_base}:{claim_type}:{content_hash[:16]}"
         if key in seen_claims:
             return
         seen_claims.add(key)
@@ -746,11 +746,8 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
             pending.append((number, raw))
     close()
 
-    # Prose path: when the structural reader found nothing, fall back to
-    # extracting normative/declarative sentences from ordinary paragraphs.
-    # Every claim still carries an exact verbatim evidence span.
-    if not claims:
-        _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals)
+    # Prose path: always run, so prose is extracted in addition to bullets/tables.
+    _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals)
 
     claims.sort(key=lambda claim: claim["key"])
     return claims, warnings
@@ -765,21 +762,32 @@ _PROSE_SIGNALS = frozenset(
 
 def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals):
     haystacks = [c.get("text") or "" for c in chunks]
-    # Collect sentences from prose paragraphs.
     sentences = []
+    # Join hard-wrapped lines within a paragraph before sentence splitting.
+    paragraphs = []
+    current = []
     for line in body.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or line.startswith("|") or line.startswith(">"):
+        if line.strip() == "":
+            if current:
+                paragraphs.append(" ".join(current))
+                current = []
             continue
-        if (
-            line.startswith("-")
-            or line.startswith("*")
-            or line.startswith("+")
-            or re.match(r"^\d", line)
-        ):
+        if line.lstrip().startswith("#") or line.lstrip().startswith("|") or line.lstrip().startswith(">"):
+            if current:
+                paragraphs.append(" ".join(current))
+                current = []
             continue
-        # split into sentences
-        for part in re.split(r"(?<=[.!?])\s+", line):
+        stripped = line.strip()
+        if stripped.startswith("-") or stripped.startswith("*") or stripped.startswith("+") or re.match(r"^\d", stripped):
+            if current:
+                paragraphs.append(" ".join(current))
+                current = []
+            continue
+        current.append(stripped)
+    if current:
+        paragraphs.append(" ".join(current))
+    for para in paragraphs:
+        for part in re.split(r"(?<=[.!?])\s+", para):
             part = part.strip()
             if len(part) < MIN_CLAIM_CHARS:
                 continue
@@ -796,9 +804,9 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
             continue
         seen_quotes.add(sig)
         key_base = "md:prose"
-        ordinal = ordinals.get(key_base, 0)
-        ordinals[key_base] = ordinal + 1
-        key = "%s:%d" % (key_base, ordinal)
+        claim_type = "prose"
+        content_hash = hashlib.sha256(sent.encode("utf-8")).hexdigest()
+        key = "%s:%s:%s" % (key_base, claim_type, content_hash[:16])
         if key in seen_claims:
             continue
         seen_claims.add(key)
@@ -814,33 +822,108 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
         )
 
 
+_STATE_RANK = {"rejected": 0, "superseded": 1, "draft": 2,
+                "historical_observation": 3, "needs_review": 4, "approved": 5}
+
+_STATE_VOCAB = {
+    "rejected": {"rejected", "rejected directions", "abandoned ideas", "disallowed examples"},
+    "draft": {"draft", "drafts", "brainstorming", "brainstorm", "unapproved proposals"},
+    "superseded": {"superseded", "deprecated", "archived policy"},
+    "historical_observation": {
+        "performance report", "past campaign results", "campaign outcomes",
+        "historical observations", "lessons learned",
+    },
+}
+
+_ALL_STATE_WORDS = set()
+for _words in _STATE_VOCAB.values():
+    _ALL_STATE_WORDS.update(_words)
+
+
+def _norm_heading(text: str) -> str:
+    text = (text or "").lower()
+    text = re.sub(r"^\d+[.)]\s*", "", text)
+    text = re.sub(r"[^\w\s-]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _state_from_heading(norm: str) -> str | None:
+    if not norm:
+        return None
+    for state, words in _STATE_VOCAB.items():
+        if norm in words:
+            return state
+    # contains a state word but is not a whole match -> needs_review
+    for word in _ALL_STATE_WORDS:
+        if word in norm:
+            return "needs_review"
+    return None
+
+
 def detect_info_state(metadata: dict, body: str = "") -> str:
-    """Classify the authority state of a document/section. Defaults to 'approved'."""
-    text = " ".join(str(v) for v in (metadata or {}).values()).lower()
-    tags = metadata.get("tags", []) if isinstance(metadata, dict) else []
-    if isinstance(tags, str):
-        tags = [t.strip() for t in tags.split(",")]
-    tag_text = " ".join(str(t).lower() for t in tags)
-    combined = text + " " + tag_text + " " + (body or "").lower()[:500]
-    if any(k in combined for k in ("rejected", "do not use", "prohibited strategy")):
-        return "rejected"
-    if any(k in combined for k in ("draft", "brainstorm", "unapproved", "work in progress")):
-        return "draft"
-    if any(k in combined for k in ("superseded", "deprecated", "obsolete")):
-        return "superseded"
-    if any(
-        k in combined
-        for k in (
-            "historical observation",
-            "performance report",
-            "past campaign",
-            "lessons learned",
-        )
-    ):
-        return "historical_observation"
-    if any(k in combined for k in ("inferred", "candidate interpretation", "unreviewed")):
-        return "inferred_insight"
-    return "approved"
+    """Classify the authority state of a document/section. Defaults to 'approved'.
+
+    Controlled vocabulary on WHOLE normalized headings (lowercase, strip
+    punctuation and numbering). Frontmatter/metadata takes precedence over
+    heading vocabulary. Nested headings inherit the most restrictive state.
+    A heading that contains a state word but is not a whole match is marked
+    'needs_review' (still ingested, never silently dropped).
+    """
+    metadata = metadata or {}
+    # frontmatter / metadata precedence
+    meta_state = None
+    for key in ("info_state", "status", "state"):
+        val = metadata.get(key)
+        if isinstance(val, str):
+            nv = _norm_heading(val)
+            for state, words in _STATE_VOCAB.items():
+                if nv in words:
+                    meta_state = state
+                    break
+            if meta_state is None and any(w in nv for w in _ALL_STATE_WORDS):
+                meta_state = "needs_review"
+            if meta_state is not None:
+                break
+    if meta_state is None:
+        tags = metadata.get("tags", [])
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",")]
+        for t in tags:
+            nv = _norm_heading(str(t))
+            for state, words in _STATE_VOCAB.items():
+                if nv in words:
+                    meta_state = state
+                    break
+            if meta_state is not None:
+                break
+            if any(w in nv for w in _ALL_STATE_WORDS):
+                meta_state = "needs_review"
+                break
+
+    # heading vocabulary
+    heading_states = []
+    for ln in (body or "").splitlines():
+        s = ln.lstrip()
+        if s.startswith("#"):
+            h = _norm_heading(s.lstrip("#"))
+            st = _state_from_heading(h)
+            if st is not None:
+                heading_states.append(st)
+
+    if meta_state is not None and heading_states:
+        # metadata precedence
+        candidates = [meta_state] + heading_states
+    elif meta_state is not None:
+        candidates = [meta_state]
+    elif heading_states:
+        candidates = heading_states
+    else:
+        candidates = ["approved"]
+
+    # most restrictive
+    best = min(candidates, key=lambda x: _STATE_RANK.get(x, 5))
+    return best
 
 
 def claims_for(metadata: dict, body: str, chunks: list[dict], *, path: str = ""):

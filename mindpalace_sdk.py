@@ -1195,6 +1195,9 @@ class MindPalace:
         strategy: str = "hybrid_rrf",
         as_of: str | None = None,
         intent: str | None = None,
+        task_type: str | None = None,
+        include_drafts: bool = False,
+        standing_rules: str = "pinned",
     ) -> ContextPack:
         """Assemble bounded, evidence-backed context for ``query``.
 
@@ -1222,6 +1225,9 @@ class MindPalace:
                     strategy=strategy,
                     as_of=cutoff,
                     intent=intent,
+                    task_type=task_type,
+                    include_drafts=include_drafts,
+                    standing_rules=standing_rules,
                 )
 
         try:

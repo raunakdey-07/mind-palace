@@ -104,7 +104,7 @@ fi
 # to the server through the environment -- exactly as a real deployment does.
 SCOPE_SECRET=$(openssl rand -hex 32)
 if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-  -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"; then
+  -c "INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"; then
   echo "::error::could not rotate the scope secret or enable enforcement."
   echo "::error::The server started below would refuse to start, which would mask"
   echo "::error::the real upgrade assertion. Fatal rather than skipped."

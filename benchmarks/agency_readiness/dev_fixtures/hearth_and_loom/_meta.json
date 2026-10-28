@@ -1,0 +1,46 @@
+{
+  "hearth_and_loom/t3_mixed.md": {
+    "status": "approved",
+    "document_type": "guide"
+  },
+  "hearth_and_loom/t1_headings.md": {
+    "status": "approved",
+    "document_type": "guide"
+  },
+  "hearth_and_loom/t2_policy.md": {
+    "status": "approved",
+    "document_type": "policy"
+  },
+  "hearth_and_loom/september_brainstorm.md": {
+    "status": "draft",
+    "document_type": "note"
+  },
+  "hearth_and_loom/volume_guide.md": {
+    "status": "approved",
+    "document_type": "guide"
+  },
+  "hearth_and_loom/prohibition_0.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "hearth_and_loom/prohibition_1.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "hearth_and_loom/prohibition_2.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "hearth_and_loom/voice_0.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "hearth_and_loom/spec_0.md": {
+    "status": "approved",
+    "document_type": "spec"
+  },
+  "hearth_and_loom/spec_1.md": {
+    "status": "approved",
+    "document_type": "spec"
+  }
+}

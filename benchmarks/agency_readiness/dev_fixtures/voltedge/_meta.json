@@ -1,0 +1,46 @@
+{
+  "voltedge/t3_mixed.md": {
+    "status": "approved",
+    "document_type": "guide"
+  },
+  "voltedge/t1_headings.md": {
+    "status": "approved",
+    "document_type": "guide"
+  },
+  "voltedge/t2_policy.md": {
+    "status": "approved",
+    "document_type": "policy"
+  },
+  "voltedge/september_brainstorm.md": {
+    "status": "draft",
+    "document_type": "note"
+  },
+  "voltedge/volume_guide.md": {
+    "status": "approved",
+    "document_type": "guide"
+  },
+  "voltedge/prohibition_0.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "voltedge/prohibition_1.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "voltedge/prohibition_2.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "voltedge/voice_0.md": {
+    "status": "approved",
+    "document_type": "styleguide"
+  },
+  "voltedge/spec_0.md": {
+    "status": "approved",
+    "document_type": "spec"
+  },
+  "voltedge/spec_1.md": {
+    "status": "approved",
+    "document_type": "spec"
+  }
+}

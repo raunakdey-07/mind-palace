@@ -64,6 +64,8 @@ FROZEN_FILES = (
     "benchmarks/agency_readiness/sealed_spec.json",
     "benchmarks/agency_readiness/METRICS.md",
     "benchmarks/agency_readiness/checker.py",
+    "benchmarks/agency_readiness/evaluate.py",
+    "benchmarks/agency_readiness/fixture_generator.py",
 )
 
 

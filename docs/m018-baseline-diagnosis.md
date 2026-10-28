@@ -98,3 +98,53 @@ This hides failures and produced silent empty contexts. Fix: remove blanket
 `ContextPack.withheld_counts` exists only on `m018/extraction-state`, not on
 `main`. The baseline on main correctly has no withheld_counts field; report
 that as a baseline limitation, not an error.
+
+
+## Run A1 findings — benchmark evidence before changes (dev set)
+
+Source: `scripts/a1_diagnostic.py`, run against dev_fixtures on `main` (migration 015).
+No product code changed; harness-only branch.
+
+### Chunk census (per brand, current harness ingests ONE version per file)
+
+| Brand | Total chunks | T1 | T2 | T3 | prohibition | spec | voice | volume | Draft chunks | v1 versions |
+|---|---|---|---|---|---|---|---|---|---|---|
+| northstar | 55 | 5 | 1 | 3 | 5 | 2 | 2 | 37 | 0 | none |
+| voltedge | 52 | 5 | 1 | 3 | 3 | 2 | 1 | 37 | 0 | none |
+| hearth_and_loom | ~52 | 5 | 1 | 3 | 3 | 2 | 1 | 37 | 0 | none |
+
+- ONE version per file ingested (current on-disk version only); **NO separate v1 versions indexed**.
+- Draft file `september_brainstorm.md` IS indexed as chunks.
+- `documents.status` column does NOT reflect frontmatter draft status (shows 0 draft chunks); C+ filter correctly maps `source_path`→frontmatter status from fixture meta.
+
+### C vs C+ per prompt
+
+- **rule_recall IDENTICAL for C and C+ on every prompt, every brand.** C+ never improves rule recall.
+- C+ removes a chunk only when a draft document's chunk is in the top-k (e.g. voltedge VE-01/02/04/06/07, removed=1 each), reducing `violation` 1→0 on those prompts. Northstar and hearth_and_loom: removed=0 everywhere.
+- Superseded markers live in `t1_headings.md` (document status `approved`); section-level state is invisible to C+ by spec design, so superseded content passes through C+ unchanged.
+- **Verdict:** C and C+ are not discriminative on rule_recall; to make the versioning advantage testable, T2 must ingest a v1 (superseded) version then a v2 (approved) version so C+ filters superseded v1 chunks.
+
+### B / B+ per-ordering (gold word positions vs 1200-word cut)
+
+- **hearth_and_loom:** fixed 6/10 beyond 1200; **reverse 0/10 beyond** (all gold within first 1200 words); shuffle1 6/10; shuffle2 4/10; shuffle3 5/10.
+- **voltedg:** gold at word positions 7–992 in every ordering (all within first 1200) → B rule_recall = 1.0 for voltedge under every ordering.
+- **northstar:** (crashed before printing; gold similarly concentrated — see Finding 1 below.)
+- **Verdict:** B rule_recall varies wildly by ordering and brand because gold is not spread. B is not a fair static baseline.
+
+### B+ violation vs B violation
+B+ violation (0.38) > B violation (0.20) in the old baseline. Cause: B+ excludes superseded documents AND uses `---` separators (more overhead → fewer words fit within 1200), changing which markers fall within the cut. Composition-dependent; will be re-measured after A2 fixes.
+
+### onnxruntime contradiction
+`onnxruntime` is NOT installed in this environment; the embedder falls back to the **torch** backend (sentence-transformers MiniLM). The benchmark uses **real embeddings** (not the SHA-256 hash stub), but via the torch backend, not ONNX as some comments claim. Documented honestly.
+
+### Tests at tag v0.9.3 (pre-existing check)
+Verified at `v0.9.3` (cb04ccb): `test_the_model_is_loaded_from_the_local_cache` and `test_the_session_is_told_to_optimise_the_graph` fail identically (missing onnxruntime; both directly instantiate/import onnxruntime). `test_m016_runtime_lifecycle` group is pre-existing environmental (subprocess runtime, needs DB). None are regressions from harness changes (harness touches zero product/test files except new ones).
+
+### Fixes required (A2)
+1. Spread gold across multiple docs (prohibitions ≥3 docs, voice ≥2, specs ≥2); each doc 300–800 words.
+2. Neutral-volume filler: ≥10 docs of 300–800 words, ≥6000 tokens total, neutral names (no `00_`/`zz_`), no gold strings; delete `00_volume_guide.md`.
+3. Structural check: under every B ordering, ≤50% of each brand's gold within first 1200 words; assert in harness.
+4. B orderings: neutral-name alphabetical, reverse, 3 seeded shuffles; report mean/min/max.
+5. Add B* (operator-curated static: brand-guide doc only) outside criterion.
+6. C and C+ index everything; T2 v1→v2 so C+ filters superseded chunks.
+7. Single tokenizer; print max context size per condition; assert ≤ budget.

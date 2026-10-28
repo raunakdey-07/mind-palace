@@ -117,8 +117,9 @@ async def enforce_startup_posture() -> None:
     # Scope-token enforcement (Migration 015). Only the server/production profile
     # is gated; local deployments are exempt, matching the posture check above.
     if mode == authz.DEPLOYMENT_SERVER:
-        if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "").lower() == "off":
+        if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() == "off":
             import logging as _logging
+
             _logging.getLogger(__name__).warning(
                 "MIND_PALACE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
                 "tenant scope can be forged. Run mp_set_scope_token_enforcement(true) to close it."

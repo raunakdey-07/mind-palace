@@ -96,6 +96,23 @@ if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   exit 1
 fi
 
+# Migration 015 makes a server deployment refuse to start with scope-token
+# enforcement off unless the operator acknowledges forgery. The server started
+# below (assert_runtime_role.py) runs in server mode, so this job must prove the
+# upgrade works in the secure configuration: rotate a real scope secret into the
+# upgraded database, enable enforcement as the owner role, and hand the secret
+# to the server through the environment -- exactly as a real deployment does.
+SCOPE_SECRET=$(openssl rand -hex 32)
+if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -c "INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"; then
+  echo "::error::could not rotate the scope secret or enable enforcement."
+  echo "::error::The server started below would refuse to start, which would mask"
+  echo "::error::the real upgrade assertion. Fatal rather than skipped."
+  exit 1
+fi
+export MIND_PALACE_SCOPE_SECRET="$SCOPE_SECRET"
+export MIND_PALACE_ENFORCE_SCOPE_TOKEN=on
+
 # Same scheme, host, port and database; a different identity. The scheme is kept
 # because a driver-qualified URL (`postgresql+asyncpg://`) is what the engine
 # expects, and userinfo is the only part that changes.

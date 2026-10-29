@@ -6,9 +6,6 @@
 
 [Current release: v0.9.3](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
-> **The path below installs `0.9.3`, the current tagged and published release.**
-> `v0.9.3` is tagged on `main` and published as a GitHub Release. To install
-> the previous tagged release instead, clone the `v0.9.2` tag.
 
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**

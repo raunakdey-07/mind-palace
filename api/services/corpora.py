@@ -24,12 +24,7 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.services.authz import (
-    AuthorizationError,
-    PERMISSIONS,
-    require_corpus,
-    require_permission,
-)
+from api.services.authz import AuthorizationError, require_corpus, require_permission
 from api.services.db import current_principal
 
 # The migration-created corpus that holds all pre-corpus documents.
@@ -84,14 +79,11 @@ async def create_corpus(
     """
     name = validate_corpus_name(name)
     principal = current_principal()
-    # Corpus creation is administrative: it requires the manage_corpus
-    # permission on the principal's *role*, not merely unrestricted status.
-    # Unrestricted (single-user off-mode) principals are not exempt -- the
-    # permission is the gate, exactly as it is for credentialled callers.
-    if "manage_corpus" not in PERMISSIONS.get(principal.role, frozenset()):
+    if not principal.unrestricted:
         raise AuthorizationError(
             "forbidden", "Creating a corpus is an administrative operation", 403
         )
+    require_permission(principal, "manage_corpus", "create a corpus")
     corpus_id = corpus_id_for_name(name)
 
     existing = await get_corpus_by_name(db, name)

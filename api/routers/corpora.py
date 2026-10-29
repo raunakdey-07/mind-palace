@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.schemas import (
@@ -38,6 +38,21 @@ async def create_corpus(request: CorpusCreate, db: DbSession = None) -> CorpusRe
         raise HTTPException(status_code=409 if "exists" in str(e) else 422, detail=str(e))
     except OperationalError as e:
         raise HTTPException(status_code=503, detail="Database unavailable") from e
+    except ProgrammingError as exc:
+        # A row-level-security / privilege violation on the INSERT means the
+        # calling principal is not permitted to create a corpus -- for example
+        # an unrestricted principal that holds no corpus grant. Return 403
+        # rather than leaking database internals as a 500.
+        orig = getattr(exc, "orig", None)
+        if isinstance(orig, Exception) and "row-level security policy" in str(orig):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "forbidden",
+                    "message": "Creating a corpus is an administrative operation",
+                },
+            ) from exc
+        raise
     return CorpusResponse(**corpus, document_count=0)
 
 

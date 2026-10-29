@@ -46,8 +46,8 @@ real stale-fact benchmark metrics, and release documentation reconciliation.
 
 > ### Upgrade notes — read before upgrading
 >
-> **Schema.** `alembic upgrade head` moves `007` to `012`. Five migrations have
-> never shipped in a tag; all five are new since `v0.9.0`.
+> **Schema.** `alembic upgrade head` moves `007` to `015`. Eight migrations have
+> never shipped in a tag; all eight are new since `v0.9.0`.
 >
 > | migration | what it adds | reversibility |
 > |---|---|---|
@@ -56,6 +56,24 @@ real stale-fact benchmark metrics, and release documentation reconciliation.
 > | `010_bind_unrestricted_scope` | binds the `{*}` tenant sentinel to a role that already reads every row | reversible |
 | `011_cross_document_supersession` | cross-document supersession edges | reversible |
 | `012_claim_embedding_hnsw` | HNSW index on claim embeddings | reversible |
+| `013_info_state` | `info_state`, `extraction_mode`, `provenance_state` on claims | additive; no downgrade path |
+| `014_scope_token` | HMAC-verified scope token: `mp_verify_scope_token()`, `scope_token` session setting | reversible |
+| `015_rls_scope_enforcement` | scope enforcement: `mp_verified_scope_corpora()`, enforcement flag, `scope_token` policy | reversible; enforcement defaults **off** |
+>
+> **Scope-token enforcement (migration 015).** Enforcement defaults to **off**;
+> until the operator runs
+> `SELECT mp_set_scope_token_enforcement(true)` (as `mindpalace_owner`), the
+> bypass is NOT closed. Verify with:
+>
+> ```sql
+> SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
+> ```
+>
+> Rotate the secret with `mindpalace secret rotate` (as the owner role, writes
+> the DB row and `--out FILE`). The DB row and `MIND_PALACE_SCOPE_SECRET` must
+> change together or every query returns 0 rows. Safe order: update the DB row
+> first, then roll the env var, expecting a brief outage. Use `--out FILE` (mode
+> 0600) to avoid terminal history.
 >
 > **Server mode needs a grant step.** The `server` profile requires
 > `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_DEPLOYMENT=server`,

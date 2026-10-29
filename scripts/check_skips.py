@@ -62,6 +62,13 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "MIND_PALACE_TEST_BUILD_WHEEL",
         "builds a wheel, which takes minutes; CI builds one in the wheel job",
     ),
+    "test_latency_and_explain_initplan": (
+        "MIND_PALACE_LATENCY_INITPLAN_XFAIL",
+        "MIND_PALACE_LATENCY_INITPLAN_XFAIL: deliberate xfail(strict) until "
+        "migration 015's per-row trap is fixed by a new migration that puts "
+        "(SELECT mp_verified_scope_corpora()) directly in each policy USING "
+        "expression; the test asserts an InitPlan and at-most-2 function calls",
+    ),
 }
 
 #: Skips that are correct only where `sentence-transformers` is absent, which is

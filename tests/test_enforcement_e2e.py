@@ -800,78 +800,206 @@ async def test_concurrent_tenants_pooled_connection(world):
 # ---------------------------------------------------------------------------
 
 
+# Scenario 11: Hoisting measurement (deterministic).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "migration 015's per-row trap: mindpalace_allowed_corpus calls "
+        "mp_verified_scope_corpora() once per row instead of hoisting it to "
+        "an InitPlan. Fix via a new migration that puts "
+        "(SELECT mp_verified_scope_corpora()) directly in each policy USING "
+        "expression. Remove this xfail when the fix is merged."
+    ),
+)
 async def test_latency_and_explain_initplan(world):
-    """Deterministic EXPLAIN plan-shape check for scope-token enforcement.
+    """Deterministic EXPLAIN plan-shape + function-call check for scope-token
+    enforcement.
 
-    Asserts the RLS policy is applied (mindpalace_allowed_corpus filter present)
-    and that there is no per-row SubPlan on mp_verified_scope_corpora.
-    Latency numbers are not measured here: they live in
-    scripts/bench_enforcement_latency.py (manual/nightly).
+    Asserts:
+      * the RLS policy is applied (mindpalace_allowed_corpus filter present),
+      * mp_verified_scope_corpora() is hoisted to an InitPlan (evaluated once
+        per query, not per row) -- an InitPlan line MUST be present;
+      * function-call counts for mp_verified_scope_corpora,
+        mp_verify_scope_token and mindpalace_allowed_corpus are at most 2
+        (one InitPlan evaluation plus at most one cache hit), not 50,000+.
+
+    The InitPlan and call-count assertions are xfail(strict) until migration
+    015's per-row trap is fixed by a new migration that puts
+    (SELECT mp_verified_scope_corpora()) directly in each policy USING
+    expression.
+
+    Latency numbers live in scripts/bench_enforcement_latency.py.
     """
-    corpus_name = "enforcement-latency-corpus"
-    cid = corpus_id_for(corpus_name)
+    import time
 
-    # Create corpus via admin DB session.
-    async with db_module.admin_session_scope() as db:
-        with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(
-                sa.text(
-                    "INSERT INTO corpora (id, name, description) VALUES (:c, :n, '') "
-                    "ON CONFLICT DO NOTHING"
-                ),
-                {"c": cid, "n": corpus_name},
-            )
-            await db.commit()
+    # Insert a measurable number of claims directly (bypasses the remember API
+    # and its embedding step) across 3 corpora.
+    corpus_names = ["hoist-alpha", "hoist-beta", "hoist-gamma"]
+    cids = [corpus_id_for(n) for n in corpus_names]
+    n_per = 20
+    total = n_per * len(corpus_names)
 
+    admin_engine = sa.create_engine(sync_url())
     try:
-        # EXPLAIN as runtime role with valid scope + token.
-        engine = apply_as_runtime(runtime_url())
-        try:
-            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-            async with factory() as session:
-                secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
-                scope = cid
-                token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
-                await session.execute(
-                    sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
-                    {"s": scope},
-                )
-                await session.execute(
-                    sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
-                    {"t": token},
-                )
-                result = await session.execute(
+        with admin_engine.begin() as conn:
+            for i, (name, cid) in enumerate(zip(corpus_names, cids)):
+                path = f"/{name}/doc.md"
+                doc_id = hashlib.sha256((cid + ":" + path).encode()).hexdigest()
+                ver_id = hashlib.sha256(f"ver:{cid}".encode()).hexdigest()
+                chunk_id = hashlib.sha256(f"chunk:{cid}".encode()).hexdigest()
+                conn.execute(
                     sa.text(
-                        "EXPLAIN (COSTS OFF) "
-                        "SELECT count(*) FROM memory_claims WHERE corpus_id = :c"
+                        "INSERT INTO corpora (id, name) VALUES (:c, :n) "
+                        "ON CONFLICT (id) DO NOTHING"
                     ),
-                    {"c": cid},
+                    {"c": cid, "n": name},
                 )
-                plan = "\n".join(str(r[0]) for r in result.fetchall())
-            print(f"\nEXPLAIN plan:\n{plan}")
-
-            has_initplan = "InitPlan" in plan
-            has_allowed_corpus = "mindpalace_allowed_corpus" in plan
-            has_subplan_per_row = "SubPlan" in plan and "mp_verified_scope_corpora" in plan
-
-            assert has_allowed_corpus, f"RLS policy not applied in EXPLAIN:\n{plan}"
-            if has_initplan:
-                assert (
-                    "mp_verified_scope_corpora" in plan
-                ), f"mp_verified_scope_corpora not in InitPlan:\n{plan}"
-            assert (
-                not has_subplan_per_row
-            ), f"Per-row SubPlan on mp_verified_scope_corpora found:\n{plan}"
-        finally:
-            await engine.dispose()
+                conn.execute(
+                    sa.text(
+                        "INSERT INTO memory_documents (corpus_id, id, path) "
+                        "VALUES (:c, :d, :p) ON CONFLICT DO NOTHING"
+                    ),
+                    {"c": cid, "d": doc_id, "p": path},
+                )
+                conn.execute(
+                    sa.text(
+                        "INSERT INTO memory_versions "
+                        "(corpus_id, memory_document_id, id, version_number, event, observed_at, "
+                        "content, metadata, fingerprint, document_id) "
+                        "VALUES (:c, :d, :v, 1, 'NEW', now(), 'c', '{}'::jsonb, 'fp', :d) "
+                        "ON CONFLICT DO NOTHING"
+                    ),
+                    {"c": cid, "d": doc_id, "v": ver_id},
+                )
+                conn.execute(
+                    sa.text(
+                        "INSERT INTO memory_chunks (corpus_id, version_id, id, text, order_index) "
+                        "VALUES (:c, :v, :k, 'evidence text for validation', 0) "
+                        "ON CONFLICT DO NOTHING"
+                    ),
+                    {"c": cid, "v": ver_id, "k": chunk_id},
+                )
+                for j in range(n_per):
+                    kid = hashlib.sha256(f"{cid}:{j}".encode()).hexdigest()
+                    eid = hashlib.sha256(f"e:{cid}:{j}".encode()).hexdigest()
+                    conn.execute(
+                        sa.text(
+                            "INSERT INTO memory_claims "
+                            "(corpus_id, memory_document_id, version_id, id, key, claim, value, "
+                            "info_state, extraction_mode, provenance_state) "
+                            "VALUES (:c, :d, :v, :kid, :key, :claim, '{}'::jsonb, "
+                            "'approved', 'deterministic', 'direct_claim') "
+                            "ON CONFLICT DO NOTHING"
+                        ),
+                        {
+                            "c": cid, "d": doc_id, "v": ver_id, "kid": kid,
+                            "key": f"k-{j}", "claim": f"hoist claim {j}",
+                        },
+                    )
+                    conn.execute(
+                        sa.text(
+                            "INSERT INTO memory_evidence "
+                            "(corpus_id, version_id, id, claim_id, chunk_id, quote, start_offset, end_offset) "
+                            "VALUES (:c, :v, :eid, :kid, :chunk, 'evidence', 0, 8) "
+                            "ON CONFLICT DO NOTHING"
+                        ),
+                        {
+                            "c": cid, "v": ver_id, "eid": eid, "kid": kid, "chunk": chunk_id,
+                        },
+                    )
     finally:
-        # Clean up the latency corpus.
-        async with db_module.admin_session_scope() as db:
-            with principal_scope(authz.ADMIN_PRINCIPAL):
-                await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid})
-                await db.commit()
-                await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": cid})
-                await db.commit()
+        admin_engine.dispose()
+
+    # Reset function-call counters (superuser only), then run as runtime.
+    reset_engine = sa.create_engine(sync_url())
+    try:
+        with reset_engine.begin() as conn:
+            for fn in (
+                "mp_verified_scope_corpora()",
+                "mp_verify_scope_token(CHAR(64),TEXT)",
+                "mindpalace_allowed_corpus(CHAR(64))",
+            ):
+                conn.execute(
+                    sa.text(f"SELECT pg_stat_reset_single_function_counters('{fn}'::regprocedure)")
+                )
+    finally:
+        reset_engine.dispose()
+
+    scope = ",".join(cids)
+    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
+
+    # Run EXPLAIN as runtime role (sync engine, matching the manual measurement
+    # that confirmed per-row calls). AsyncSession would also work but sync is
+    # simpler for the counter readback below.
+    rt_sync = runtime_url().replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace(
+        "postgresql://", "postgresql+psycopg2://"
+    )
+    rt_engine = sa.create_engine(rt_sync, poolclass=sa.pool.NullPool)
+    try:
+        with rt_engine.begin() as conn:
+            conn.execute(
+                sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                {"s": scope},
+            )
+            conn.execute(
+                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                {"t": token},
+            )
+            result = conn.execute(
+                sa.text(
+                    "EXPLAIN (ANALYZE, VERBOSE, BUFFERS) "
+                    "SELECT count(*) FROM memory_claims"
+                )
+            )
+            plan = "\n".join(str(r[0]) for r in result.fetchall())
+        print(f"\nEXPLAIN plan:\n{plan}")
+    finally:
+        rt_engine.dispose()
+
+    has_initplan = "InitPlan" in plan
+    has_allowed_corpus = "mindpalace_allowed_corpus" in plan
+
+    assert has_allowed_corpus, f"RLS policy not applied in EXPLAIN:\n{plan}"
+
+    # Read back the call counters (superuser).
+    read_engine = sa.create_engine(sync_url())
+    try:
+        with read_engine.connect() as conn:
+            rows = conn.execute(
+                sa.text(
+                    "SELECT funcname, calls FROM pg_stat_user_functions "
+                    "WHERE funcname IN ('mp_verified_scope_corpora', "
+                    "'mp_verify_scope_token', 'mindpalace_allowed_corpus')"
+                )
+            ).fetchall()
+    finally:
+        read_engine.dispose()
+    calls = {r[0]: r[1] for r in rows}
+    print(f"\nFunction-call counts: {calls}")
+
+    mac = calls.get("mindpalace_allowed_corpus", 0)
+    mpc = calls.get("mp_verified_scope_corpora", 0)
+    mvt = calls.get("mp_verify_scope_token", 0)
+
+    # Unconditional assertions (fail now, pass after the InitPlan fix).
+    assert has_initplan, (
+        f"Expected an InitPlan hoisting mp_verified_scope_corpora(); none found.\n{plan}"
+    )
+    assert mac <= 2, (
+        f"mindpalace_allowed_corpus called {mac} times (per-row trap); "
+        f"expected at most 2 (InitPlan evaluated once).\n{plan}"
+    )
+    assert mpc <= 2, (
+        f"mp_verified_scope_corpora called {mpc} times (per-row trap); "
+        f"expected at most 2.\n{plan}"
+    )
+    assert mvt <= 2, (
+        f"mp_verify_scope_token called {mvt} times; expected at most 2.\n{plan}"
+    )
 
 
 # ---------------------------------------------------------------------------

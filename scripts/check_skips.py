@@ -69,6 +69,13 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "(SELECT mp_verified_scope_corpora()) directly in each policy USING "
         "expression; the test asserts an InitPlan and at-most-2 function calls",
     ),
+    "test_scope_token_mismatch_returns_rows_after_rotation": (
+        "MIND_PALACE_SCOPE_TOKEN_XFAIL",
+        "MIND_PALACE_SCOPE_TOKEN_XFAIL: deliberate xfail(strict) until the "
+        "owner chooses between env-flag and database approaches for the "
+        "scope-token mismatch silent outage; no fix implemented on this "
+        "branch.",
+    ),
 }
 
 #: Skips that are correct only where `sentence-transformers` is absent, which is

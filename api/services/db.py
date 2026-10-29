@@ -163,8 +163,16 @@ def _apply_tenant_scope(session, transaction, connection):
     so reinstating the capability is a migration rather than a hunt.
     """
     scope = _scope_value()
-    secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
-    token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
+    enforce = os.environ.get("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() in (
+        "on",
+        "true",
+        "1",
+    )
+    if enforce:
+        secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
+        token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
+    else:
+        token = ""
     connection.execute(
         text("SELECT set_config(:name, :value, true)"),
         {"name": TENANT_SETTING, "value": scope},

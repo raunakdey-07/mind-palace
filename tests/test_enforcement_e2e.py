@@ -21,7 +21,8 @@ Scenario list (each is its own test):
 9. The `{*}` maintenance sentinel: maintenance role with {*}+token works;
    runtime role cannot forge {*}.
 10. Two tenants on separate clients never see each other's rows.
-11. Latency p50/p95 recall with enforcement ON vs OFF; EXPLAIN shows InitPlan.
+11. EXPLAIN plan shape (deterministic): RLS active, no per-row SubPlan.
+    (Latency numbers moved to scripts/bench_enforcement_latency.py)
 12. Operator procedure per docs/security.md: rotate, enable, mismatch window yields 0 rows.
 """
 
@@ -31,7 +32,6 @@ import hashlib
 import hmac
 import os
 import secrets as _secrets
-import statistics
 import sys
 import time
 
@@ -801,13 +801,17 @@ async def test_concurrent_tenants_pooled_connection(world):
 
 
 async def test_latency_and_explain_initplan(world):
-    """p50/p95 recall latency with enforcement ON vs OFF (n>=200 each);
-    EXPLAIN shows InitPlan for mp_verified_scope_corpora() with no per-row
-    SubPlan; or falls back to pg_stat_user_functions call count."""
+    """Deterministic EXPLAIN plan-shape check for scope-token enforcement.
+
+    Asserts the RLS policy is applied (mindpalace_allowed_corpus filter present)
+    and that there is no per-row SubPlan on mp_verified_scope_corpora.
+    Latency numbers are not measured here: they live in
+    scripts/bench_enforcement_latency.py (manual/nightly).
+    """
     corpus_name = "enforcement-latency-corpus"
     cid = corpus_id_for(corpus_name)
 
-    # Create corpus and issue a credential via admin DB session.
+    # Create corpus via admin DB session.
     async with db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
             await db.execute(
@@ -818,24 +822,6 @@ async def test_latency_and_explain_initplan(world):
                 {"c": cid, "n": corpus_name},
             )
             await db.commit()
-            lat_cred = await authz.issue_credential(
-                db, "latency-client", [corpus_name], "read_write"
-            )
-
-    client_headers = {"Authorization": f"Bearer {lat_cred['secret']}"}
-
-    # Write ~200 claims via the remember API (handles all archive constraints).
-    for i in range(200):
-        resp = await world.client.post(
-            "/api/memory/remember",
-            headers=client_headers,
-            json={
-                "corpus": corpus_name,
-                "statement": f"latency fact number {i} about widgets and production systems.",
-                "key": f"lat-k{i}",
-            },
-        )
-        assert resp.status_code in (200, 201), resp.text
 
     try:
         # EXPLAIN as runtime role with valid scope + token.
@@ -878,54 +864,6 @@ async def test_latency_and_explain_initplan(world):
             ), f"Per-row SubPlan on mp_verified_scope_corpora found:\n{plan}"
         finally:
             await engine.dispose()
-
-        # Latency with enforcement ON via API (n=200).
-        recalls = []
-        for _ in range(200):
-            t0 = time.perf_counter()
-            resp = await world.client.post(
-                "/api/memory/query",
-                headers=client_headers,
-                json={"corpus": corpus_name, "query": "widgets"},
-            )
-            assert resp.status_code == 200, resp.text
-            recalls.append((time.perf_counter() - t0) * 1000)
-
-        # Toggle enforcement OFF.
-        engine = sa.create_engine(sync_url())
-        try:
-            with engine.begin() as conn:
-                conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(false)"))
-        finally:
-            engine.dispose()
-
-        try:
-            recalls_off = []
-            for _ in range(200):
-                t0 = time.perf_counter()
-                resp = await world.client.post(
-                    "/api/memory/query",
-                    headers=client_headers,
-                    json={"corpus": corpus_name, "query": "widgets"},
-                )
-                assert resp.status_code == 200, resp.text
-                recalls_off.append((time.perf_counter() - t0) * 1000)
-        finally:
-            engine = sa.create_engine(sync_url())
-            try:
-                with engine.begin() as conn:
-                    conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
-            finally:
-                engine.dispose()
-
-        p50_on = statistics.median(recalls)
-        p95_on = statistics.quantiles(recalls, n=20)[18]
-        p50_off = statistics.median(recalls_off)
-        p95_off = statistics.quantiles(recalls_off, n=20)[18]
-        print(
-            f"\nlatency ON (n=200):  p50={p50_on:.2f}ms p95={p95_on:.2f}ms  "
-            f"OFF (n=200): p50={p50_off:.2f}ms p95={p95_off:.2f}ms"
-        )
     finally:
         # Clean up the latency corpus.
         async with db_module.admin_session_scope() as db:

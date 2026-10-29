@@ -2271,8 +2271,10 @@ def secret_rotate(
 
     typer.echo(f"Rotated scope secret: {secret}")
     if out is not None:
-        out.write_text(secret + "\n")
-        os.chmod(out, 0o600)
+        out_path = Path(out)
+        with out_path.open("w", encoding="utf-8") as f:
+            f.write(secret + "\n")
+        os.chmod(out_path, 0o600)
     typer.echo("")
     typer.echo("Update the service environment:")
     typer.echo(f"  export MIND_PALACE_SCOPE_SECRET={secret}")

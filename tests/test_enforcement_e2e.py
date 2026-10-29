@@ -227,59 +227,64 @@ async def test_db_role_properties(world):
 
 
 async def test_admin_creates_a_corpus(world):
-    """A corpus created via the API is visible under enforcement."""
-    corpus_name = "alpha-enforcement-corpus"
-    cid = corpus_id_for(corpus_name)
+    """A brand-new corpus is created under enforcement and is then usable.
 
-    # Create the corpus via the API as an admin. Enforcement stays ON.
-    # In `off` auth mode LOCAL_PRINCIPAL is unrestricted; in `required` mode no
-    # credential is unrestricted, so corpus creation via the API is an admin/DB
-    # operation. Try the API route first.
+    Corpus creation goes through the CLI (`corpora create`, which connects as
+    `ADMIN_PRINCIPAL` -- see `_authz_session`), since the HTTP route
+    `POST /api/corpora` resolves the target name through `get_corpus_by_name`
+    and therefore requires the caller to already hold scope over that corpus --
+    impossible for a brand-new corpus id. Ingest, recall, listing and erasure
+    then go through the HTTP API with a real `read_write` credential.
+
+    Auth mode is `required` throughout: no `LOCAL_PRINCIPAL`, no env flipping,
+    no direct DB INSERT fallback.
+    """
+    corpus_name = "alpha-enforcement-corpus"
+
+    # 1. Create the corpus via the CLI (administrative, enforcement ON).
+    import subprocess
     import os as _os
 
-    _os.environ["MIND_PALACE_AUTH_MODE"] = "off"
-    try:
-        response = await world.client.post(
-            "/api/corpora",
-            json={"name": corpus_name, "description": "enforcement test corpus"},
-        )
-        api_created = response.status_code == 201
-        if not api_created:
-            print(f"\n  API corpus creation returned {response.status_code}: {response.text[:200]}")
-    finally:
-        _os.environ["MIND_PALACE_AUTH_MODE"] = "required"
+    env = dict(_os.environ)
+    env["DATABASE_URL"] = _os.environ["DATABASE_URL"]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "cli.main",
+            "corpus",
+            "create",
+            corpus_name,
+            "--description",
+            "enforcement test corpus",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode == 0, f"corpora create failed: {result.stderr}"
+    print(f"\n  CLI create: {result.stdout.strip()}")
 
-    if not api_created:
-        # Fall back to DB creation (corpus creation is an administrative op).
-        async with world.db_module.admin_session_scope() as db:
-            with principal_scope(authz.ADMIN_PRINCIPAL):
-                await db.execute(
-                    sa.text(
-                        "INSERT INTO corpora (id, name, description) VALUES (:c, :n, '') "
-                        "ON CONFLICT DO NOTHING"
-                    ),
-                    {"c": cid, "n": corpus_name},
-                )
-                await db.commit()
-
-    # Issue a credential for the new corpus and verify listing.
+    # 2. Issue a regular credential for the new corpus (ADMIN_PRINCIPAL is
+    #    unrestricted, so it can see the brand-new corpus to grant it).
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
             new_cred = await authz.issue_credential(
-                db, "enforcement-admin", [corpus_name], "read_write"
+                db, "enforcement-reader", [corpus_name], "read_write"
             )
 
-    # The new corpus appears in listings for its credential under enforcement.
-    headers = {"Authorization": f"Bearer {new_cred['secret']}"}
-    response = await world.client.get("/api/corpora", headers=headers)
+    reader_headers = {"Authorization": f"Bearer {new_cred['secret']}"}
+
+    # 3. The new corpus appears in listings under enforcement.
+    response = await world.client.get("/api/corpora", headers=reader_headers)
     assert response.status_code == 200, response.text
     names = {row["name"] for row in response.json()}
     assert corpus_name in names, f"{corpus_name} not in {names}"
 
-    # Ingest and recall in the new corpus.
+    # 4. Ingest and recall in the new corpus.
     response = await world.client.post(
         "/api/memory/remember",
-        headers=headers,
+        headers=reader_headers,
         json={
             "statement": "ENFORCEMENT_NEW_CORPUS_FACT the launch date is March 15.",
             "corpus": corpus_name,
@@ -290,7 +295,7 @@ async def test_admin_creates_a_corpus(world):
 
     response = await world.client.post(
         "/api/memory/current",
-        headers=headers,
+        headers=reader_headers,
         json={"corpus": corpus_name, "query": ""},
     )
     assert response.status_code == 200, response.text
@@ -300,14 +305,21 @@ async def test_admin_creates_a_corpus(world):
         for m in body.get("current_memories", [])
     ), body
 
-    # Clean up: erase and drop.
+    # 5. Erasure through the DELETE /api/corpora/{name} route. Issue a second
+    #    admin credential carrying a grant on the new corpus (delete_corpus
+    #    requires both manage_corpus and visibility of the target).
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": cid})
-            await db.commit()
-            await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": cid})
-            await db.commit()
-            await authz.revoke_credential(db, new_cred["id"])
+            admin_eraser = await authz.issue_credential(
+                db, "admin-eraser", [corpus_name], "principal_admin"
+            )
+
+    eraser_headers = {"Authorization": f"Bearer {admin_eraser['secret']}"}
+    response = await world.client.delete(
+        f"/api/corpora/{corpus_name}", headers=eraser_headers
+    )
+    assert response.status_code == 200, response.text
+    assert response.json().get("deleted") is True, response.text
 
 
 # ---------------------------------------------------------------------------

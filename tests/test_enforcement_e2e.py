@@ -74,8 +74,7 @@ def _rotate_and_enable(url: str) -> str:
         with engine.begin() as conn:
             row = conn.execute(
                 sa.text(
-                    "SELECT value FROM memory_server_secrets "
-                    "WHERE name = 'scope_hmac_secret'"
+                    "SELECT value FROM memory_server_secrets " "WHERE name = 'scope_hmac_secret'"
                 )
             ).scalar()
             original_secret = row if row is not None else "dev-scope-secret"
@@ -106,9 +105,7 @@ def _restore_secret_and_disable(url: str, original_secret: str) -> None:
                 ),
                 {"v": original_secret},
             )
-            conn.execute(
-                sa.text("SELECT mp_set_scope_token_enforcement(false)")
-            )
+            conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(false)"))
     finally:
         engine.dispose()
 
@@ -354,9 +351,7 @@ async def test_admin_creates_a_corpus(world):
             )
 
     eraser_headers = {"Authorization": f"Bearer {admin_eraser['secret']}"}
-    response = await world.client.delete(
-        f"/api/corpora/{corpus_name}", headers=eraser_headers
-    )
+    response = await world.client.delete(f"/api/corpora/{corpus_name}", headers=eraser_headers)
     assert response.status_code == 200, response.text
     assert response.json().get("deleted") is True, response.text
 
@@ -884,14 +879,11 @@ async def test_latency_and_explain_initplan(world):
 
     Latency numbers live in scripts/bench_enforcement_latency.py.
     """
-    import time
-
     # Insert a measurable number of claims directly (bypasses the remember API
     # and its embedding step) across 3 corpora.
     corpus_names = ["hoist-alpha", "hoist-beta", "hoist-gamma"]
     cids = [corpus_id_for(n) for n in corpus_names]
     n_per = 20
-    total = n_per * len(corpus_names)
 
     admin_engine = sa.create_engine(sync_url())
     try:
@@ -946,19 +938,29 @@ async def test_latency_and_explain_initplan(world):
                             "ON CONFLICT DO NOTHING"
                         ),
                         {
-                            "c": cid, "d": doc_id, "v": ver_id, "kid": kid,
-                            "key": f"k-{j}", "claim": f"hoist claim {j}",
+                            "c": cid,
+                            "d": doc_id,
+                            "v": ver_id,
+                            "kid": kid,
+                            "key": f"k-{j}",
+                            "claim": f"hoist claim {j}",
                         },
                     )
                     conn.execute(
                         sa.text(
                             "INSERT INTO memory_evidence "
-                            "(corpus_id, version_id, id, claim_id, chunk_id, quote, start_offset, end_offset) "
-                            "VALUES (:c, :v, :eid, :kid, :chunk, 'evidence', 0, 8) "
+                            "(corpus_id, version_id, id, claim_id, "
+                            "chunk_id, quote, start_offset, end_offset) "
+                            "VALUES (:c, :v, :eid, :kid, :chunk, "
+                            "'evidence', 0, 8) "
                             "ON CONFLICT DO NOTHING"
                         ),
                         {
-                            "c": cid, "v": ver_id, "eid": eid, "kid": kid, "chunk": chunk_id,
+                            "c": cid,
+                            "v": ver_id,
+                            "eid": eid,
+                            "kid": kid,
+                            "chunk": chunk_id,
                         },
                     )
     finally:
@@ -986,8 +988,10 @@ async def test_latency_and_explain_initplan(world):
     # Run EXPLAIN as runtime role (sync engine, matching the manual measurement
     # that confirmed per-row calls). AsyncSession would also work but sync is
     # simpler for the counter readback below.
-    rt_sync = runtime_url().replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace(
-        "postgresql://", "postgresql+psycopg2://"
+    rt_sync = (
+        runtime_url()
+        .replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        .replace("postgresql://", "postgresql+psycopg2://")
     )
     rt_engine = sa.create_engine(rt_sync, poolclass=sa.pool.NullPool)
     try:
@@ -1001,10 +1005,7 @@ async def test_latency_and_explain_initplan(world):
                 {"t": token},
             )
             result = conn.execute(
-                sa.text(
-                    "EXPLAIN (ANALYZE, VERBOSE, BUFFERS) "
-                    "SELECT count(*) FROM memory_claims"
-                )
+                sa.text("EXPLAIN (ANALYZE, VERBOSE, BUFFERS) " "SELECT count(*) FROM memory_claims")
             )
             plan = "\n".join(str(r[0]) for r in result.fetchall())
         print(f"\nEXPLAIN plan:\n{plan}")
@@ -1037,9 +1038,9 @@ async def test_latency_and_explain_initplan(world):
     mvt = calls.get("mp_verify_scope_token", 0)
 
     # Unconditional assertions (fail now, pass after the InitPlan fix).
-    assert has_initplan, (
-        f"Expected an InitPlan hoisting mp_verified_scope_corpora(); none found.\n{plan}"
-    )
+    assert (
+        has_initplan
+    ), f"Expected an InitPlan hoisting mp_verified_scope_corpora(); none found.\n{plan}"
     assert mac <= 2, (
         f"mindpalace_allowed_corpus called {mac} times (per-row trap); "
         f"expected at most 2 (InitPlan evaluated once).\n{plan}"
@@ -1048,9 +1049,7 @@ async def test_latency_and_explain_initplan(world):
         f"mp_verified_scope_corpora called {mpc} times (per-row trap); "
         f"expected at most 2.\n{plan}"
     )
-    assert mvt <= 2, (
-        f"mp_verify_scope_token called {mvt} times; expected at most 2.\n{plan}"
-    )
+    assert mvt <= 2, f"mp_verify_scope_token called {mvt} times; expected at most 2.\n{plan}"
 
 
 # ---------------------------------------------------------------------------

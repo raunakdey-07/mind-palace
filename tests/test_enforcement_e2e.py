@@ -853,11 +853,11 @@ async def test_concurrent_tenants_pooled_connection(world):
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "migration 015's per-row trap: mindpalace_allowed_corpus calls "
-        "mp_verified_scope_corpora() once per row instead of hoisting it to "
-        "an InitPlan. Fix via a new migration that puts "
-        "(SELECT mp_verified_scope_corpora()) directly in each policy USING "
-        "expression. Remove this xfail when the fix is merged."
+        "MIND_PALACE_LATENCY_INITPLAN_XFAIL: migration 015's per-row trap: "
+        "mindpalace_allowed_corpus calls mp_verified_scope_corpora() once per "
+        "row instead of hoisting it to an InitPlan. Fix via a new migration "
+        "that puts (SELECT mp_verified_scope_corpora()) directly in each "
+        "policy USING expression. Remove this xfail when the fix is merged."
     ),
 )
 async def test_latency_and_explain_initplan(world):

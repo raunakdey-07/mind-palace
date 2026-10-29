@@ -63,10 +63,11 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "builds a wheel, which takes minutes; CI builds one in the wheel job",
     ),
     "test_latency_and_explain_initplan": (
-        "migration 015's per-row trap",
-        "known product bug: mindpalace_allowed_corpus calls "
-        "mp_verified_scope_corpora() once per row instead of hoisting it to "
-        "an InitPlan; fix requires a new migration; remove when fixed",
+        "MIND_PALACE_LATENCY_INITPLAN_XFAIL",
+        "MIND_PALACE_LATENCY_INITPLAN_XFAIL: deliberate xfail(strict) until "
+        "migration 015's per-row trap is fixed by a new migration that puts "
+        "(SELECT mp_verified_scope_corpora()) directly in each policy USING "
+        "expression; the test asserts an InitPlan and at-most-2 function calls",
     ),
 }
 

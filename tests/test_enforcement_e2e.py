@@ -69,7 +69,7 @@ def _rotate_and_enable(url: str) -> str:
     """Rotate a random scope HMAC secret into memory_server_secrets and turn
     enforcement on. Returns the rotated secret."""
     secret = _secrets.token_hex(32)
-    engine = sa.create_engine(url)
+    engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
             conn.execute(
@@ -991,7 +991,7 @@ async def test_operator_procedure_per_docs(world):
     os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
 
     # Step 3: enable enforcement as the owner role.
-    engine = sa.create_engine(url)
+    engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
             conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
@@ -1026,7 +1026,7 @@ async def test_operator_procedure_per_docs(world):
         f"{parts.host}:{parts.port or 5432}/{parts.database}"
     )
     # Apply runtime_roles.sql to the session database.
-    admin_engine = sa.create_engine(url)
+    admin_engine = sa.create_engine(sync_url())
     try:
         with admin_engine.begin() as conn:
             with open("scripts/db/runtime_roles.sql") as f:

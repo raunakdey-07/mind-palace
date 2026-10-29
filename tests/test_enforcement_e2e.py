@@ -72,6 +72,13 @@ def _rotate_and_enable(url: str) -> str:
     engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
+            row = conn.execute(
+                sa.text(
+                    "SELECT value FROM memory_server_secrets "
+                    "WHERE name = 'scope_hmac_secret'"
+                )
+            ).scalar()
+            original_secret = row if row is not None else "dev-scope-secret"
             conn.execute(
                 sa.text(
                     "INSERT INTO memory_server_secrets (name, value) VALUES "
@@ -83,15 +90,47 @@ def _rotate_and_enable(url: str) -> str:
             conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
     finally:
         engine.dispose()
-    return secret
+    return secret, original_secret
 
 
-@pytest.fixture(scope="session")
-def enforced_secret():
-    """Rotate a random scope secret and enable enforcement on the session DB."""
+def _restore_secret_and_disable(url: str, original_secret: str) -> None:
+    """Restore the default scope secret and turn enforcement off."""
+    engine = sa.create_engine(sync_url())
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO memory_server_secrets (name, value) VALUES "
+                    "('scope_hmac_secret', :v) "
+                    "ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value"
+                ),
+                {"v": original_secret},
+            )
+            conn.execute(
+                sa.text("SELECT mp_set_scope_token_enforcement(false)")
+            )
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture
+def enforced_secret(monkeypatch):
+    """Rotate a random scope secret and enable enforcement for one test.
+
+    Function-scoped with a restoring finalizer so the suite does not leave
+    enforcement ON or a rotated secret behind for later tests (isolation).
+    Also sets MIND_PALACE_SCOPE_SECRET so the application's HMAC tokens match
+    the rotated DB secret. Restores both on teardown.
+    """
     url = os.environ.get("DATABASE_URL")
     assert url, "DATABASE_URL must be set (conftest creates the session database)"
-    return _rotate_and_enable(url)
+    secret, original_secret = _rotate_and_enable(url)
+    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", secret)
+
+    yield secret
+
+    _restore_secret_and_disable(url, original_secret)
+    monkeypatch.delenv("MIND_PALACE_SCOPE_SECRET", raising=False)
 
 
 # ---------------------------------------------------------------------------
@@ -1044,6 +1083,7 @@ async def test_operator_procedure_per_docs(world):
 
     old_secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
     secret_file = "/tmp/opencode/operator-secret.txt"
+    os.makedirs(os.path.dirname(secret_file), exist_ok=True)
 
     # Step 1: `mindpalace secret rotate` via the CLI (writes DB row + file).
     result = subprocess.run(

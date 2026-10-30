@@ -551,16 +551,26 @@ async def readiness() -> JSONResponse:
                 posture = await inspect_posture(db)
                 policy_enforced = not posture.problems()
                 enforced = policy_enforced or deployment_mode() != DEPLOYMENT_SERVER
-                # Scope-token enforcement (Migration 015): in server mode, the
-                # token this process would send must verify against the database.
-                # `_apply_tenant_scope` always sets `mindpalace.scope_token` to
-                # HMAC(secret, scope) on every transaction, so the process always
-                # sends a token. Migration 015's `mp_verified_scope_corpora()`
-                # compares the supplied token to the stored secret regardless of
-                # the enforcement flag: a non-empty token that does not verify
-                # returns zero rows even with enforcement off. Therefore a
-                # mismatched secret is always a not-ready condition in server
-                # mode, whether or not enforcement is enabled.
+
+                if not enforced:
+                    return JSONResponse(
+                        status_code=503,
+                        content={
+                            "status": "not_ready",
+                            "checks": {"database": "ok", "row_level_security": "not_enforced"},
+                        },
+                    )
+
+                # Scope-token enforcement (Migration 015): in server mode with a
+                # clean posture, the token this process would send must verify
+                # against the database. `_apply_tenant_scope` always sets
+                # `mindpalace.scope_token` to HMAC(secret, scope) on every
+                # transaction, so the process always sends a token. Migration
+                # 015's `mp_verified_scope_corpora()` compares the supplied token
+                # to the stored secret regardless of the enforcement flag: a
+                # non-empty token that does not verify returns zero rows even
+                # with enforcement off. Therefore a mismatched secret is always
+                # a not-ready condition in server mode.
                 if deployment_mode() == DEPLOYMENT_SERVER:
                     probed = await _probe_scope_token(db)
                     if probed is None or not probed[2]:
@@ -587,15 +597,6 @@ async def readiness() -> JSONResponse:
         return JSONResponse(
             status_code=503,
             content={"status": "not_ready", "checks": {"database": "unavailable"}},
-        )
-
-    if not enforced:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "not_ready",
-                "checks": {"database": "ok", "row_level_security": "not_enforced"},
-            },
         )
 
     return JSONResponse(

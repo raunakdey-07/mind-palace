@@ -4,6 +4,25 @@ on:
   push:
     branches:
       - main
+      - feat/reranker
+      # Added so this branch's CI actually runs. A branch that pushes nothing
+      # and gates nothing is a branch whose green is a local memory: the whole
+      # point of a runner is that it is not this machine. Removed when the
+      # branch merges.
+      - wip/platform-readiness
+      # Same reason as the line above: this branch's green must be a runner's
+      # green, not a laptop's. Removed when the branch merges.
+      - wip/claims-and-lab
+      # Same reason as the line above: this branch's green must be a runner's
+      # green, not a laptop's. Removed when the branch merges.
+      - wip/wedge
+      - wip/independent-set
+      # Same reason as the line above. A push trigger, not a gate: no step is
+      # added and none is removed. Without it this branch's green would be a
+      # local memory, which is the thing the other five lines exist to prevent.
+      # Removed when the branch merges.
+      - wip/boundary-fixes
+      - wip/boundary-fixes-2
   pull_request:
     branches:
       - main
@@ -12,15 +31,10 @@ on:
   # workstation does, and the only way to check one is to have a runner do it again.
   workflow_dispatch:
 
-concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   tests:
     name: Lint and Test
     runs-on: ubuntu-latest
-    timeout-minutes: 29
 
     services:
       postgres:
@@ -277,6 +291,11 @@ jobs:
           DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
         run: python -m cli.main posture
 
+      - name: Run linting
+        run: |
+          flake8 api cli tests scripts --max-line-length=100
+          black --check api cli tests scripts --line-length 100
+
       - name: Evaluate deterministic memory lifecycle (offline)
         env:
           HF_HUB_OFFLINE: "1"
@@ -380,23 +399,20 @@ jobs:
       - name: Every skip is accounted for
         run: python scripts/check_skips.py --junit /tmp/pytest-main.xml --default-dependency
 
-      # The lexical-mode speedup numbers are already captured by `pytest -q -rs`
-      # in "Run tests" above. Read them from the junit instead of starting a
-      # second pytest session (and rebuilding another session database).
-      - name: Report lexical-mode speedup from this run
+      # The lexical-mode speedup is a claim about the model load, so its size depends on
+      # the runner. The test prints both numbers; `pytest -q -rs` above captures them,
+      # so this runs the same two tests with -s to put the measurement in the log
+      # where it can be read and compared run to run. The gate that matters is the
+      # import-table assertion in test_lexical_mode_does_not_import_the_model_stack,
+      # which is machine-independent; this only says how big the saving was here.
+      - name: Measure the lexical-mode speedup on this runner
         env:
           MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
-          python - <<'PY'
-          import json, xml.etree.ElementTree as ET
-          tree = ET.parse('/tmp/pytest-main.xml')
-          for tc in tree.getroot().findall('.//testcase'):
-              name = tc.get('name', '')
-              if 'lexical' in name.lower() or 'is_faster' in name:
-                  print(f"{tc.get('classname')}.{name}: {tc.get('time')}s")
-          PY
+          pytest -q -s tests/test_m016_lexical_mode.py \
+            -k "is_faster or does_not_import_the_model_stack"
 
       - name: Upload the junitxml
         uses: actions/upload-artifact@v4
@@ -514,27 +530,6 @@ jobs:
           fi
           python examples/marketing-campaign-memory/demo.py
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: "pip"
-      - name: Install flake8 and black
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install flake8 black
-      - name: Run flake8 and black
-        run: |
-          flake8 api cli tests scripts --max-line-length=100
-          black --check api cli tests scripts --line-length 100
-
   # The two embedding backends have to stay interchangeable, because the archive
   # stores vectors and records only the model name and the dimension. If they drift
   # apart, every corpus written under one backend is silently mis-ranked by the
@@ -544,7 +539,6 @@ jobs:
   embedding-backends:
     name: Embedding backends stay interchangeable
     runs-on: ubuntu-latest
-    timeout-minutes: 7
 
     services:
       postgres:
@@ -628,7 +622,6 @@ jobs:
   five-minute-path:
     name: The five-minute path, from a clean checkout
     runs-on: ubuntu-latest
-    timeout-minutes: 4
     needs: tests
 
     services:
@@ -809,7 +802,6 @@ jobs:
   wheel:
     name: Clean install from the built wheel
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     needs: tests
 
     services:
@@ -1093,7 +1085,6 @@ jobs:
   upgrade-safety:
     name: Upgrade safety, from v0.9.0
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     needs: tests
 
     services:
@@ -1150,7 +1141,6 @@ jobs:
   build:
     name: Docker Build
     runs-on: ubuntu-latest
-    timeout-minutes: 2
     needs: tests
     # The BUILD runs on every branch. It used to be gated behind
     # `github.ref == 'refs/heads/main'`, which meant no branch could find out

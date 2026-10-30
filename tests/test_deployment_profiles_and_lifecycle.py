@@ -388,7 +388,7 @@ async def test_a_writer_cannot_create_a_corpus(world):
             with pytest.raises(authz.AuthorizationError) as caught:
                 await create_corpus(db, "escalation-corpus")
     assert caught.value.status_code == 403
-    assert "administrative" in caught.value.message
+    assert "mindpalace corpus create" in caught.value.message
 
 
 async def test_a_credential_does_not_acquire_a_corpus_created_later():

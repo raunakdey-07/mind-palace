@@ -1136,3 +1136,30 @@ SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
 `MIND_PALACE_SCOPE_SECRET` must change together or every query returns 0 rows.
 Safe order: update the DB row first, then roll the env var, expecting a brief
 outage. Use `--out FILE` (mode 0600) to avoid terminal history.
+
+### Server-profile refusal on mismatch (v0.10.0)
+
+A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) refuses to start
+when scope-token enforcement is on and the secret the process would send does
+not verify against the database. The startup refusal pre-existed on main; this
+release adds the readiness check, the rotation-order text in refusal messages,
+and explicit fail-closed behaviour when `mp_scope_enforcement_status` is
+unavailable (old schema or unreachable database). The refusal names the cause
+and the safe rotation order, and never prints any secret:
+
+```
+refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the database row.
+Rotate in this order: (1) set the new secret in the database with
+`mindpalace secret rotate --out FILE` as mindpalace_owner,
+(2) update MIND_PALACE_SCOPE_SECRET in the service environment to match,
+(3) restart the service. Expect a brief outage.
+```
+
+The same check runs on `/health/ready`: a mismatch or an unavailable
+`mp_scope_enforcement_status` probe reports `not_ready` with
+`checks.scope_token = "mismatch"`. Enforcement off is not a mismatch — the
+server still refuses to start enforcement-off unless
+`MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, a pre-existing guard.
+
+Local deployments (`MIND_PALACE_DEPLOYMENT=local`, the documented five-minute
+path) are exempt from all of this: no refusal, no readiness impact.

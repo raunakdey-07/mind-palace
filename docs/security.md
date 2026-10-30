@@ -333,6 +333,24 @@ Permissions are checked against the *caller* in `require_permission`, and the
 corpora are then resolved under that same caller — so a `principal_admin` can
 hand out only the corpora it already reaches.
 
+## Corpus creation over HTTP (server mode)
+
+In server mode, corpora are created by the operator with `mindpalace corpus create`
+(which runs as the maintenance/unrestricted identity). `POST /api/corpora` is not an
+operator path for a brand-new corpus:
+
+* A credential with `manage_corpus` but no grant on an existing corpus: `403`
+  `forbidden`. The INSERT into `corpora` runs as the least-privileged runtime
+  role, row-level security rejects it (`WITH CHECK` on `corpora`), and the route
+  translates the `42501` ProgrammingError to `403` without leaking database
+  internals.
+* A credential with `manage_corpus` and a grant on an existing corpus: `201`
+  `CorpusResponse` (the INSERT is permitted by RLS).
+
+The misleading response text "Creating a corpus is an administrative operation"
+names the policy cause, not the caller: it is returned when RLS refuses the row,
+whether or not the caller holds `manage_corpus`.
+
 ## Threat model
 
 **The attacker controls:** an HTTP client, an MCP tool caller, and anything they

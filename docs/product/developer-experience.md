@@ -22,7 +22,7 @@ whether the paths that exist behave correctly.
 | Receipt | `mindpalace receipt "<question>" -o receipt.json` | a self-contained receipt |
 | Verify | `mindpalace verify receipt.json` | `VERIFIED`, or `REJECTED` with a reason, offline |
 | Corpus list | `mindpalace corpora` | every readable and writable corpus |
-| Corpus create | `POST /api/corpora` | `201` |
+| Corpus create | `POST /api/corpora` | `201` when the caller holds `manage_corpus` over an existing corpus grant path; `403` `forbidden` when row-level security rejects the INSERT (a caller without a grant on any existing corpus). In server mode, corpora are created by the operator with `mindpalace corpus create`; `POST /api/corpora` is not an operator path for a brand-new corpus. |
 | SDK write | `client.remember("...", key="datastore")` | `MemoryResult` with `unchanged` |
 | SDK read | `client.recall(...)` / `client.explain(...)` | the same response the CLI renders |
 | SDK sync | `mp.sync("examples/docs")` | machine-readable summary |

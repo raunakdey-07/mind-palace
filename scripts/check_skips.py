@@ -69,13 +69,6 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "(SELECT mp_verified_scope_corpora()) directly in each policy USING "
         "expression; the test asserts an InitPlan and at-most-2 function calls",
     ),
-    "test_admin_cannot_create_new_corpus_over_http": (
-        "MIND_PALACE_HTTP_CORPUS_CREATE_XFAIL",
-        "MIND_PALACE_HTTP_CORPUS_CREATE_XFAIL: deliberate xfail(strict) until "
-        "the HTTP corpus creation path is redesigned; today POST /api/corpora "
-        "returns 404 for a brand-new corpus because get_corpus_by_name requires "
-        "scope over a target that does not yet exist.",
-    ),
 }
 
 #: Skips that are correct only where `sentence-transformers` is absent, which is

@@ -636,7 +636,6 @@ jobs:
     name: The five-minute path, from a clean checkout
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: tests
 
     services:
       postgres:
@@ -817,7 +816,6 @@ jobs:
     name: Clean install from the built wheel
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: tests
 
     services:
       postgres:
@@ -1101,7 +1099,6 @@ jobs:
     name: Upgrade safety, from v0.9.0
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: tests
 
     services:
       postgres:
@@ -1158,7 +1155,6 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: tests
     # The BUILD runs on every branch. It used to be gated behind
     # `github.ref == 'refs/heads/main'`, which meant no branch could find out
     # whether its Dockerfile still worked until after it merged -- and a broken
@@ -1203,3 +1199,25 @@ jobs:
             exit 1
           fi
           echo "no port published by default"
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [tests, lint, embedding-backends, five-minute-path, wheel, upgrade-safety, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every needed job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS"])
+          for name, info in sorted(needs.items()):
+              print(f"{name}: {info['result']}")
+          bad = {n: i["result"] for n, i in needs.items() if i["result"] != "success"}
+          if bad:
+              print("::error::jobs not successful: " + json.dumps(bad))
+              sys.exit(1)
+          PY

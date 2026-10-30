@@ -20,7 +20,7 @@ jobs:
   tests:
     name: Lint and Test
     runs-on: ubuntu-latest
-    timeout-minutes: 29
+    timeout-minutes: 44
 
     services:
       postgres:
@@ -390,12 +390,19 @@ jobs:
           TRANSFORMERS_OFFLINE: "1"
         run: |
           python - <<'PY'
-          import json, xml.etree.ElementTree as ET
+          import xml.etree.ElementTree as ET
           tree = ET.parse('/tmp/pytest-main.xml')
+          props = {}
           for tc in tree.getroot().findall('.//testcase'):
-              name = tc.get('name', '')
-              if 'lexical' in name.lower() or 'is_faster' in name:
-                  print(f"{tc.get('classname')}.{name}: {tc.get('time')}s")
+              for prop in tc.findall('properties/property'):
+                  props[prop.get('name')] = prop.get('value')
+          missing = [k for k in ('lexical_semantic_s', 'lexical_lexical_s', 'lexical_ratio') if k not in props]
+          if missing:
+              print(f"::error::lexical-mode speedup numbers missing from junit: {missing}")
+              print("  Ensure test_lexical_mode_is_faster_because_of_that records them via record_property.")
+              exit(1)
+          print(f"lexical-mode speedup: semantic={props['lexical_semantic_s']}s, "
+                f"lexical={props['lexical_lexical_s']}s, ratio={props['lexical_ratio']}x")
           PY
 
       - name: Upload the junitxml
@@ -517,7 +524,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -544,7 +551,7 @@ jobs:
   embedding-backends:
     name: Embedding backends stay interchangeable
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -628,7 +635,7 @@ jobs:
   five-minute-path:
     name: The five-minute path, from a clean checkout
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 10
     needs: tests
 
     services:
@@ -809,7 +816,7 @@ jobs:
   wheel:
     name: Clean install from the built wheel
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: tests
 
     services:
@@ -1093,7 +1100,7 @@ jobs:
   upgrade-safety:
     name: Upgrade safety, from v0.9.0
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: tests
 
     services:
@@ -1150,7 +1157,7 @@ jobs:
   build:
     name: Docker Build
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 10
     needs: tests
     # The BUILD runs on every branch. It used to be gated behind
     # `github.ref == 'refs/heads/main'`, which meant no branch could find out

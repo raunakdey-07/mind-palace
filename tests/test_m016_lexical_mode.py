@@ -168,7 +168,7 @@ def test_lexical_mode_does_not_import_the_model_stack(corpus):
     )
 
 
-def test_lexical_mode_is_faster_because_of_that(corpus):
+def test_lexical_mode_is_faster_because_of_that(corpus, record_property):
     """The speed claim, measured in the same process shape on the same corpus.
 
     The bound is 1.33x and it used to be 2x, and the reason matters: the whole
@@ -204,6 +204,9 @@ def test_lexical_mode_is_faster_because_of_that(corpus):
         f"lexical {lexical['elapsed']:.2f}s, ratio "
         f"{semantic['elapsed'] / lexical['elapsed']:.2f}x (bound: above 1.33x)"
     )
+    record_property("lexical_semantic_s", semantic["elapsed"])
+    record_property("lexical_lexical_s", lexical["elapsed"])
+    record_property("lexical_ratio", semantic["elapsed"] / lexical["elapsed"])
     assert lexical["elapsed"] < semantic["elapsed"] * 0.75, (
         f"lexical {lexical['elapsed']:.2f}s vs semantic {semantic['elapsed']:.2f}s -- "
         "the difference between the two modes is the model load, so lexical should "

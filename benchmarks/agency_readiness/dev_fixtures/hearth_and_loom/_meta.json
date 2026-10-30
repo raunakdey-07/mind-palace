@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "hearth_and_loom/prohibition_0.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "hearth_and_loom/prohibition_1.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "hearth_and_loom/prohibition_2.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "hearth_and_loom/voice_0.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "hearth_and_loom/voice_1.md": {
+      "status": "approved",
+      "document_type": "styleguide"
+    },
+    "hearth_and_loom/spec_0.md": {
+      "status": "approved",
+      "document_type": "spec"
+    },
+    "hearth_and_loom/spec_1.md": {
+      "status": "approved",
+      "document_type": "spec"
+    },
+    "hearth_and_loom/headings.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "hearth_and_loom/t2_policy_v1.md": {
+      "status": "superseded",
+      "document_type": "policy"
+    },
+    "hearth_and_loom/t2_policy_v2.md": {
+      "status": "approved",
+      "document_type": "policy"
+    },
+    "hearth_and_loom/september_brainstorm.md": {
+      "status": "draft",
+      "document_type": "note"
+    },
+    "hearth_and_loom/mixed.md": {
+      "status": "approved",
+      "document_type": "guide"
+    },
+    "hearth_and_loom/doc-001.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-002.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-003.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-004.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-005.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-006.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-007.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-008.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-009.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-010.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-011.md": {
+      "status": "approved",
+      "document_type": "note"
+    },
+    "hearth_and_loom/doc-012.md": {
+      "status": "approved",
+      "document_type": "note"
+    }
+  },
+  "template_of": {
+    "hearth_and_loom/prohibition_0.md": "prohibition",
+    "hearth_and_loom/prohibition_1.md": "prohibition",
+    "hearth_and_loom/prohibition_2.md": "prohibition",
+    "hearth_and_loom/voice_0.md": "voice",
+    "hearth_and_loom/voice_1.md": "voice",
+    "hearth_and_loom/spec_0.md": "spec",
+    "hearth_and_loom/spec_1.md": "spec",
+    "hearth_and_loom/headings.md": "T1",
+    "hearth_and_loom/t2_policy_v1.md": "T2",
+    "hearth_and_loom/t2_policy_v2.md": "T2",
+    "hearth_and_loom/september_brainstorm.md": "draft",
+    "hearth_and_loom/mixed.md": "T3",
+    "hearth_and_loom/doc-001.md": "filler",
+    "hearth_and_loom/doc-002.md": "filler",
+    "hearth_and_loom/doc-003.md": "filler",
+    "hearth_and_loom/doc-004.md": "filler",
+    "hearth_and_loom/doc-005.md": "filler",
+    "hearth_and_loom/doc-006.md": "filler",
+    "hearth_and_loom/doc-007.md": "filler",
+    "hearth_and_loom/doc-008.md": "filler",
+    "hearth_and_loom/doc-009.md": "filler",
+    "hearth_and_loom/doc-010.md": "filler",
+    "hearth_and_loom/doc-011.md": "filler",
+    "hearth_and_loom/doc-012.md": "filler"
+  }
+}

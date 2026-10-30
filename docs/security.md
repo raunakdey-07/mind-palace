@@ -344,12 +344,16 @@ operator path for a brand-new corpus:
   role, row-level security rejects it (`WITH CHECK` on `corpora`), and the route
   translates the `42501` ProgrammingError to `403` without leaking database
   internals.
-* A credential with `manage_corpus` and a grant on an existing corpus: `201`
-  `CorpusResponse` (the INSERT is permitted by RLS).
+* A credential with `manage_corpus` and a grant on an existing corpus: also
+  `403` `forbidden`. Experimentally, no authenticated `POST /api/corpora`
+  request for a brand-new corpus returns `201`; the INSERT is always refused by
+  RLS because a principal cannot hold a grant to a corpus that does not exist
+  yet. Corpora are created by the operator with `mindpalace corpus create`.
 
-The misleading response text "Creating a corpus is an administrative operation"
-names the policy cause, not the caller: it is returned when RLS refuses the row,
-whether or not the caller holds `manage_corpus`.
+The 403 body is `{"code": "forbidden", "message": "Creating a corpus over HTTP
+is not permitted for this credential. Corpora are created by the operator with
+`mindpalace corpus create`."}`. It is returned whenever the INSERT is refused by
+row-level security, including for an administrator credential.
 
 ## Threat model
 

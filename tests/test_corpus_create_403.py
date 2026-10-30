@@ -84,7 +84,9 @@ async def test_admin_cannot_create_new_corpus_over_http(world):
     # and hits the RLS WITH CHECK on `corpora`, which we translate to 403.
     # Corpora are created by the operator with `mindpalace corpus create`.
     assert response.status_code == 403, f"expected 403, got {response.status_code}: {response.text}"
-    assert response.json()["detail"]["code"] == "forbidden", response.json()
+    detail = response.json()["detail"]
+    assert detail["code"] == "forbidden", response.json()
+    assert "mindpalace corpus create" in detail["message"], detail
 
 
 @pytest.mark.asyncio

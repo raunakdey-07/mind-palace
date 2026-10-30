@@ -6,15 +6,17 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
-### Breaking change: server-profile scope-secret refusal (v0.10.0)
+### Scope-token enforcement made loud (v0.10.0)
 
-After upgrade, a server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`)
-refuses to start until the scope secret is set, rotated and enforcement
-enabled, and also refuses on a mismatch between `MIND_PALACE_SCOPE_SECRET` and
-the database's `scope_hmac_secret`. The refusal names the cause and the safe
-rotation order (DB first, then environment, brief outage) and never prints any
-secret. `/health/ready` reports `not_ready` with `checks.scope_token =
-"mismatch"` on the same condition. Local deployments are unaffected.
+A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) now refuses to
+start on a mismatch between `MIND_PALACE_SCOPE_SECRET` and the database's
+`scope_hmac_secret` (the startup refusal pre-existed on main; this release
+adds the readiness check, the rotation-order text, and explicit fail-closed
+behaviour when the probe is unavailable). The refusal names the cause and the
+safe rotation order (DB first, then environment, brief outage) and never prints
+any secret. `/health/ready` reports `not_ready` with `checks.scope_token =
+"mismatch"` when the probe is unavailable or the token does not verify. Local
+deployments are unaffected.
 
 ### Corpus creation over HTTP
 

@@ -1115,12 +1115,15 @@ SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
 Safe order: update the DB row first, then roll the env var, expecting a brief
 outage. Use `--out FILE` (mode 0600) to avoid terminal history.
 
-### Server-profile refusal on mismatch (v0.10.0 breaking change)
+### Server-profile refusal on mismatch (v0.10.0)
 
-A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) now refuses to
-start when scope-token enforcement is on and the secret the process would send
-does not verify against the database. The refusal names the cause and the safe
-rotation order, and never prints any secret:
+A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) refuses to start
+when scope-token enforcement is on and the secret the process would send does
+not verify against the database. The startup refusal pre-existed on main; this
+release adds the readiness check, the rotation-order text in refusal messages,
+and explicit fail-closed behaviour when `mp_scope_enforcement_status` is
+unavailable (old schema or unreachable database). The refusal names the cause
+and the safe rotation order, and never prints any secret:
 
 ```
 refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the database row.

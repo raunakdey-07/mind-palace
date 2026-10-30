@@ -145,16 +145,15 @@ async def _enforce_scope_token_startup() -> None:
     except Exception as exc:  # noqa: BLE001 - a probe that cannot run is not a pass
         raise RuntimeError(
             "refusing to start: could not verify scope enforcement "
-            f"({type(exc).__name__}). Start with "
-            "MIND_PALACE_DEPLOYMENT=local to run without this check."
+            f"({type(exc).__name__}). Apply migration 015 or fix the "
+            "database connection."
         ) from exc
 
     if probed is None:
         raise RuntimeError(
             "refusing to start: scope-token probe unavailable "
             "(mp_scope_enforcement_status missing or unreachable). "
-            "Apply migration 015, or start with "
-            "MIND_PALACE_DEPLOYMENT=local to run without this check."
+            "Apply migration 015 or fix the database connection."
         )
     enforced, using_default_secret, secret_matches = probed
 
@@ -552,16 +551,17 @@ async def readiness() -> JSONResponse:
                 posture = await inspect_posture(db)
                 policy_enforced = not posture.problems()
                 enforced = policy_enforced or deployment_mode() != DEPLOYMENT_SERVER
-                # Scope-token enforcement (Migration 015): in server mode, when
-                # enforcement is on, the token this process would send must
-                # verify against the database. A mismatch or an unavailable
-                # probe makes the service not-ready; enforcement off is not a
-                # readiness failure here (startup already refuses a server that
-                # runs enforcement-off without acknowledgement).
-                if (
-                    deployment_mode() == DEPLOYMENT_SERVER
-                    and os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() == "on"
-                ):
+                # Scope-token enforcement (Migration 015): in server mode, the
+                # token this process would send must verify against the database.
+                # `_apply_tenant_scope` always sets `mindpalace.scope_token` to
+                # HMAC(secret, scope) on every transaction, so the process always
+                # sends a token. Migration 015's `mp_verified_scope_corpora()`
+                # compares the supplied token to the stored secret regardless of
+                # the enforcement flag: a non-empty token that does not verify
+                # returns zero rows even with enforcement off. Therefore a
+                # mismatched secret is always a not-ready condition in server
+                # mode, whether or not enforcement is enabled.
+                if deployment_mode() == DEPLOYMENT_SERVER:
                     probed = await _probe_scope_token(db)
                     if probed is None or not probed[2]:
                         return JSONResponse(

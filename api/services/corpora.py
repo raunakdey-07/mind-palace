@@ -81,7 +81,10 @@ async def create_corpus(
     principal = current_principal()
     if not principal.unrestricted:
         raise AuthorizationError(
-            "forbidden", "Creating a corpus is an administrative operation", 403
+            "forbidden",
+            "Creating a corpus over HTTP is not permitted for this credential. "
+            "Corpora are created by the operator with `mindpalace corpus create`.",
+            403,
         )
     require_permission(principal, "manage_corpus", "create a corpus")
     corpus_id = corpus_id_for_name(name)

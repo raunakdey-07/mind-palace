@@ -101,7 +101,6 @@ def test_the_two_opt_in_skips_are_the_whole_allowlist():
         "test_migrations_apply_downgrade_and_reapply",
         "test_a_built_wheel_contains_every_declared_module",
         "test_latency_and_explain_initplan",
-        "test_admin_cannot_create_new_corpus_over_http",
     }
     for name, (variable, why) in module.ALLOWLIST.items():
         assert variable.startswith("MIND_PALACE_"), name

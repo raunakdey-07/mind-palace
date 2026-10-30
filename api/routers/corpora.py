@@ -38,20 +38,22 @@ async def create_corpus(request: CorpusCreate, db: DbSession = None) -> CorpusRe
         raise HTTPException(status_code=409 if "exists" in str(e) else 422, detail=str(e))
     except OperationalError as e:
         raise HTTPException(status_code=503, detail="Database unavailable") from e
-    except ProgrammingError as exc:
-        # A row-level-security / privilege violation on the INSERT means the
-        # calling principal is not permitted to create a corpus -- for example
-        # an unrestricted principal that holds no corpus grant. Return 403
-        # rather than leaking database internals as a 500.
-        orig = getattr(exc, "orig", None)
-        if isinstance(orig, Exception) and "row-level security policy" in str(orig):
+    except ProgrammingError as e:
+        # Row-level security violations (42501) mean the principal is not
+        # permitted to create a corpus. Return 403 instead of leaking a 500.
+        # Other ProgrammingErrors (e.g. undefined table) propagate as 500.
+        if getattr(e.orig, "sqlstate", None) == "42501":
             raise HTTPException(
                 status_code=403,
                 detail={
                     "code": "forbidden",
-                    "message": "Creating a corpus is an administrative operation",
+                    "message": (
+                        "Creating a corpus over HTTP is not permitted for this "
+                        "credential. Corpora are created by the operator with "
+                        "`mindpalace corpus create`."
+                    ),
                 },
-            ) from exc
+            ) from e
         raise
     return CorpusResponse(**corpus, document_count=0)
 

@@ -6,6 +6,29 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+## [v0.10.0] - 2026-10-30
+
+M018: scope-token enforcement made loud, corpus-creation 403, CI parallel jobs,
+hoisted InitPlan policies, tenant-rerun replacement.
+
+### Breaking change: server-profile scope-secret refusal
+
+After upgrade, a server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`)
+refuses to start until the scope secret is set, rotated and enforcement
+enabled, and also refuses on a mismatch between `MIND_PALACE_SCOPE_SECRET` and
+the database's `scope_hmac_secret`. The refusal names the cause and the safe
+rotation order (DB first, then environment, brief outage) and never prints any
+secret. `/health/ready` reports `not_ready` with `checks.scope_token =
+"mismatch"` on the same condition. Local deployments are unaffected.
+
+### Corpus creation over HTTP
+
+`POST /api/corpora` now translates row-level-security violations (SQLSTATE
+42501) to `403` `forbidden` instead of leaking a 500. Other `ProgrammingError`s
+still propagate as 500. In server mode, corpora are created by the operator
+with `mindpalace corpus create`; `POST /api/corpora` is not an operator path
+for a brand-new corpus.
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.

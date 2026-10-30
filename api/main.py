@@ -55,6 +55,127 @@ def create_app() -> FastAPI:
     )
 
 
+async def _probe_scope_token(db) -> tuple[bool, bool, bool] | None:
+    """Probe scope-token enforcement via `mp_scope_enforcement_status`.
+
+    Computes the token this process would send (HMAC-SHA256 of the probe scope
+    under `MIND_PALACE_SCOPE_SECRET`, the same inputs `_apply_tenant_scope`
+    uses) and asks the database whether it verifies.
+
+    Returns ``(enforced, using_default_secret, secret_matches)``, or ``None``
+    when the probe is unavailable -- the function is missing on an old schema,
+    or the database cannot be reached. A ``None`` probe is treated as fail
+    closed: the caller must refuse.
+    """
+    import hashlib
+    import hmac
+    import os
+
+    from sqlalchemy import text as _text
+
+    secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
+    probe_scope = "{*}"
+    probe_token = hmac.new(secret.encode(), probe_scope.encode(), hashlib.sha256).hexdigest()
+    try:
+        row = (
+            await db.execute(
+                _text(
+                    "SELECT enforced, using_default_secret, secret_matches "
+                    "FROM mp_scope_enforcement_status(:t, :s)"
+                ),
+                {"t": probe_token, "s": probe_scope},
+            )
+        ).first()
+    except Exception:  # noqa: BLE001 - probe unavailable is fail-closed, not a pass
+        return None
+    if row is None:
+        return None
+    return bool(row[0]), bool(row[1]), bool(row[2])
+
+
+_SCOPE_ROTATION_ORDER = (
+    "Rotate in this order: (1) set the new secret in the database with "
+    "`mindpalace secret rotate --out FILE` as mindpalace_owner, "
+    "(2) update MIND_PALACE_SCOPE_SECRET in the service environment to match, "
+    "(3) restart the service. Expect a brief outage."
+)
+
+
+async def _enforce_scope_token_startup() -> None:
+    """Scope-token enforcement for server-profile startup (Migration 015).
+
+    Local deployments are exempt. Raises RuntimeError with a message naming the
+    cause and the safe rotation order when enforcement is on and the probe does
+    not verify. Never prints any secret value.
+    """
+    import os
+
+    from api.services import authz
+    from api.services.db import session_scope
+
+    mode = authz.deployment_mode()
+    if mode != authz.DEPLOYMENT_SERVER:
+        return
+
+    if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() == "off":
+        import logging as _logging
+
+        _logging.getLogger(__name__).warning(
+            "MIND_PALACE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
+            "tenant scope can be forged. Run mp_set_scope_token_enforcement(true) to close it."
+        )
+        if os.getenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "") != "1":
+            raise RuntimeError(
+                "refusing to start: scope-token enforcement is disabled (off). "
+                "Set MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1 to acknowledge, "
+                "or run mp_set_scope_token_enforcement(true)."
+            )
+        return
+
+    secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
+    if secret == "" or secret == "dev-scope-secret":
+        raise RuntimeError(
+            "refusing to start: MIND_PALACE_SCOPE_SECRET is unset or uses the "
+            "default dev value. " + _SCOPE_ROTATION_ORDER
+        )
+
+    try:
+        async with session_scope() as db:
+            probed = await _probe_scope_token(db)
+    except Exception as exc:  # noqa: BLE001 - a probe that cannot run is not a pass
+        raise RuntimeError(
+            "refusing to start: could not verify scope enforcement "
+            f"({type(exc).__name__}). Start with "
+            "MIND_PALACE_DEPLOYMENT=local to run without this check."
+        ) from exc
+
+    if probed is None:
+        raise RuntimeError(
+            "refusing to start: scope-token probe unavailable "
+            "(mp_scope_enforcement_status missing or unreachable). "
+            "Apply migration 015, or start with "
+            "MIND_PALACE_DEPLOYMENT=local to run without this check."
+        )
+    enforced, using_default_secret, secret_matches = probed
+
+    if not enforced:
+        raise RuntimeError(
+            "refusing to start: scope-token enforcement is disabled in the "
+            "database. Run SELECT mp_set_scope_token_enforcement(true) as "
+            "mindpalace_owner. " + _SCOPE_ROTATION_ORDER
+        )
+    if using_default_secret:
+        raise RuntimeError(
+            "refusing to start: the database still uses the default scope "
+            "secret. Rotate it first. " + _SCOPE_ROTATION_ORDER
+        )
+    if not secret_matches:
+        raise RuntimeError(
+            "refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the "
+            "database row. " + _SCOPE_ROTATION_ORDER
+        )
+
+
 async def enforce_startup_posture() -> None:
     """Refuse to serve a server deployment whose database role is unsafe.
 
@@ -75,10 +196,6 @@ async def enforce_startup_posture() -> None:
     reads, and serves every tenant to every caller is the failure this whole
     mechanism exists to prevent.
     """
-    import hashlib
-    import hmac
-    import os
-
     from api.services import authz
     from api.services.db import session_scope
     from api.services.posture import inspect
@@ -114,63 +231,7 @@ async def enforce_startup_posture() -> None:
             + ". See docs/security.md for what a network deployment must set."
         )
 
-    # Scope-token enforcement (Migration 015). Only the server/production profile
-    # is gated; local deployments are exempt, matching the posture check above.
-    if mode == authz.DEPLOYMENT_SERVER:
-        if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() == "off":
-            import logging as _logging
-
-            _logging.getLogger(__name__).warning(
-                "MIND_PALACE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
-                "tenant scope can be forged. Run mp_set_scope_token_enforcement(true) to close it."
-            )
-            if os.getenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "") != "1":
-                raise RuntimeError(
-                    "refusing to start: scope-token enforcement is disabled (off). "
-                    "Set MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1 to acknowledge, "
-                    "or run mp_set_scope_token_enforcement(true)."
-                )
-            return
-        secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
-        probe_scope = "{*}"
-        if secret == "" or secret == "dev-scope-secret":
-            raise RuntimeError(
-                "refusing to start: MIND_PALACE_SCOPE_SECRET is unset or uses the "
-                "default dev value. See docs/security.md."
-            )
-        try:
-            async with session_scope() as db:
-                from sqlalchemy import text as _text
-
-                probe_token = hmac.new(
-                    secret.encode(), probe_scope.encode(), hashlib.sha256
-                ).hexdigest()
-                row = (
-                    await db.execute(
-                        _text(
-                            "SELECT enforced, using_default_secret, secret_matches "
-                            "FROM mp_scope_enforcement_status(:t, :s)"
-                        ),
-                        {"t": probe_token, "s": probe_scope},
-                    )
-                ).first()
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(
-                "refusing to start: could not verify scope enforcement " f"({type(exc).__name__})."
-            ) from exc
-        if row is None or not row[0]:
-            raise RuntimeError(
-                "refusing to start: scope-token enforcement is disabled. "
-                "Run mp_set_scope_token_enforcement(true) as mindpalace_owner."
-            )
-        if row[1]:
-            raise RuntimeError(
-                "refusing to start: the database still uses the default scope secret."
-            )
-        if not row[2]:
-            raise RuntimeError(
-                "refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the " "database row."
-            )
+    await _enforce_scope_token_startup()
 
 
 @contextlib.asynccontextmanager
@@ -491,6 +552,37 @@ async def readiness() -> JSONResponse:
                 posture = await inspect_posture(db)
                 policy_enforced = not posture.problems()
                 enforced = policy_enforced or deployment_mode() != DEPLOYMENT_SERVER
+                # Scope-token enforcement (Migration 015): in server mode, when
+                # enforcement is on, the token this process would send must
+                # verify against the database. A mismatch or an unavailable
+                # probe makes the service not-ready; enforcement off is not a
+                # readiness failure here (startup already refuses a server that
+                # runs enforcement-off without acknowledgement).
+                if (
+                    deployment_mode() == DEPLOYMENT_SERVER
+                    and os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() == "on"
+                ):
+                    probed = await _probe_scope_token(db)
+                    if probed is None or not probed[2]:
+                        return JSONResponse(
+                            status_code=503,
+                            content={
+                                "status": "not_ready",
+                                "checks": {
+                                    "database": "ok",
+                                    "row_level_security": "enforced",
+                                    "scope_token": "mismatch",
+                                },
+                                "auth": auth,
+                                "reason": (
+                                    "MIND_PALACE_SCOPE_SECRET disagrees with the "
+                                    "database row, or the scope-token probe is "
+                                    "unavailable. Rotate the secret in the database "
+                                    "first, then in the service environment, then "
+                                    "restart."
+                                ),
+                            },
+                        )
     except (SQLAlchemyError, OSError, TimeoutError, ValueError):
         return JSONResponse(
             status_code=503,

@@ -6,12 +6,7 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
-## [v0.10.0] - 2026-10-30
-
-M018: scope-token enforcement made loud, corpus-creation 403, CI parallel jobs,
-hoisted InitPlan policies, tenant-rerun replacement.
-
-### Breaking change: server-profile scope-secret refusal
+### Breaking change: server-profile scope-secret refusal (v0.10.0)
 
 After upgrade, a server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`)
 refuses to start until the scope secret is set, rotated and enforcement

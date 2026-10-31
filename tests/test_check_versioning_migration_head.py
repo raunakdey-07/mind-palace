@@ -72,8 +72,16 @@ def test_migration_head_matches_real_status_doc():
 
 
 def test_real_alembic_head_returns_real_head():
+    """Independent oracle: alembic's own ScriptDirectory must agree with our
+    file-scanning implementation."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
     module = _check_versioning()
-    assert module.real_alembic_head(_real_versions_dir()) == "015_rls_scope_enforcement"
+    oracle = ScriptDirectory.from_config(
+        Config(str(ROOT / "migrations" / "alembic.ini"))
+    ).get_current_head()
+    assert module.real_alembic_head(_real_versions_dir()) == oracle
 
 
 def test_zero_heads_is_a_problem(tmp_path):

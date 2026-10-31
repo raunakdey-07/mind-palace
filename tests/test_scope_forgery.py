@@ -365,7 +365,16 @@ async def _session(role: str):
 
 
 async def test_only_one_mindpalace_allowed_corpus_overload_and_policies_updated():
-    """Migration 015 keeps a single CHAR(64) overload and updates all policies."""
+    """Migration 016 inlines the scope check into each policy.
+
+    Migration 015's `mindpalace_allowed_corpus()` wrapper could not be inlined by
+    PostgreSQL, so it ran once per row. Migration 016 puts
+    `(SELECT mp_verified_scope_corpora())` directly in each `mindpalace_tenant`
+    policy USING / WITH CHECK expression, so policies no longer reference
+    `mindpalace_allowed_corpus` -- they reference `mp_verified_scope_corpora`
+    instead. The function itself still exists (single CHAR(64) overload) and is
+    still granted, only its role in the policies changed.
+    """
     rows = await _maintenance_rows(
         "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace "
         "WHERE n.nspname='public' AND p.proname='mindpalace_allowed_corpus'"
@@ -380,7 +389,7 @@ async def test_only_one_mindpalace_allowed_corpus_overload_and_policies_updated(
     policies = await _maintenance_rows(
         "SELECT count(*) FROM pg_policies "
         "WHERE (coalesce(qual,'') || ' ' || coalesce(with_check,'')) "
-        "LIKE '%mindpalace_allowed_corpus%'"
+        "LIKE '%mp_verified_scope_corpora%'"
     )
     assert policies[0][0] >= 9
 

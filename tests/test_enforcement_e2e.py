@@ -850,32 +850,22 @@ async def test_concurrent_tenants_pooled_connection(world):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "MIND_PALACE_LATENCY_INITPLAN_XFAIL: migration 015's per-row trap: "
-        "mindpalace_allowed_corpus calls mp_verified_scope_corpora() once per "
-        "row instead of hoisting it to an InitPlan. Fix via a new migration "
-        "that puts (SELECT mp_verified_scope_corpora()) directly in each "
-        "policy USING expression. Remove this xfail when the fix is merged."
-    ),
-)
 async def test_latency_and_explain_initplan(world):
     """Deterministic EXPLAIN plan-shape + function-call check for scope-token
     enforcement.
 
+    Migration 016 puts `(SELECT mp_verified_scope_corpora())` directly in each
+    `mindpalace_tenant` policy USING / WITH CHECK expression so the planner can
+    evaluate it once as an InitPlan instead of once per row.
+
     Asserts:
-      * the RLS policy is applied (mindpalace_allowed_corpus filter present),
+      * the RLS scope check is applied (mp_verified_scope_corpora present in
+        the plan);
       * mp_verified_scope_corpora() is hoisted to an InitPlan (evaluated once
         per query, not per row) -- an InitPlan line MUST be present;
       * function-call counts for mp_verified_scope_corpora,
         mp_verify_scope_token and mindpalace_allowed_corpus are at most 2
         (one InitPlan evaluation plus at most one cache hit), not 50,000+.
-
-    The InitPlan and call-count assertions are xfail(strict) until migration
-    015's per-row trap is fixed by a new migration that puts
-    (SELECT mp_verified_scope_corpora()) directly in each policy USING
-    expression.
 
     Latency numbers live in scripts/bench_enforcement_latency.py.
     """
@@ -1013,9 +1003,12 @@ async def test_latency_and_explain_initplan(world):
         rt_engine.dispose()
 
     has_initplan = "InitPlan" in plan
-    has_allowed_corpus = "mindpalace_allowed_corpus" in plan
+    # Migration 016 inlines the scope check into the policy, so the plan now
+    # references mp_verified_scope_corpora (via InitPlan) rather than calling
+    # mindpalace_allowed_corpus per row.
+    has_scope_expr = "mp_verified_scope_corpora" in plan
 
-    assert has_allowed_corpus, f"RLS policy not applied in EXPLAIN:\n{plan}"
+    assert has_scope_expr, f"RLS scope check not applied in EXPLAIN:\n{plan}"
 
     # Read back the call counters (superuser).
     read_engine = sa.create_engine(sync_url())
@@ -1037,7 +1030,7 @@ async def test_latency_and_explain_initplan(world):
     mpc = calls.get("mp_verified_scope_corpora", 0)
     mvt = calls.get("mp_verify_scope_token", 0)
 
-    # Unconditional assertions (fail now, pass after the InitPlan fix).
+    # Unconditional assertions (pass after the migration 016 InitPlan fix).
     assert (
         has_initplan
     ), f"Expected an InitPlan hoisting mp_verified_scope_corpora(); none found.\n{plan}"

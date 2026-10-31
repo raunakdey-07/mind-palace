@@ -26,6 +26,18 @@ still propagate as 500. In server mode, corpora are created by the operator
 with `mindpalace corpus create`; `POST /api/corpora` is not an operator path
 for a brand-new corpus.
 
+### RLS scope hoisting (migration 016)
+
+The `mindpalace_tenant` row-level-security policy on every corpus table is now
+written with `(SELECT mp_verified_scope_corpora())` inlined directly in the
+`USING` / `WITH CHECK` expression instead of calling
+`mindpalace_allowed_corpus()`. PostgreSQL cannot inline the wrapper function, so
+migration 015's policy invoked `mp_verified_scope_corpora()` once per row; the
+inlined form is planned as an InitPlan (evaluated once per query). Semantics are
+unchanged; `mindpalace_allowed_corpus` and its grants are left intact. See
+`tests/test_enforcement_e2e.py::test_latency_and_explain_initplan` for the
+InitPlan / call-count proof (no per-row trap).
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.
@@ -66,19 +78,20 @@ real stale-fact benchmark metrics, and release documentation reconciliation.
 
 > ### Upgrade notes — read before upgrading
 >
-> **Schema.** `alembic upgrade head` moves `007` to `015`. Eight migrations have
-> never shipped in a tag; all eight are new since `v0.9.0`.
+> **Schema.** `alembic upgrade head` moves `007` to `016`. Nine migrations have
+> never shipped in a tag; all nine are new since `v0.9.0`.
 >
 > | migration | what it adds | reversibility |
 > |---|---|---|
 > | `008_tenant_scoped_access` | service credentials and row-level security on the protected tables | `downgrade` refuses while more than one evidence row per claim exists |
 > | `009_permission_granularity_and_erasure` | per-claim/per-corpus permissions and corpus erasure | reversible; `docs/security.md` names the tables that keep their rows |
 > | `010_bind_unrestricted_scope` | binds the `{*}` tenant sentinel to a role that already reads every row | reversible |
-| `011_cross_document_supersession` | cross-document supersession edges | reversible |
-| `012_claim_embedding_hnsw` | HNSW index on claim embeddings | reversible |
-| `013_info_state` | `info_state`, `extraction_mode`, `provenance_state` on claims | additive; no downgrade path |
-| `014_scope_token` | HMAC-verified scope token: `mp_verify_scope_token()`, `scope_token` session setting | reversible |
-| `015_rls_scope_enforcement` | scope enforcement: `mp_verified_scope_corpora()`, enforcement flag, `scope_token` policy | reversible; enforcement defaults **off** |
+> | `011_cross_document_supersession` | cross-document supersession edges | reversible |
+> | `012_claim_embedding_hnsw` | HNSW index on claim embeddings | reversible |
+> | `013_info_state` | `info_state`, `extraction_mode`, `provenance_state` on claims | additive; no downgrade path |
+> | `014_scope_token` | HMAC-verified scope token: `mp_verify_scope_token()`, `scope_token` session setting | reversible |
+> | `015_rls_scope_enforcement` | scope enforcement: `mp_verified_scope_corpora()`, enforcement flag, `scope_token` policy | reversible; enforcement defaults **off** |
+> | `016_hoist_scope_initplan` | inline `(SELECT mp_verified_scope_corpora())` in each `mindpalace_tenant` policy so it is planned as an InitPlan instead of once per row | reversible; restores the 015 policy form |
 >
 > **Scope-token enforcement (migration 015).** Enforcement defaults to **off**;
 > until the operator runs

@@ -64,8 +64,11 @@ async def test_admin_cannot_create_new_corpus_over_http(world):
 
     world.db_module.admin_session_scope() and principal_scope(ADMIN_PRINCIPAL)
     are used to issue the credential, mirroring how other administrative tests
-    operate against the runtime-role app. The INSERT runs as the runtime role
-    and hits the RLS WITH CHECK on `corpora`, which we translate to 403.
+    operate against the runtime-role app. The service layer raises
+    AuthorizationError before any INSERT
+    (api/services/corpora.py::create_corpus checks principal.unrestricted, which
+    is false for every credential), so no credential can create a corpus over
+    HTTP.
     """
     async with world.db_module.admin_session_scope() as db:
         with world.db_module.principal_scope(authz.ADMIN_PRINCIPAL):
@@ -79,9 +82,10 @@ async def test_admin_cannot_create_new_corpus_over_http(world):
         json={"name": "brand-new-http-corpus", "description": "known-gap"},
         headers=headers,
     )
-    # Currently 403: get_corpus_by_name returns None for an unrestricted
-    # principal on a new corpus (RLS filters the SELECT), so the INSERT runs
-    # and hits the RLS WITH CHECK on `corpora`, which we translate to 403.
+    # Currently 403: the service layer raises AuthorizationError before any
+    # INSERT (api/services/corpora.py::create_corpus checks
+    # principal.unrestricted, which is false for every credential). Corpora are
+    # created by the operator with `mindpalace corpus create`.
     # Corpora are created by the operator with `mindpalace corpus create`.
     assert response.status_code == 403, f"expected 403, got {response.status_code}: {response.text}"
     detail = response.json()["detail"]

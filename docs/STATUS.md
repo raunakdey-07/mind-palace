@@ -44,7 +44,7 @@ row by row, including the two rows whose harness no longer runs at this head.
 | latest tag | **`v0.9.2`** at `19863d8`. `v0.9.1` remains at `be1931a` |
 | `v0.9.2` state | released: tagged on `main` and published as a GitHub Release |
 | previous release | `v0.8.0`, unmodified |
-| migration head | `012_claim_embedding_hnsw`, additive and reversible |
+| migration head | `015_rls_scope_enforcement`, additive and reversible |
 | tests | **2047 passed, 0 failed, 20 skipped** (as of `bb7ee66`, `python -m pytest -q`); 2067 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips that are opt-in and named remain allowlisted**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. The additional skips are from `tests/test_embedder_backend_equivalence.py` (18) and `tests/test_search_semantics.py` (1), with reasons for missing optional dependencies (`[torch]`/both backends); `check_skips.py` accounts for them under the default-dependency set. Current head at `3b0562e` produced **2048 passed, 0 failed, 2 skipped** (as of `3b0562e`, 2050 collected). Previous head at `c65ffb2` produced **2032 passed, 0 failed, 2 skipped** (as of `c65ffb2`, 2034 collected); see the recorded run at `c65ffb2` in `docs/performance/test-runs.json`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
@@ -100,10 +100,10 @@ not move. No public response field changed, existing receipts remain verifiable,
 no MCP tool was added.
 
 **Read that in the past tense, about `v0.9.0` specifically. It is not a statement
-about this branch.** `v0.9.0`'s head is 007. The branch's head is **012**, and
-migrations 008-012 have **never shipped in any release** — they all
+about this branch.** `v0.9.0`'s head is 007. The branch's head is **015**, and
+migrations 008-015 have **never shipped in any release** — they all
 arrived in `da8a14a`, after the `v0.9.0` tag. So the first release cut from this
-branch *does* move the schema head, by three migrations, and the "no migration"
+branch *does* move the schema head, by eight migrations, and the "no migration"
 sentence above does not apply to it.
 
 **Upgrade notes are NOT YET WRITTEN. NOT ESTABLISHED.** No `docs/release/`

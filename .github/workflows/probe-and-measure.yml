@@ -1,0 +1,122 @@
+# Temporary probe + measurement workflow (throwaway).
+# THROWAWAY: delete after collecting results.
+name: Probe and measure (throwaway)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  probe-and-measure:
+    name: Probe and measure
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install --no-deps -e .
+          python -c "import onnxruntime; print('onnxruntime', onnxruntime.__version__)"
+
+      - name: Verify package imports
+        run: |
+          python -c "import api, cli; print('imports ok')"
+
+      - name: Verify milestone and release metadata
+        run: |
+          python scripts/release/check_versioning.py
+
+      - name: Verify documented claims point at real evidence
+        run: |
+          python scripts/check_evidence.py --strict
+
+      - name: Every path these documents name is tracked by git
+        run: python scripts/check_doc_paths.py
+
+      - name: The frozen evidence has not moved
+        run: python scripts/check_frozen.py
+
+      - name: Apply database migrations
+        run: |
+          python -m pip install pgvector
+          python -m alembic -c migrations/alembic.ini -x script_location=migrations upgrade head
+
+      - name: Provision the least-privileged runtime role
+        id: provision
+        run: |
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -v runtime_password=ci-runtime-role-password \
+            -f scripts/db/runtime_roles.sql
+          SCOPE_SECRET=$(openssl rand -hex 32)
+          echo "secret=$SCOPE_SECRET" >> $GITHUB_OUTPUT
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
+
+      - name: Run probe (gap analysis experiments)
+        env:
+          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: "on"
+        run: |
+          # Start server
+          python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 > /tmp/server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          ready=""
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null http://127.0.0.1:8000/openapi.json; then ready=1; break; fi
+            if ! kill -0 "$server" 2>/dev/null; then
+              echo "::error::the server exited before becoming ready"
+              cat /tmp/server.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ -z "$ready" ]; then
+            echo "::error::the server never became ready"
+            cat /tmp/server.log
+            exit 1
+          fi
+          # Run probe as runtime role
+          DATABASE_URL="postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace" \
+            MIND_PALACE_SCOPE_SECRET="${{ steps.provision.outputs.secret }}" \
+            MIND_PALACE_ENFORCE_SCOPE_TOKEN="on" \
+            python scripts/probe_gap.py
+
+      - name: Run measurement (hoisting)
+        env:
+          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: "on"
+        run: |
+          python scripts/measure_hoisting.py

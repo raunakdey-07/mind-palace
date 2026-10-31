@@ -8,6 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# BREAK for CI evidence - this step will fail
+RUN false
+
 COPY requirements-runtime.txt requirements-docker.txt ./
 RUN pip install --no-cache-dir --no-compile -r requirements-docker.txt
 

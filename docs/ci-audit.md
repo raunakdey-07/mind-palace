@@ -43,7 +43,6 @@ Median and p90 of `completedAt - startedAt` for each job.
 | Upgrade safety, from v0.9.0 | 111.0 | 124.0 | 25 |
 | The five-minute path, from a clean checkout | 107.0 | 115.0 | 25 |
 | Docker Build | 52.0 | 58.0 | 25 |
-| Lint | 48.0 | 48.0 | 3 |
 
 ### After #78 (N=2)
 
@@ -440,13 +439,18 @@ measurement plan. The 413 s figure is withdrawn.
 
 ## 10. V1 — tenant-rerun question (Stage 4 evidence)
 
-### V1 has NOT been run yet
+### V1 ran — no test differs
+
+The junit comparison of the nine tenant files (main step vs rerun step) was
+completed and posted as a comment on issue #84:
+https://github.com/raunakdey-07/mind-palace/issues/84#issuecomment-6539427500
+
+Result: NO test differs — 202 tests in both runs with identical outcomes and
+durations (within 0.5 s). V1 holds, so the rerun can be deleted without losing
+coverage (the PR D path).
 
 The rerun step costs **221 s median** (before #75) / **205.5 s median** (after
 #78), about 27% of the `tests` job.
-
-The junit comparison script and its output are tracked in Issue #84, not
-inlined here.
 
 ### The rerun
 

@@ -62,6 +62,7 @@ class Claim(Contract):
     valid_until: AwareDatetime | None = None
     supersedes_id: str | None = None
     evidence_ids: list[str]
+    info_state: str = "approved"
 
 
 class Source(Contract):

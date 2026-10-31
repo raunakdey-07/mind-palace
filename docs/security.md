@@ -339,21 +339,18 @@ In server mode, corpora are created by the operator with `mindpalace corpus crea
 (which runs as the maintenance/unrestricted identity). `POST /api/corpora` is not an
 operator path for a brand-new corpus:
 
-* A credential with `manage_corpus` but no grant on an existing corpus: `403`
-  `forbidden`. The INSERT into `corpora` runs as the least-privileged runtime
-  role, row-level security rejects it (`WITH CHECK` on `corpora`), and the route
-  translates the `42501` ProgrammingError to `403` without leaking database
-  internals.
-* A credential with `manage_corpus` and a grant on an existing corpus: also
-  `403` `forbidden`. Experimentally, no authenticated `POST /api/corpora`
-  request for a brand-new corpus returns `201`; the INSERT is always refused by
-  RLS because a principal cannot hold a grant to a corpus that does not exist
-  yet. Corpora are created by the operator with `mindpalace corpus create`.
+* Any authenticated credential: `403` `forbidden`. The service layer raises
+  `AuthorizationError` before any INSERT
+  (`api/services/corpora.py::create_corpus` checks `principal.unrestricted`, which
+  is false for every credential), so no credential can create a corpus over HTTP.
+  Corpora are created by the operator with `mindpalace corpus create`.
 
 The 403 body is `{"code": "forbidden", "message": "Creating a corpus over HTTP
 is not permitted for this credential. Corpora are created by the operator with
-`mindpalace corpus create`."}`. It is returned whenever the INSERT is refused by
-row-level security, including for an administrator credential.
+`mindpalace corpus create`."}`. It is returned by the service-layer authorization
+check, before any INSERT, for every authenticated credential. The route's
+42501 ProgrammingError handler (`api/routers/corpora.py`) only matters for an
+unrestricted principal running as the runtime role (off auth mode).
 
 ## Threat model
 

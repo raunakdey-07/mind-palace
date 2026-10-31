@@ -14,6 +14,7 @@ run in the same job, so the gate cannot rot as tests are added.
 Usage:
     python scripts/ci/check_files_ran.py --junit /tmp/pytest-main.xml --files file1 file2 ...
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,7 +46,9 @@ def parse_junit(path):
     """Parse junitxml and return {file_path: {passed, skipped, failed, errors, test_ids}}."""
     tree = ET.parse(path)
     root = tree.getroot()
-    per_file = defaultdict(lambda: {"passed": 0, "skipped": 0, "failed": 0, "errors": 0, "ids": set()})
+    per_file = defaultdict(
+        lambda: {"passed": 0, "skipped": 0, "failed": 0, "errors": 0, "ids": set()}
+    )
     for tc in root.iter("testcase"):
         # testcase has attributes: classname, name, time
         # The classname is typically the module path: e.g. "tests.test_tenant_isolation"
@@ -59,8 +62,6 @@ def parse_junit(path):
             # Remove the last part if it looks like a class name (PascalCase)
             if parts[-1][0].isupper():
                 file_path = "/".join(parts[:-1]) + ".py"
-        else:
-            file_path = file_path
 
         tc_id = f"{tc.get('classname')}.{tc.get('name')}"
 
@@ -116,7 +117,6 @@ def main():
             continue
 
         info = per_file[junit_key]
-        total = info["passed"] + info["skipped"] + info["failed"] + info["errors"]
         expected_count = collected_counts.get(f, 0)
 
         # Check 1: file contributed at least one testcase

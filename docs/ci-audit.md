@@ -22,16 +22,18 @@ The data below is split into:
 - **Before #75**: 25 successful runs with heads older than `29a5094`
 - **After #78**: 2 successful runs with heads at `3779292` (#78) or `f6aff7f` (#77)
 
-Only 2 post-#78 runs are available (fewer than 5), so post-#78 medians are
-indicative, not conclusive.
+Only 2 post-#78 runs are available, so post-#78 medians are indicative, not
+conclusive. Each CI run executes 4 pytest sessions:
+`Run tests`, `End-to-end enforcement-on suite`, `Tenant isolation`,
+`Migration chain round-trip`. Total sessions across 27 runs: 108.
 
 ---
 
 ## 1. Per-job total durations
 
-### Before #75 (N=25)
-
 Median and p90 of `completedAt - startedAt` for each job.
+
+### Before #75 (N=25)
 
 | Job | Median (s) | p90 (s) | N |
 |-----|-----------|---------|---|
@@ -47,14 +49,16 @@ Median and p90 of `completedAt - startedAt` for each job.
 
 | Job | Median (s) | p90 (s) | N |
 |-----|-----------|---------|---|
-| Lint and Test | 784.5 | 711.0 | 2 |
-| Embedding backends stay interchangeable | 164.0 | 147.0 | 2 |
-| Clean install from the built wheel | 131.0 | 127.0 | 2 |
-| Upgrade safety, from v0.9.0 | 120.5 | 114.0 | 2 |
-| The five-minute path, from a clean checkout | 100.5 | 94.0 | 2 |
-| Docker Build | 54.5 | 54.0 | 2 |
-| Lint | 48.5 | 48.0 | 2 |
-| CI gate | 3.0 | 2.0 | 2 |
+| Lint and Test | 784.5 | N/A | 2 |
+| Embedding backends stay interchangeable | 164.0 | N/A | 2 |
+| Clean install from the built wheel | 131.0 | N/A | 2 |
+| Upgrade safety, from v0.9.0 | 120.5 | N/A | 2 |
+| The five-minute path, from a clean checkout | 100.5 | N/A | 2 |
+| Docker Build | 54.5 | N/A | 2 |
+| Lint | 48.5 | N/A | 2 |
+| CI gate | 3.0 | N/A | 2 |
+
+p90 is shown only when N ≥ 5; with N=2, min–max is shown instead.
 
 ### Actual post-merge wall-clock
 
@@ -63,10 +67,16 @@ Median and p90 of `completedAt - startedAt` for each job.
 | 41120682917 | `3779292` (#78) | 2026-10-30T20:06:50Z | 2026-10-30T20:21:51Z | 901 s (15.0 min) |
 | 41120751689 | `f6aff7f` (#77) | 2026-10-30T20:07:18Z | 2026-10-30T20:33:14Z | 1556 s (25.9 min) |
 
-With only 2 post-#78 runs, these wall-clock figures are not conclusive. The
-owner's "almost 20 minutes" per PR observation is not confirmed or refuted by
-successful `main` runs; possible causes (queue time, reruns after red runs,
-PR-only extra steps) cannot be shown with the available data.
+With only 2 post-#78 runs, these wall-clock figures are indicative, not
+conclusive. The #77 run waited 692 seconds (11.5 min) in queue before its
+`Lint and Test` job started (job `startedAt` 20:18:50 vs run `createdAt`
+20:07:18). The #78 run waited only 2 seconds. Queue time is a significant
+component of wall-clock that is not captured by per-job timing.
+
+The owner's "almost 20 minutes" per-PR observation is not confirmed or
+refuted by the 2 post-#78 successful `main` runs (901 s and 1556 s). Possible
+causes (queue time, reruns after red runs, PR-only extra steps) cannot be
+shown with the available data.
 
 ---
 
@@ -74,89 +84,89 @@ PR-only extra steps) cannot be shown with the available data.
 
 ### Before #75 (N=25)
 
-Sorted by median. Steps with 0.0 s median completed within the same timestamp
-bucket as their neighbours (GitHub Actions step timestamps have 1-second
-granularity).
+Sorted by median. p90 is shown only when N ≥ 5; with N < 5, min–max is shown.
 
-| Step | Median (s) | p90 (s) | N |
-|------|-----------|---------|---|
-| Run tests | 466.0 | 495.0 | 25 |
-| Tenant isolation, against the least-privileged role | 221.0 | 240.0 | 25 |
-| Set up Python | 26.0 | 31.0 | 25 |
-| Install dependencies | 23.0 | 26.0 | 25 |
-| Initialize containers | 14.0 | 16.0 | 25 |
-| End-to-end enforcement-on suite | 14.0 | 14.0 | 3 |
-| Cache the model weights | 13.0 | 16.0 | 25 |
-| Verify documented claims point at real evidence | 10.0 | 11.0 | 25 |
-| Run linting | 10.0 | 10.0 | 25 |
-| The marketing reference integration runs standalone | 9.0 | 9.0 | 25 |
-| Evaluate deterministic memory lifecycle (offline) | 6.0 | 7.0 | 25 |
-| Measure the lexical-mode speedup on this runner | 5.0 | 6.0 | 25 |
-| The migration chain survives a downgrade and a re-apply | 4.0 | 4.0 | 25 |
-| Set up job | 1.0 | 1.0 | 25 |
-| Checkout repository | 1.0 | 2.0 | 25 |
-| Apply database migrations | 1.0 | 2.0 | 25 |
-| A server deployment refuses an unsafe database role | 1.0 | 1.0 | 25 |
-| A server deployment starts on the least-privileged role | 1.0 | 2.0 | 25 |
-| Provision the pinned model weights | 1.0 | 1.0 | 25 |
-| Verify the pinned models load offline | 1.0 | 1.0 | 25 |
-| Upload the junitxml | 1.0 | 1.0 | 25 |
-| The runtime role cannot bypass row-level security | 0.5 | 1.0 | 25 |
-| Verify package imports | 0.0 | 0.0 | 25 |
-| Record what the runner resolved | 0.0 | 0.0 | 25 |
-| Verify milestone and release metadata | 0.0 | 0.0 | 25 |
-| Every path these documents name is tracked by git | 0.0 | 0.0 | 25 |
-| The frozen evidence has not moved | 0.0 | 0.0 | 25 |
-| Provision the least-privileged runtime role | 0.0 | 1.0 | 25 |
-| The role script is safe to re-run | 0.0 | 0.0 | 25 |
-| Every skip is accounted for | 0.0 | 0.0 | 25 |
-| Report lexical-mode speedup from this run | 0.0 | 0.0 | 25 |
-| The documented counts match THIS run | 0.0 | 1.0 | 25 |
-| Post Cache the model weights | 0.0 | 0.0 | 25 |
-| Post Set up Python | 0.0 | 1.0 | 25 |
-| Post Checkout repository | 0.0 | 1.0 | 25 |
-| Stop containers | 0.0 | 1.0 | 25 |
-| Complete job | 0.0 | 0.0 | 25 |
+| Step | Median (s) | p90 (s) | min (s) | max (s) | N |
+|------|-----------|---------|---------|---------|---|
+| Run tests | 466.0 | 495.0 | 276.0 | 521.0 | 25 |
+| Tenant isolation, against the least-privileged role | 221.0 | 240.0 | 130.0 | 243.0 | 25 |
+| Set up Python | 26.0 | 31.0 | 17.0 | 33.0 | 25 |
+| Install dependencies | 23.0 | 26.0 | 15.0 | 36.0 | 25 |
+| Initialize containers | 14.0 | 16.0 | 12.0 | 23.0 | 25 |
+| End-to-end enforcement-on suite | 14.0 | N/A | 13.0 | 15.0 | 3 |
+| Cache the model weights | 13.0 | 16.0 | 9.0 | 16.0 | 25 |
+| Verify documented claims point at real evidence | 10.0 | 11.0 | 6.0 | 14.0 | 25 |
+| Run linting | 10.0 | 10.0 | 5.0 | 11.0 | 25 |
+| The marketing reference integration runs standalone | 9.0 | 9.0 | 6.0 | 10.0 | 25 |
+| Evaluate deterministic memory lifecycle (offline) | 6.0 | 7.0 | 4.0 | 7.0 | 25 |
+| Measure the lexical-mode speedup on this runner | 5.0 | 6.0 | 3.0 | 7.0 | 25 |
+| The migration chain survives a downgrade and a re-apply | 4.0 | 4.0 | 3.0 | 5.0 | 25 |
+| Set up job | 1.0 | 1.0 | 0.0 | 2.0 | 25 |
+| Checkout repository | 1.0 | 2.0 | 0.0 | 2.0 | 25 |
+| Apply database migrations | 1.0 | 2.0 | 1.0 | 6.0 | 25 |
+| A server deployment refuses an unsafe database role | 1.0 | 1.0 | 0.0 | 1.0 | 25 |
+| A server deployment starts on the least-privileged role | 1.0 | 2.0 | 1.0 | 2.0 | 25 |
+| Provision the pinned model weights | 1.0 | 1.0 | 0.0 | 1.0 | 25 |
+| Verify the pinned models load offline | 1.0 | 1.0 | 0.0 | 2.0 | 25 |
+| Upload the junitxml | 1.0 | 1.0 | 1.0 | 2.0 | 25 |
+| The runtime role cannot bypass row-level security | 0.5 | 1.0 | 0.0 | 1.0 | 25 |
+| Verify package imports | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Record what the runner resolved | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Verify milestone and release metadata | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Every path these documents name is tracked by git | 0.0 | 0.0 | 0.0 | 1.0 | 25 |
+| The frozen evidence has not moved | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Provision the least-privileged runtime role | 0.0 | 1.0 | 0.0 | 1.0 | 25 |
+| The role script is safe to re-run | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Every skip is accounted for | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Report lexical-mode speedup from this run | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| The documented counts match THIS run | 0.0 | 1.0 | 0.0 | 1.0 | 25 |
+| Post Cache the model weights | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
+| Post Set up Python | 0.0 | 1.0 | 0.0 | 1.0 | 25 |
+| Post Checkout repository | 0.0 | 1.0 | 0.0 | 1.0 | 25 |
+| Stop containers | 0.0 | 1.0 | 0.0 | 1.0 | 25 |
+| Complete job | 0.0 | 0.0 | 0.0 | 0.0 | 25 |
 
 ### After #78 (N=2)
 
-| Step | Median (s) | p90 (s) | N |
-|------|-----------|---------|---|
-| Run tests | 454.0 | 412.0 | 2 |
-| Tenant isolation, against the least-privileged role | 205.5 | 180.0 | 2 |
-| Set up Python | 25.5 | 25.0 | 2 |
-| Install dependencies | 21.5 | 20.0 | 2 |
-| Initialize containers | 13.0 | 13.0 | 2 |
-| End-to-end enforcement-on suite | 12.5 | 11.0 | 2 |
-| Cache the model weights | 12.0 | 12.0 | 2 |
-| Verify documented claims point at real evidence | 10.0 | 10.0 | 2 |
-| The marketing reference integration runs standalone | 7.5 | 7.0 | 2 |
-| Evaluate deterministic memory lifecycle (offline) | 6.0 | 5.0 | 2 |
-| The migration chain survives a downgrade and a re-apply | 3.5 | 3.0 | 2 |
-| Checkout repository | 1.5 | 1.0 | 2 |
-| A server deployment starts on the least-privileged role | 1.5 | 1.0 | 2 |
-| Set up job | 1.0 | 1.0 | 2 |
-| Apply database migrations | 1.0 | 1.0 | 2 |
-| Provision the pinned model weights | 1.0 | 1.0 | 2 |
-| Verify the pinned models load offline | 1.0 | 1.0 | 2 |
-| Upload the junitxml | 1.0 | 1.0 | 2 |
-| Post Checkout repository | 1.0 | 1.0 | 2 |
-| The role script is safe to re-run | 0.5 | 0.0 | 2 |
-| A server deployment refuses an unsafe database role | 0.5 | 0.0 | 2 |
-| The runtime role cannot bypass row-level security | 0.5 | 0.0 | 2 |
-| Verify package imports | 0.0 | 0.0 | 2 |
-| Record what the runner resolved | 0.0 | 0.0 | 2 |
-| Verify milestone and release metadata | 0.0 | 0.0 | 2 |
-| Every path these documents name is tracked by git | 0.0 | 0.0 | 2 |
-| The frozen evidence has not moved | 0.0 | 0.0 | 2 |
-| Provision the least-privileged runtime role | 0.0 | 0.0 | 2 |
-| Every skip is accounted for | 0.0 | 0.0 | 2 |
-| Report lexical-mode speedup from this run | 0.0 | 0.0 | 2 |
-| The documented counts match THIS run | 0.0 | 0.0 | 2 |
-| Post Cache the model weights | 0.0 | 0.0 | 2 |
-| Post Set up Python | 0.0 | 0.0 | 2 |
-| Stop containers | 0.0 | 0.0 | 2 |
-| Complete job | 0.0 | 0.0 | 2 |
+p90 is not shown (N < 5); min–max is shown instead.
+
+| Step | Median (s) | p90 (s) | min (s) | max (s) | N |
+|------|-----------|---------|---------|---------|---|
+| Run tests | 454.0 | N/A | 412.0 | 496.0 | 2 |
+| Tenant isolation, against the least-privileged role | 205.5 | N/A | 180.0 | 231.0 | 2 |
+| Set up Python | 25.5 | N/A | 25.0 | 26.0 | 2 |
+| Install dependencies | 21.5 | N/A | 20.0 | 23.0 | 2 |
+| Initialize containers | 13.0 | N/A | 13.0 | 13.0 | 2 |
+| End-to-end enforcement-on suite | 12.5 | N/A | 11.0 | 14.0 | 2 |
+| Cache the model weights | 12.0 | N/A | 12.0 | 12.0 | 2 |
+| Verify documented claims point at real evidence | 10.0 | N/A | 10.0 | 10.0 | 2 |
+| The marketing reference integration runs standalone | 7.5 | N/A | 7.0 | 8.0 | 2 |
+| Evaluate deterministic memory lifecycle (offline) | 6.0 | N/A | 5.0 | 7.0 | 2 |
+| The migration chain survives a downgrade and a re-apply | 3.5 | N/A | 3.0 | 4.0 | 2 |
+| Checkout repository | 1.5 | N/A | 1.0 | 2.0 | 2 |
+| A server deployment starts on the least-privileged role | 1.5 | N/A | 1.0 | 2.0 | 2 |
+| Set up job | 1.0 | N/A | 1.0 | 1.0 | 2 |
+| Apply database migrations | 1.0 | N/A | 1.0 | 1.0 | 2 |
+| Provision the pinned model weights | 1.0 | N/A | 1.0 | 1.0 | 2 |
+| Verify the pinned models load offline | 1.0 | N/A | 1.0 | 1.0 | 2 |
+| Upload the junitxml | 1.0 | N/A | 1.0 | 1.0 | 2 |
+| Post Checkout repository | 1.0 | N/A | 1.0 | 1.0 | 2 |
+| The role script is safe to re-run | 0.5 | N/A | 0.0 | 1.0 | 2 |
+| A server deployment refuses an unsafe database role | 0.5 | N/A | 0.0 | 1.0 | 2 |
+| The runtime role cannot bypass row-level security | 0.5 | N/A | 0.0 | 1.0 | 2 |
+| Verify package imports | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Record what the runner resolved | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Verify milestone and release metadata | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Every path these documents name is tracked by git | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| The frozen evidence has not moved | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Provision the least-privileged runtime role | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Every skip is accounted for | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Report lexical-mode speedup from this run | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| The documented counts match THIS run | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Post Cache the model weights | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Post Set up Python | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Stop containers | 0.0 | N/A | 0.0 | 0.0 | 2 |
+| Complete job | 0.0 | N/A | 0.0 | 0.0 | 2 |
 
 ---
 
@@ -348,7 +358,7 @@ completes, their timestamps are identical to sub-millisecond precision (about
 
 ### Sessions per CI run
 
-Each CI run on `main` executes **4 pytest sessions**:
+Each CI run executes **4 pytest sessions**:
 
 1. `pytest -q -rs --junitxml=/tmp/pytest-main.xml` ("Run tests")
 2. `pytest -q tests/test_enforcement_e2e.py` ("End-to-end enforcement-on suite")
@@ -357,8 +367,6 @@ Each CI run on `main` executes **4 pytest sessions**:
 
 The marketing reference integration runs a standalone `uvicorn` + `demo.py`
 step, not a pytest session, so it does not create a session database.
-
-Total sessions across 23 runs: 95 (23 runs × 4 sessions).
 
 `MEMORY_TEST_DATABASE_URL` is shared across sessions, not rewritten.
 
@@ -380,7 +388,7 @@ T_serial = 820 + max(157, 130, 111, 107, 52, 48) + 3
 This matches the earlier hand-off figure of 960 s (measured) closely: the
 difference (980 vs 960) is within measurement noise. The earlier claim that
 "960 s was not supported by per-run data" is withdrawn — the old structure
-produced ~954-980 s, consistent with the measured 960 s.
+produced ~954–980 s, consistent with the measured 960 s.
 
 ### After #78 (new structure: all jobs parallel from t=0)
 
@@ -405,8 +413,8 @@ T_parallel = max(820, 164, 131, 120, 100, 54, 48) + 3
 The owner reports about 10 minutes per run now; the data predicts about 13.5
 minutes (823 s) for successful runs. The difference (10 min vs 13.5 min) cannot
 be explained by successful `main` runs alone — possible causes include queue
-time, reruns after red runs, or PR-specific extra steps, but none of these can
-be shown with the available data.
+time (the #77 post-#78 run waited 692 s in queue), reruns after red runs, or
+PR-specific extra steps, but none of these can be shown with the available data.
 
 ---
 
@@ -432,15 +440,20 @@ measurement plan. The 413 s figure is withdrawn.
 
 ## 10. V1 — tenant-rerun question (Stage 4 evidence)
 
+### V1 has NOT been run yet
+
+The rerun step costs **221 s median** (before #75) / **205.5 s median** (after
+#78), about 27% of the `tests` job.
+
+The junit comparison script and its output are tracked in Issue #84, not
+inlined here.
+
 ### The rerun
 
 The `tests` job runs the nine tenant-isolation files twice:
 1. In "Run tests" (job-level `DATABASE_URL`, `MEMORY_TEST_DATABASE_URL` set, session DB)
 2. In "Tenant isolation, against the least-privileged role" (env `DATABASE_URL`
    = shared DB, `MIND_PALACE_AUTH_MODE=required`)
-
-The rerun step costs **221 s median** (before #75) / **205.5 s median** (after
-#78), about 27% of the `tests` job.
 
 ### Commit that introduced the rerun
 
@@ -456,16 +469,9 @@ Date:   Sat Oct 10 16:43:46 2026 +0530
     ...
 ```
 
-### Junit comparison
-
-A junit comparison script was written to compare per-test-id outcomes between
-the main run and the rerun. See Issue 5 (PR D) for the script and its output.
-The V1 question — whether any test in the rerun differs from its twin in the
-main run — must be answered before the rerun can be removed (Stage 6 / PR D).
-
 ### Rerun cost breakdown
 
-Of the 221 s median rerun cost:
+Of the 221 s median rerun cost (before #75):
 - Session-database build: not directly measurable (see section 7)
 - Marketing standalone step vs its test twin: requires separate measurement
 - Sleeps: unknown, requires instrumentation

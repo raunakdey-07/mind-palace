@@ -21,6 +21,8 @@ branch (m018/corpus-403-followups).
 
 from __future__ import annotations
 
+import json  # unused import for flake8 F401 evidence
+
 from unittest.mock import MagicMock, patch
 
 import pytest

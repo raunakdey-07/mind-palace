@@ -7,8 +7,8 @@ Live probes from issue #105 (run 41287500689, branch m018/probe-gap) completed
 2026-11-01 and are cited inline where they confirm or refute a code-reading claim.
 Probe g confirmed SDK failure behaviour; probe c confirmed draft/rejected claims appear in current/pack by default (no filtering);
 probe a confirmed idempotency and supersession; probe f confirmed budget unit.
-Probes d (path filter) and e (HTTP-level isolation) were inconclusive due to probe
-script limitations; code-level tests remain the evidence for those.
+Probes d (path filter) and e (HTTP-level isolation) are pending — probe CI is
+iterating; code-level tests remain the evidence for those.
 
 Read-only analysis against the Team 052 requirements report (attachment D,
 34 requirements MP-SE-01..34) and the Mind Palace repository at
@@ -78,14 +78,20 @@ What the code does:
 - Withdrawal: `api/services/memory.py:1187-1195` `record_deletion()` appends a `DELETED` tombstone version for a path (via sync file deletion per docs/security.md:726-728). `api/services/revalidate.py:145,147`: revalidate treats `event == "DELETED"` as not-current. `api/services/memory.py:476,617,1372`: current/pack/query filter `v.event <> 'DELETED'`.
 
 **Gap #1 (rewrite):** Retire via `supersedes_claim_id` / `topic_key` and via sync tombstone (`record_deletion`, `api/services/memory.py:1187`) exist.
-- **Probe a raw output (issue #105 comment 6555683810):** `remember` #3 (changed content, same key) → event=MODIFIED, version_id=V2. `current` returns V2 as CURRENT only; V1 appears in `historical_memories` as SUPERSEDED. So supersession via same-key re-remember DOES remove the prior claim from `current_memories`.
+- **Probe a raw output (issue #105 comment 6555683810):** `remember` #3 (changed content, same key) → event=MODIFIED, version_id=V2. `current` returns V2 as CURRENT only; V1 appears in `historical_memories` as SUPERSEDED. So supersession via same-key re-remember DOES remove the prior claim from `current_memories` — but this requires supplying a replacement statement.
 - **Separately (probe c, issue #105 comment 6555683810):** `info_state` claims (approved/draft/rejected/superseded) are all returned by `current` and `pack` by default — there is no filtering by `info_state` in those paths. Only `query` returns approved claims.
-- **Retire without replacement:** No route exists. Tried: `POST /remember` with `supersedes_claim_id` (requires `statement`), `POST /revalidate` (does not retire), `DELETE` (no endpoint). None found (probe de, issue #105 comment 6555710278).
+- **Retire WITHOUT replacement:** Observed per route (probe de, issue #105 comment 6555710278):
+  - `POST /remember` with `supersedes_claim_id` but no `statement` → validation error (requires statement)
+  - `POST /remember` with `topic_key` but no `statement` → validation error (requires statement)
+  - `POST /revalidate` → does not retire claims
+  - `DELETE /api/corpora/{name}` → erases whole corpus, not one claim
+  - `sync` after file deletion → adds DELETED tombstone but does not remove from current/pack
+  **Conclusion: no route retires one claim without a replacement statement.**
 Priority: owner decides.
 
 ### 2.2 Scope separation (Test D and F of attachment D)
 
-**Code reading only.** Probe d (run 41290203070) was inconclusive due to path mismatch in probe script; raw output posted (issue #105 comment 6555710278). **Unverified:** live HTTP-level path-scoped isolation. Code-level tests (test_corpus_isolation.py) remain the evidence.
+**Pending.** Probe d (path-scoped isolation within one corpus) — probe CI iterating; raw output pending. **Unverified:** live HTTP-level path-scoped isolation. Code-level tests (test_corpus_isolation.py) remain the evidence.
 
 Mind Palace primitives:
 
@@ -113,7 +119,7 @@ Mind Palace primitives:
 
 ### 2.5 Isolation (MP-SE-12/28)
 
-**Code reading + existing tests.** Probe e (run 41290203070) returned AuthorizationError on all cross-corpus calls as restricted credential; raw output posted (issue #105 comment 6555710278). **Unverified:** live HTTP-level isolation for history/as-of/snapshot/replay/evidence/conflicts/changes/feed. Code-level tests remain evidence.
+**Pending.** Probe e (cross-corpus isolation via restricted credential) — probe CI iterating; raw output pending. **Unverified:** live HTTP-level isolation for history/as-of/snapshot/replay/evidence/conflicts/changes/feed against a second corpus as a restricted credential. Code-level tests remain evidence.
 
 From code: every archive row carries `corpus_id`; RLS policies keyed on `corpus_id` (migration 008) or via document (`chunks` through `documents`, migration 008). Runtime role has no BYPASSRLS (`scripts/db/runtime_roles.sql`).
 From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files, zero outcome differences between main run and rerun; both connect as `mpadmin`. `tests/test_scope_forgery.py`: forged scope, wrong-secret token, empty token → zero rows. `tests/test_corpus_isolation.py`: cross-corpus reads return zero.
@@ -163,5 +169,5 @@ No marketing concepts should enter Mind Palace core.
 
 - Attachment D's status column is partly out of date (it claims auth/tenant/erasure/structured ingestion are missing; all four have shipped in some form). This gap analysis supersedes it for the items verified above.
 - Several "absent" items (structured ingestion, correction classification, outbox) are correctly absent from *core* — they belong in the consumer adapter, not Mind Palace. The report's "not established" verdicts for those are accurate for core but misleading if read as "Mind Palace should build them."
-- Live probes (#105, run 41287500689) completed 2026-11-01. Probe a confirmed idempotency/supersession; probe c confirmed draft/rejected appear in current/pack by default; probe f confirmed budget in Unicode characters; probe g confirmed SDK failure behaviour. Probes d and e were inconclusive due to probe script limitations.
-- The probe issue (#105) and measurement issue (#106) are throwaway PRs; neither will be merged to main.
+- Live probes (#105, run 41287500689, raw output issue #105 comment 6555683810) completed 2026-11-01. Probe a confirmed idempotency/supersession; probe c confirmed draft/rejected/superseded appear in current/pack by default; probe f confirmed budget in Unicode characters; probe g confirmed SDK failure behaviour. Probes d and e pending (probe CI iterating).
+- Issue #105 is the live probe issue (not a throwaway PR); its results are evidence for this gap analysis.

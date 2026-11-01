@@ -100,7 +100,7 @@ Mind Palace primitives:
 
 - **Corpus boundary** (RLS per corpus, migration 008/015): strongest isolation. Campaign A and Campaign B of the same brand are different corpora → no cross-read (enforced by `mindpalace_allowed_corpus` policy, `migrations/008_tenant_scoped_access.py:120-128`).
 - **Path filter**: `MemoryRequest.path` filters by exact document path match in `memory.py` (line 1250: `d.path = :path`); `memory_public.py:445` raises `document_not_found` unless a version path equals request.path. Not a prefix/directory match.
-- **Doc state** (`info_state`): written at `api/services/memory.py:1168-1171` but NOT used as a filter in `current`/`pack`/`query` (those filter only `v.event <> 'DELETED'` at `api/services/memory.py:476,617,1372`). **Unverified:** whether rejected text can appear in a pack by default.
+- **Doc state** (`info_state`): written at `api/services/memory.py:1168-1171` but NOT used as a filter in `current`/`pack`/`query` (those filter only `v.event <> 'DELETED'` at `api/services/memory.py:476,617,1372`). **Probe c (issue #105 comment 6555683810) confirmed:** rejected content appears in pack by default (see #114 for the fix).
 
 **Concrete test of absence of leak:** V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files (not `test_tenant_isolation.py` alone), zero outcome differences between main run and rerun. `tests/test_scope_forgery.py` proves forged scopes return zero rows. `tests/test_corpus_isolation.py` proves cross-corpus reads return zero.
 
@@ -109,14 +109,14 @@ Mind Palace primitives:
 **Verified by probe f (run 41287500689, raw output issue #105 comment 6555683810).** Derived from code reading + live probe.
 
 - `ContextPack` budgets are in **Unicode characters**, not tokens (`memory_pack.py`, `ContextPack.budget`; `api/routers/memory.py:244` `POST /pack`). docs/STATUS.md §5: "pack construction is ~0.2 ms at every size measured".
-- The sealed benchmark's `token_budget` (1200) is also characters in the sealed_spec.json.
+- The sealed benchmark's `token_budget` (1200) is in characters, per the pack's `budget_unit`.
 - **Probe f confirmed:** live pack response includes `"budget_unit": "unicode_characters"`. A `budget=1200` request returns at most 1200 Unicode characters of claim text, not 1200 tokens.
 
 ### 2.4 Metadata filters (MP-SE-21)
 
 **Code reading only (no live probe needed).**
 
-- Arbitrary key/value filter: **absent**. `MemoryRequest` supports `query`, `path` (prefix), `as_of`, `include_history`. No `metadata` filter.
+- Arbitrary key/value filter: **absent**. `MemoryRequest` supports `query`, `path` (exact document path, memory.py:1250), `as_of`, `include_history`. No `metadata` filter. See #124 for prefix scoping gap.
 - What exists: exact document path match, doc state (not used as filter — see MP-SE-17), corpus scope (RLS), temporal (`as_of`), `include_history` boolean.
 - Consumer adapter must encode platform/campaign in path or corpus name, or wait for a general metadata filter.
 
@@ -127,7 +127,7 @@ Mind Palace primitives:
 From code: every archive row carries `corpus_id`; RLS policies keyed on `corpus_id` (migration 008) or via document (`chunks` through `documents`, migration 008). Runtime role has no BYPASSRLS (`scripts/db/runtime_roles.sql`).
 From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files, zero outcome differences between main run and rerun; both connect as `mpadmin`. `tests/test_scope_forgery.py`: forged scope, wrong-secret token, empty token → zero rows. `tests/test_corpus_isolation.py`: cross-corpus reads return zero.
 
-**Unverified:** live HTTP calls to history/as-of/snapshot/replay/evidence/conflicts/changes/feed against a second corpus as a restricted credential — needs probe (#105, item e).
+**Specific unverified item:** HTTP-level replay_snapshot (requires snapshot_id from prior call).
 
 ### 2.6 Failure behaviour (MP-SE-26)
 

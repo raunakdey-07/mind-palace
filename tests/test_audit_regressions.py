@@ -73,6 +73,7 @@ def test_descriptive_voice_no_modal():
     # On main this fails because classify_memory_role returns "fact" not "example".
     assert len(claims) > 0, "expected at least one claim from voice body"
     from api.services.context_packer import classify_memory_role
+
     voice_claims = [c for c in claims if "warm" in c["claim"].lower()]
     assert voice_claims, "expected a voice claim containing 'warm'"
     # Voice descriptor must be classified as 'example' (style example), not 'fact'
@@ -89,10 +90,10 @@ def test_unapproved_september_brainstorm():
     # The packer must withhold draft claims by default and count them.
     # withheld_counts does not exist on main -> this fails.
     from api.services.context_packer import pack_context
+
     # Verify the packer exposes withheld_counts (does not exist on main)
-    assert (
-        hasattr(pack_context, "__wrapped__")
-        or "withheld_counts" in str(pack_context.__code__.co_consts)
+    assert hasattr(pack_context, "__wrapped__") or "withheld_counts" in str(
+        pack_context.__code__.co_consts
     ), "packer does not expose withheld_counts"
 
 
@@ -122,7 +123,9 @@ def test_v2_top_of_list_insertion():
                 "- Rule three: access is role-based.\n"
             )
             await svc.ingest_file(
-                v1_body, path="audit-v2-8375/rules.md", corpus_id=corpus_id,
+                v1_body,
+                path="audit-v2-8375/rules.md",
+                corpus_id=corpus_id,
             )
             await db.commit()
 
@@ -134,7 +137,9 @@ def test_v2_top_of_list_insertion():
                 "- Rule three: access is role-based.\n"
             )
             await svc.ingest_file(
-                v2_body, path="audit-v2-8375/rules.md", corpus_id=corpus_id,
+                v2_body,
+                path="audit-v2-8375/rules.md",
+                corpus_id=corpus_id,
             )
             await db.commit()
 
@@ -172,12 +177,12 @@ def test_v2_top_of_list_insertion():
             for content in ("Rule one", "Rule two", "Rule three"):
                 matching_v1 = [c for c in v1_by_content if c.startswith(content)]
                 matching_v2 = [c for c in v2_by_content if c.startswith(content)]
-                assert len(matching_v1) == 1, (
-                    f"expected 1 v1 claim for {content!r}, got {len(matching_v1)}"
-                )
-                assert len(matching_v2) == 1, (
-                    f"expected 1 v2 claim for {content!r}, got {len(matching_v2)}"
-                )
+                assert (
+                    len(matching_v1) == 1
+                ), f"expected 1 v1 claim for {content!r}, got {len(matching_v1)}"
+                assert (
+                    len(matching_v2) == 1
+                ), f"expected 1 v2 claim for {content!r}, got {len(matching_v2)}"
                 _, v1_sid = v1_by_content[matching_v1[0]]
                 _, v2_sid = v2_by_content[matching_v2[0]]
                 assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"

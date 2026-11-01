@@ -77,7 +77,8 @@ def test_descriptive_voice_no_modal():
     assert voice_claims, "expected a voice claim containing 'warm'"
     # Voice descriptor must be classified as 'example' (style example), not 'fact'
     assert classify_memory_role(voice_claims[0]["claim"], "Approved") == "example", (
-        f"voice claim classified as {classify_memory_role(voice_claims[0]['claim'], 'Approved')!r}, expected 'example'"
+        f"voice claim classified as "
+        f"{classify_memory_role(voice_claims[0]['claim'], 'Approved')!r}, expected 'example'"
     )
 
 
@@ -89,9 +90,11 @@ def test_unapproved_september_brainstorm():
     # withheld_counts does not exist on main -> this fails.
     from api.services.context_packer import pack_context
     # Verify the packer exposes withheld_counts (does not exist on main)
-    assert hasattr(pack_context, "__wrapped__") or "withheld_counts" in str(pack_context.__code__.co_consts), (
-        "packer does not expose withheld_counts"
-    )
+    assert (
+        hasattr(pack_context, "__wrapped__")
+        or "withheld_counts" in str(pack_context.__code__.co_consts)
+    ), "packer does not expose withheld_counts"
+
 
 @pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
 def test_v2_top_of_list_insertion():
@@ -169,8 +172,12 @@ def test_v2_top_of_list_insertion():
             for content in ("Rule one", "Rule two", "Rule three"):
                 matching_v1 = [c for c in v1_by_content if c.startswith(content)]
                 matching_v2 = [c for c in v2_by_content if c.startswith(content)]
-                assert len(matching_v1) == 1, f"expected 1 v1 claim for {content!r}, got {len(matching_v1)}"
-                assert len(matching_v2) == 1, f"expected 1 v2 claim for {content!r}, got {len(matching_v2)}"
+                assert len(matching_v1) == 1, (
+                    f"expected 1 v1 claim for {content!r}, got {len(matching_v1)}"
+                )
+                assert len(matching_v2) == 1, (
+                    f"expected 1 v2 claim for {content!r}, got {len(matching_v2)}"
+                )
                 _, v1_sid = v1_by_content[matching_v1[0]]
                 _, v2_sid = v2_by_content[matching_v2[0]]
                 assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"
@@ -185,4 +192,3 @@ def test_v2_top_of_list_insertion():
             assert r.scalar() == 0, f"expected 0 supersession edges on v2, got {r.scalar()}"
 
     asyncio.run(run())
-

@@ -7,8 +7,11 @@ Live probes from issue #105 (run 41287500689, branch m018/probe-gap) completed
 2026-11-01 and are cited inline where they confirm or refute a code-reading claim.
 Probe g confirmed SDK failure behaviour; probe c confirmed draft/rejected claims appear in current/pack by default (no filtering);
 probe a confirmed idempotency and supersession; probe f confirmed budget unit.
-Probes d (path filter) and e (HTTP-level isolation) are pending — probe CI is
-iterating; code-level tests remain the evidence for those.
+Probes d (path scoping) and e (HTTP-level isolation): probe d raw output posted
+(issue #105 comment 6556588065, run 41296378275); probe e raw output posted
+(issue #105 comment 6556969596, run 41299138837). Both show isolation works
+(corpus boundary via RLS; path is exact document match, not prefix). Code-level
+tests remain the evidence for HTTP-level isolation semantics.
 
 Read-only analysis against the Team 052 requirements report (attachment D,
 34 requirements MP-SE-01..34) and the Mind Palace repository at
@@ -43,7 +46,7 @@ cut line is "owner decides" for every item.
 | MP-SE-18 | Correction classification | P1 | **absent** (core) | No correction type in core. Report §9.2 proposes 5 categories. Belongs in consumer adapter. | consumer adapter | owner decides |
 | MP-SE-19 | Persistent human-feedback workflow | P1 | **partial** | `remember` + supersession + history exist; correction promotion policy not in core. | consumer adapter | owner decides |
 | MP-SE-20 | Approved/rejected example distinction | P1 | **partial** | `info_state` distinguishes approved/rejected/superseded but is NOT used to filter current/pack/query (see MP-SE-17 above). **Probe c (issue #105 comment 6555683810) confirmed:** rejected content appears in pack by default. | core (state) + adapter (query) | owner decides |
-| MP-SE-21 | Marketing-specific retrieval | P1 | **partial** | Path prefix, doc state, corpus scope exist; no arbitrary key/value filter (see §2.4). | core candidate (general metadata filter) | owner decides |
+| MP-SE-21 | Marketing-specific retrieval | P1 | **partial** | Exact document path match, doc state, corpus scope exist; no arbitrary key/value filter (see §2.4). | core candidate (general metadata filter) | owner decides |
 | MP-SE-22 | Token-aware context builder | P1 | **absent** | Pack budgets in Unicode characters, not tokens (`memory_pack.py`, `ContextPack.budget`; §2.3). **Probe f (issue #105 comment 6555683810) confirmed:** `budget_unit` = `unicode_characters` in live pack response. | core candidate | owner decides |
 | MP-SE-23 | Generation-service integration | P1 | **partial** | `POST /api/memory/pack`, `POST /api/context`, SDK; no generation orchestration in core (correct — belongs in adapter). | consumer adapter | owner decides |
 | MP-SE-24 | Generation provenance | P2 | **partial** | `memory_proof` / `memory_receipt` / `memory_pack` digests; `source_hash`, `version_id`, `observed_at` in responses. | core (primitives) + adapter (logging) | owner decides |
@@ -80,23 +83,23 @@ What the code does:
 **Gap #1 (rewrite):** Retire via `supersedes_claim_id` / `topic_key` and via sync tombstone (`record_deletion`, `api/services/memory.py:1187`) exist.
 - **Probe a raw output (issue #105 comment 6555683810):** `remember` #3 (changed content, same key) → event=MODIFIED, version_id=V2. `current` returns V2 as CURRENT only; V1 appears in `historical_memories` as SUPERSEDED. So supersession via same-key re-remember DOES remove the prior claim from `current_memories` — but this requires supplying a replacement statement.
 - **Separately (probe c, issue #105 comment 6555683810):** `info_state` claims (approved/draft/rejected/superseded) are all returned by `current` and `pack` by default — there is no filtering by `info_state` in those paths. Only `query` returns approved claims.
-- **Retire WITHOUT replacement:** Observed per route (probe de, issue #105 comment 6555710278):
+- **Retire WITHOUT replacement:** Observed per route (probe d/e v2, issue #105 comment 6556424199):
   - `POST /remember` with `supersedes_claim_id` but no `statement` → validation error (requires statement)
   - `POST /remember` with `topic_key` but no `statement` → validation error (requires statement)
   - `POST /revalidate` → does not retire claims
   - `DELETE /api/corpora/{name}` → erases whole corpus, not one claim
-  - `sync` after file deletion → adds DELETED tombstone but does not remove from current/pack
-  **Conclusion: no route retires one claim without a replacement statement.**
+  - `sync` after file deletion → adds DELETED tombstone (per docs/security.md); current/pack filter `v.event <> 'DELETED'` (api/services/memory.py:476,617,1372)
+  **Conclusion: no route retires one claim without a replacement statement.** (Unverified for `sync` path: raw output from v2 probe was posted but sync behavior not directly observed in v2 run.)
 Priority: owner decides.
 
 ### 2.2 Scope separation (Test D and F of attachment D)
 
-**Pending.** Probe d (path-scoped isolation within one corpus) — probe CI iterating; raw output pending. **Unverified:** live HTTP-level path-scoped isolation. Code-level tests (test_corpus_isolation.py) remain the evidence.
+**Partially verified.** Probe d (run 41296378275, raw output issue #105 comment 6556588065): exact-path `query`/`pack`/`current` return only the matching document; directory prefix (`campaign-a/`) returns 404 `document_not_found` (confirming path is exact, not prefix). Campaign-b text does not appear in campaign-a exact-path results. **Unverified:** live HTTP-level isolation (in-process SDK only). Code-level tests remain evidence.
 
 Mind Palace primitives:
 
 - **Corpus boundary** (RLS per corpus, migration 008/015): strongest isolation. Campaign A and Campaign B of the same brand are different corpora → no cross-read (enforced by `mindpalace_allowed_corpus` policy, `migrations/008_tenant_scoped_access.py:120-128`).
-- **Path filter**: `MemoryRequest.path` filters by path prefix in `memory.py` query. Untested for isolation semantics until probed.
+- **Path filter**: `MemoryRequest.path` filters by exact document path match in `memory.py` (line 1250: `d.path = :path`); `memory_public.py:445` raises `document_not_found` unless a version path equals request.path. Not a prefix/directory match.
 - **Doc state** (`info_state`): written at `api/services/memory.py:1168-1171` but NOT used as a filter in `current`/`pack`/`query` (those filter only `v.event <> 'DELETED'` at `api/services/memory.py:476,617,1372`). **Unverified:** whether rejected text can appear in a pack by default.
 
 **Concrete test of absence of leak:** V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files (not `test_tenant_isolation.py` alone), zero outcome differences between main run and rerun. `tests/test_scope_forgery.py` proves forged scopes return zero rows. `tests/test_corpus_isolation.py` proves cross-corpus reads return zero.
@@ -114,12 +117,12 @@ Mind Palace primitives:
 **Code reading only (no live probe needed).**
 
 - Arbitrary key/value filter: **absent**. `MemoryRequest` supports `query`, `path` (prefix), `as_of`, `include_history`. No `metadata` filter.
-- What exists: path prefix, doc state (not used as filter — see MP-SE-17), corpus scope (RLS), temporal (`as_of`), `include_history` boolean.
+- What exists: exact document path match, doc state (not used as filter — see MP-SE-17), corpus scope (RLS), temporal (`as_of`), `include_history` boolean.
 - Consumer adapter must encode platform/campaign in path or corpus name, or wait for a general metadata filter.
 
 ### 2.5 Isolation (MP-SE-12/28)
 
-**Pending.** Probe e (cross-corpus isolation via restricted credential) — probe CI iterating; raw output pending. **Unverified:** live HTTP-level isolation for history/as-of/snapshot/replay/evidence/conflicts/changes/feed against a second corpus as a restricted credential. Code-level tests remain evidence.
+**Partially verified.** Probe e (run 41299138837, raw output issue #105 comment 6556969596): over HTTP against real server, restricted credential (corpus A only) calling history/as-of/evidence/snapshot/replay_snapshot/changes/pack/query/current/feed on corpus B returns 403/404 (denied). Conflicts exposed as a field in query/pack responses, not a separate route. **Unverified:** HTTP-level replay_snapshot (requires snapshot_id from prior call). Code-level tests remain evidence.
 
 From code: every archive row carries `corpus_id`; RLS policies keyed on `corpus_id` (migration 008) or via document (`chunks` through `documents`, migration 008). Runtime role has no BYPASSRLS (`scripts/db/runtime_roles.sql`).
 From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files, zero outcome differences between main run and rerun; both connect as `mpadmin`. `tests/test_scope_forgery.py`: forged scope, wrong-secret token, empty token → zero rows. `tests/test_corpus_isolation.py`: cross-corpus reads return zero.
@@ -145,7 +148,7 @@ Each line = one issue, one small PR. Cut line is "owner decides" for every item.
 
 | # | Gap | Priority | Cut line | Notes |
 |---|---|---|---|---|
-| 1 | Single-claim withdraw/tombstone endpoint (MP-SE-15) | P0 | owner decides | Consumer needs per-claim withdraw. **Probe a (issue #105 comment 6555683810):** `remember` with changed content (same key) creates MODIFIED version (V2); prior claim (V1) moves to `historical_memories` as SUPERSEDED — so same-key re-remember DOES retire. **Probe de (issue #105 comment 6555710278):** no route found to retire a claim without supplying a replacement statement (tried `POST /remember` with `supersedes_claim_id`, `POST /revalidate`, `DELETE` — none exist). See gap #1 in §2.1. |
+| 1 | Single-claim withdraw/tombstone endpoint (MP-SE-15) | P0 | owner decides | Consumer needs per-claim withdraw. **Probe a (issue #105 comment 6555683810):** `remember` with changed content (same key) creates MODIFIED version (V2); prior claim (V1) moves to `historical_memories` as SUPERSEDED — so same-key re-remember DOES retire. **Probe d/e v2 (issue #105 comment 6556424199):** no route found to retire a claim without supplying a replacement statement (tried `POST /remember` with `supersedes_claim_id`/`topic_key`, `POST /revalidate`, `DELETE` — none exist). `sync` after file deletion adds DELETED tombstone; code filters `v.event <> 'DELETED'` (api/services/memory.py:476,617,1372). See gap #1 in §2.1. |
 | 2 | Token-aware context budgets (MP-SE-22, MP-SE-07) | P1 | owner decides | Today characters; report assumes tokens. Cost: tokenizer dep. |
 | 3 | General metadata filters (MP-SE-21) | P1 | owner decides | Path prefix + state exist; arbitrary key/value not. Keep core domain-neutral. |
 | 4 | SDK timeouts + retry guidance (MP-SE-26) | P1 | owner decides | Default timeout 30s; no automatic retry found in SDK code. |
@@ -169,5 +172,5 @@ No marketing concepts should enter Mind Palace core.
 
 - Attachment D's status column is partly out of date (it claims auth/tenant/erasure/structured ingestion are missing; all four have shipped in some form). This gap analysis supersedes it for the items verified above.
 - Several "absent" items (structured ingestion, correction classification, outbox) are correctly absent from *core* — they belong in the consumer adapter, not Mind Palace. The report's "not established" verdicts for those are accurate for core but misleading if read as "Mind Palace should build them."
-- Live probes (#105, run 41287500689, raw output issue #105 comment 6555683810) completed 2026-11-01. Probe a confirmed idempotency/supersession; probe c confirmed draft/rejected/superseded appear in current/pack by default; probe f confirmed budget in Unicode characters; probe g confirmed SDK failure behaviour. Probes d and e pending (probe CI iterating).
+- Live probes (#105, run 41287500689, raw output issue #105 comment 6555683810) completed 2026-11-01. Probe a confirmed idempotency/supersession; probe c confirmed draft/rejected/superseded appear in current/pack by default; probe f confirmed budget in Unicode characters; probe g confirmed SDK failure behaviour. Probe d (run 41296378275, raw output issue #105 comment 6556588065) confirmed exact-path scoping works; probe e (run 41299138837, raw output issue #105 comment 6556969596) confirmed cross-corpus denial over HTTP.
 - Issue #105 is the live probe issue (not a throwaway PR); its results are evidence for this gap analysis.

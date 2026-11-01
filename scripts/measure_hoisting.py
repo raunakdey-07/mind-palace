@@ -35,12 +35,10 @@ import time
 
 import sqlalchemy as sa
 
-ADMIN_DB_URL = os.environ.get(
-    "ADMIN_DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace"
-)
-PROBE_DB_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace"
-)
+_admin_raw = os.environ.get("ADMIN_DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+ADMIN_DB_URL = _admin_raw.replace("postgresql://", "postgresql+psycopg2://", 1)
+_probe_raw = os.environ.get("DATABASE_URL", "postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace")
+PROBE_DB_URL = _probe_raw.replace("postgresql://", "postgresql+psycopg2://", 1)
 SCOPE_SECRET = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
 ENFORCE = os.environ.get("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
 

@@ -63,35 +63,35 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "builds a wheel, which takes minutes; CI builds one in the wheel job",
     ),
     "test_approved_prohibition_curated": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_approved_prose_plain_language": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_descriptive_mustard_yellow": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_hard_wrapped_prose": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_mixed_bullet_prose_table": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_descriptive_voice_no_modal": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_unapproved_september_brainstorm": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
     "test_v2_top_of_list_insertion": (
-        "fixed in m018/extraction-state",
+        "MIND_PALACE_EXTRACTION_STATE_FIX",
         "audit regression test waiting for extraction-state fix",
     ),
 }

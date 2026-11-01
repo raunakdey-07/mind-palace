@@ -5,7 +5,7 @@
 **STATIC ANALYSIS + LIVE PROBES.** Sections §1-§5 derived from code reading.
 Live probes from issue #105 (run 41287500689, branch m018/probe-gap) completed
 2026-11-01 and are cited inline where they confirm or refute a code-reading claim.
-Probe g confirmed SDK failure behaviour; probe c confirmed draft/rejected filtering;
+Probe g confirmed SDK failure behaviour; probe c confirmed draft/rejected claims appear in current/pack by default (no filtering);
 probe a confirmed idempotency and supersession; probe f confirmed budget unit.
 Probes d (path filter) and e (HTTP-level isolation) were inconclusive due to probe
 script limitations; code-level tests remain the evidence for those.
@@ -39,12 +39,12 @@ cut line is "owner decides" for every item.
 | MP-SE-14 | Structured marketing ingestion | P0 | **absent** (as native) | `POST /api/memory/remember` exists (`api/routers/memory.py:63`); no marketing event schema. Belongs in consumer adapter (`examples/marketing-campaign-memory`). | consumer adapter | owner decides |
 | MP-SE-15 | Stable source mapping | P0 | **partial** | `source_hash`, `path`, `version_id` in `memory_documents`/`memory_versions`; idempotency on identical `remember` (docs/STATUS.md). Update semantics via `supersedes_claim_id`/`topic_key` (api/services/remember.py:405,426-429). See §2.1 and gap #1 below. | core + adapter | owner decides |
 | MP-SE-16 | Idempotent event ingestion | P1 | **partial** | Idempotent `remember` returns same `version_id` with `changed=false` (docs/STATUS.md "Idempotency"). Outbox/retry not in core (consumer adapter). | consumer adapter | owner decides |
-| MP-SE-17 | Memory authority hierarchy | P0 | **partial** | `info_state` (approved/draft/superseded/rejected/…) written at api/services/memory.py:1168-1171; NOT used as a filter in current/pack/query (those filter only `v.event <> 'DELETED'` at api/services/memory.py:476,617,1372). **Probe c (run 41287500689) confirmed:** current and pack both return draft/rejected/superseded claims by default; query returns approved only. No consumer-side authority evaluation. | core (primitives) + adapter (evaluation) | owner decides |
+| MP-SE-17 | Memory authority hierarchy | P0 | **partial** | `info_state` (approved/draft/superseded/rejected/…) written at api/services/memory.py:1168-1171; NOT used as a filter in current/pack/query (those filter only `v.event <> 'DELETED'` at api/services/memory.py:476,617,1372). **Probe c (run 41287500689, raw output issue #105 comment 6555683810) confirmed:** current and pack both return draft/rejected/superseded claims by default; query returns approved only. No consumer-side authority evaluation. | core (primitives) + adapter (evaluation) | owner decides |
 | MP-SE-18 | Correction classification | P1 | **absent** (core) | No correction type in core. Report §9.2 proposes 5 categories. Belongs in consumer adapter. | consumer adapter | owner decides |
 | MP-SE-19 | Persistent human-feedback workflow | P1 | **partial** | `remember` + supersession + history exist; correction promotion policy not in core. | consumer adapter | owner decides |
-| MP-SE-20 | Approved/rejected example distinction | P1 | **partial** | `info_state` distinguishes approved/rejected/superseded but is NOT used to filter current/pack/query (see MP-SE-17 above). **Probe c confirmed:** rejected content appears in pack by default. | core (state) + adapter (query) | owner decides |
+| MP-SE-20 | Approved/rejected example distinction | P1 | **partial** | `info_state` distinguishes approved/rejected/superseded but is NOT used to filter current/pack/query (see MP-SE-17 above). **Probe c (issue #105 comment 6555683810) confirmed:** rejected content appears in pack by default. | core (state) + adapter (query) | owner decides |
 | MP-SE-21 | Marketing-specific retrieval | P1 | **partial** | Path prefix, doc state, corpus scope exist; no arbitrary key/value filter (see §2.4). | core candidate (general metadata filter) | owner decides |
-| MP-SE-22 | Token-aware context builder | P1 | **absent** | Pack budgets in Unicode characters, not tokens (`memory_pack.py`, `ContextPack.budget`; §2.3). **Probe f confirmed:** `budget_unit` = `unicode_characters` in live pack response. | core candidate | owner decides |
+| MP-SE-22 | Token-aware context builder | P1 | **absent** | Pack budgets in Unicode characters, not tokens (`memory_pack.py`, `ContextPack.budget`; §2.3). **Probe f (issue #105 comment 6555683810) confirmed:** `budget_unit` = `unicode_characters` in live pack response. | core candidate | owner decides |
 | MP-SE-23 | Generation-service integration | P1 | **partial** | `POST /api/memory/pack`, `POST /api/context`, SDK; no generation orchestration in core (correct — belongs in adapter). | consumer adapter | owner decides |
 | MP-SE-24 | Generation provenance | P2 | **partial** | `memory_proof` / `memory_receipt` / `memory_pack` digests; `source_hash`, `version_id`, `observed_at` in responses. | core (primitives) + adapter (logging) | owner decides |
 | MP-SE-25 | Durable sync/retries | P1 | **absent** (core) | No outbox in core; report §7.4 recommends app-level outbox. Belongs in consumer adapter. | consumer adapter | owner decides |
@@ -77,11 +77,15 @@ What the code does:
 - `api/services/memory.py:1064`: event = "NEW" if not previous else "RESTORED" if previous["event"] == "DELETED" else "MODIFIED". Idempotent re-write of identical content returns skipped=True (`api/services/memory.py:1054-1055`).
 - Withdrawal: `api/services/memory.py:1187-1195` `record_deletion()` appends a `DELETED` tombstone version for a path (via sync file deletion per docs/security.md:726-728). `api/services/revalidate.py:145,147`: revalidate treats `event == "DELETED"` as not-current. `api/services/memory.py:476,617,1372`: current/pack/query filter `v.event <> 'DELETED'`.
 
-**Gap #1 (rewrite):** Retire via `supersedes_claim_id` / `topic_key` and via sync tombstone (`record_deletion`, `api/services/memory.py:1187`) exist. **Probe a confirmed:** a retired claim appears as SUPERSEDED in `history` but the prior claim is NOT removed from `current`/`pack` by default (only DELETED tombstones filter out via `v.event <> 'DELETED'`). There is no REST/SDK call that retires one claim WITHOUT supplying a replacement statement. Priority: owner decides.
+**Gap #1 (rewrite):** Retire via `supersedes_claim_id` / `topic_key` and via sync tombstone (`record_deletion`, `api/services/memory.py:1187`) exist.
+- **Probe a raw output (issue #105 comment 6555683810):** `remember` #3 (changed content, same key) → event=MODIFIED, version_id=V2. `current` returns V2 as CURRENT only; V1 appears in `historical_memories` as SUPERSEDED. So supersession via same-key re-remember DOES remove the prior claim from `current_memories`.
+- **Separately (probe c, issue #105 comment 6555683810):** `info_state` claims (approved/draft/rejected/superseded) are all returned by `current` and `pack` by default — there is no filtering by `info_state` in those paths. Only `query` returns approved claims.
+- **Retire without replacement:** No route exists. Tried: `POST /remember` with `supersedes_claim_id` (requires `statement`), `POST /revalidate` (does not retire), `DELETE` (no endpoint). None found (probe de, issue #105 comment 6555710278).
+Priority: owner decides.
 
 ### 2.2 Scope separation (Test D and F of attachment D)
 
-**Partially verified.** Code reading + probe d (inconclusive due to probe script path mismatch).
+**Code reading only.** Probe d (run 41290203070) was inconclusive due to path mismatch in probe script; raw output posted (issue #105 comment 6555710278). **Unverified:** live HTTP-level path-scoped isolation. Code-level tests (test_corpus_isolation.py) remain the evidence.
 
 Mind Palace primitives:
 
@@ -93,7 +97,7 @@ Mind Palace primitives:
 
 ### 2.3 Budget semantics (MP-SE-22)
 
-**Verified by probe f (run 41287500689).** Derived from code reading + live probe.
+**Verified by probe f (run 41287500689, raw output issue #105 comment 6555683810).** Derived from code reading + live probe.
 
 - `ContextPack` budgets are in **Unicode characters**, not tokens (`memory_pack.py`, `ContextPack.budget`; `api/routers/memory.py:244` `POST /pack`). docs/STATUS.md §5: "pack construction is ~0.2 ms at every size measured".
 - The sealed benchmark's `token_budget` (1200) is also characters in the sealed_spec.json.
@@ -109,7 +113,7 @@ Mind Palace primitives:
 
 ### 2.5 Isolation (MP-SE-12/28)
 
-**Code reading + existing tests (probe e inconclusive due to credential scope mismatch in probe script).**
+**Code reading + existing tests.** Probe e (run 41290203070) returned AuthorizationError on all cross-corpus calls as restricted credential; raw output posted (issue #105 comment 6555710278). **Unverified:** live HTTP-level isolation for history/as-of/snapshot/replay/evidence/conflicts/changes/feed. Code-level tests remain evidence.
 
 From code: every archive row carries `corpus_id`; RLS policies keyed on `corpus_id` (migration 008) or via document (`chunks` through `documents`, migration 008). Runtime role has no BYPASSRLS (`scripts/db/runtime_roles.sql`).
 From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files, zero outcome differences between main run and rerun; both connect as `mpadmin`. `tests/test_scope_forgery.py`: forged scope, wrong-secret token, empty token → zero rows. `tests/test_corpus_isolation.py`: cross-corpus reads return zero.
@@ -126,7 +130,7 @@ Verified from code (`mindpalace_sdk.py`):
 - `httpx.TimeoutException` → `MemoryClientError("timeout", ..., 504)` (`mindpalace_sdk.py:334,450,607,822`).
 - `httpx.RequestError` → `MemoryClientError("transport_error", ..., 503)` (`mindpalace_sdk.py:336,451,606,821`).
 
-**Verified by probe g (run 41287500689):**
+**Verified by probe g (run 41287500689, raw output issue #105 comment 6555683810):**
 - No automatic retry found in SDK code (no retry loop/retry library import observed). **Probe g confirmed:** connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang, no retry. SDK default timeout 30s confirmed from source (`mindpalace_sdk.py:918`).
 
 ## 3. Prioritised new issues (owner decides cut line)
@@ -135,7 +139,7 @@ Each line = one issue, one small PR. Cut line is "owner decides" for every item.
 
 | # | Gap | Priority | Cut line | Notes |
 |---|---|---|---|---|
-| 1 | Single-claim withdraw/tombstone endpoint (MP-SE-15) | P0 | owner decides | Only whole-corpus erasure exists today. Consumer needs per-claim withdraw. **Probe a confirmed:** `remember` with changed content creates a new version (MODIFIED) but does not retire the prior claim from current/pack; prior claim appears as SUPERSEDED in history. A dedicated withdraw endpoint (no replacement statement) does not exist. See gap #1 in §2.1. |
+| 1 | Single-claim withdraw/tombstone endpoint (MP-SE-15) | P0 | owner decides | Consumer needs per-claim withdraw. **Probe a (issue #105 comment 6555683810):** `remember` with changed content (same key) creates MODIFIED version (V2); prior claim (V1) moves to `historical_memories` as SUPERSEDED — so same-key re-remember DOES retire. **Probe de (issue #105 comment 6555710278):** no route found to retire a claim without supplying a replacement statement (tried `POST /remember` with `supersedes_claim_id`, `POST /revalidate`, `DELETE` — none exist). See gap #1 in §2.1. |
 | 2 | Token-aware context budgets (MP-SE-22, MP-SE-07) | P1 | owner decides | Today characters; report assumes tokens. Cost: tokenizer dep. |
 | 3 | General metadata filters (MP-SE-21) | P1 | owner decides | Path prefix + state exist; arbitrary key/value not. Keep core domain-neutral. |
 | 4 | SDK timeouts + retry guidance (MP-SE-26) | P1 | owner decides | Default timeout 30s; no automatic retry found in SDK code. |

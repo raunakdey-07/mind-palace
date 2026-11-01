@@ -500,12 +500,13 @@ def main() -> None:
 
     # Step 5: Seed claims
     print("\n=== Seeding claims ===")
-    seed_claims(engine, N_CLAIMS)
+    cids = seed_claims(engine, N_CLAIMS)
+    scope = cids[0]
 
     # Step 6: Measure at 015
     print("\n\n##### MEASUREMENT AT 015 #####")
-    measure_condition("015-enforcement-off", SCOPE_SECRET, SCOPE_SECRET, False, rt_engine, engine)
-    measure_condition("015-enforcement-on", SCOPE_SECRET, SCOPE_SECRET, True, rt_engine, engine)
+    measure_condition("015-enforcement-off", scope, SCOPE_SECRET, False, rt_engine, engine)
+    measure_condition("015-enforcement-on", scope, SCOPE_SECRET, True, rt_engine, engine)
 
     # Step 7: Upgrade to 016
     print("\n\n##### Upgrading to 016_hoist_scope_initplan #####")
@@ -523,8 +524,8 @@ def main() -> None:
 
     # Step 9: Measure at 016
     print("\n\n##### MEASUREMENT AT 016 #####")
-    measure_condition("016-enforcement-off", SCOPE_SECRET, SCOPE_SECRET, False, rt_engine, engine)
-    measure_condition("016-enforcement-on", SCOPE_SECRET, SCOPE_SECRET, True, rt_engine, engine)
+    measure_condition("016-enforcement-off", scope, SCOPE_SECRET, False, rt_engine, engine)
+    measure_condition("016-enforcement-on", scope, SCOPE_SECRET, True, rt_engine, engine)
 
     print("\n\n##### MEASUREMENT COMPLETE #####")
 

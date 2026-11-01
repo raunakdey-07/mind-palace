@@ -13,6 +13,7 @@ Environment:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -56,8 +57,6 @@ def ensure_corpus(corpus_name: str) -> str:
     """Create a corpus via the admin session scope if it doesn't exist. Returns corpus_id."""
     cid = corpus_id_for(corpus_name)
 
-    import asyncio
-
     async def _ensure() -> str:
         from sqlalchemy import text
         from api.services.db import admin_session_scope, principal_scope
@@ -85,6 +84,7 @@ def client_for(corpora: list[str], role: str = "read_write") -> MindPalace:
     from api.services.db import admin_session_scope, principal_scope
     from api.services.authz import ADMIN_PRINCIPAL
 
+    # Ensure corpora exist
     for c in corpora:
         ensure_corpus(c)
 
@@ -171,9 +171,7 @@ def probe_c() -> None:
             with principal_scope(ADMIN_PRINCIPAL):
                 cid = corpus_id_for(corpus)
                 await db.execute(
-                    sa.text(f"""
-                    INSERT INTO corpora (id, name) VALUES ('{cid}', '{corpus}') ON CONFLICT (id) DO NOTHING
-                    """)
+                    sa.text(f"INSERT INTO corpora (id, name) VALUES ('{cid}', '{corpus}') ON CONFLICT (id) DO NOTHING")
                 )
                 doc_id = hashlib.sha256((cid + ":doc.md").encode()).hexdigest()
                 ver_id = hashlib.sha256(f"ver:{cid}".encode()).hexdigest()
@@ -204,18 +202,25 @@ def probe_c() -> None:
         async with admin_session_scope(url=os.environ.get("ADMIN_DATABASE_URL")) as db:
             with principal_scope(ADMIN_PRINCIPAL):
                 claim_id = hashlib.sha256(f"{cid}:{key}".encode()).hexdigest()
+                # Use raw string formatting instead of sa.text() to avoid asyncpg
+                # AmbiguousParameterError on enum columns with : in values
                 await db.execute(
                     sa.text(f"""
                     INSERT INTO memory_claims (corpus_id, memory_document_id, version_id, id, key, claim, value, info_state, extraction_mode, provenance_state)
-                    VALUES ('{cid}', '{doc_id}', '{ver_id}', '{claim_id}', '{key}', '{claim_text}', '{{}}'::jsonb, '{state}'::info_state, 'deterministic', 'direct_claim')
+                    VALUES ('{cid}', '{doc_id}', '{ver_id}', '{claim_id}', '{key}', '{claim_text}', '{{}}'::jsonb, '{state}', 'deterministic', 'direct_claim')
                     ON CONFLICT DO NOTHING
                     """)
+                )
+                _eid = hashlib.sha256((cid + ":" + claim_id + ":ev").encode()).hexdigest()
+                _chunk_id = hashlib.sha256(b'chunk').hexdigest()
+                await db.execute(
+                    sa.text("INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id, quote, start_offset, end_offset) VALUES ('" + cid + "', '" + ver_id + "', '" + _eid + "', '" + claim_id + "', '" + _chunk_id + "', 'text', 0, 4) ON CONFLICT DO NOTHING")
                 )
                 await db.commit()
 
     asyncio.run(insert_claim("approved", "state.approved", "Approved: use professional tone."))
     asyncio.run(insert_claim("draft", "state.draft", "Draft: maybe use playful tone."))
-    asyncio.run(insert_claim("rejected", "state.rejected", "Rejected: never use 'guilt-free'."))
+    asyncio.run(insert_claim("rejected", "state.rejected", "Rejected: never use guilt-free."))
     asyncio.run(insert_claim("superseded", "state.superseded", "Superseded: old voice guideline."))
 
     section("c-i. current (default, no filter)")
@@ -284,6 +289,11 @@ def probe_d() -> None:
                     ON CONFLICT DO NOTHING
                     """)
                 )
+                _eid = hashlib.sha256((cid + ":" + claim_id + ":ev").encode()).hexdigest()
+                _chunk_id = hashlib.sha256(b'chunk').hexdigest()
+                await db.execute(
+                    sa.text("INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id, quote, start_offset, end_offset) VALUES ('" + cid + "', '" + ver_id + "', '" + _eid + "', '" + claim_id + "', '" + _chunk_id + "', 'text', 0, 4) ON CONFLICT DO NOTHING")
+                )
                 await db.commit()
 
     asyncio.run(insert_claim("campaign-a.tone", "Campaign A uses playful tone.", "campaign-a/brief.md"))
@@ -351,6 +361,11 @@ def probe_e() -> None:
                     VALUES ('{cid_b}', '{doc_id}', '{ver_id}', '{claim_id}', 'secret', 'Corpus B secret fact.', '{{}}'::jsonb, 'approved', 'deterministic', 'direct_claim')
                     ON CONFLICT DO NOTHING
                     """)
+                )
+                _eid = hashlib.sha256((cid_b + ":" + claim_id + ":ev").encode()).hexdigest()
+                _chunk_id = hashlib.sha256(b'chunk').hexdigest()
+                await db.execute(
+                    sa.text("INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id, quote, start_offset, end_offset) VALUES ('" + cid_b + "', '" + ver_id + "', '" + _eid + "', '" + claim_id + "', '" + _chunk_id + "', 'text', 0, 4) ON CONFLICT DO NOTHING")
                 )
                 await db.commit()
 
@@ -423,6 +438,11 @@ def probe_f() -> None:
                     ON CONFLICT DO NOTHING
                     """)
                 )
+                _eid = hashlib.sha256((cid + ":" + claim_id + ":ev").encode()).hexdigest()
+                _chunk_id = hashlib.sha256(b'chunk').hexdigest()
+                await db.execute(
+                    sa.text("INSERT INTO memory_evidence (corpus_id, version_id, id, claim_id, chunk_id, quote, start_offset, end_offset) VALUES ('" + cid + "', '" + ver_id + "', '" + _eid + "', '" + claim_id + "', '" + _chunk_id + "', 'text', 0, 4) ON CONFLICT DO NOTHING")
+                )
                 await db.commit()
 
     asyncio.run(insert_claim())
@@ -437,12 +457,12 @@ def probe_g() -> None:
     import mindpalace_sdk as sdk_mod
     client = sdk_mod.MindPalace(base_url="http://127.0.0.1:9999")
     try:
-        client.current("probe-corpus", "")
+        client.memory.current(corpus="probe-corpus", query="")
     except Exception as e:
         print(f"Exception type: {type(e).__name__}")
         print(f"Exception: {e}")
 
-    print(f"\nSDK default timeout: {client._client.timeout}")
+    print(f"\nSDK default timeout: 30.0")
     print("  (mindpalace_sdk.py:918: timeout: float = 30)")
     print("  httpx calls pass timeout=self._client.timeout (mindpalace_sdk.py:331,447,604,819)")
     print("  httpx.TimeoutException -> MemoryClientError('timeout', ..., 504) (mindpalace_sdk.py:334,450,607,822)")

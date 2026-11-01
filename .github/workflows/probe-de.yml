@@ -1,0 +1,170 @@
+# Temporary probe workflow for Stage 3 gap analysis (issue #105).
+# THROWAWAY: close unmerged and delete the branch after collecting results.
+name: Probe de (marketing isolation) (throwaway)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  probe-de:
+    name: Probe de (marketing isolation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # No CPU index and no torch. The default install is the ONNX stack, so the
+      # runner downloads 90 MB of onnxruntime instead of a 184 MB CPU-index torch
+      # wheel plus the nvidia tree it depends on. Nothing in this suite uses CUDA,
+      # and nothing in it needs torch either: the backend equivalence test lives in
+      # its own job below, because that test is the only thing here that does.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install --no-deps -e .
+          python -c "import onnxruntime; print('onnxruntime', onnxruntime.__version__)"
+
+      - name: Verify package imports
+        run: |
+          python -c "import api, cli; print('imports ok')"
+
+      # What the runner actually resolved, for the packages whose version has
+      # changed behaviour rather than merely changed.
+      #
+      # `requirements.txt` pins almost nothing, so the runner resolves whatever
+      # PyPI serves today and a developer's machine resolves whatever it
+      # installed months ago. Six tests in tests/test_ingestion_statistics.py
+      # skipped on every runner for four sessions because SQLAlchemy 2.1 changed
+      # which driver a bare `postgresql://` selects, and nothing on the runner
+      # said so. `log_error_verbosity = terse` hid the rest.
+      #
+      # This prints them; it asserts nothing. A line that fails the build
+      # because a dependency moved is a build that fails for a reason nobody
+      # chose, and the fix for that is a constraint file, not a louder CI.
+      - name: Record what the runner resolved
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          names = [
+              "SQLAlchemy", "asyncpg", "psycopg2-binary", "alembic", "pgvector",
+              "fastapi", "starlette", "pydantic", "httpx", "typer",
+              "sentence-transformers", "torch", "transformers", "numpy",
+              "sentencepiece",
+          ]
+          for name in names:
+              try:
+                  print(f"{name}=={version(name)}")
+              except Exception:
+                  print(f"{name}: NOT INSTALLED")
+          import sys
+          print(f"python=={sys.version.split()[0]}")
+          PY
+
+      - name: Verify milestone and release metadata
+        run: |
+          python scripts/release/check_versioning.py
+
+      - name: Verify documented claims point at real evidence
+        run: |
+          python scripts/check_evidence.py --strict
+
+      # Every path README.md, CHANGELOG.md, STATUS.md, PROGRESS.md and the
+      # release map name must exist in `git ls-files`.
+      #
+      # `check_evidence.py` scans STATUS.md and README.md for markdown *links*
+      # and could not catch what this catches, for two reasons: the documents
+      # that lost files are named in backticks in prose, so there is no link to
+      # resolve, and seven of them were dropped by a blanket `*.md` in
+      # .gitignore that `git add` never reported.
+      #
+      # It also fails when an ignored Markdown file appears under docs/ or
+      # eval/ with no rule saying it should be there. A new document must be
+      # committed or deliberately ignored; being forgotten is no longer a
+      # silent option.
+      - name: Every path these documents name is tracked by git
+        run: python scripts/check_doc_paths.py
+
+      # The frozen-evidence manifest. A git diff over `eval/` and
+      # `docs/performance/` proves a tracked file did not move -- it proves
+      # nothing at all about an ignored one, and several frozen artifacts are
+      # ignored. This hashes the bytes.
+      - name: The frozen evidence has not moved
+        run: python scripts/check_frozen.py
+
+      # Apply database migrations (copied verbatim from the `tests` job).
+      - name: Apply database migrations
+        run: |
+          python -m pip install pgvector
+          python -m alembic -c migrations/alembic.ini -x script_location=migrations upgrade head
+
+      # Provision the least-privileged runtime role (copied verbatim from the
+      # `tests` job) and rotate a real scope secret, enable enforcement, exactly
+      # as the `tests` job does.
+      - name: Provision the least-privileged runtime role
+        id: provision
+        run: |
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -v runtime_password=ci-runtime-role-password \
+            -f scripts/db/runtime_roles.sql
+          # Rotate a real scope secret and enable enforcement as the owner role.
+          #
+          # The secret and the enforcement flag are rotated into the SHARED
+          # `mindpalace` database so the server-posture steps below can prove a
+          # secure deployment starts with enforcement on. They MUST NOT be
+          # exported to $GITHUB_ENV: every later step in this job inherits the
+          # job environment, and "Run tests" builds a fresh session database
+          # (seeded with the default dev secret by migration 014). A leaked
+          # rotated secret makes the product compute HMAC tokens that do not
+          # verify against the session DB, so `mp_verified_scope_corpora()`
+          # returns zero rows and every tenant-scoped read answers 404. The
+          # posture step that needs the secret reads it as a step output below.
+          SCOPE_SECRET=$(openssl rand -hex 32)
+          echo "secret=$SCOPE_SECRET" >> $GITHUB_OUTPUT
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
+
+      # Run the probe in-process via the MindPalace SDK (same code paths as the
+      # HTTP server, but avoids uvicorn startup issues in CI).
+      - name: Run probe (in-process SDK)
+        env:
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
+          ADMIN_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_DEPLOYMENT: server
+          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: on
+          MIND_PALACE_RUNTIME: "0"
+          MIND_PALACE_INGEST_ROOTS: /content
+        run: |
+          python scripts/probe_de.py

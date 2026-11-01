@@ -1,0 +1,108 @@
+# Temporary probe workflow for Stage 3 gap analysis probe e (issue #105).
+# THROWAWAY: close unmerged and delete the branch after collecting results.
+name: Probe e (HTTP isolation) (throwaway)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  probe-e:
+    name: Probe e (HTTP isolation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: mindpalace
+          POSTGRES_USER: mpadmin
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      ADMIN_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install --no-deps -e .
+          python -c "import onnxruntime; print('onnxruntime', onnxruntime.__version__)"
+
+      - name: Verify package imports
+        run: |
+          python -c "import api, cli; print('imports ok')"
+
+      - name: Record what the runner resolved
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          names = ["SQLAlchemy", "asyncpg", "psycopg2-binary", "alembic", "pgvector",
+                   "fastapi", "starlette", "pydantic", "httpx", "typer",
+                   "sentence-transformers", "torch", "transformers", "numpy",
+                   "sentencepiece"]
+          for name in names:
+              try:
+                  print(f"{name}=={version(name)}")
+              except Exception:
+                  print(f"{name}: NOT INSTALLED")
+          import sys
+          print(f"python=={sys.version.split()[0]}")
+          PY
+
+      # Apply migrations to head so schema exists.
+      - name: Apply database migrations
+        run: |
+          python -m alembic -c migrations/alembic.ini -x script_location=migrations upgrade head
+
+      # Run runtime_roles.sql
+      - name: Run runtime roles
+        run: |
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -v runtime_password=ci-runtime-role-password \
+            -f scripts/db/runtime_roles.sql
+
+      # Rotate scope secret and enable enforcement
+      - name: Provision scope secret
+        id: provision
+        run: |
+          SCOPE_SECRET=$(openssl rand -hex 32)
+          echo "secret=$SCOPE_SECRET" >> $GITHUB_OUTPUT
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -c "INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
+
+      # Run the probe e (in-process SDK + HTTP against real server)
+      - name: Run probe e (in-process SDK + HTTP)
+        env:
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
+          ADMIN_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MIND_PALACE_AUTH_MODE: required
+          MIND_PALACE_DEPLOYMENT: server
+          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: on
+          MIND_PALACE_RUNTIME: "0"
+          MIND_PALACE_INGEST_ROOTS: /tmp/ingest
+        run: |
+          python scripts/probe_e.py

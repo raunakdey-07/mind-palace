@@ -37,6 +37,7 @@ import sqlalchemy as sa
 
 _admin_raw = os.environ.get("ADMIN_DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
 ADMIN_DB_URL = _admin_raw.replace("postgresql://", "postgresql+psycopg2://", 1)
+ADMIN_DB_URL_PLAIN = _admin_raw  # for psql subprocess calls
 _probe_raw = os.environ.get("DATABASE_URL", "postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace")
 PROBE_DB_URL = _probe_raw.replace("postgresql://", "postgresql+psycopg2://", 1)
 SCOPE_SECRET = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
@@ -113,7 +114,7 @@ def apply_runtime_roles() -> None:
     run(
         [
             "psql",
-            ADMIN_DB_URL,
+            ADMIN_DB_URL_PLAIN,
             "-v",
             "ON_ERROR_STOP=1",
             "-v",

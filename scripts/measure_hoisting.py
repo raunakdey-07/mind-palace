@@ -246,6 +246,9 @@ def seed_claims(engine: sa.Engine, n: int = N_CLAIMS) -> list[str]:
                 {"c": cid, "v": ver_id, "k": chunk_id},
             )
             per = n // len(corpus_names)
+            remainder = n - per * len(corpus_names)
+            if name == corpus_names[-1]:
+                per += remainder
             for j in range(per):
                 kid = hashlib.sha256(f"{cid}:{j}".encode()).hexdigest()
                 eid = hashlib.sha256(f"e:{cid}:{j}".encode()).hexdigest()

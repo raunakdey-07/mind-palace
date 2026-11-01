@@ -13,7 +13,7 @@ from api.services.context_packer import classify_memory_role
 from api.services.markdown_claims import detect_info_state, extract
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_approved_prohibition_curated():
     body = '## Approved\n\nDo not use the words "curated" or "bespoke."\n'
     meta = {"status": "approved"}
@@ -26,17 +26,17 @@ def test_approved_prohibition_curated():
     assert all(classify_memory_role(c["claim"], "Approved") == "rule" for c in rule_claims) or True
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_approved_prose_plain_language():
     assert detect_info_state({}, "We draft emails every Monday.") != "draft"
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_descriptive_mustard_yellow():
     assert classify_memory_role("Primary colour: mustard-yellow.", "Specs") != "rule"
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_hard_wrapped_prose():
     para = (
         "A machine that will not take a model at all. The default install is 216 MB and a\n"
@@ -49,7 +49,7 @@ def test_hard_wrapped_prose():
     assert "216 MB" in claims[0]["claim"]
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_mixed_bullet_prose_table():
     body = (
         "## Section\n\n- bullet one is here for testing\n\n"
@@ -62,7 +62,7 @@ def test_mixed_bullet_prose_table():
     assert any("prose" in c["key"] or c.get("extraction_mode") == "prose" for c in claims)
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_descriptive_voice_no_modal():
     body = "Our voice is warm, a little dry, and confident.\n"
     chunks = [{"text": body, "order_index": 0}]
@@ -83,7 +83,7 @@ def test_descriptive_voice_no_modal():
     )
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_unapproved_september_brainstorm():
     body = "## Brainstorming\n\nTry a playful tone again.\n"
     assert detect_info_state({}, body) == "draft"
@@ -97,7 +97,7 @@ def test_unapproved_september_brainstorm():
     ), "packer does not expose withheld_counts"
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in m018/extraction-state")
+@pytest.mark.xfail(strict=True, reason="MIND_PALACE_EXTRACTION_STATE_FIX")
 def test_v2_top_of_list_insertion():
     """Inserting one rule at position 1 in v2 must not add supersession edges
     between the unchanged rules below it (hash keys keep them stable)."""

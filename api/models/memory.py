@@ -62,6 +62,7 @@ class Claim(Contract):
     valid_until: AwareDatetime | None = None
     supersedes_id: str | None = None
     evidence_ids: list[str]
+    info_state: str = Field(default="approved", exclude_if=lambda value: value == "approved")
 
 
 class Source(Contract):

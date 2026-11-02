@@ -208,6 +208,7 @@ def project(
                     "valid_from",
                     "valid_until",
                     "supersedes_id",
+                    "info_state",
                 )
             },
             evidence_ids=sorted(by_claim[cid]),

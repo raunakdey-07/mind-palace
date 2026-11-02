@@ -1080,11 +1080,11 @@ async def record_version(
     if previous:
         result = await db.execute(
             text("""
-            SELECT key, id FROM memory_claims WHERE corpus_id = :c AND version_id = :v
+            SELECT key, id, claim FROM memory_claims WHERE corpus_id = :c AND version_id = :v
         """),
             {"c": corpus_id, "v": previous["id"]},
         )
-        previous_claims = dict(result.all())
+        previous_claims = {row[0]: (row[1], row[2]) for row in result.all()}
         single_replacement = (
             len(previous_claims) == len(claims) == 1
             and all(k.startswith("text:") for k in previous_claims)
@@ -1116,10 +1116,15 @@ async def record_version(
     claim_rows: list[dict] = []
     evidence_rows: list[dict] = []
     for claim in claims:
-        supersedes = previous_claims.get(claim["key"])
+        previous = previous_claims.get(claim["key"])
+        supersedes = (
+            None
+            if previous and previous[1] == claim["claim"]
+            else (previous[0] if previous else None)
+        )
         basis = "same_document_key" if supersedes else None
         if single_replacement:
-            supersedes = next(iter(previous_claims.values()))
+            supersedes = next(iter(previous_claims.values()))[0]
             basis = "single_claim_replacement"
         # An explicit target outranks whatever this document's own history
         # offered. The author named the claim being retired, and the fact that

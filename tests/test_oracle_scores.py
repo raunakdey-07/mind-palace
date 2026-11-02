@@ -23,8 +23,7 @@ import pytest
 
 from benchmarks.agency_readiness.checker import score
 from benchmarks.agency_readiness.fixture_generator import (
-    SEALED_FIXTURE_DIR,
-    SEALED_SEED,
+    HARNESS_DEV_FIXTURES_SEED,
     generate_brand,
     write_fixtures,
 )
@@ -36,7 +35,7 @@ def _load_spec():
 
 
 def _generated(brand_name):
-    return generate_brand(brand_name, _load_spec(), SEALED_SEED)
+    return generate_brand(brand_name, _load_spec(), HARNESS_DEV_FIXTURES_SEED)
 
 
 def _oracle_context(result: dict) -> str:

@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import pytest
 
+from api.models.memory import Claim, MemoryResponse
+from api.services.context_packer import pack_context
 from api.services.markdown_claims import detect_info_state, extract
 
 
@@ -38,87 +40,91 @@ def test_v2_top_of_list_insertion():
     import asyncio
     from sqlalchemy import text as sa_text
 
-    from api.services.db import session_scope
+    from api.services import authz
     from api.services.corpora import create_corpus, get_corpus_by_name
+    from api.services.db import admin_session_scope, principal_scope
     from api.services.ingestion import IngestionService
 
     async def run():
-        async with session_scope() as db:
-            await create_corpus(db, "audit-v2", "audit v2 corpus")
-            await db.commit()
-            corpus_row = await get_corpus_by_name(db, "audit-v2")
-            corpus_id = corpus_row["id"]
-            svc = IngestionService(require_embeddings=False)
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            async with admin_session_scope() as db:
+                await create_corpus(db, "audit-v2", "audit v2 corpus")
+                await db.commit()
+                corpus_row = await get_corpus_by_name(db, "audit-v2")
+                corpus_id = corpus_row["id"]
+                svc = IngestionService(require_embeddings=False)
 
-            v1_body = (
+                v1_body = (
                 "# Rules\n\n"
                 "- Rule one: the primary datastore is PostgreSQL.\n"
                 "- Rule two: backups run nightly.\n"
                 "- Rule three: access is role-based.\n"
             )
-            await svc.ingest_file(
-                v1_body, path="audit-v2/rules.md", corpus_id=corpus_id,
-            )
-            await db.commit()
+                await svc.ingest_file(
+                    v1_body, path="audit-v2/rules.md", corpus_id=corpus_id,
+                )
+                await db.commit()
 
-            v2_body = (
+                v2_body = (
                 "# Rules\n\n"
                 "- Inserted rule at position one: never log secrets.\n"
                 "- Rule one: the primary datastore is PostgreSQL.\n"
                 "- Rule two: backups run nightly.\n"
                 "- Rule three: access is role-based.\n"
             )
-            await svc.ingest_file(
-                v2_body, path="audit-v2/rules.md", corpus_id=corpus_id,
-            )
-            await db.commit()
+                await svc.ingest_file(
+                    v2_body, path="audit-v2/rules.md", corpus_id=corpus_id,
+                )
+                await db.commit()
 
-            async def version_ids():
-                r = await db.execute(
+                async def version_ids():
+                    r = await db.execute(
                     sa_text(
                         "SELECT id FROM memory_versions WHERE corpus_id = :c "
                         "ORDER BY version_number"
                     ),
                     {"c": corpus_id},
-                )
-                return [row[0] for row in r.fetchall()]
+                    )
+                    return [row[0] for row in r.fetchall()]
 
-            vids = await version_ids()
-            assert len(vids) == 2, f"expected 2 versions, got {vids}"
-            v1_version_id, v2_version_id = vids[0], vids[1]
+                vids = await version_ids()
+                assert len(vids) == 2, f"expected 2 versions, got {vids}"
+                v1_version_id, v2_version_id = vids[0], vids[1]
 
-            async def claim_rows(version_id):
-                r = await db.execute(
+                async def claim_rows(version_id):
+                    r = await db.execute(
                     sa_text(
                         "SELECT key, claim, supersedes_id FROM memory_claims "
                         "WHERE corpus_id = :c AND version_id = :v ORDER BY key"
                     ),
                     {"c": corpus_id, "v": version_id},
-                )
-                return r.fetchall()
+                    )
+                    return r.fetchall()
 
-            v1_by_content = {
+                v1_by_content = {
                 claim: (key, sid) for key, claim, sid in await claim_rows(v1_version_id)
             }
-            v2_by_content = {
+                v2_by_content = {
                 claim: (key, sid) for key, claim, sid in await claim_rows(v2_version_id)
             }
 
             # The unchanged rules (one/two/three) must not gain a supersedes_id in v2.
-            for content in ("Rule one", "Rule two", "Rule three"):
-                _, v1_sid = v1_by_content[content]
-                _, v2_sid = v2_by_content[content]
-                assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"
+                for content in ("Rule one", "Rule two", "Rule three"):
+                v1_claim = next(c for c in v1_by_content if c.startswith(content))
+                v2_claim = next(c for c in v2_by_content if c.startswith(content))
+                _, v1_sid = v1_by_content[v1_claim]
+                _, v2_sid = v2_by_content[v2_claim]
+                    assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"
 
             # Count supersession edges in v2 that point at unchanged rules: must be zero.
-            r = await db.execute(
+                r = await db.execute(
                 sa_text(
                     "SELECT count(*) FROM memory_claims "
                     "WHERE corpus_id = :c AND version_id = :v AND supersedes_id IS NOT NULL"
                 ),
                 {"c": corpus_id, "v": v2_version_id},
-            )
-            assert r.scalar() == 0
+                )
+                assert r.scalar() == 0
 
     asyncio.run(run())
 
@@ -152,9 +158,51 @@ def test_descriptive_voice_no_modal():
     body = "Our voice is warm, a little dry, and confident.\n"
     chunks = [{"text": body, "order_index": 0}]
     claims, _ = extract(body, chunks)
-    assert isinstance(claims, list)
+    claim = Claim(
+        id="voice-claim",
+        key="voice",
+        value=claims[0]["claim"],
+        claim=claims[0]["claim"],
+        status="CURRENT",
+        version_id="voice-version",
+        path="voice.md",
+        observed_at="2026-01-01T00:00:00Z",
+        evidence_ids=[],
+        info_state=claims[0].get("info_state", "approved"),
+    )
+    pack = pack_context(
+        "write a launch tweet",
+        [],
+        memory=MemoryResponse(
+            query="write a launch tweet",
+            corpus="voice",
+            current_memories=[claim],
+        ),
+    )
+    assert claims[0]["claim"] in pack.task_context["style_examples"]
 
 
 def test_unapproved_september_brainstorm():
     body = "## Brainstorming\n\nTry a playful tone again.\n"
-    assert detect_info_state({}, body) == "draft"
+    chunks = [{"text": body, "order_index": 0}]
+    claims, _ = extract(body, chunks)
+    assert claims[0]["info_state"] == "draft"
+    claim = Claim(
+        id="draft-claim",
+        key=claims[0]["key"],
+        value=claims[0]["claim"],
+        claim=claims[0]["claim"],
+        status="CURRENT",
+        version_id="draft-version",
+        path="brainstorm.md",
+        observed_at="2026-01-01T00:00:00Z",
+        evidence_ids=[],
+        info_state=claims[0]["info_state"],
+    )
+    pack = pack_context(
+        "tone",
+        [],
+        memory=MemoryResponse(query="tone", corpus="brainstorm", current_memories=[claim]),
+    )
+    assert all(claim.claim not in chunk.text for chunk in pack.chunks)
+    assert pack.to_dict()["withheld_counts"]["draft"] == 1

@@ -4,8 +4,6 @@ and asserts the correct behaviour. Strict xfail only for fixes not yet merged.
 
 from __future__ import annotations
 
-import pytest
-
 from api.models.memory import Claim, MemoryResponse
 from api.services.context_packer import pack_context
 from api.services.markdown_claims import detect_info_state, extract
@@ -177,7 +175,6 @@ def test_mixed_bullet_prose_table():
     )
     chunks = [{"text": body, "order_index": 0}]
     claims, _ = extract(body, chunks)
-    modes = {c.get("extraction_mode") for c in claims}
     assert any("prose" in c["key"] or c.get("extraction_mode") == "prose" for c in claims)
 
 

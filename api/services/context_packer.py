@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
+import re as _re
 
 # ~4 characters per token is the standard rough estimate for English text.
 CHARS_PER_TOKEN = 4
@@ -678,9 +679,6 @@ def _pack_retrieval_only(
         truncated=truncated,
         status=RESOLVED,
     )
-
-
-import re as _re
 
 
 def classify_memory_role(claim: str, heading: str = "") -> str:

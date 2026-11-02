@@ -361,7 +361,6 @@ def _assemble_authoritative(
     strategy: str,
     task_type: str | None = None,
     include_drafts: bool = False,
-    standing_rules: str = "pinned",
 ) -> ContextPack:
     """Build the pack from archive authority, with retrieval as raw material only."""
     evidence_by_id = {e.id: e for e in memory.evidence}
@@ -563,7 +562,6 @@ def pack_context(
     memory=None,
     task_type=None,
     include_drafts: bool = False,
-    standing_rules: str = "pinned",
 ) -> ContextPack:
     """Pack memory into model-ready context within a token budget.
 
@@ -581,7 +579,6 @@ def pack_context(
             strategy,
             task_type,
             include_drafts,
-            standing_rules,
         )
     return _pack_retrieval_only(query, results, budget_tokens, strategy)
 

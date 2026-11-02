@@ -119,10 +119,17 @@ def test_b_star_equals_generator_guide_placement(brand_name):
     gold = result["gold"]
 
     guide_rel = next(
+        p["path"]
+        for p in result["placements"]
+        if p["category"] in {"rule", "voice", "spec"}
+        and result["meta"].get(p["path"], {}).get("document_type") == "guide"
+    )
+    selected_by_harness = next(
         rel
         for rel, metadata in result["meta"].items()
         if metadata.get("document_type") == "guide" and rel.endswith("headings.md")
     )
+    assert selected_by_harness == guide_rel
     guide_body = docs.get(guide_rel)
     assert guide_body is not None, f"{brand_name}: no guide document found"
 

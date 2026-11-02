@@ -134,7 +134,9 @@ class ContextPack:
     valid_at: Optional[str] = None
     budget_unit: str = "token_estimate"
     task_context: Optional[dict] = None
-    withheld_counts: dict = field(default_factory=lambda: {"draft": 0, "superseded": 0, "rejected": 0, "needs_re_review": 0})
+    withheld_counts: dict = field(
+        default_factory=lambda: {"draft": 0, "superseded": 0, "rejected": 0, "needs_re_review": 0}
+    )
 
     def to_dict(self) -> dict:
         return {
@@ -256,8 +258,14 @@ def _to_memory(claim, evidence_by_id: dict) -> ContextMemory:
         valid_until=_iso(claim.valid_until),
         supersedes_id=claim.supersedes_id,
         evidence=_evidence_for(claim, evidence_by_id),
-        role=classify_memory_role(claim.claim, getattr(claim, 'heading', '') or getattr(claim, 'heading_path', '') or ''),
-        info_state=(claim.get("info_state", "approved") if isinstance(claim, dict) else getattr(claim, "info_state", "approved")),
+        role=classify_memory_role(
+            claim.claim, getattr(claim, "heading", "") or getattr(claim, "heading_path", "") or ""
+        ),
+        info_state=(
+            claim.get("info_state", "approved")
+            if isinstance(claim, dict)
+            else getattr(claim, "info_state", "approved")
+        ),
     )
 
 
@@ -366,7 +374,11 @@ def _assemble_authoritative(
             return obj.get("info_state", "approved")
         return getattr(obj, "info_state", "approved")
 
-    all_claims = list(memory.current_memories) + list(memory.historical_memories) + list(memory.uncertain_memories)
+    all_claims = (
+        list(memory.current_memories)
+        + list(memory.historical_memories)
+        + list(memory.uncertain_memories)
+    )
     for g in memory.conflicts:
         all_claims.extend(g.claims)
     for c in all_claims:
@@ -377,7 +389,9 @@ def _assemble_authoritative(
             for eid in (c.evidence_ids if hasattr(c, "evidence_ids") else []):
                 ev = evidence_by_id.get(eid)
                 if ev is not None:
-                    withheld_evidence_texts.add(getattr(ev, "text", None) or getattr(ev, "quote", ""))
+                    withheld_evidence_texts.add(
+                        getattr(ev, "text", None) or getattr(ev, "quote", "")
+                    )
 
     def _keep(obj):
         st = _state_of(obj)
@@ -396,13 +410,17 @@ def _assemble_authoritative(
 
     # filter chunks whose text contains evidence of a withheld claim
     filtered_results = []
-    for r in (results or []):
+    for r in results or []:
         text_body = (getattr(r, "text", None) or "").strip()
         if any(q and q in text_body for q in withheld_evidence_texts):
             continue
         # chunk-level info_state
         meta = getattr(r, "metadata", None) or {}
-        if isinstance(meta, dict) and meta.get("info_state") in withheld_states and not (meta.get("info_state") == "draft" and include_drafts):
+        if (
+            isinstance(meta, dict)
+            and meta.get("info_state") in withheld_states
+            and not (meta.get("info_state") == "draft" and include_drafts)
+        ):
             continue
         filtered_results.append(r)
     results = filtered_results
@@ -554,7 +572,16 @@ def pack_context(
     ranked chunks are the pack.
     """
     if memory is not None:
-        return _assemble_authoritative(query, memory, results, budget_tokens, strategy, task_type, include_drafts, standing_rules)
+        return _assemble_authoritative(
+            query,
+            memory,
+            results,
+            budget_tokens,
+            strategy,
+            task_type,
+            include_drafts,
+            standing_rules,
+        )
     return _pack_retrieval_only(query, results, budget_tokens, strategy)
 
 
@@ -670,9 +697,15 @@ def classify_memory_role(claim: str, heading: str = "") -> str:
     rule_words = ("must", "never", "avoid", "prohibited", "should", "always", "cannot", "do not")
     if any(_re.search(r"\b" + k + r"\b", low) for k in rule_words):
         return "rule"
-    if any(_re.search(r"\b" + k + r"\b", low) for k in ("approved", "rejected", "abandoned", "selected", "decided")):
+    if any(
+        _re.search(r"\b" + k + r"\b", low)
+        for k in ("approved", "rejected", "abandoned", "selected", "decided")
+    ):
         return "decision"
-    if any(_re.search(r"\b" + k + r"\b", low) for k in ("conversion", "engagement", "outperformed", "missed target", "worked better")):
+    if any(
+        _re.search(r"\b" + k + r"\b", low)
+        for k in ("conversion", "engagement", "outperformed", "missed target", "worked better")
+    ):
         return "observation"
     fact_words = ("%", "fabric", "audience", "deadline", "spec")
     if any(k in low for k in fact_words):

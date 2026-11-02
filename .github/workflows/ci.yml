@@ -4,25 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/reranker
-      # Added so this branch's CI actually runs. A branch that pushes nothing
-      # and gates nothing is a branch whose green is a local memory: the whole
-      # point of a runner is that it is not this machine. Removed when the
-      # branch merges.
-      - wip/platform-readiness
-      # Same reason as the line above: this branch's green must be a runner's
-      # green, not a laptop's. Removed when the branch merges.
-      - wip/claims-and-lab
-      # Same reason as the line above: this branch's green must be a runner's
-      # green, not a laptop's. Removed when the branch merges.
-      - wip/wedge
-      - wip/independent-set
-      # Same reason as the line above. A push trigger, not a gate: no step is
-      # added and none is removed. Without it this branch's green would be a
-      # local memory, which is the thing the other five lines exist to prevent.
-      # Removed when the branch merges.
-      - wip/boundary-fixes
-      - wip/boundary-fixes-2
   pull_request:
     branches:
       - main
@@ -31,10 +12,15 @@ on:
   # workstation does, and the only way to check one is to have a runner do it again.
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   tests:
     name: Lint and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 44
 
     services:
       postgres:
@@ -159,10 +145,27 @@ jobs:
       # The password is supplied here because the script refuses to provision a
       # role that cannot log in -- which reads as an RLS problem and is not one.
       - name: Provision the least-privileged runtime role
+        id: provision
         run: |
           psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
             -v runtime_password=ci-runtime-role-password \
             -f scripts/db/runtime_roles.sql
+          # Rotate a real scope secret and enable enforcement as the owner role.
+          #
+          # The secret and the enforcement flag are rotated into the SHARED
+          # `mindpalace` database so the server-posture steps below can prove a
+          # secure deployment starts with enforcement on. They MUST NOT be
+          # exported to $GITHUB_ENV: every later step in this job inherits the
+          # job environment, and "Run tests" builds a fresh session database
+          # (seeded with the default dev secret by migration 014). A leaked
+          # rotated secret makes the product compute HMAC tokens that do not
+          # verify against the session DB, so `mp_verified_scope_corpora()`
+          # returns zero rows and every tenant-scoped read answers 404. The
+          # posture step that needs the secret reads it as a step output below.
+          SCOPE_SECRET=$(openssl rand -hex 32)
+          echo "secret=$SCOPE_SECRET" >> $GITHUB_OUTPUT
+          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
 
       # The script must work on a database that has never had it applied. Running
       # it twice proves both that the grants are idempotent and that a rotation
@@ -251,6 +254,11 @@ jobs:
           MIND_PALACE_DEPLOYMENT: server
           MIND_PALACE_AUTH_MODE: required
           MIND_PALACE_INGEST_ROOTS: /content
+          # The rotated secret (provisioned above, exposed as a step output so it
+          # cannot leak into "Run tests" and other later steps) and enforcement
+          # on: this step really proves a secure server deployment starts up.
+          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
+          MIND_PALACE_ENFORCE_SCOPE_TOKEN: on
         run: |
           python -c "from api.main import app; print('server profile accepted the runtime role')"
           python - <<'PYEOF'
@@ -268,11 +276,6 @@ jobs:
         env:
           DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
         run: python -m cli.main posture
-
-      - name: Run linting
-        run: |
-          flake8 api cli tests scripts --max-line-length=100
-          black --check api cli tests scripts --line-length 100
 
       - name: Evaluate deterministic memory lifecycle (offline)
         env:
@@ -348,6 +351,20 @@ jobs:
         run: |
           pytest -q -rs --junitxml=/tmp/pytest-main.xml
 
+      # End-to-end proof that scope-token enforcement ON still works:
+      # a random secret is rotated into the session DB, enforcement is
+      # enabled, and every tenant-scoped operation still works through
+      # the real API paths as the least-privileged runtime role.
+      # The secret is set step-scoped inside the tests (never exported
+      # job-wide), so it cannot leak into later steps.
+      - name: End-to-end enforcement-on suite
+        env:
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          pytest -q tests/test_enforcement_e2e.py
+
       # A skip is invisible in a green build. Six tests skipped on every runner
       # for four sessions while carrying the reason "no reachable DATABASE_URL",
       # which was false: the database was reachable, and SQLAlchemy 2.1 had
@@ -363,20 +380,51 @@ jobs:
       - name: Every skip is accounted for
         run: python scripts/check_skips.py --junit /tmp/pytest-main.xml --default-dependency
 
-      # The lexical-mode speedup is a claim about the model load, so its size depends on
-      # the runner. The test prints both numbers; `pytest -q -rs` above captures them,
-      # so this runs the same two tests with -s to put the measurement in the log
-      # where it can be read and compared run to run. The gate that matters is the
-      # import-table assertion in test_lexical_mode_does_not_import_the_model_stack,
-      # which is machine-independent; this only says how big the saving was here.
-      - name: Measure the lexical-mode speedup on this runner
+      # Verify that every test in the nine tenant-isolation files actually ran
+      # and passed. This replaces the removed "Tenant isolation, against the
+      # least-privileged role" rerun step: instead of running the files a second
+      # time, we check the junitxml from "Run tests" to confirm they all passed
+      # with zero skips. Expected counts come from --collect-only on the same
+      # files, so they cannot rot as tests are added.
+      - name: Every tenant file's tests ran
+        run: |
+          python scripts/ci/check_files_ran.py \
+            --junit /tmp/pytest-main.xml \
+            --files tests/test_tenant_isolation.py \
+                    tests/test_tenant_connection_isolation.py \
+                    tests/test_tenant_control_effectiveness.py \
+                    tests/test_credential_management.py \
+                    tests/test_deployment_profiles_and_lifecycle.py \
+                    tests/test_operator_cli.py \
+                    tests/test_marketing_reference_integration.py \
+                    tests/test_scope_forgery.py \
+                    tests/test_error_and_log_hygiene.py \
+            --deselect tests/test_deployment_profiles_and_lifecycle.py::test_migrations_apply_downgrade_and_reapply
+
+      # The lexical-mode speedup numbers are already captured by `pytest -q -rs`
+      # in "Run tests" above. Read them from the junit instead of starting a
+      # second pytest session (and rebuilding another session database).
+      - name: Report lexical-mode speedup from this run
         env:
           MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
-          pytest -q -s tests/test_m016_lexical_mode.py \
-            -k "is_faster or does_not_import_the_model_stack"
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('/tmp/pytest-main.xml')
+          props = {}
+          for tc in tree.getroot().findall('.//testcase'):
+              for prop in tc.findall('properties/property'):
+                  props[prop.get('name')] = prop.get('value')
+          missing = [k for k in ('lexical_semantic_s', 'lexical_lexical_s', 'lexical_ratio') if k not in props]
+          if missing:
+              print(f"::error::lexical-mode speedup numbers missing from junit: {missing}")
+              print("  Ensure test_lexical_mode_is_faster_because_of_that records them via record_property.")
+              exit(1)
+          print(f"lexical-mode speedup: semantic={props['lexical_semantic_s']}s, "
+                f"lexical={props['lexical_lexical_s']}s, ratio={props['lexical_ratio']}x")
+          PY
 
       - name: Upload the junitxml
         uses: actions/upload-artifact@v4
@@ -400,37 +448,15 @@ jobs:
         run: |
           python scripts/check_evidence.py --require-head --junitxml /tmp/pytest-main.xml
 
-      # Tenant isolation, as a separate step so a leak cannot hide inside a green
-      # run: it needs the pinned models off, the runtime role present, and a
-      # visible place for a failure to land. Same command the rest of the suite
-      # uses, not a parallel runner, so there is one way to run the tests.
+      # Tenant isolation coverage is verified by check_files_ran.py below, which
+      # reads the junitxml from "Run tests" and asserts that every test in the
+      # nine tenant files passed with zero skips. The rerun step has been
+      # removed (PR D): the V1 comparison showed no test differs between the
+      # main run and the rerun, and the DB role is the same (mpadmin) in both.
       #
-      # `test_credential_management.py` is in this list, not the general one:
-      # it covers the surfaces that are not HTTP -- the runtime socket, the
-      # unnamed SDK client, MCP -- and a bypass there is as real as one on a route.
-      #
-      # `test_scope_forgery.py` and `test_error_and_log_hygiene.py` are here for
-      # the same reason. The first asserts against the real runtime role that the
-      # `{*}` sentinel cannot be self-asserted, and fails on `009`; the second
-      # asserts that an unhandled error neither returns nor logs the row that
-      # PostgreSQL puts in its constraint detail. Both are fast, and neither
-      # belongs in a run that only passes if the whole suite is green.
-      - name: Tenant isolation, against the least-privileged role
-        env:
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          MIND_PALACE_AUTH_MODE: required
-          HF_HUB_OFFLINE: "1"
-          TRANSFORMERS_OFFLINE: "1"
-        run: |
-          pytest -q tests/test_tenant_isolation.py \
-                     tests/test_tenant_connection_isolation.py \
-                     tests/test_tenant_control_effectiveness.py \
-                     tests/test_credential_management.py \
-                     tests/test_deployment_profiles_and_lifecycle.py \
-                     tests/test_operator_cli.py \
-                     tests/test_marketing_reference_integration.py \
-                     tests/test_scope_forgery.py \
-                     tests/test_error_and_log_hygiene.py
+      # test_enforcement_e2e.py double run (14 s): NOT removed. Its environment
+      # differs from "Run tests" (shared DB vs session DB, AUTH_MODE=required vs
+      # off), so it is a distinct test that must run separately.
 
       # Opt-in inside the test, because it creates and drops a database. It is the
       # only place the migration chain is driven `up -> down -> up`, and a
@@ -494,6 +520,27 @@ jobs:
           fi
           python examples/marketing-campaign-memory/demo.py
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install flake8 and black
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 black
+      - name: Run flake8 and black
+        run: |
+          flake8 api cli tests scripts --max-line-length=100
+          black --check api cli tests scripts --line-length 100
+
   # The two embedding backends have to stay interchangeable, because the archive
   # stores vectors and records only the model name and the dimension. If they drift
   # apart, every corpus written under one backend is silently mis-ranked by the
@@ -503,6 +550,7 @@ jobs:
   embedding-backends:
     name: Embedding backends stay interchangeable
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -586,7 +634,7 @@ jobs:
   five-minute-path:
     name: The five-minute path, from a clean checkout
     runs-on: ubuntu-latest
-    needs: tests
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -766,7 +814,7 @@ jobs:
   wheel:
     name: Clean install from the built wheel
     runs-on: ubuntu-latest
-    needs: tests
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -1049,7 +1097,7 @@ jobs:
   upgrade-safety:
     name: Upgrade safety, from v0.9.0
     runs-on: ubuntu-latest
-    needs: tests
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -1105,7 +1153,7 @@ jobs:
   build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: tests
+    timeout-minutes: 10
     # The BUILD runs on every branch. It used to be gated behind
     # `github.ref == 'refs/heads/main'`, which meant no branch could find out
     # whether its Dockerfile still worked until after it merged -- and a broken
@@ -1150,3 +1198,25 @@ jobs:
             exit 1
           fi
           echo "no port published by default"
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [tests, lint, embedding-backends, five-minute-path, wheel, upgrade-safety, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every needed job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS"])
+          for name, info in sorted(needs.items()):
+              print(f"{name}: {info['result']}")
+          bad = {n: i["result"] for n, i in needs.items() if i["result"] != "success"}
+          if bad:
+              print("::error::jobs not successful: " + json.dumps(bad))
+              sys.exit(1)
+          PY

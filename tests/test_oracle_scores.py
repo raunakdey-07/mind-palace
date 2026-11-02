@@ -23,8 +23,6 @@ import pytest
 
 from benchmarks.agency_readiness.checker import score
 from benchmarks.agency_readiness.fixture_generator import (
-    DEV_FIXTURE_DIR,
-    DEV_SET_SEED,
     SEALED_FIXTURE_DIR,
     SEALED_SEED,
     generate_brand,
@@ -37,40 +35,37 @@ def _load_spec():
     return json.loads(spec_path.read_text())
 
 
-def _oracle_context(gold: dict) -> str:
-    """Build an oracle context containing every gold item exactly once."""
-    parts: list[str] = []
-    for p in gold["standing_prohibitions"]:
-        parts.append(f"Do not use the word {p}.")
-    for v in gold["required_voice_descriptors"]:
-        parts.append(f"Our voice is {v}.")
-    for s in gold["approved_specs"]:
-        parts.append(f"The material is {s}.")
-    return "\n".join(parts)
+def _generated(brand_name):
+    return generate_brand(brand_name, _load_spec(), SEALED_SEED)
 
 
-def _stale_oracle_context(gold: dict) -> str:
-    """Build a stale oracle context containing superseded/draft markers."""
-    parts: list[str] = []
-    for m in gold["superseded_v1_markers"]:
-        parts.append(f"Previous claim: {m}.")
-    for m in gold["unapproved_draft_markers"]:
-        parts.append(f"Draft note: {m}.")
-    return "\n".join(parts)
+def _oracle_context(result: dict) -> str:
+    return "\n".join(p["sentence"] for p in result["placements"] if p["version"] == "approved")
 
 
-def _filler_context() -> str:
-    """Build a filler context containing no gold items."""
-    return ("The product ships with a two-year limited warranty covering defects "
-            "in materials and workmanship. " * 5)
+def _stale_oracle_context(result: dict) -> str:
+    markers = result["gold"]["superseded_v1_markers"] + result["gold"]["unapproved_draft_markers"]
+    return "\n".join(
+        sentence
+        for body in result["docs"].values()
+        for sentence in body.replace("\n", " ").split(". ")
+        if any(marker in sentence for marker in markers)
+    )
+
+
+def _filler_context(result: dict) -> str:
+    return "\n".join(
+        body for path, body in result["docs"].items() if result["template_of"][path] == "filler"
+    )
 
 
 @pytest.mark.parametrize("brand_name", ["northstar", "voltedge", "hearth_and_loom"])
 def test_oracle_context_scores_perfect_recall_no_violation(brand_name):
     """Oracle context (all gold items) scores rule_recall=1.0, violation=0."""
     spec = _load_spec()
-    gold = spec["brands"][brand_name]
-    ctx = _oracle_context(gold)
+    generated = _generated(brand_name)
+    gold = generated["gold"]
+    ctx = _oracle_context(generated)
     result = score(ctx, gold)
     print(f"\nOracle {brand_name}: rule_recall={result['rule_recall']}, "
           f"voice_recall={result['voice_recall']}, spec_recall={result['spec_recall']}, "
@@ -86,8 +81,9 @@ def test_oracle_context_scores_perfect_recall_no_violation(brand_name):
 def test_stale_oracle_scores_violation_one(brand_name):
     """Stale oracle context (superseded/draft markers) scores violation=1."""
     spec = _load_spec()
-    gold = spec["brands"][brand_name]
-    ctx = _stale_oracle_context(gold)
+    generated = _generated(brand_name)
+    gold = generated["gold"]
+    ctx = _stale_oracle_context(generated)
     result = score(ctx, gold)
     print(f"\nStale oracle {brand_name}: violation={result['violation']}, "
           f"stale_hits={result['stale_hits']}, rule_recall={result['rule_recall']}")
@@ -99,8 +95,9 @@ def test_stale_oracle_scores_violation_one(brand_name):
 def test_filler_context_scores_zero_recall(brand_name):
     """Filler context (no gold items) scores 0 recall on all metrics."""
     spec = _load_spec()
-    gold = spec["brands"][brand_name]
-    ctx = _filler_context()
+    generated = _generated(brand_name)
+    gold = generated["gold"]
+    ctx = _filler_context(generated)
     result = score(ctx, gold)
     print(f"\nFiller {brand_name}: rule_recall={result['rule_recall']}, "
           f"voice_recall={result['voice_recall']}, spec_recall={result['spec_recall']}, "
@@ -118,43 +115,39 @@ def test_b_star_equals_generator_guide_placement(brand_name):
     The guide document is headings.md (template='guide'). B* context should
     contain exactly what headings.md contains -- no more, no less.
     """
-    result = generate_brand(brand_name, _load_spec(), SEALED_SEED)
+    result = _generated(brand_name)
     docs = result["docs"]
-    meta = result["meta"]
-    spec = _load_spec()
-    gold = spec["brands"][brand_name]
+    gold = result["gold"]
 
-    # Find the guide document (headings.md with template='guide' / document_type='guide')
-    guide_body = None
-    for rel, body in docs.items():
-        m = meta.get(rel) or {}
-        if m.get("document_type") == "guide" and rel.endswith("headings.md"):
-            guide_body = body
-            break
+    guide_rel = next(
+        rel
+        for rel, metadata in result["meta"].items()
+        if metadata.get("document_type") == "guide" and rel.endswith("headings.md")
+    )
+    guide_body = docs.get(guide_rel)
     assert guide_body is not None, f"{brand_name}: no guide document found"
 
     # B* context is the guide document only
     b_star_ctx = guide_body
 
-    # Score B* against gold
-    gold = spec["brands"][brand_name]
     b_star_result = score(b_star_ctx, gold)
     print(f"\nB* {brand_name}: rule_recall={b_star_result['rule_recall']}, "
           f"voice_recall={b_star_result['voice_recall']}, spec_recall={b_star_result['spec_recall']}, "
           f"violation={b_star_result['violation']}")
 
-    # B* (guide document only) should score 0 on all metrics since headings.md
-    # contains filler content, not gold items. This confirms B* is a true
-    # baseline that doesn't accidentally contain gold.
-    assert b_star_result["rule_recall"] == 0.0, (
-        f"{brand_name}: B* rule_recall {b_star_result['rule_recall']} != 0.0"
-    )
-    assert b_star_result["voice_recall"] == 0.0, (
-        f"{brand_name}: B* voice_recall {b_star_result['voice_recall']} != 0.0"
-    )
-    assert b_star_result["spec_recall"] == 0.0, (
-        f"{brand_name}: B* spec_recall {b_star_result['spec_recall']} != 0.0"
-    )
+    expected = {}
+    for category, key in (("rule", "standing_prohibitions"), ("voice", "required_voice_descriptors"), ("spec", "approved_specs")):
+        total = len(gold[key])
+        placed = {
+            p["sentence"]
+            for p in result["placements"]
+            if p["category"] == category and p["path"] == guide_rel
+        }
+        expected[category] = len(placed) / total if total else 1.0
+    print(f"B* {brand_name}: selected={guide_rel}, expected={expected}")
+    assert b_star_result["rule_recall"] == expected["rule"]
+    assert b_star_result["voice_recall"] == expected["voice"]
+    assert b_star_result["spec_recall"] == expected["spec"]
     assert b_star_result["violation"] == 0, (
         f"{brand_name}: B* violation {b_star_result['violation']} != 0"
     )
@@ -165,8 +158,9 @@ def test_oracle_per_brand_scores():
     spec = _load_spec()
     print("\n=== Per-brand oracle scores ===")
     for brand_name in ["northstar", "voltedge", "hearth_and_loom"]:
-        gold = spec["brands"][brand_name]
-        ctx = _oracle_context(gold)
+        generated = _generated(brand_name)
+        gold = generated["gold"]
+        ctx = _oracle_context(generated)
         result = score(ctx, gold)
         print(f"  {brand_name}: rule_recall={result['rule_recall']}, "
               f"voice_recall={result['voice_recall']}, "

@@ -329,12 +329,32 @@ def generate_brand(brand: str, spec: dict, seed: int) -> dict:
         meta[path] = {"status": "approved", "document_type": "note"}
         template_of[path] = "filler"
 
+    placement_specs = [
+        ("rule", [f'Do not use the word "{p}" in any customer-facing copy.' for p in prohibitions]),
+        ("voice", [f"Our voice is {v}." for v in voice]),
+        ("spec", [f"The material is {s}." for s in specs_list]),
+    ]
+    placements = []
+    for category, sentences in placement_specs:
+        for sentence in sentences:
+            for path, body in docs.items():
+                if sentence in body:
+                    placements.append(
+                        {
+                            "path": path,
+                            "version": (meta.get(path) or {}).get("status", "approved"),
+                            "sentence": sentence,
+                            "category": category,
+                        }
+                    )
+
     return {
         "brand": brand,
         "seed": seed,
         "docs": docs,
         "meta": meta,
         "template_of": template_of,
+        "placements": placements,
         "gold": {
             "standing_prohibitions": prohibitions,
             "required_voice_descriptors": voice,
@@ -359,7 +379,14 @@ def write_fixtures(spec: dict, seed: int, out_dir: Path) -> dict:
             fname = path.split("/", 1)[1]
             (bdir / fname).write_text(content, encoding="utf-8")
         (bdir / "_meta.json").write_text(
-            json.dumps({"meta": result["meta"], "template_of": result["template_of"]}, indent=2),
+            json.dumps(
+                {
+                    "meta": result["meta"],
+                    "template_of": result["template_of"],
+                    "placements": result["placements"],
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
         total_tokens = sum(_tokens(c) for c in result["docs"].values())

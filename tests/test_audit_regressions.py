@@ -102,7 +102,6 @@ def test_mixed_bullet_prose_table():
     )
     chunks = [{"text": body, "order_index": 0}]
     claims, _ = extract(body, chunks)
-    modes = {c.get("extraction_mode") for c in claims}
     assert any("prose" in c.get("key", "") or c.get("extraction_mode") == "prose" for c in claims)
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,3 +62,44 @@ def test_final_log_line_is_shaped(tmp_path):
         "C_plus",
         "D",
     ]
+
+
+def test_final_without_seed_exits_two_and_writes_nothing(tmp_path, monkeypatch):
+    evaluate = load("evaluate_missing_seed", ROOT / "benchmarks/agency_readiness/evaluate.py")
+    harness = tmp_path / "harness_dev_fixtures"
+    final = tmp_path / "final_fixtures"
+    monkeypatch.setattr(evaluate, "HARNESS_DEV_FIXTURE_DIR", harness)
+    monkeypatch.setattr(evaluate, "ROOT", tmp_path)
+    monkeypatch.delenv("MP_FINAL_SEED", raising=False)
+    monkeypatch.setattr(sys, "argv", ["evaluate.py", "--final"])
+
+    assert evaluate.main() == 2
+    assert not harness.exists()
+    assert not final.exists()
+
+
+def test_final_writes_only_final_fixtures(tmp_path, monkeypatch):
+    evaluate = load("evaluate_final_dir", ROOT / "benchmarks/agency_readiness/evaluate.py")
+    harness = tmp_path / "harness_dev_fixtures"
+    final = tmp_path / "benchmarks" / "agency_readiness" / "final_fixtures"
+    captured = []
+    monkeypatch.setattr(evaluate, "ROOT", tmp_path)
+    monkeypatch.setattr(evaluate, "HARNESS_DEV_FIXTURE_DIR", harness)
+    monkeypatch.setattr(
+        evaluate, "load_spec", lambda: {"version": "test", "brands": {}, "prompts": []}
+    )
+    monkeypatch.setattr(evaluate, "verify_embedder", lambda: {"backend": "fake"})
+    def fake_write_fixtures(spec, seed, path):
+        captured.append((spec, seed, path))
+        path.mkdir(parents=True)
+
+    monkeypatch.setattr(evaluate, "write_fixtures", fake_write_fixtures)
+    monkeypatch.setattr(evaluate, "append_final_run", lambda *args: None)
+    monkeypatch.setattr("subprocess.check_output", lambda *args, **kwargs: "fake-sha\n")
+    monkeypatch.setenv("MP_FINAL_SEED", "7")
+    monkeypatch.setattr(sys, "argv", ["evaluate.py", "--final"])
+
+    assert evaluate.main() == 0
+    assert captured == [({"version": "test", "brands": {}, "prompts": []}, 7, final)]
+    assert final.is_dir()
+    assert not harness.exists()

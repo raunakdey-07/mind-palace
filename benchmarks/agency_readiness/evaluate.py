@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import random
 import sys
 from datetime import datetime, timezone
@@ -39,8 +40,8 @@ from api.services.retrieval import RetrievalService  # noqa: E402
 from api.services.embedder import Embedder  # noqa: E402
 from benchmarks.agency_readiness.checker import score as score_context  # noqa: E402
 from benchmarks.agency_readiness.fixture_generator import (  # noqa: E402
-    SEALED_SEED,
-    SEALED_FIXTURE_DIR,
+    HARNESS_DEV_FIXTURES_SEED,
+    HARNESS_DEV_FIXTURE_DIR,
 )
 
 SPEC_PATH = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
@@ -382,15 +383,18 @@ def main():
     spec = load_spec()
     embedder_identity = verify_embedder()
     print("embedder_identity:", json.dumps(embedder_identity))
-    # Regenerate sealed fixtures with the sealed seed (idempotent, same bytes).
+    mp_final_seed = os.environ.get("MP_FINAL_SEED")
+    if mp_final_seed:
+        print(f"MP_FINAL_SEED={mp_final_seed}")
+    # Regenerate harness_dev fixtures with the harness_dev seed (idempotent, same bytes).
     from benchmarks.agency_readiness.fixture_generator import write_fixtures
 
-    write_fixtures(spec, SEALED_SEED, SEALED_FIXTURE_DIR)
+    write_fixtures(spec, HARNESS_DEV_FIXTURES_SEED, HARNESS_DEV_FIXTURE_DIR)
 
     all_results = {}
     for brand in spec["brands"]:
         prompts = [p for p in spec["prompts"] if p["brand"] == brand]
-        brand_dir = SEALED_FIXTURE_DIR / brand
+        brand_dir = HARNESS_DEV_FIXTURE_DIR / brand
         brand_res = asyncio.run(run_brand(brand, spec, prompts, brand_dir))
         all_results[brand] = brand_res
 
@@ -436,7 +440,8 @@ def main():
         "spec_version": spec["version"],
         "token_budget": BUDGET,
         "tokenizer": TOKENIZER,
-        "seed": SEALED_SEED,
+        "seed": HARNESS_DEV_FIXTURES_SEED,
+        "mp_final_seed": mp_final_seed,
         "sealed": True,
         "embedder_identity": embedder_identity,
         "generated_at": datetime.now(timezone.utc).isoformat(),

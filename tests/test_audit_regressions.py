@@ -199,9 +199,9 @@ def test_unapproved_september_brainstorm():
 
     # (c) pack reports withheld_counts
     pack_dict = pack.to_dict()
-    assert pack_dict.get("withheld_counts") is not None, (
-        "pack output does not report withheld_counts"
-    )
+    assert (
+        pack_dict.get("withheld_counts") is not None
+    ), "pack output does not report withheld_counts"
 
 
 @pytest.mark.xfail(
@@ -284,17 +284,15 @@ def test_v2_top_of_list_insertion():
             for content in ("Rule one", "Rule two", "Rule three"):
                 matching_v1 = [c for c in v1_by_content if c.startswith(content)]
                 matching_v2 = [c for c in v2_by_content if c.startswith(content)]
-                assert len(matching_v1) == 1, (
-                    f"expected 1 v1 claim for {content!r}, got {len(matching_v1)}"
-                )
-                assert len(matching_v2) == 1, (
-                    f"expected 1 v2 claim for {content!r}, got {len(matching_v2)}"
-                )
+                assert (
+                    len(matching_v1) == 1
+                ), f"expected 1 v1 claim for {content!r}, got {len(matching_v1)}"
+                assert (
+                    len(matching_v2) == 1
+                ), f"expected 1 v2 claim for {content!r}, got {len(matching_v2)}"
                 _, v1_sid = v1_by_content[matching_v1[0]]
                 _, v2_sid = v2_by_content[matching_v2[0]]
-                assert v1_sid == v2_sid, (
-                    f"{content!r} gained a supersession edge on v2 insert"
-                )
+                assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"
 
             # memory_supersessions: count rows on v2 whose supersedes_id points
             # at an unchanged rule -- must be 0.

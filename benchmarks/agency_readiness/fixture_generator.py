@@ -330,25 +330,30 @@ def generate_brand(brand: str, spec: dict, seed: int) -> dict:
         meta[path] = {"status": "approved", "document_type": "note"}
         template_of[path] = "filler"
 
-    placement_specs = [
-        ("rule", [f'Do not use the word "{p}" in any customer-facing copy.' for p in prohibitions]),
-        ("voice", [f"Our voice is {v}." for v in voice]),
-        ("spec", [f"The material is {s}." for s in specs_list]),
-    ]
     placements = []
-    for category, sentences in placement_specs:
-        for sentence in sentences:
+    gold_by_category = {
+        "rule": prohibitions,
+        "voice": voice,
+        "spec": specs_list,
+    }
+    for category, gold_items in gold_by_category.items():
+        for item in gold_items:
             for path, body in docs.items():
-                if sentence in body:
-                    placements.append(
-                        {
-                            "path": path,
-                            "version": 1,
-                            "status": (meta.get(path) or {}).get("status", "approved"),
-                            "sentence": sentence,
-                            "category": category,
-                        }
-                    )
+                if item.casefold() not in body.casefold():
+                    continue
+                sentence = next(
+                    (line.strip() for line in body.splitlines() if item.casefold() in line.casefold()),
+                    item,
+                )
+                placements.append(
+                    {
+                        "path": path,
+                        "version": 1,
+                        "status": (meta.get(path) or {}).get("status", "approved"),
+                        "sentence": sentence,
+                        "category": category,
+                    }
+                )
 
     return {
         "brand": brand,

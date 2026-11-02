@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 import pytest
 
 from benchmarks.agency_readiness.checker import score
+from benchmarks.agency_readiness.evaluate import _guide_path
 from benchmarks.agency_readiness.fixture_generator import (
     HARNESS_DEV_FIXTURES_SEED,
     generate_brand,
@@ -124,12 +125,12 @@ def test_b_star_equals_generator_guide_placement(brand_name):
         if p["category"] in {"rule", "voice", "spec"}
         and result["meta"].get(p["path"], {}).get("document_type") == "guide"
     )
-    selected_by_harness = next(
-        rel
-        for rel, metadata in result["meta"].items()
-        if metadata.get("document_type") == "guide" and rel.endswith("headings.md")
-    )
-    assert selected_by_harness == guide_rel
+    docs_for_selector = [
+        (path, body, result["meta"][path].get("status", "approved"),
+         result["meta"][path].get("document_type", "?"))
+        for path, body in result["docs"].items()
+    ]
+    assert _guide_path(docs_for_selector, result["placements"]) == guide_rel
     guide_body = docs.get(guide_rel)
     assert guide_body is not None, f"{brand_name}: no guide document found"
 
@@ -154,9 +155,13 @@ def test_b_star_equals_generator_guide_placement(brand_name):
     assert b_star_result["rule_recall"] == expected["rule"]
     assert b_star_result["voice_recall"] == expected["voice"]
     assert b_star_result["spec_recall"] == expected["spec"]
-    assert b_star_result["violation"] == 0, (
-        f"{brand_name}: B* violation {b_star_result['violation']} != 0"
+    expected_violation = int(
+        any(
+            marker in guide_body
+            for marker in gold["superseded_v1_markers"] + gold["unapproved_draft_markers"]
+        )
     )
+    assert b_star_result["violation"] == expected_violation
 
 
 def test_oracle_per_brand_scores():

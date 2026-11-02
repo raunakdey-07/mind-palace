@@ -103,7 +103,7 @@ def _doc_entries(brand_dir, meta):
         rel = f"{brand_dir.name}/{fname.name}"
         status = (meta.get(rel) or {}).get("status", "approved")
         body = text.split("---", 2)[-1] if text.startswith("---\n") else text
-        tmpl = (meta.get(rel) or {}).get("template", "?")
+        tmpl = (meta.get(rel) or {}).get("document_type", "?")
         out.append((rel, body, status, tmpl))
     return out
 
@@ -118,11 +118,22 @@ async def condition_B_plus(docs, prompt):
     return prompt + "\n\n---\n\n" + truncate_words(dump)
 
 
-async def condition_B_star(docs, prompt, brand):
-    # Brand-guide document only: the guide-typed doc (headings.md).
-    guide = [
-        body for rel, body, status, tmpl in docs if tmpl == "guide" and rel.endswith("headings.md")
-    ]
+def _guide_path(docs, placements):
+    placed = {
+        p["path"]
+        for p in placements
+        if p.get("category") in {"rule", "voice", "spec"}
+        and p.get("status") == "approved"
+    }
+    return next(
+        (rel for rel, _body, _status, tmpl in docs if tmpl == "guide" and rel in placed),
+        None,
+    )
+
+
+async def condition_B_star(docs, prompt, brand, placements=()):
+    guide_path = _guide_path(docs, placements)
+    guide = [body for rel, body, _status, _tmpl in docs if rel == guide_path]
     if not guide:
         guide = [body for rel, body, status, tmpl in docs if tmpl == "guide"]
     dump = guide[0] if guide else ""
@@ -214,6 +225,7 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir) -> d
 
     meta_raw = json.loads((brand_dir / "_meta.json").read_text())
     meta = meta_raw.get("meta", meta_raw)
+    placements = meta_raw.get("placements", [])
     docs = _doc_entries(brand_dir, meta)  # (rel, body, status, template)
 
     gold = spec["brands"][brand]
@@ -320,7 +332,9 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir) -> d
                 "A": score_context(ctx_A, gold),
                 "B": _agg(b_per),
                 "B_plus": _agg(bp_per),
-                "B_star": score_context(await condition_B_star(docs, prompt, brand), gold),
+                "B_star": score_context(
+                    await condition_B_star(docs, prompt, brand, placements), gold
+                ),
                 "C": score_context(ctx_C, gold),
                 "C_plus": score_context(ctx_Cp, gold),
                 "D": score_context(ctx_D, gold),

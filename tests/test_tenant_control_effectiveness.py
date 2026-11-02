@@ -75,69 +75,97 @@ def _forget_row_level_policy(monkeypatch) -> None:
     monkeypatch.setattr(db_module, "_scope_value", lambda: "{*}", raising=True)
 
 
-#: The `009` predicate: `{*}` at face value. Restoring this is what "removing the
-#: control" means here, and it is a real body rather than a flag because the
-#: control *is* the function body.
-_TRUSTING_PREDICATE = """
-    CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64))
-    RETURNS BOOLEAN
-    LANGUAGE sql STABLE AS $$
-        SELECT CASE
-            WHEN current_setting('mindpalace.tenant_scope', true) = '{*}' THEN TRUE
-            WHEN coalesce(current_setting('mindpalace.tenant_scope', true), '') = ''
-                THEN FALSE
-            ELSE btrim(candidate::text) = ANY (string_to_array(
-                current_setting('mindpalace.tenant_scope', true), ','
-            ))
-        END
-    $$
+#: Tables protected by the `mindpalace_tenant` row-level policy. Migration `016`
+#: inlines `(SELECT mp_verified_scope_corpora())` directly in each policy, so
+#: `mindpalace_allowed_corpus` is no longer the policy control point -- disabling
+#: row-level security on these tables is what "removing the control" means now.
+_PROTECTED_TABLES = (
+    "corpora",
+    "documents",
+    "ingestion_manifest",
+    "memory_documents",
+    "memory_versions",
+    "memory_chunks",
+    "memory_claims",
+    "memory_evidence",
+    "memory_snapshots",
+    "memory_snapshot_versions",
+    "memory_snapshot_seals",
+    "memory_claim_embeddings",
+    "chunks",
+)
+
+
+#: A trusting replacement for `mp_verified_scope_corpora()`: it parses the session
+#: scope setting into corpus IDs without checking the token or enforcement flag,
+#: so any scope a session names is honoured. This is the new control point after
+#: migration 016 (the policy inlines `(SELECT mp_verified_scope_corpora())`).
+_TRUSTING_SCOPE_FUNCTION = """
+CREATE OR REPLACE FUNCTION mp_verified_scope_corpora()
+RETURNS text[]
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp AS $fn$
+    SELECT CASE
+        WHEN coalesce(current_setting('mindpalace.tenant_scope', true), '') = ''
+            THEN ARRAY[]::text[]
+        WHEN current_setting('mindpalace.tenant_scope', true) = '{*}'
+            THEN ARRAY['*']::text[]
+        ELSE coalesce(
+            (SELECT array_agg(btrim(x))
+             FROM unnest(string_to_array(
+                 current_setting('mindpalace.tenant_scope', true), ','
+             )) AS x),
+            ARRAY[]::text[]
+        )
+    END
+$fn$
 """
 
-#: The predicate as installed, captured the first time a test removes it, so the
-#: restore is exact rather than a re-typed approximation of migration `010`.
-_installed_predicate: str | None = None
+
+#: Captured once, on first use, so the autouse restore is exact rather than a
+#: re-typed approximation of migration 015's definition.
+_installed_scope_function: str | None = None
 
 
-async def _remove_every_database_control(monkeypatch) -> None:
-    """Take the row-level control off entirely, both halves of it.
+async def _replace_scope_function_with_trusting_body() -> None:
+    """Replace `mp_verified_scope_corpora()` with a trusting body.
 
-    Migration `010` means "claim `{*}`" and "believe `{*}`" are separate. This
-    removes the second, restoring the `009` predicate for the duration of one
-    test, and `monkeypatch` cannot do it because the thing being changed is
-    installed state in a database rather than a Python attribute.
+    Uses CREATE OR REPLACE so the function owner and existing grants are
+    preserved; the only thing that changes is the body. The original definition
+    is captured the first time this runs and restored by `_restore_scope_function`.
     """
+    global _installed_scope_function
     from sqlalchemy import text
 
     from api.services import authz
     from api.services.db import admin_session_scope, principal_scope
 
-    global _installed_predicate
-
     async with admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            if _installed_predicate is None:
-                _installed_predicate = (
+            if _installed_scope_function is None:
+                _installed_scope_function = (
                     await db.execute(
                         text(
-                            "SELECT prosrc FROM pg_proc WHERE proname = 'mindpalace_allowed_corpus'"
+                            "SELECT pg_get_functiondef("
+                            "'mp_verified_scope_corpora()'::regprocedure)"
                         )
                     )
                 ).scalar()
-            await db.execute(text(_TRUSTING_PREDICATE))
+            await db.execute(text(_TRUSTING_SCOPE_FUNCTION))
         await db.commit()
 
 
 @pytest.fixture(autouse=True)
-async def _restore_the_predicate():
-    """Put the real predicate back, whatever a test did to it.
+async def _restore_scope_function():
+    """Restore `mp_verified_scope_corpora()` after each test, unconditionally.
 
-    Autouse and unconditional rather than tied to the helper, because a test that
-    fails partway through after removing the control would otherwise leave every
-    later test in this file -- and the isolation suite, which shares the database
-    -- running against a predicate that trusts a session setting.
+    Autouse so that a test that fails partway through after replacing the
+    function does not leave every later test running against a trusting scope
+    check. Restoration is verified by reading the definition back and comparing
+    it to the captured original.
     """
     yield
-    if _installed_predicate is None:
+    if _installed_scope_function is None:
         return
     from sqlalchemy import text
 
@@ -146,12 +174,60 @@ async def _restore_the_predicate():
 
     async with admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(
-                text(
-                    "CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64)) "
-                    "RETURNS BOOLEAN LANGUAGE sql STABLE AS $$ " + _installed_predicate + " $$"
+            await db.execute(text(_installed_scope_function))
+            restored = (
+                await db.execute(
+                    text(
+                        "SELECT pg_get_functiondef(" "'mp_verified_scope_corpora()'::regprocedure)"
+                    )
                 )
-            )
+            ).scalar()
+        await db.commit()
+    assert (
+        restored == _installed_scope_function
+    ), "mp_verified_scope_corpora() was not restored to its original definition"
+
+
+async def _remove_every_database_control(monkeypatch) -> None:
+    """Take the row-level control off entirely.
+
+    Migration `016` inlines `(SELECT mp_verified_scope_corpora())` directly in
+    each `mindpalace_tenant` policy, so `mindpalace_allowed_corpus` is no longer
+    referenced by any policy. Disabling row-level security on every protected
+    table is what "removing the control" means now; the function itself is left
+    untouched (it still exists and is still granted).
+    """
+    from sqlalchemy import text
+
+    from api.services import authz
+    from api.services.db import admin_session_scope, principal_scope
+
+    async with admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            for table in _PROTECTED_TABLES:
+                await db.execute(text(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY"))
+        await db.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _restore_rls():
+    """Re-enable row-level security on every protected table, whatever a test did.
+
+    Autouse and unconditional rather than tied to the helper, because a test that
+    fails partway through after disabling RLS would otherwise leave every later
+    test in this file -- and the isolation suite, which shares the database --
+    running without row-level security.
+    """
+    yield
+    from sqlalchemy import text
+
+    from api.services import authz
+    from api.services.db import admin_session_scope, principal_scope
+
+    async with admin_session_scope() as db:
+        with principal_scope(authz.ADMIN_PRINCIPAL):
+            for table in _PROTECTED_TABLES:
+                await db.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
         await db.commit()
 
 
@@ -240,6 +316,52 @@ async def test_without_both_controls_the_cross_tenant_read_succeeds(world, monke
     assert BETA_PRIVATE_PRODUCT_FACT_7Q2 in response.text, (
         "the canary did not leak even with every control removed; the fixture is "
         "not proving what it claims to"
+    )
+
+
+async def test_without_scope_function_the_forgery_holds(world, monkeypatch):
+    """The scope function is the new control point: replace it with a trusting
+    body and the forgery passes through.
+
+    Migration `016` inlines `(SELECT mp_verified_scope_corpora())` directly in
+    each `mindpalace_tenant` policy, so `mp_verified_scope_corpora()` is the
+    control. This is a mutation test: first the forged request is refused with
+    the real function (404, zero rows), then the function is replaced with a
+    trusting body and the same request succeeds (200, canary leaks), proving
+    the control is load-bearing. The autouse fixture restores the original
+    definition; restoration is verified by reading the definition back.
+    """
+    _forget_application_check(monkeypatch)
+    _forget_row_level_policy(monkeypatch)
+
+    # Red first: with the real function the forged request is refused.
+    response = await world.post(
+        "/api/memory/query",
+        "alpha-creator",
+        json={"corpus": BETA_CORPORA["brand"], "query": "router mesh bands"},
+    )
+    assert response.status_code == 404, (
+        "with the real scope function the forged request should be refused; "
+        "got %d" % response.status_code
+    )
+    World.assert_no_foreign_canary(response.json())
+
+    # Mutation: replace with a trusting body.
+    await _replace_scope_function_with_trusting_body()
+
+    # Forgery now succeeds.
+    response = await world.post(
+        "/api/memory/query",
+        "alpha-creator",
+        json={"corpus": BETA_CORPORA["brand"], "query": "router mesh bands"},
+    )
+    assert response.status_code == 200, (
+        "with the scope function replaced the forged request should have been "
+        "served; the control is not proving what it claims to"
+    )
+    assert BETA_PRIVATE_PRODUCT_FACT_7Q2 in response.text, (
+        "the canary did not leak even with the scope function replaced; the "
+        "fixture is not proving what it claims to"
     )
 
 

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import random
 import sys
 from datetime import datetime, timezone
@@ -39,8 +40,9 @@ from api.services.retrieval import RetrievalService  # noqa: E402
 from api.services.embedder import Embedder  # noqa: E402
 from benchmarks.agency_readiness.checker import score as score_context  # noqa: E402
 from benchmarks.agency_readiness.fixture_generator import (  # noqa: E402
-    SEALED_SEED,
-    SEALED_FIXTURE_DIR,
+    HARNESS_DEV_FIXTURES_SEED,
+    HARNESS_DEV_FIXTURE_DIR,
+    write_fixtures,
 )
 
 SPEC_PATH = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
@@ -52,6 +54,12 @@ HISTORY_ALLOWED = {"NS-05", "VE-03", "HL-04", "VE-06"}
 # Orderings for B/B+: neutral-name alphabetical, reverse, 3 seeded shuffles.
 ORDER_SEEDS = [0, 1, 2, 3, 4]
 MAX_GOLD_FRACTION_FIRST_BUDGET = 0.50
+
+
+def append_final_run(log: Path, seed: int, sha: str, now: datetime) -> None:
+    log.open("a", encoding="utf-8").write(
+        f"{now.isoformat()} {seed} {sha} FINAL A B B_plus B_star C C_plus D\n"
+    )
 
 
 def load_spec():
@@ -95,7 +103,7 @@ def _doc_entries(brand_dir, meta):
         rel = f"{brand_dir.name}/{fname.name}"
         status = (meta.get(rel) or {}).get("status", "approved")
         body = text.split("---", 2)[-1] if text.startswith("---\n") else text
-        tmpl = (meta.get(rel) or {}).get("template", "?")
+        tmpl = (meta.get(rel) or {}).get("document_type", "?")
         out.append((rel, body, status, tmpl))
     return out
 
@@ -110,11 +118,22 @@ async def condition_B_plus(docs, prompt):
     return prompt + "\n\n---\n\n" + truncate_words(dump)
 
 
-async def condition_B_star(docs, prompt, brand):
-    # Brand-guide document only: the guide-typed doc (headings.md).
-    guide = [
-        body for rel, body, status, tmpl in docs if tmpl == "guide" and rel.endswith("headings.md")
-    ]
+def _guide_path(docs, placements):
+    placed = {
+        p["path"]
+        for p in placements
+        if p.get("category") in {"rule", "voice", "spec"}
+        and p.get("status") == "approved"
+    }
+    return next(
+        (rel for rel, _body, _status, tmpl in docs if tmpl == "guide" and rel in placed),
+        None,
+    )
+
+
+async def condition_B_star(docs, prompt, brand, placements=()):
+    guide_path = _guide_path(docs, placements)
+    guide = [body for rel, body, _status, _tmpl in docs if rel == guide_path]
     if not guide:
         guide = [body for rel, body, status, tmpl in docs if tmpl == "guide"]
     dump = guide[0] if guide else ""
@@ -206,6 +225,7 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir) -> d
 
     meta_raw = json.loads((brand_dir / "_meta.json").read_text())
     meta = meta_raw.get("meta", meta_raw)
+    placements = meta_raw.get("placements", [])
     docs = _doc_entries(brand_dir, meta)  # (rel, body, status, template)
 
     gold = spec["brands"][brand]
@@ -312,7 +332,9 @@ async def run_brand(brand: str, spec: dict, prompts: list[dict], brand_dir) -> d
                 "A": score_context(ctx_A, gold),
                 "B": _agg(b_per),
                 "B_plus": _agg(bp_per),
-                "B_star": score_context(await condition_B_star(docs, prompt, brand), gold),
+                "B_star": score_context(
+                    await condition_B_star(docs, prompt, brand, placements), gold
+                ),
                 "C": score_context(ctx_C, gold),
                 "C_plus": score_context(ctx_Cp, gold),
                 "D": score_context(ctx_D, gold),
@@ -379,18 +401,27 @@ def verify_embedder():
 
 
 def main():
+    final = "--final" in sys.argv[1:]
+    final_seed = os.environ.get("MP_FINAL_SEED")
+    if final and not final_seed:
+        print("error: --final requires MP_FINAL_SEED", file=sys.stderr)
+        return 2
     spec = load_spec()
     embedder_identity = verify_embedder()
     print("embedder_identity:", json.dumps(embedder_identity))
-    # Regenerate sealed fixtures with the sealed seed (idempotent, same bytes).
-    from benchmarks.agency_readiness.fixture_generator import write_fixtures
-
-    write_fixtures(spec, SEALED_SEED, SEALED_FIXTURE_DIR)
+    seed = int(final_seed) if final else HARNESS_DEV_FIXTURES_SEED
+    # Regenerate harness_dev fixtures with the harness_dev seed (idempotent, same bytes).
+    fixture_dir = (
+        ROOT / "benchmarks" / "agency_readiness" / "final_fixtures"
+        if final
+        else HARNESS_DEV_FIXTURE_DIR
+    )
+    write_fixtures(spec, seed, fixture_dir)
 
     all_results = {}
     for brand in spec["brands"]:
         prompts = [p for p in spec["prompts"] if p["brand"] == brand]
-        brand_dir = SEALED_FIXTURE_DIR / brand
+        brand_dir = fixture_dir / brand
         brand_res = asyncio.run(run_brand(brand, spec, prompts, brand_dir))
         all_results[brand] = brand_res
 
@@ -436,8 +467,8 @@ def main():
         "spec_version": spec["version"],
         "token_budget": BUDGET,
         "tokenizer": TOKENIZER,
-        "seed": SEALED_SEED,
-        "sealed": True,
+        "seed": seed,
+        "run_kind": "final" if final else "harness_dev",
         "embedder_identity": embedder_identity,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "conditions": conditions,
@@ -448,8 +479,15 @@ def main():
     }
     out_path = ROOT / "benchmarks" / "agency_readiness" / "results_baseline.json"
     out_path.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    if final:
+        sha = __import__("subprocess").check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
+        ).strip()
+        log = ROOT / "benchmarks" / "agency_readiness" / "sealed_runs.log"
+        append_final_run(log, seed, sha, datetime.now(timezone.utc))
     print("wrote", out_path)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

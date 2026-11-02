@@ -113,11 +113,16 @@ helm/
 # The first of the three first-hour documents: README -> quickstart -> authoring.
 # Commands only, no prose, and it runs.
 !/docs/quickstart.md
+# CI timing audit (Stage 3): measured per-job and per-step timing, cache hit
+# rates, and recomputed CI options. Tracked so the numbers are reproducible.
+!/docs/ci-audit.md
 # The worked example the README Quickstart ingests. It is a plain ADR with no
 # frontmatter and no `claims:` block, which is the thing being demonstrated, so
 # it has to be a real file on a clean clone.
 !/docs/adr/
 !/docs/adr/**
+!/docs/integration/
+!/docs/integration/**
 # Registering the agent. Three clients, three config shapes, and the README points
 # here for them, so the file has to survive a clone or the link 404s on a fresh
 # checkout. tests/test_mcp_client_docs.py parses the JSON in it and checks every
@@ -205,3 +210,4 @@ monitoring/
 # purged from this branch. The entry stays so a stale local directory left by an
 # earlier checkout does not show up as untracked.
 .retrieval_lab_cache/
+benchmarks/agency_readiness/final_fixtures/

@@ -1,7 +1,7 @@
-"""Deterministic fixture generator for the M018 sealed benchmark.
+"""Deterministic fixture generator for the M018 harness dev fixtures.
 
 Spreads each brand's gold across multiple documents, uses neutral-volume
-filler, and produces separate dev and sealed fixture sets. No Mind Palace
+filler, and produces separate dev and harness_dev fixture sets. No Mind Palace
 imports; no tuning to Mind Palace vocabulary.
 
 Layout per brand (every content doc 300-800 words, carries at most one
@@ -27,15 +27,16 @@ doc, v1/v2 are represented as separate paths (t2_policy_v1.md / v2.md).
 from __future__ import annotations
 
 import json
+import os
 import random
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SEALED_SEED = 20261028
+HARNESS_DEV_FIXTURES_SEED = 20261028
 DEV_SET_SEED = 777
 
 DEV_FIXTURE_DIR = ROOT / "benchmarks" / "agency_readiness" / "dev_fixtures"
-SEALED_FIXTURE_DIR = ROOT / "benchmarks" / "agency_readiness" / "sealed_fixtures"
+HARNESS_DEV_FIXTURE_DIR = ROOT / "benchmarks" / "agency_readiness" / "harness_dev_fixtures"
 
 # Neutral filler sentences (contain none of the gold strings).
 FILLER_SENTENCES = [
@@ -329,12 +330,38 @@ def generate_brand(brand: str, spec: dict, seed: int) -> dict:
         meta[path] = {"status": "approved", "document_type": "note"}
         template_of[path] = "filler"
 
+    placements = []
+    gold_by_category = {
+        "rule": prohibitions,
+        "voice": voice,
+        "spec": specs_list,
+    }
+    for category, gold_items in gold_by_category.items():
+        for item in gold_items:
+            for path, body in docs.items():
+                if item.casefold() not in body.casefold():
+                    continue
+                sentence = next(
+                    (line.strip() for line in body.splitlines() if item.casefold() in line.casefold()),
+                    item,
+                )
+                placements.append(
+                    {
+                        "path": path,
+                        "version": 1,
+                        "status": (meta.get(path) or {}).get("status", "approved"),
+                        "sentence": sentence,
+                        "category": category,
+                    }
+                )
+
     return {
         "brand": brand,
         "seed": seed,
         "docs": docs,
         "meta": meta,
         "template_of": template_of,
+        "placements": placements,
         "gold": {
             "standing_prohibitions": prohibitions,
             "required_voice_descriptors": voice,
@@ -359,7 +386,14 @@ def write_fixtures(spec: dict, seed: int, out_dir: Path) -> dict:
             fname = path.split("/", 1)[1]
             (bdir / fname).write_text(content, encoding="utf-8")
         (bdir / "_meta.json").write_text(
-            json.dumps({"meta": result["meta"], "template_of": result["template_of"]}, indent=2),
+            json.dumps(
+                {
+                    "meta": result["meta"],
+                    "template_of": result["template_of"],
+                    "placements": result["placements"],
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
         total_tokens = sum(_tokens(c) for c in result["docs"].values())
@@ -380,6 +414,6 @@ if __name__ == "__main__":
     spec_path = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
     spec = json.loads(spec_path.read_text())
     dev_summary = write_fixtures(spec, DEV_SET_SEED, DEV_FIXTURE_DIR)
-    sealed_summary = write_fixtures(spec, SEALED_SEED, SEALED_FIXTURE_DIR)
+    harness_dev_summary = write_fixtures(spec, HARNESS_DEV_FIXTURES_SEED, HARNESS_DEV_FIXTURE_DIR)
     print("dev_fixtures:", json.dumps(dev_summary, indent=2))
-    print("sealed_fixtures:", json.dumps(sealed_summary, indent=2))
+    print("harness_dev_fixtures:", json.dumps(harness_dev_summary, indent=2))

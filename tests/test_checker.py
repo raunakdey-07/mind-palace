@@ -14,16 +14,34 @@ def test_present_mid_sentence_cut():
 
 
 def test_score_all_rules():
-    gold = {"standing_prohibitions": ["curated"], "required_voice_descriptors": [], "approved_specs": [], "superseded_v1_markers": [], "unapproved_draft_markers": []}
+    gold = {
+        "standing_prohibitions": ["curated"],
+        "required_voice_descriptors": [],
+        "approved_specs": [],
+        "superseded_v1_markers": [],
+        "unapproved_draft_markers": [],
+    }
     ctx = "Do not use the word curated."
     assert score(ctx, gold)["rule_recall"] == 1.0
 
 
 def test_score_empty():
-    gold = {"standing_prohibitions": ["curated"], "required_voice_descriptors": [], "approved_specs": [], "superseded_v1_markers": [], "unapproved_draft_markers": []}
+    gold = {
+        "standing_prohibitions": ["curated"],
+        "required_voice_descriptors": [],
+        "approved_specs": [],
+        "superseded_v1_markers": [],
+        "unapproved_draft_markers": [],
+    }
     assert score("", gold)["rule_recall"] == 0.0
 
 
 def test_score_violation():
-    gold = {"standing_prohibitions": [], "required_voice_descriptors": [], "approved_specs": [], "superseded_v1_markers": ["enthusiastic playful tone"], "unapproved_draft_markers": []}
+    gold = {
+        "standing_prohibitions": [],
+        "required_voice_descriptors": [],
+        "approved_specs": [],
+        "superseded_v1_markers": ["enthusiastic playful tone"],
+        "unapproved_draft_markers": [],
+    }
     assert score("enthusiastic playful tone", gold)["violation"] == 1

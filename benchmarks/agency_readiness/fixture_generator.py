@@ -342,7 +342,8 @@ def generate_brand(brand: str, spec: dict, seed: int) -> dict:
                     placements.append(
                         {
                             "path": path,
-                            "version": (meta.get(path) or {}).get("status", "approved"),
+                            "version": 1,
+                            "status": (meta.get(path) or {}).get("status", "approved"),
                             "sentence": sentence,
                             "category": category,
                         }

@@ -40,7 +40,7 @@ def _generated(brand_name):
 
 
 def _oracle_context(result: dict) -> str:
-    return "\n".join(p["sentence"] for p in result["placements"] if p["version"] == "approved")
+    return "\n".join(p["sentence"] for p in result["placements"] if p["status"] == "approved")
 
 
 def _stale_oracle_context(result: dict) -> str:

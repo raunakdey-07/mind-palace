@@ -37,14 +37,22 @@ def main() -> int:
         if line.startswith("INVALIDATED") and "reason:" not in line:
             print(f"invalidated entry missing reason: {line}")
             return 1
+        parts = line.split()
+        offset = 1 if parts and parts[0] == "INVALIDATED" else 0
+        if len(parts) < offset + 4 or not parts[offset + 1].isdigit():
+            print(f"sealed_runs.log entry is missing a numeric seed: {line}")
+            return 1
 
-    # Count valid runs per seed (git SHA)
+    # Every run is timestamp, seed, git SHA, then its condition set.
     per_seed: dict[str, list[str]] = defaultdict(list)
     for line in valid:
         parts = line.split()
-        if len(parts) >= 2:
-            seed = parts[1]
-            per_seed[seed].append(line)
+        offset = 1 if parts and parts[0] == "INVALIDATED" else 0
+        if len(parts) < offset + 4 or not parts[offset + 1].isdigit():
+            print(f"sealed_runs.log entry is missing a numeric seed: {line}")
+            return 1
+        seed = parts[offset + 1]
+        per_seed[seed].append(line)
 
     # Check max 2 valid runs per seed
     over_limit = []

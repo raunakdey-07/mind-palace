@@ -205,3 +205,4 @@ monitoring/
 # purged from this branch. The entry stays so a stale local directory left by an
 # earlier checkout does not show up as untracked.
 .retrieval_lab_cache/
+benchmarks/agency_readiness/final_fixtures/

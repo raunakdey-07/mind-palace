@@ -681,6 +681,7 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
                 "evidence": _limit_quote(raw),
                 "extraction_mode": "deterministic",
                 "provenance_state": "direct_claim",
+                "info_state": detect_info_state({}, pending_path),
             }
         )
 
@@ -772,13 +773,22 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
                 paragraphs.append(" ".join(current))
                 current = []
             continue
-        if line.lstrip().startswith("#") or line.lstrip().startswith("|") or line.lstrip().startswith(">"):
+        if (
+            line.lstrip().startswith("#")
+            or line.lstrip().startswith("|")
+            or line.lstrip().startswith(">")
+        ):
             if current:
                 paragraphs.append(" ".join(current))
                 current = []
             continue
         stripped = line.strip()
-        if stripped.startswith("-") or stripped.startswith("*") or stripped.startswith("+") or re.match(r"^\d", stripped):
+        if (
+            stripped.startswith("-")
+            or stripped.startswith("*")
+            or stripped.startswith("+")
+            or re.match(r"^\d", stripped)
+        ):
             if current:
                 paragraphs.append(" ".join(current))
                 current = []
@@ -815,20 +825,30 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
                 "evidence": _limit_quote(sent),
                 "extraction_mode": "prose",
                 "provenance_state": "direct_claim",
+                "info_state": detect_info_state({}, body),
             }
         )
 
 
-_STATE_RANK = {"rejected": 0, "superseded": 1, "draft": 2,
-                "historical_observation": 3, "needs_review": 4, "approved": 5}
+_STATE_RANK = {
+    "rejected": 0,
+    "superseded": 1,
+    "draft": 2,
+    "historical_observation": 3,
+    "needs_review": 4,
+    "approved": 5,
+}
 
 _STATE_VOCAB = {
     "rejected": {"rejected", "rejected directions", "abandoned ideas", "disallowed examples"},
     "draft": {"draft", "drafts", "brainstorming", "brainstorm", "unapproved proposals"},
     "superseded": {"superseded", "deprecated", "archived policy"},
     "historical_observation": {
-        "performance report", "past campaign results", "campaign outcomes",
-        "historical observations", "lessons learned",
+        "performance report",
+        "past campaign results",
+        "campaign outcomes",
+        "historical observations",
+        "lessons learned",
     },
 }
 

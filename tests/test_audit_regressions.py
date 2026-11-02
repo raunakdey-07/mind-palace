@@ -12,7 +12,7 @@ from api.services.markdown_claims import detect_info_state, extract
 
 
 def test_approved_prohibition_curated():
-    body = "## Approved\n\nDo not use the words \"curated\" or \"bespoke.\"\n"
+    body = '## Approved\n\nDo not use the words "curated" or "bespoke."\n'
     meta = {"status": "approved"}
     assert detect_info_state(meta, body) == "approved"
     chunks = [{"text": body, "order_index": 0}]
@@ -55,35 +55,39 @@ def test_v2_top_of_list_insertion():
                 svc = IngestionService(require_embeddings=False)
 
                 v1_body = (
-                "# Rules\n\n"
-                "- Rule one: the primary datastore is PostgreSQL.\n"
-                "- Rule two: backups run nightly.\n"
-                "- Rule three: access is role-based.\n"
-            )
+                    "# Rules\n\n"
+                    "- Rule one: the primary datastore is PostgreSQL.\n"
+                    "- Rule two: backups run nightly.\n"
+                    "- Rule three: access is role-based.\n"
+                )
                 await svc.ingest_file(
-                    v1_body, path="audit-v2/rules.md", corpus_id=corpus_id,
+                    v1_body,
+                    path="audit-v2/rules.md",
+                    corpus_id=corpus_id,
                 )
                 await db.commit()
 
                 v2_body = (
-                "# Rules\n\n"
-                "- Inserted rule at position one: never log secrets.\n"
-                "- Rule one: the primary datastore is PostgreSQL.\n"
-                "- Rule two: backups run nightly.\n"
-                "- Rule three: access is role-based.\n"
-            )
+                    "# Rules\n\n"
+                    "- Inserted rule at position one: never log secrets.\n"
+                    "- Rule one: the primary datastore is PostgreSQL.\n"
+                    "- Rule two: backups run nightly.\n"
+                    "- Rule three: access is role-based.\n"
+                )
                 await svc.ingest_file(
-                    v2_body, path="audit-v2/rules.md", corpus_id=corpus_id,
+                    v2_body,
+                    path="audit-v2/rules.md",
+                    corpus_id=corpus_id,
                 )
                 await db.commit()
 
                 async def version_ids():
                     r = await db.execute(
-                    sa_text(
-                        "SELECT id FROM memory_versions WHERE corpus_id = :c "
-                        "ORDER BY version_number"
-                    ),
-                    {"c": corpus_id},
+                        sa_text(
+                            "SELECT id FROM memory_versions WHERE corpus_id = :c "
+                            "ORDER BY version_number"
+                        ),
+                        {"c": corpus_id},
                     )
                     return [row[0] for row in r.fetchall()]
 
@@ -93,36 +97,36 @@ def test_v2_top_of_list_insertion():
 
                 async def claim_rows(version_id):
                     r = await db.execute(
-                    sa_text(
-                        "SELECT key, claim, supersedes_id FROM memory_claims "
-                        "WHERE corpus_id = :c AND version_id = :v ORDER BY key"
-                    ),
-                    {"c": corpus_id, "v": version_id},
+                        sa_text(
+                            "SELECT key, claim, supersedes_id FROM memory_claims "
+                            "WHERE corpus_id = :c AND version_id = :v ORDER BY key"
+                        ),
+                        {"c": corpus_id, "v": version_id},
                     )
                     return r.fetchall()
 
                 v1_by_content = {
-                claim: (key, sid) for key, claim, sid in await claim_rows(v1_version_id)
-            }
+                    claim: (key, sid) for key, claim, sid in await claim_rows(v1_version_id)
+                }
                 v2_by_content = {
-                claim: (key, sid) for key, claim, sid in await claim_rows(v2_version_id)
-            }
+                    claim: (key, sid) for key, claim, sid in await claim_rows(v2_version_id)
+                }
 
             # The unchanged rules (one/two/three) must not gain a supersedes_id in v2.
-                for content in ("Rule one", "Rule two", "Rule three"):
+            for content in ("Rule one", "Rule two", "Rule three"):
                 v1_claim = next(c for c in v1_by_content if c.startswith(content))
                 v2_claim = next(c for c in v2_by_content if c.startswith(content))
                 _, v1_sid = v1_by_content[v1_claim]
                 _, v2_sid = v2_by_content[v2_claim]
-                    assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"
+                assert v1_sid == v2_sid, f"{content!r} gained a supersession edge on v2 insert"
 
-            # Count supersession edges in v2 that point at unchanged rules: must be zero.
+                # Count supersession edges in v2 that point at unchanged rules: must be zero.
                 r = await db.execute(
-                sa_text(
-                    "SELECT count(*) FROM memory_claims "
-                    "WHERE corpus_id = :c AND version_id = :v AND supersedes_id IS NOT NULL"
-                ),
-                {"c": corpus_id, "v": v2_version_id},
+                    sa_text(
+                        "SELECT count(*) FROM memory_claims "
+                        "WHERE corpus_id = :c AND version_id = :v AND supersedes_id IS NOT NULL"
+                    ),
+                    {"c": corpus_id, "v": v2_version_id},
                 )
                 assert r.scalar() == 0
 
@@ -130,24 +134,30 @@ def test_v2_top_of_list_insertion():
 
 
 def test_hard_wrapped_prose():
-    para = ("A machine that will not take a model at all. The default install is 216 MB and a\n"
-            "cold recall is about 1.4 s, so this is a narrower case than it was at v0.9.1.")
+    para = (
+        "A machine that will not take a model at all. The default install is 216 MB and a\n"
+        "cold recall is about 1.4 s, so this is a narrower case than it was at v0.9.1."
+    )
     body = para + "\n"
     chunks = [{"text": para.replace("\n", " "), "order_index": 0}]
     claims, _ = extract(body, chunks)
     # Hard-wrapped lines join into one paragraph; each sentence becomes one
     # intact claim. "216 MB" must live in a single complete claim, not split.
-    full_sentence = ("The default install is 216 MB and a cold recall is about 1.4 s, "
-                     "so this is a narrower case than it was at v0.9.1.")
+    full_sentence = (
+        "The default install is 216 MB and a cold recall is about 1.4 s, "
+        "so this is a narrower case than it was at v0.9.1."
+    )
     intact = [c for c in claims if "216 MB" in c["claim"]]
     assert len(intact) == 1, f"expected exactly one claim holding '216 MB', got {len(intact)}"
     assert full_sentence in intact[0]["claim"], intact[0]["claim"]
 
 
 def test_mixed_bullet_prose_table():
-    body = ("## Section\n\n- bullet one is here for testing\n\n"
-            "This is a prose sentence that must be extracted too.\n\n"
-            "| a | b |\n|---|---|\n| 1 | 2 |\n")
+    body = (
+        "## Section\n\n- bullet one is here for testing\n\n"
+        "This is a prose sentence that must be extracted too.\n\n"
+        "| a | b |\n|---|---|\n| 1 | 2 |\n"
+    )
     chunks = [{"text": body, "order_index": 0}]
     claims, _ = extract(body, chunks)
     modes = {c.get("extraction_mode") for c in claims}

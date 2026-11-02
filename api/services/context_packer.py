@@ -687,7 +687,9 @@ def classify_memory_role(claim: str, heading: str = "") -> str:
     """Deterministic semantic-role classification for a memory claim."""
     low = (claim or "").lower()
     h = (heading or "").lower()
-    if "voice" in low and not any(
+    if _re.search(
+        r"\b(?:our|the)\s+(?:brand\s+)?(?:voice|tone)\s+(?:is|should be)\b", low
+    ) and not any(
         _re.search(r"\b" + k + r"\b", low)
         for k in ("must", "never", "avoid", "prohibited", "should", "always", "cannot", "do not")
     ):

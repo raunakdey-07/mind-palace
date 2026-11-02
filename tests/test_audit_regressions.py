@@ -11,6 +11,23 @@ from api.services.context_packer import pack_context
 from api.services.markdown_claims import detect_info_state, extract
 
 
+def test_voice_role_uses_descriptive_forms_only():
+    from api.services.context_packer import classify_memory_role
+
+    for claim in (
+        "Voice calls are billed monthly.",
+        "Voice recognition is enabled.",
+        "Voicemail is transcribed automatically.",
+    ):
+        assert classify_memory_role(claim) != "example"
+    for claim in (
+        "Our voice is warm and direct.",
+        "The brand voice is concise and friendly.",
+        "Our tone is practical and clear.",
+    ):
+        assert classify_memory_role(claim) == "example"
+
+
 def test_approved_prohibition_curated():
     body = '## Approved\n\nDo not use the words "curated" or "bespoke."\n'
     meta = {"status": "approved"}

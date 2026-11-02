@@ -333,6 +333,25 @@ Permissions are checked against the *caller* in `require_permission`, and the
 corpora are then resolved under that same caller — so a `principal_admin` can
 hand out only the corpora it already reaches.
 
+## Corpus creation over HTTP (server mode)
+
+In server mode, corpora are created by the operator with `mindpalace corpus create`
+(which runs as the maintenance/unrestricted identity). `POST /api/corpora` is not an
+operator path for a brand-new corpus:
+
+* Any authenticated credential: `403` `forbidden`. The service layer raises
+  `AuthorizationError` before any INSERT
+  (`api/services/corpora.py::create_corpus` checks `principal.unrestricted`, which
+  is false for every credential), so no credential can create a corpus over HTTP.
+  Corpora are created by the operator with `mindpalace corpus create`.
+
+The 403 body is `{"code": "forbidden", "message": "Creating a corpus over HTTP
+is not permitted for this credential. Corpora are created by the operator with
+`mindpalace corpus create`."}`. It is returned by the service-layer authorization
+check, before any INSERT, for every authenticated credential. The route's
+42501 ProgrammingError handler (`api/routers/corpora.py`) only matters for an
+unrestricted principal running as the runtime role (off auth mode).
+
 ## Threat model
 
 **The attacker controls:** an HTTP client, an MCP tool caller, and anything they
@@ -1115,11 +1134,29 @@ SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
 Safe order: update the DB row first, then roll the env var, expecting a brief
 outage. Use `--out FILE` (mode 0600) to avoid terminal history.
 
+### Server-profile refusal on mismatch (v0.10.0)
 
-## Default behaviour of the env var (M018 fix)
+A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) refuses to start
+when scope-token enforcement is on and the secret the process would send does
+not verify against the database. The startup refusal pre-existed on main; this
+release adds the readiness check, the rotation-order text in refusal messages,
+and explicit fail-closed behaviour when `mp_scope_enforcement_status` is
+unavailable (old schema or unreachable database). The refusal names the cause
+and the safe rotation order, and never prints any secret:
 
-`MIND_PALACE_ENFORCE_SCOPE_TOKEN` defaults to `off` when unset: an unset value is
-treated as `off` (enforcement off), which requires `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1`
-to proceed in the `server` profile. This matches "enforcement defaults to off".
-To enable enforcement, run `SELECT mp_set_scope_token_enforcement(true)` as
-`mindpalace_owner` and set `MIND_PALACE_SCOPE_SECRET` to match the DB row.
+```
+refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the database row.
+Rotate in this order: (1) set the new secret in the database with
+`mindpalace secret rotate --out FILE` as mindpalace_owner,
+(2) update MIND_PALACE_SCOPE_SECRET in the service environment to match,
+(3) restart the service. Expect a brief outage.
+```
+
+The same check runs on `/health/ready`: a mismatch or an unavailable
+`mp_scope_enforcement_status` probe reports `not_ready` with
+`checks.scope_token = "mismatch"`. Enforcement off is not a mismatch — the
+server still refuses to start enforcement-off unless
+`MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, a pre-existing guard.
+
+Local deployments (`MIND_PALACE_DEPLOYMENT=local`, the documented five-minute
+path) are exempt from all of this: no refusal, no readiness impact.

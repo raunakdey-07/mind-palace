@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.schemas import (
@@ -38,6 +38,23 @@ async def create_corpus(request: CorpusCreate, db: DbSession = None) -> CorpusRe
         raise HTTPException(status_code=409 if "exists" in str(e) else 422, detail=str(e))
     except OperationalError as e:
         raise HTTPException(status_code=503, detail="Database unavailable") from e
+    except ProgrammingError as e:
+        # Row-level security violations (42501) mean the principal is not
+        # permitted to create a corpus. Return 403 instead of leaking a 500.
+        # Other ProgrammingErrors (e.g. undefined table) propagate as 500.
+        if getattr(e.orig, "sqlstate", None) == "42501":
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "forbidden",
+                    "message": (
+                        "Creating a corpus over HTTP is not permitted for this "
+                        "credential. Corpora are created by the operator with "
+                        "`mindpalace corpus create`."
+                    ),
+                },
+            ) from e
+        raise
     return CorpusResponse(**corpus, document_count=0)
 
 

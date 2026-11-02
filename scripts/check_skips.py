@@ -62,38 +62,6 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "MIND_PALACE_TEST_BUILD_WHEEL",
         "builds a wheel, which takes minutes; CI builds one in the wheel job",
     ),
-    "test_approved_prohibition_curated": (
-        "MIND_PALACE_EXTRACTION_STATE_PROHIBITION_STATE",
-        "prohibition under Approved heading misclassified as rejected",
-    ),
-    "test_approved_prose_plain_language": (
-        "MIND_PALACE_EXTRACTION_STATE_PROSE_DRAFT",
-        "plain declarative prose misclassified as draft",
-    ),
-    "test_descriptive_mustard_yellow": (
-        "MIND_PALACE_EXTRACTION_STATE_DESCRIPTIVE_FACT",
-        "descriptive colour text misclassified as rule",
-    ),
-    "test_hard_wrapped_prose": (
-        "MIND_PALACE_EXTRACTION_STATE_HARD_WRAPPED_PROSE",
-        "hard-wrapped paragraph split into multiple claims",
-    ),
-    "test_mixed_bullet_prose_table": (
-        "MIND_PALACE_EXTRACTION_STATE_MIXED_BULLET_PROSE_TABLE",
-        "prose between bullets and tables not extracted",
-    ),
-    "test_descriptive_voice_no_modal": (
-        "MIND_PALACE_EXTRACTION_STATE_VOICE_NOT_EXAMPLE",
-        "voice statement classified as fact not example",
-    ),
-    "test_unapproved_september_brainstorm": (
-        "MIND_PALACE_EXTRACTION_STATE_SEPTEMBER_WITHHELD",
-        "draft claims not withheld from pack, no withheld_counts",
-    ),
-    "test_v2_top_of_list_insertion": (
-        "MIND_PALACE_EXTRACTION_STATE_V2_SUPERSESSION_EDGES",
-        "v2 top-of-list insertion creates spurious supersession edges",
-    ),
 }
 
 #: Skips that are correct only where `sentence-transformers` is absent, which is

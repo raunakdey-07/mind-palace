@@ -100,14 +100,6 @@ def test_the_two_opt_in_skips_are_the_whole_allowlist():
     assert set(module.ALLOWLIST) == {
         "test_migrations_apply_downgrade_and_reapply",
         "test_a_built_wheel_contains_every_declared_module",
-        "test_approved_prohibition_curated",
-        "test_approved_prose_plain_language",
-        "test_descriptive_mustard_yellow",
-        "test_hard_wrapped_prose",
-        "test_mixed_bullet_prose_table",
-        "test_descriptive_voice_no_modal",
-        "test_unapproved_september_brainstorm",
-        "test_v2_top_of_list_insertion",
     }
     for name, (variable, why) in module.ALLOWLIST.items():
         assert variable.startswith("MIND_PALACE_"), name

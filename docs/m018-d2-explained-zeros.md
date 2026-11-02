@@ -290,6 +290,34 @@ The generator marks both `headings.md` and `mixed.md` as `document_type: guide`.
 
 Retrieval uses chunk size 512 words with overlap 64 and top-k 50. C and C+ use the same retrieved top-10 ranking; C+ applies the current-approved document filter while packing. `*` marks a chunk containing a gold item.
 
+## Northstar shuffle-1 score reconciliation
+
+The `Scores` line above is **rule_recall**, not total recall. It is the
+checker’s `rule_recall` for each prompt, averaged across the eight northstar
+prompts; it does not average voice or spec recall. Therefore the score is
+`0.000000` even though this window contains voice and spec gold.
+
+The checker decisions for the gold items in that 1200-word window are:
+
+```text
+rule curated                         inside=False checker.present=False
+rule carbon-neutral                  inside=False checker.present=False
+rule 100% eco-friendly               inside=False checker.present=False
+rule revolutionary                  inside=False checker.present=False
+rule guilt-free                     inside=False checker.present=False
+voice warm, a little dry, and confident inside=True  checker.present=True
+voice plain language                inside=False checker.present=False
+spec 80% GRS-certified recycled polyester inside=True checker.present=True
+spec first-time buyers aged 20-30   inside=True  checker.present=True
+```
+
+For all eight prompts, the checker returned
+`rule_recall=0.0, voice_recall=0.5, spec_recall=1.0, violation=1,
+stale_hits=1`. The checker accepts both present strings after normalization:
+`warm, a little dry, and confident` -> `warm a little dry and confident`, and
+`80% GRS-certified recycled polyester` -> `80% grs certified recycled
+polyester`. No checker bug was found, so no checker behavior was changed.
+
 ```text
 EMBEDDER IDENTITY: {"class": "Embedder", "backend": "onnx", "model_name": "all-MiniLM-L6-v2", "dimension": 384}
 onnxruntime available: True

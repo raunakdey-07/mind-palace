@@ -4,7 +4,6 @@ import importlib.util
 from pathlib import Path
 import sys
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -48,7 +47,9 @@ def test_final_log_line_is_shaped(tmp_path):
         ROOT / "benchmarks/agency_readiness/evaluate.py",
     )
     log = tmp_path / "sealed_runs.log"
-    evaluate.append_final_run(log, 7, "abc123", evaluate.datetime(2026, 1, 1, tzinfo=evaluate.timezone.utc))
+    evaluate.append_final_run(
+        log, 7, "abc123", evaluate.datetime(2026, 1, 1, tzinfo=evaluate.timezone.utc)
+    )
     assert log.read_text().split() == [
         "2026-01-01T00:00:00+00:00",
         "7",
@@ -89,6 +90,7 @@ def test_final_writes_only_final_fixtures(tmp_path, monkeypatch):
         evaluate, "load_spec", lambda: {"version": "test", "brands": {}, "prompts": []}
     )
     monkeypatch.setattr(evaluate, "verify_embedder", lambda: {"backend": "fake"})
+
     def fake_write_fixtures(spec, seed, path):
         captured.append((spec, seed, path))
         path.mkdir(parents=True)

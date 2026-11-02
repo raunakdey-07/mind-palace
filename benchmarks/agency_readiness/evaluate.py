@@ -56,6 +56,12 @@ ORDER_SEEDS = [0, 1, 2, 3, 4]
 MAX_GOLD_FRACTION_FIRST_BUDGET = 0.50
 
 
+def append_final_run(log: Path, seed: int, sha: str, now: datetime) -> None:
+    log.open("a", encoding="utf-8").write(
+        f"{now.isoformat()} {seed} {sha} FINAL A B B_plus B_star C C_plus D\n"
+    )
+
+
 def load_spec():
     return json.loads(SPEC_PATH.read_text())
 
@@ -464,10 +470,7 @@ def main():
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
         ).strip()
         log = ROOT / "benchmarks" / "agency_readiness" / "sealed_runs.log"
-        log.open("a", encoding="utf-8").write(
-            f"{datetime.now(timezone.utc).isoformat()} {seed} {sha} "
-            "A B B_plus B_star C C_plus D\n"
-        )
+        append_final_run(log, seed, sha, datetime.now(timezone.utc))
     print("wrote", out_path)
     return 0
 

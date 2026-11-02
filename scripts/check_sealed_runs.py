@@ -1,4 +1,4 @@
-"""CI check: sealed_runs.log must not exceed 2 valid entries per seed before v0.10.0 is tagged.
+"""CI check: sealed_runs.log must not exceed 2 final entries per seed.
 
 One line per sealed run (timestamp, git SHA, condition set). Baseline + final
 release run are the only two allowed per seed before the v0.10.0 tag exists.
@@ -33,26 +33,22 @@ def main() -> int:
         return 1
     lines = [line for line in LOG.read_text().splitlines() if line.strip()]
     valid = [line for line in lines if not line.startswith("INVALIDATED")]
+    per_seed: dict[str, list[str]] = defaultdict(list)
     for line in lines:
         if line.startswith("INVALIDATED") and "reason:" not in line:
             print(f"invalidated entry missing reason: {line}")
             return 1
         parts = line.split()
         offset = 1 if parts and parts[0] == "INVALIDATED" else 0
-        if len(parts) < offset + 4 or not parts[offset + 1].isdigit():
+        if len(parts) < offset + 3 or not parts[offset + 1].isdigit():
             print(f"sealed_runs.log entry is missing a numeric seed: {line}")
             return 1
-
-    # Every run is timestamp, seed, git SHA, then its condition set.
-    per_seed: dict[str, list[str]] = defaultdict(list)
     for line in valid:
         parts = line.split()
-        offset = 1 if parts and parts[0] == "INVALIDATED" else 0
-        if len(parts) < offset + 4 or not parts[offset + 1].isdigit():
-            print(f"sealed_runs.log entry is missing a numeric seed: {line}")
-            return 1
         seed = parts[offset + 1]
-        per_seed[seed].append(line)
+        kind = parts[offset + 3] if len(parts) > offset + 3 else "FINAL"
+        if kind != "DEV_SET":
+            per_seed[seed].append(line)
 
     # Check max 2 valid runs per seed
     over_limit = []

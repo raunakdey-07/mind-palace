@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import random
 import sys
 from datetime import datetime, timezone
@@ -39,8 +40,9 @@ from api.services.retrieval import RetrievalService  # noqa: E402
 from api.services.embedder import Embedder  # noqa: E402
 from benchmarks.agency_readiness.checker import score as score_context  # noqa: E402
 from benchmarks.agency_readiness.fixture_generator import (  # noqa: E402
-    SEALED_SEED,
-    SEALED_FIXTURE_DIR,
+    HARNESS_DEV_FIXTURES_SEED,
+    HARNESS_DEV_FIXTURE_DIR,
+    write_fixtures,
 )
 
 SPEC_PATH = ROOT / "benchmarks" / "agency_readiness" / "sealed_spec.json"
@@ -52,6 +54,12 @@ HISTORY_ALLOWED = {"NS-05", "VE-03", "HL-04", "VE-06"}
 # Orderings for B/B+: neutral-name alphabetical, reverse, 3 seeded shuffles.
 ORDER_SEEDS = [0, 1, 2, 3, 4]
 MAX_GOLD_FRACTION_FIRST_BUDGET = 0.50
+
+
+def append_final_run(log: Path, seed: int, sha: str, now: datetime) -> None:
+    log.open("a", encoding="utf-8").write(
+        f"{now.isoformat()} {seed} {sha} FINAL A B B_plus B_star C C_plus D\n"
+    )
 
 
 def load_spec():
@@ -379,18 +387,27 @@ def verify_embedder():
 
 
 def main():
+    final = "--final" in sys.argv[1:]
+    final_seed = os.environ.get("MP_FINAL_SEED")
+    if final and not final_seed:
+        print("error: --final requires MP_FINAL_SEED", file=sys.stderr)
+        return 2
     spec = load_spec()
     embedder_identity = verify_embedder()
     print("embedder_identity:", json.dumps(embedder_identity))
-    # Regenerate sealed fixtures with the sealed seed (idempotent, same bytes).
-    from benchmarks.agency_readiness.fixture_generator import write_fixtures
-
-    write_fixtures(spec, SEALED_SEED, SEALED_FIXTURE_DIR)
+    seed = int(final_seed) if final else HARNESS_DEV_FIXTURES_SEED
+    # Regenerate harness_dev fixtures with the harness_dev seed (idempotent, same bytes).
+    fixture_dir = (
+        ROOT / "benchmarks" / "agency_readiness" / "final_fixtures"
+        if final
+        else HARNESS_DEV_FIXTURE_DIR
+    )
+    write_fixtures(spec, seed, fixture_dir)
 
     all_results = {}
     for brand in spec["brands"]:
         prompts = [p for p in spec["prompts"] if p["brand"] == brand]
-        brand_dir = SEALED_FIXTURE_DIR / brand
+        brand_dir = fixture_dir / brand
         brand_res = asyncio.run(run_brand(brand, spec, prompts, brand_dir))
         all_results[brand] = brand_res
 
@@ -436,8 +453,8 @@ def main():
         "spec_version": spec["version"],
         "token_budget": BUDGET,
         "tokenizer": TOKENIZER,
-        "seed": SEALED_SEED,
-        "sealed": True,
+        "seed": seed,
+        "run_kind": "final" if final else "harness_dev",
         "embedder_identity": embedder_identity,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "conditions": conditions,
@@ -448,8 +465,15 @@ def main():
     }
     out_path = ROOT / "benchmarks" / "agency_readiness" / "results_baseline.json"
     out_path.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    if final:
+        sha = __import__("subprocess").check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
+        ).strip()
+        log = ROOT / "benchmarks" / "agency_readiness" / "sealed_runs.log"
+        append_final_run(log, seed, sha, datetime.now(timezone.utc))
     print("wrote", out_path)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

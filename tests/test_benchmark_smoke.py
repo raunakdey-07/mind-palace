@@ -7,20 +7,18 @@ output schema. No product code under api/cli/migrations is changed by this test.
 from __future__ import annotations
 
 import asyncio
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from benchmarks.agency_readiness.checker import score as score_context, normalize
-from benchmarks.agency_readiness.evaluate import (
+from benchmarks.agency_readiness.checker import score as score_context, normalize  # noqa: E402
+from benchmarks.agency_readiness.evaluate import (  # noqa: E402
     count_tokens,
     truncate_words,
     condition_A,
     condition_B,
     condition_B_plus,
-    condition_C,
     condition_C_plus,
 )
 
@@ -52,7 +50,14 @@ def test_normalize_and_score_schema():
 
 async def _run_conditions():
     ctx_a = await condition_A("Write a launch tweet.")
-    docs = [("rel/approved.md", "Do not use the word curated in any copy. The material is 80% GRS certified recycled polyester. Our voice is warm a little dry and confident.", "approved")]
+    docs = [
+        (
+            "rel/approved.md",
+            "Do not use the word curated in any copy. The material is 80% GRS "
+            "certified recycled polyester. Our voice is warm a little dry and confident.",
+            "approved",
+        )
+    ]
     ctx_b = await condition_B(docs, "Write a launch tweet.")
     ctx_bp = await condition_B_plus(docs, "Write a launch tweet.")
     return ctx_a, ctx_b, ctx_bp
@@ -76,6 +81,7 @@ def test_c_plus_filters_draft():
         def __init__(self, text, source_path):
             self.text = text
             self.source_path = source_path
+
     draft = R("try a playful tone again.", "rel/draft.md")
     approved = R("Do not use the word curated.", "rel/approved.md")
     path_status = {"rel/draft.md": "draft", "rel/approved.md": "approved"}

@@ -3,7 +3,7 @@
   "token_budget": 1200,
   "tokenizer": "whitespace words (len(text.split()))",
   "seed": 20261028,
-  "sealed": true,
+  "run_kind": "harness_dev",
   "embedder_identity": {
     "class": "Embedder",
     "backend": "torch",

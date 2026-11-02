@@ -65,7 +65,10 @@ def main() -> int:
     if over_limit:
         if not tagged:
             for seed, count, runs in over_limit:
-                print(f"sealed_runs.log has {count} valid entries for seed {seed} (>2) but v0.10.0 is not tagged")
+                print(
+                    f"sealed_runs.log has {count} valid entries for seed {seed} "
+                    "(>2) but v0.10.0 is not tagged"
+                )
                 for entry in runs:
                     print("  ", entry)
             return 1

@@ -28,6 +28,132 @@ def require_absent(text: str, pattern: str, label: str) -> None:
         )
 
 
+def _strip_quotes(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        return value[1:-1]
+    return value
+
+
+def _parse_revision(text: str, path: Path) -> str | None:
+    """Parse ``revision = "x"`` or ``revision: type = "x"``. None if unparseable."""
+    m = re.search(r'^revision\s*(?::\s*[^=\n]*)?\s*=\s*"([^"]*)"', text, re.MULTILINE)
+    if m:
+        return m.group(1)
+    m = re.search(r"^revision\s*(?::\s*[^=\n]*)?\s*=\s*'([^']*)'", text, re.MULTILINE)
+    return m.group(1) if m else None
+
+
+def _parse_down_revisions(text: str, path: Path) -> list[str] | None:
+    """Parse down_revision into a list of referenced revisions.
+
+    Handles None, empty tuple/list, single quoted value, and tuple/list of
+    quoted values (merge revisions). Returns None when the value is present
+    but in a form we cannot parse statically (fail loud). A missing
+    down_revision line is alembic-valid (defaults to None) and yields [].
+    """
+    m = re.search(r"^down_revision\s*(?::\s*[^=\n]*)?\s*=\s*(.+)$", text, re.MULTILINE)
+    if m is None:
+        return []
+    raw = m.group(1).strip()
+    if raw in ("None", "none", "()", "[]"):
+        return []
+    if raw.startswith('"') and raw.endswith('"'):
+        return [raw[1:-1]]
+    if raw.startswith("'") and raw.endswith("'"):
+        return [raw[1:-1]]
+    if raw.startswith("(") and raw.endswith(")"):
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        return [_strip_quotes(part) for part in inner.split(",")]
+    if raw.startswith("[") and raw.endswith("]"):
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        return [_strip_quotes(part) for part in inner.split(",")]
+    return None
+
+
+def analyze_migration_heads(
+    versions_dir: Path,
+) -> tuple[str | None, list[str]]:
+    """Return (head, problems) for the migrations in versions_dir.
+
+    head is the unique alembic head, or None when it cannot be determined.
+    problems names zero heads, multiple heads, and any migration file whose
+    revision/down_revision cannot be parsed (fail loud).
+    """
+    down_revisions: dict[str, list[str]] = {}
+    problems: list[str] = []
+    for path in sorted(versions_dir.glob("*.py")):
+        if path.name.startswith("__"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        rev = _parse_revision(text, path)
+        if rev is None:
+            problems.append(f"{path.name}: could not parse revision")
+            continue
+        downs = _parse_down_revisions(text, path)
+        if downs is None:
+            problems.append(f"{path.name}: could not parse down_revision")
+            continue
+        down_revisions[rev] = downs
+
+    if problems:
+        return None, problems
+
+    referenced = {d for downs in down_revisions.values() for d in downs}
+    heads = [rev for rev in down_revisions if rev not in referenced]
+    if len(heads) == 0:
+        problems.append("no alembic head found: every migration is referenced as a down_revision")
+        return None, problems
+    if len(heads) > 1:
+        problems.append("multiple alembic heads: " + ", ".join(sorted(heads)))
+        return None, problems
+    return heads[0], problems
+
+
+def real_alembic_head(versions_dir: Path | None = None) -> str | None:
+    """The real migration head, computed from the migration files themselves.
+
+    A head is a revision that no other migration lists as its down_revision.
+    Pure stdlib: no database connection and no alembic import required, so this
+    check runs in CI without a Postgres service. ``versions_dir`` defaults to
+    the real migrations directory; tests pass a temp dir.
+    """
+    if versions_dir is None:
+        versions_dir = ROOT / "migrations" / "versions"
+    head, _problems = analyze_migration_heads(versions_dir)
+    return head
+
+
+def doc_named_migration_head(status_text: str) -> str | None:
+    """The migration head named in STATUS.md's release-state table."""
+    m = re.search(r"\|\s*migration head\s*\|\s*`([^`]+)`", status_text)
+    return m.group(1) if m else None
+
+
+def migration_head_problems(status_text: str, versions_dir: Path) -> list[str]:
+    """Compare the doc-named migration head with the real alembic head.
+
+    Returns a problem list (empty when everything is consistent). Fails loud
+    when the head cannot be determined: zero heads, multiple heads (named),
+    or an unparseable migration file.
+    """
+    head, problems = analyze_migration_heads(versions_dir)
+    if problems:
+        return problems
+    doc_head = doc_named_migration_head(status_text)
+    if doc_head is None:
+        return [f"STATUS.md does not name a migration head; real alembic head is {head}"]
+    if doc_head != head:
+        return [
+            f"STATUS.md names migration head {doc_head!r} but the real alembic head is {head!r}"
+        ]
+    return []
+
+
 def main() -> None:
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -183,6 +309,10 @@ def main() -> None:
             "release metadata check failed: examples/project-log/decisions.md is "
             "gitignored, so the example's data file would not ship"
         )
+    status = (ROOT / "docs" / "STATUS.md").read_text(encoding="utf-8")
+    versions_dir = ROOT / "migrations" / "versions"
+    for problem in migration_head_problems(status, versions_dir):
+        raise SystemExit(f"release metadata check failed: {problem}")
     print("release metadata: PASS")
 
 

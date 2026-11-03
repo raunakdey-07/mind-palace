@@ -370,6 +370,61 @@ def test_cli_remember_records_state_and_scope():
     assert "campaigns/spring/memory/" in result.stdout, result.stdout
 
 
+# ---------------------------------------------------------------------------
+# 14-16: scoped keys round-trip and scope topic_key
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_scoped_key_round_trip_is_idempotent():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        first = await remember(
+            client,
+            corpus,
+            statement="Headline: Summer of Speed",
+            key="spring.headline",
+            scope="campaigns/spring",
+        )
+        assert first["key"] == "campaigns/spring/spring.headline", first
+        assert first["path"] == "campaigns/spring/" + memory_path("campaigns/spring/spring.headline"), first
+        second = await remember(
+            client,
+            corpus,
+            statement="Headline: Summer of Speed",
+            key=first["key"],
+            scope="campaigns/spring",
+        )
+        assert second["event"] == "UNCHANGED", second
+        assert second["path"] == first["path"], second
+
+
+@pytest.mark.asyncio
+async def test_scoped_topic_key_is_retired_by_scope():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        body = await remember(
+            client,
+            corpus,
+            statement="Headline: Summer of Speed",
+            key="spring.headline",
+            scope="campaigns/spring",
+            topic_key="spring.headline",
+        )
+        assert body["key"] == "campaigns/spring/spring.headline", body
+
+
+def test_scoped_key_unit_checks():
+    from api.services.remember import scoped_key
+
+    assert scoped_key(None, "k") == "k"
+    assert scoped_key("a/b", "k") == "a/b/k"
+    assert scoped_key("a/b", "a/b/k") == "a/b/k"
+    assert scoped_key("a/b", "a/bk") == "a/b/a/bk"
+
+
 def _invoke(args, base_url_env: str | None = None):
     from cli.main import app
 

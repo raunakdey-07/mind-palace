@@ -52,6 +52,21 @@ class ClaimValidationError(ValueError):
         super().__init__(f"document={path} version={version_id}: {reason}")
 
 
+class SupersessionRefused(ClaimValidationError):
+    """A supersession the caller asked for that cannot be applied as given.
+
+    A ClaimValidationError, so every surface that maps that class to 422 keeps
+    doing so, but the message is the reason alone: there is no stored document
+    or version to name yet.
+    """
+
+    def __init__(self, reason: str):
+        self.path = ""
+        self.version_id = ""
+        self.reason = reason
+        ValueError.__init__(self, reason)
+
+
 class UnresolvedSupersession(ValueError):
     """A supersession reference names nothing this archive can see.
 
@@ -951,7 +966,7 @@ async def _cross_document_targets(
         return {}
     keys = {claim["key"] for claim in claims}
     if topic_key and topic_key not in keys:
-        raise ValueError(
+        raise SupersessionRefused(
             f"topic_key {topic_key!r} is not one of this version's claim keys; "
             "superseding a key would record a claim about something the new "
             "document does not say"
@@ -964,7 +979,7 @@ async def _cross_document_targets(
         candidates = await _active_claims(db, corpus_id, exclude_document=identity, limit=None)
         targets = [c for c in candidates if c["id"] == wanted]
         if not targets:
-            raise ValueError(
+            raise SupersessionRefused(
                 f"supersedes_claim_id {supersedes_claim_id!r} is not an active claim "
                 "in this corpus. A superseded, deleted or other-corpus claim cannot "
                 "be superseded again."
@@ -980,7 +995,7 @@ async def _cross_document_targets(
             return {matching[0]: (target["id"], "explicit_claim_id")}
         if len(keys) == 1:
             return {next(iter(keys)): (target["id"], "explicit_claim_id")}
-        raise ValueError(
+        raise SupersessionRefused(
             f"this version authors {len(keys)} claims ({sorted(keys)}), so "
             f"supersedes_claim_id {supersedes_claim_id!r} cannot say which one replaces "
             f"{target['id']!r} on key {target['key']!r}. Use topic_key to retire by "
@@ -996,7 +1011,7 @@ async def _cross_document_targets(
         # Refuse rather than pick. Retiring the newest of three live claims leaves
         # two disagreeing ones and makes the archive look like it resolved
         # something it did not. The caller can name the claim instead.
-        raise ValueError(
+        raise SupersessionRefused(
             f"topic_key {topic_key!r} has {len(candidates)} active claims across "
             "documents; topic_key would retire one arbitrarily. Pass "
             "supersedes_claim_id with the id of the one to replace."

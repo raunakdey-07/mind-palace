@@ -63,6 +63,11 @@ invalid_scope`. Validation lives in `check_state` / `check_scope`, which raise
 response's key is that full key, so sending it back as key with the same scope
 is the same memory, and topic_key is scoped the same way.
 
+### Supersession mistakes are 422, not 500
+
+remember: supersession input errors (unknown topic_key, no or several matching
+claims) are 422 invalid_request, not 500.
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.

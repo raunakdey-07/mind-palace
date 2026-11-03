@@ -355,6 +355,8 @@ class MemoryClient:
         file: str | None = None,
         supersedes_claim_id: str | None = None,
         topic_key: str | None = None,
+        state: str | None = None,
+        scope: str | None = None,
     ) -> MemoryResult:
         """Record a fact as authoritative memory, and return what was written.
 
@@ -366,6 +368,13 @@ class MemoryClient:
         Remembering the same statement twice returns ``unchanged=True`` and the
         same ``version_id``: submitting identical memory is not duplication.
         Remembering the same ``key`` with new text supersedes the previous value.
+
+        ``state`` is the decision state of the claim: "approved" (default),
+        "draft" or "rejected". ``scope`` is an optional relative folder, e.g.
+        "campaigns/spring", prepended to the document path so the same key in two
+        scopes is two documents. ``file=` reads a local path, so state and scope
+        are not supported with it -- read the file and send its content as the
+        statement.
 
         ``supersedes_claim_id`` retires a named claim in this corpus and
         ``topic_key`` retires whatever is active under that key, both from any
@@ -379,6 +388,12 @@ class MemoryClient:
         ``base_url``. Requires no embedding model either way. The same operation is
         available as :meth:`MindPalace.remember`.
         """
+        if file is not None and (state is not None or scope is not None):
+            raise ValueError(
+                "state and scope are not supported with file=; file= reads a "
+                "local path on this machine. Read the file and send its content "
+                "as the statement."
+            )
         name = self._corpus_name(corpus)
         if self._client.base_url is None:
             _require_sync()
@@ -392,6 +407,8 @@ class MemoryClient:
                     file=file,
                     supersedes_claim_id=supersedes_claim_id,
                     topic_key=topic_key,
+                    state=state,
+                    scope=scope,
                 )
                 return MemoryResult.from_write(written, name, statement)
 
@@ -406,7 +423,13 @@ class MemoryClient:
                         # corpus's connection pool warm for the recall that
                         # usually follows.
                         remote = self._remember_via_runtime(
-                            name, statement, key, supersedes_claim_id, topic_key
+                            name,
+                            statement,
+                            key,
+                            supersedes_claim_id,
+                            topic_key,
+                            state=state,
+                            scope=scope,
                         )
                         if remote is not None:
                             return remote
@@ -436,6 +459,8 @@ class MemoryClient:
                 "key": key,
                 "supersedes_claim_id": supersedes_claim_id,
                 "topic_key": topic_key,
+                "state": state,
+                "scope": scope,
             }.items()
             if v is not None
         }
@@ -623,6 +648,8 @@ class MemoryClient:
         key: str | None,
         supersedes_claim_id: str | None = None,
         topic_key: str | None = None,
+        state: str | None = None,
+        scope: str | None = None,
     ) -> "MemoryResult | None":
         """One write through a running runtime, or None if there is not one."""
         if not getattr(self._client, "use_runtime", False):
@@ -642,6 +669,8 @@ class MemoryClient:
                     "key": key,
                     "supersedes_claim_id": supersedes_claim_id,
                     "topic_key": topic_key,
+                    "state": state,
+                    "scope": scope,
                 },
                 timeout=self._client.timeout,
             )
@@ -1101,6 +1130,8 @@ class MindPalace:
         file: str | None = None,
         supersedes_claim_id: str | None = None,
         topic_key: str | None = None,
+        state: str | None = None,
+        scope: str | None = None,
     ) -> MemoryResult:
         """Record a fact as authoritative memory, and return what was written.
 
@@ -1117,6 +1148,11 @@ class MindPalace:
         ``key`` is how you tell Mind Palace that two statements are about the same
         fact. Omit it and each distinct statement is its own memory.
 
+        ``state`` is the decision state of the claim: "approved" (default),
+        "draft" or "rejected". ``scope`` is an optional relative folder, e.g.
+        "campaigns/spring", prepended to the document path so the same key in two
+        scopes is two documents.
+
         Requires no embedding model. Semantic ranking fills in later; the
         authoritative claim and its evidence are recorded either way.
         """
@@ -1127,6 +1163,8 @@ class MindPalace:
             file=file,
             supersedes_claim_id=supersedes_claim_id,
             topic_key=topic_key,
+            state=state,
+            scope=scope,
         )
 
     def revalidate(

@@ -421,6 +421,29 @@ def remember(
             ),
         ),
     ] = None,
+    state: Annotated[
+        str | None,
+        typer.Option(
+            "--state",
+            help=(
+                "The decision state of the claim: approved (default), draft or "
+                "rejected. Supersession stays explicit through --supersedes and "
+                "--topic-key."
+            ),
+        ),
+    ] = None,
+    scope: Annotated[
+        str | None,
+        typer.Option(
+            "--scope",
+            help=(
+                "Optional relative folder the document is filed under, e.g. "
+                "campaigns/spring. The document is stored at "
+                "<scope>/memory/<slug>-<digest>.md, so the same key in two scopes "
+                "is two documents."
+            ),
+        ),
+    ] = None,
     corpus: Annotated[str, typer.Option("--corpus", help="Corpus name.")] = DEFAULT_CORPUS,
     base_url: BaseURL = None,
     json_out: Annotated[
@@ -457,6 +480,8 @@ def remember(
             file=file,
             supersedes_claim_id=supersedes,
             topic_key=topic_key,
+            state=state,
+            scope=scope,
         )
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         _fail(exc, verbose, debug)

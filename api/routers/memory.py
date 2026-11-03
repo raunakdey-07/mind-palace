@@ -100,16 +100,21 @@ async def remember(request: RememberRequest) -> RememberResult:
             key=request.key,
             supersedes_claim_id=request.supersedes_claim_id,
             topic_key=request.topic_key,
+            state=request.state,
+            scope=request.scope,
         )
     except (RememberError, ClaimValidationError) as exc:
         # The two places a statement is rejected: the service's own validation, and
         # the archive's authored-evidence rule. Both are input problems, so both are
         # 422 with a message a developer can act on -- a 500 would mean the archive
-        # rejected something the caller could have been told about. Named rather
-        # than caught as `ValueError`, so a genuine defect still surfaces as a 500
-        # instead of being reported to the caller as bad input.
+        # rejected something the caller could have been told about. A DecisionError
+        # carries its own code (invalid_state / invalid_scope); everything else is
+        # a generic invalid_request. Named rather than caught as `ValueError`, so a
+        # genuine defect still surfaces as a 500 instead of being reported to the
+        # caller as bad input.
         raise HTTPException(
-            status_code=422, detail={"code": "invalid_request", "message": str(exc)}
+            status_code=422,
+            detail={"code": getattr(exc, "code", "invalid_request"), "message": str(exc)},
         ) from exc
     except (SQLAlchemyError, OSError, TimeoutError) as exc:
         from api.services.memory_public import translate_database_error

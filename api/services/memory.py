@@ -951,10 +951,12 @@ async def _cross_document_targets(
         return {}
     keys = {claim["key"] for claim in claims}
     if topic_key and topic_key not in keys:
-        raise ValueError(
+        raise ClaimValidationError(
+            "",
+            "",
             f"topic_key {topic_key!r} is not one of this version's claim keys; "
             "superseding a key would record a claim about something the new "
-            "document does not say"
+            "document does not say",
         )
 
     if supersedes_claim_id:
@@ -964,10 +966,12 @@ async def _cross_document_targets(
         candidates = await _active_claims(db, corpus_id, exclude_document=identity, limit=None)
         targets = [c for c in candidates if c["id"] == wanted]
         if not targets:
-            raise ValueError(
+            raise ClaimValidationError(
+                "",
+                "",
                 f"supersedes_claim_id {supersedes_claim_id!r} is not an active claim "
                 "in this corpus. A superseded, deleted or other-corpus claim cannot "
-                "be superseded again."
+                "be superseded again.",
             )
         target = targets[0]
         # Exactly one claim in this version may take the target. Naming a claim is
@@ -980,11 +984,13 @@ async def _cross_document_targets(
             return {matching[0]: (target["id"], "explicit_claim_id")}
         if len(keys) == 1:
             return {next(iter(keys)): (target["id"], "explicit_claim_id")}
-        raise ValueError(
+        raise ClaimValidationError(
+            "",
+            "",
             f"this version authors {len(keys)} claims ({sorted(keys)}), so "
             f"supersedes_claim_id {supersedes_claim_id!r} cannot say which one replaces "
             f"{target['id']!r} on key {target['key']!r}. Use topic_key to retire by "
-            "key, or write one claim."
+            "key, or write one claim.",
         )
 
     candidates = await _active_claims(
@@ -996,10 +1002,12 @@ async def _cross_document_targets(
         # Refuse rather than pick. Retiring the newest of three live claims leaves
         # two disagreeing ones and makes the archive look like it resolved
         # something it did not. The caller can name the claim instead.
-        raise ValueError(
+        raise ClaimValidationError(
+            "",
+            "",
             f"topic_key {topic_key!r} has {len(candidates)} active claims across "
             "documents; topic_key would retire one arbitrarily. Pass "
-            "supersedes_claim_id with the id of the one to replace."
+            "supersedes_claim_id with the id of the one to replace.",
         )
     # Most recently observed wins. An older live claim under the same key stays
     # CURRENT and is reported as a conflict, which is the honest state: two

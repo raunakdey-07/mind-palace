@@ -16,6 +16,7 @@ class MemoryRequest(Contract):
     as_of: AwareDatetime | None = None
     valid_at: AwareDatetime | None = None
     path: str | None = Field(default=None, min_length=1, max_length=2048)
+    path_prefix: str | list[str] | None = None
     claim_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     snapshot_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     budget: int = Field(default=8000, ge=512, le=128000, strict=True)

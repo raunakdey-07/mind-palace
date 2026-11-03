@@ -147,6 +147,13 @@ Mind Palace primitives:
 
 **Concrete test of absence of leak:** V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files (not `test_tenant_isolation.py` alone), zero outcome differences between main run and rerun. `tests/test_scope_forgery.py` proves forged scopes return zero rows. `tests/test_corpus_isolation.py` proves cross-corpus reads return zero.
 
+One corpus per brand, one folder per campaign. A generation call scopes with
+`path_prefix`, for example `mp.memory.pack(query="", budget=8000,
+path_prefix=["brand", "campaigns/spring"])`, so the brand-wide documents and one
+campaign's documents are read together while another campaign's briefs stay out of
+the pack. Two briefs built from one template do not leak into each other's packs:
+a conflict group keeps only its in-scope sides, and one side left becomes current.
+
 ### 2.3 Budget semantics (MP-SE-22)
 
 **Verified by probe f (run 41287500689, raw output issue #105 comment 6555683810).** Derived from code reading + live probe.

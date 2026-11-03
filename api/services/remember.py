@@ -72,6 +72,14 @@ class RememberError(ValueError):
     """A remembered statement that cannot become a memory."""
 
 
+class DecisionError(RememberError):
+    """A decision (state or scope) that validation refused, with a stable code."""
+
+    def __init__(self, code: str, message: str):
+        self.code = code
+        super().__init__(message)
+
+
 def _threshold() -> float:
     import os
 
@@ -316,7 +324,61 @@ def _yaml_scalar(value: str) -> str:
     return f'"{escaped}"'
 
 
-def render_statement(statement: str, key: str) -> str:
+#: The only decision states a remembered claim can carry. "superseded" is not
+#: among them: supersession stays explicit through supersedes_claim_id and
+#: topic_key, never through a state value.
+DECISION_STATES = ("approved", "draft", "rejected")
+
+#: A scope is a relative folder: non-empty segments of
+#: [A-Za-z0-9._-]+, none of them "." or "..", no leading or trailing slash.
+_SCOPE_SEGMENT = re.compile(r"[A-Za-z0-9._-]+")
+
+
+def check_state(state: str | None) -> str:
+    """Validate and normalise a decision state. None means approved."""
+    if state is None:
+        return "approved"
+    if state not in DECISION_STATES:
+        raise DecisionError(
+            "invalid_state",
+            f"invalid state {state!r}; must be one of {DECISION_STATES}",
+        )
+    return state
+
+
+def check_scope(scope: str | None) -> str | None:
+    """Validate a scope folder. None means no scope."""
+    if scope is None:
+        return None
+    if scope.startswith("/") or scope.endswith("/"):
+        raise DecisionError(
+            "invalid_scope",
+            f"invalid scope {scope!r}; a scope is a relative folder",
+        )
+    for segment in scope.split("/"):
+        if segment in ("", ".", "..") or not _SCOPE_SEGMENT.fullmatch(segment):
+            raise DecisionError(
+                "invalid_scope",
+                f"invalid scope {scope!r}; bad segment {segment!r}",
+            )
+    return scope
+
+
+def scoped_key(scope: str | None, key: str) -> str:
+    """The stored claim key for `key` filed under `scope`.
+
+    With a scope, the stored claim key is ``<scope>/<key>``. When the caller
+    sends that full key back with the same scope it is the same memory, so a
+    key that already carries the scope is returned unchanged. ``a/bk`` under
+    scope ``a/b`` becomes ``a/b/a/bk`` -- the prefix match is deliberate, so
+    ``a/b`` does not silently swallow a key that merely starts with it.
+    """
+    if not scope or key.startswith(scope + "/"):
+        return key
+    return f"{scope}/{key}"
+
+
+def render_statement(statement: str, key: str, state: str = "approved") -> str:
     """Render a statement as a memory document with exactly one authored claim.
 
     The claim text is the statement, and the evidence quote is the same text: the
@@ -325,22 +387,35 @@ def render_statement(statement: str, key: str) -> str:
     that can always be re-verified against the stored bytes. The caller is
     expected to have passed the statement through `normalise`, so that the quote,
     the body and the claim are identical strings.
+
+    When `state` is not "approved" the document declares its decision: a
+    `status:` line right after `document_type: note`, and an `info_state:` line
+    inside the authored claim. "approved" is byte-identical to the output before
+    decisions existed, so an approved remembered claim is indistinguishable from
+    one written on main.
     """
     title = _title(statement)
-    return (
-        "---\n"
-        f"title: {_yaml_scalar(title)}\n"
-        f"date: {date.today().isoformat()}\n"
-        "document_type: note\n"
-        "claims:\n"
-        f"  - key: {_yaml_scalar(key)}\n"
-        f"    claim: {_yaml_scalar(statement)}\n"
-        f"    value: {_yaml_scalar(statement)}\n"
-        f"    evidence: {_yaml_scalar(statement)}\n"
-        "---\n\n"
-        f"# {title}\n\n"
-        f"{statement}\n"
+    lines = [
+        "---\n",
+        f"title: {_yaml_scalar(title)}\n",
+        f"date: {date.today().isoformat()}\n",
+        "document_type: note\n",
+    ]
+    if state != "approved":
+        lines.append(f"status: {state}\n")
+    lines.extend(
+        [
+            "claims:\n",
+            f"  - key: {_yaml_scalar(key)}\n",
+            f"    claim: {_yaml_scalar(statement)}\n",
+            f"    value: {_yaml_scalar(statement)}\n",
+            f"    evidence: {_yaml_scalar(statement)}\n",
+        ]
     )
+    if state != "approved":
+        lines.append(f"    info_state: {state}\n")
+    lines.extend(["---\n\n", f"# {title}\n\n", f"{statement}\n"])
+    return "".join(lines)
 
 
 def validate_statement(statement: str) -> str:
@@ -359,15 +434,21 @@ def validate_statement(statement: str) -> str:
     return statement
 
 
-def resolve(statement: str, key: str | None = None) -> tuple[str, str]:
+def resolve(statement: str, key: str | None = None, scope: str | None = None) -> tuple[str, str]:
     """The identity one statement resolves to: its claim key and its document path.
 
     One function, because three call sites recomputing this is three places for
     the key and the path to disagree -- and a caller that retries with the wrong
-    key creates a second memory instead of recognising the first.
+    key creates a second memory instead of recognising the first. `scope` is
+    part of the key: the same key in two scopes is two different memories, so
+    they never supersede or conflict with each other, and `scope` is also
+    prepended to the path so key, path and retries agree on one document.
     """
-    resolved = claim_key(statement, key)
-    return resolved, memory_path(resolved)
+    resolved = scoped_key(scope, claim_key(statement, key))
+    path = memory_path(resolved)
+    if scope:
+        path = f"{scope}/{path}"
+    return resolved, path
 
 
 async def ensure_corpus(corpus: str, corpus_id: str | None = None) -> str:
@@ -411,11 +492,19 @@ async def remember(
     file: str | None = None,
     supersedes_claim_id: str | None = None,
     topic_key: str | None = None,
+    state: str | None = None,
+    scope: str | None = None,
 ) -> dict:
     """Record one statement as authoritative memory. Returns the write result.
 
     The result carries the identity that was written -- `key`, `path`,
     `version_id` and `event` -- so a caller never has to recompute it.
+
+    `state` is the decision state of the claim: "approved" (default), "draft"
+    or "rejected". `scope` is an optional relative folder, e.g.
+    "campaigns/spring", prepended to the document path so the same key in two
+    scopes is two documents. Both are validated before anything else, so a bad
+    state or scope never touches the archive.
 
     `file` reads the statement from a Markdown file instead of an argument. A file
     that already carries authored `claims:` is archived under its own path with
@@ -430,6 +519,8 @@ async def remember(
 
     `corpus_id` lets a caller that already resolved the corpus skip the lookup.
     """
+    state = check_state(state)
+    scope = check_scope(scope)
     from api.services import telemetry
 
     # One recorder, so every surface that calls `remember` is logged without each
@@ -502,20 +593,30 @@ async def remember(
             )
 
         statement = validate_statement(statement)
-        resolved_key, path = resolve(statement, key)
+        resolved_key, path = resolve(statement, key, scope)
         # Read the archive BEFORE the write, not after. Afterwards the claim just
         # written is itself active and is always its own nearest neighbour, which
         # is a hint about nothing.
         related = await related_active(
             statement, corpus_id, exclude_ids={supersedes_claim_id} if supersedes_claim_id else None
         )
+        # Scope isolates keys: with a scope the caller's topic_key stands alone
+        # (the same key in two scopes is two documents); without a scope the
+        # key itself retires whatever is active under it, exactly as today.
+        # topic_key is scoped the same way as the authored key: under a scope it
+        # is ``<scope>/<key>``, so the archive resolves it against this write's
+        # own claim keys.
+        if scope is not None:
+            topic_key_for_write = scoped_key(scope, topic_key) if topic_key is not None else None
+        else:
+            topic_key_for_write = topic_key or key
         written = await _write(
-            render_statement(statement, resolved_key),
+            render_statement(statement, resolved_key, state),
             path,
             corpus_id,
             resolved_key,
             supersedes_claim_id=supersedes_claim_id,
-            topic_key=topic_key or key,
+            topic_key=topic_key_for_write,
         )
         if related:
             written["related_active_claims"] = related

@@ -47,6 +47,22 @@ unchanged; `mindpalace_allowed_corpus` and its grants are left intact. See
 `tests/test_enforcement_e2e.py::test_latency_and_explain_initplan` for the
 InitPlan / call-count proof (no per-row trap).
 
+### `remember` records decisions: `state` and `scope`
+
+`POST /api/memory/remember` accepts two new request fields. `state` is
+"approved" (default), "draft" or "rejected" -- anything else is `422
+invalid_state` -- and is stored as a `status:` line on the document plus
+`info_state` on the authored claim, byte-identical to before when approved.
+`scope` is an optional relative folder (e.g. `campaigns/spring`); the document is
+stored at `f"{scope}/{memory_path(key)}"` and the same key in two scopes is two
+memories, so they never supersede or conflict. Malformed scopes are `422
+invalid_scope`. Validation lives in `check_state` / `check_scope`, which raise
+`DecisionError` so the route keeps the error code; `invalid_state` and
+`invalid_scope` flow through the SDK, the local runtime and the CLI (`--state`,
+`--scope`) alike. With scope, the stored claim key is `f"{scope}/{key}"`; the
+response's key is that full key, so sending it back as key with the same scope
+is the same memory, and topic_key is scoped the same way.
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.

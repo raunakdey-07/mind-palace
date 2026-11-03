@@ -92,6 +92,49 @@ What the code does:
   **Conclusion: no route retires one claim without a replacement statement.** (Unverified for `sync` path: raw output from v2 probe was posted but sync behavior not directly observed in v2 run.)
 Priority: owner decides.
 
+#### Withdrawing a rule (v0.10.0, PR-3)
+
+A decision can be withdrawn without deleting anything: remember the same key
+with `state="rejected"`. That creates a new version, so the key then has no
+approved current claim. Draft/rejected claims are withheld from `current` and
+`pack` by default, and `history` keeps both versions.
+
+SDK example:
+
+    from mindpalace_sdk import MindPalace
+
+    mp = MindPalace("acme")
+    mp.memory.remember("Never use the word curated in copy.", key="brand.rule.curated")
+    mp.memory.remember("Never use the word curated in copy.", key="brand.rule.curated", state="rejected")
+    pack = mp.memory.pack(query="")            # withheld_counts["rejected"] == 1; "curated" absent
+    current = mp.memory.current(query="")      # no claim containing "curated"
+    history = mp.memory.history(query="", path=pack.changes[0].path)  # two changes: approved, then rejected
+
+HTTP example:
+
+    POST /api/memory/remember
+    {"corpus": "acme", "statement": "Never use the word curated in copy.", "key": "brand.rule.curated"}           # 200, event NEW
+    POST /api/memory/remember
+    {"corpus": "acme", "statement": "Never use the word curated in copy.", "key": "brand.rule.curated", "state": "rejected"}  # 200, event MODIFIED
+    POST /api/memory/pack
+    {"corpus": "acme", "query": ""}                                 # 200, withheld_counts.rejected == 1
+
+Why this works: `remember` writes an AUTHORED claim. `render_statement` emits
+`status: <state>` right after `document_type: note` and `info_state: <state>`
+inside the claim entry only when state is not "approved", and "approved" output
+is byte-identical to before. PR-1's `assign_states` never runs on documents
+with an authored `claims:` block, so frontmatter `status` alone does not set
+the claim's state -- a document with `status: draft` plus an authored
+`claims:` list still has approved claims (see the open issue below). With
+scope, the stored claim key is `<scope>/<key>`; the response's key is that full
+key, so sending it back as key with the same scope is the same memory, and
+topic_key is scoped the same way.
+
+Open issue: frontmatter `status` is ignored on documents with an authored
+`claims:` block, so a `status: draft` authored document's claims stay
+approved -- https://github.com/raunakdey-07/mind-palace/issues/140. Not fixed
+in v0.10.0.
+
 ### 2.2 Scope separation (Test D and F of attachment D)
 
 **Partially verified.** Probe d (run 41296378275, raw output issue #105 comment 6556588065): exact-path `query`/`pack`/`current` return only the matching document; directory prefix (`campaign-a/`) returns 404 `document_not_found` (confirming path is exact, not prefix). Campaign-b text does not appear in campaign-a exact-path results. **Unverified:** live HTTP-level isolation (in-process SDK only). Code-level tests remain evidence.

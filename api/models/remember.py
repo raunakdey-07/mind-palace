@@ -71,6 +71,18 @@ class RememberRequest(BaseModel):
             "document. Must be a key this write authors."
         ),
     )
+    state: str | None = None
+    """The decision state of the claim: "approved" (default), "draft" or
+    "rejected". Any other value is 422 `invalid_state`. Supersession stays
+    explicit through `supersedes_claim_id` and `topic_key`."""
+    scope: str | None = None
+    """An optional relative folder the document is filed under, e.g.
+    "campaigns/spring". The document is stored at
+    f"{scope}/{memory_path(key)}". Any malformed scope is 422
+    `invalid_scope`. No scope means today's path exactly. With scope, the
+    stored claim key is f"{scope}/{key}"; the response's key is that full key,
+    so sending it back as key with the same scope is the same memory, and
+    topic_key is scoped the same way."""
 
     @field_validator("statement", "key", "topic_key", mode="before")
     @classmethod

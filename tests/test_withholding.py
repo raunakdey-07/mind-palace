@@ -281,3 +281,55 @@ async def test_history_keeps_draft_claim():
         body = response.json()
     brainstorm = _find_claim(body, "playful tone")
     assert brainstorm is not None
+
+
+# ---------------------------------------------------------------------------
+# 10: conflict promotion when a draft side is withheld
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_withheld_draft_side_promotes_approved_claim():
+    # #10: two documents with the same heading form a conflict; when the draft
+    # side is withheld, the approved side is promoted to current_memories.
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await _create_corpus(client, corpus)
+        await _ingest(
+            client,
+            corpus,
+            "brand/voice.md",
+            "# Voice\n\n- Our voice is warm and consistent.\n",
+        )
+        await _ingest(
+            client,
+            corpus,
+            "drafts/voice.md",
+            "---\nstatus: draft\n---\n\n# Voice\n\n- Our voice is loud and playful always.\n",
+        )
+        # Step 1: with include_states=["draft"], both sides are present in one
+        # conflict group.
+        response = await client.post(
+            "/api/memory/pack",
+            json={"corpus": corpus, "query": "", "include_states": ["draft"]},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        conflicts = body.get("conflicts", [])
+        assert len(conflicts) == 1, conflicts
+        claims_text = " ".join(c["claim"] for c in conflicts[0].get("claims", []))
+        assert "warm and consistent" in claims_text
+        assert "loud and playful" in claims_text
+        # Step 2: default pack withholds the draft side and promotes the
+        # approved side to current_memories.
+        response = await client.post(
+            "/api/memory/pack",
+            json={"corpus": corpus, "query": ""},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        text = response.text
+        assert "loud and playful" not in text
+        assert any("warm and consistent" in c["claim"] for c in body.get("current_memories", []))
+        assert body.get("conflicts", []) == []
+        assert body.get("withheld_counts", {}).get("draft") == 1

@@ -25,6 +25,10 @@ class MemoryRequest(Contract):
     # Opt-in. Absent by default so an existing client receives byte-identical
     # output; a receipt is evidence about the answer, not part of the answer.
     include_receipt: bool = False
+    # Opt-in. Names the claim authority states a caller wants to see in current
+    # and pack, overriding the default withholding of draft, rejected and
+    # superseded claims. Absent means the default withholding applies.
+    include_states: list[str] | None = None
 
     @field_validator("query")
     @classmethod
@@ -62,6 +66,7 @@ class Claim(Contract):
     valid_until: AwareDatetime | None = None
     supersedes_id: str | None = None
     evidence_ids: list[str]
+    info_state: str = Field(default="approved", exclude_if=lambda v: v == "approved")
 
 
 class Source(Contract):
@@ -210,6 +215,10 @@ class MemoryResponse(Contract):
     #: Derived from the ranking, like the other diagnostics; excluded from the
     #: digest for the same reason.
     unmatched_subparts: list[str] = Field(default_factory=list, exclude=True)
+    #: Distinct withheld claim ids per withheld state, for current and pack.
+    #: Present only when at least one claim was withheld; a response with nothing
+    #: withheld is byte-identical to a response without this field.
+    withheld_counts: dict[str, int] | None = Field(default=None, exclude_if=lambda v: v is None)
 
     #: The fields `model_dump` leaves out because the digest must not move.
     DIAGNOSTICS: ClassVar[tuple[str, ...]] = (

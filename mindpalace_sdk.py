@@ -759,8 +759,11 @@ class MemoryClient:
         *,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        include_states: list[str] | None = None,
     ) -> MemoryResponse:
-        return self._execute("current", corpus, query, valid_at=valid_at, path=path)
+        return self._execute(
+            "current", corpus, query, valid_at=valid_at, path=path, include_states=include_states
+        )
 
     def history(
         self,
@@ -891,6 +894,7 @@ class MemoryClient:
         valid_at: datetime | str | None = None,
         path: str | None = None,
         snapshot_id: str | None = None,
+        include_states: list[str] | None = None,
     ) -> MemoryResponse:
         return self._execute(
             "pack",
@@ -901,6 +905,7 @@ class MemoryClient:
             valid_at=valid_at,
             path=path,
             snapshot_id=snapshot_id,
+            include_states=include_states,
         )
 
 

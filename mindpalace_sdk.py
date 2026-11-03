@@ -372,9 +372,11 @@ class MemoryClient:
         ``state`` is the decision state of the claim: "approved" (default),
         "draft" or "rejected". ``scope`` is an optional relative folder, e.g.
         "campaigns/spring", prepended to the document path so the same key in two
-        scopes is two documents. ``file=` reads a local path, so state and scope
-        are not supported with it -- read the file and send its content as the
-        statement.
+        scopes is two documents. With scope, the stored claim key is
+        f"{scope}/{key}"; the response's key is that full key, so sending it back
+        as key with the same scope is the same memory, and topic_key is scoped
+        the same way. ``file=`` reads a local path, so state and scope are not
+        supported with it -- read the file and send its content as the statement.
 
         ``supersedes_claim_id`` retires a named claim in this corpus and
         ``topic_key`` retires whatever is active under that key, both from any
@@ -1151,7 +1153,10 @@ class MindPalace:
         ``state`` is the decision state of the claim: "approved" (default),
         "draft" or "rejected". ``scope`` is an optional relative folder, e.g.
         "campaigns/spring", prepended to the document path so the same key in two
-        scopes is two documents.
+        scopes is two documents. With scope, the stored claim key is
+        f"{scope}/{key}"; the response's key is that full key, so sending it back
+        as key with the same scope is the same memory, and topic_key is scoped
+        the same way.
 
         Requires no embedding model. Semantic ranking fills in later; the
         authoritative claim and its evidence are recorded either way.

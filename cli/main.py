@@ -440,7 +440,10 @@ def remember(
                 "Optional relative folder the document is filed under, e.g. "
                 "campaigns/spring. The document is stored at "
                 "<scope>/memory/<slug>-<digest>.md, so the same key in two scopes "
-                "is two documents."
+                "is two documents. With scope, the stored claim key is "
+                "<scope>/<key>; the response's key is that full key, so sending it "
+                "back as key with the same scope is the same memory, and topic_key "
+                "is scoped the same way."
             ),
         ),
     ] = None,

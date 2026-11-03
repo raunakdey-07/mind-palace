@@ -59,7 +59,9 @@ memories, so they never supersede or conflict. Malformed scopes are `422
 invalid_scope`. Validation lives in `check_state` / `check_scope`, which raise
 `DecisionError` so the route keeps the error code; `invalid_state` and
 `invalid_scope` flow through the SDK, the local runtime and the CLI (`--state`,
-`--scope`) alike.
+`--scope`) alike. With scope, the stored claim key is `f"{scope}/{key}"`; the
+response's key is that full key, so sending it back as key with the same scope
+is the same memory, and topic_key is scoped the same way.
 
 ## [v0.9.3] - 2026-10-27
 

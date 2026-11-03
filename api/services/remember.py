@@ -364,6 +364,20 @@ def check_scope(scope: str | None) -> str | None:
     return scope
 
 
+def scoped_key(scope: str | None, key: str) -> str:
+    """The stored claim key for `key` filed under `scope`.
+
+    With a scope, the stored claim key is ``<scope>/<key>``. When the caller
+    sends that full key back with the same scope it is the same memory, so a
+    key that already carries the scope is returned unchanged. ``a/bk`` under
+    scope ``a/b`` becomes ``a/b/a/bk`` -- the prefix match is deliberate, so
+    ``a/b`` does not silently swallow a key that merely starts with it.
+    """
+    if not scope or key.startswith(scope + "/"):
+        return key
+    return f"{scope}/{key}"
+
+
 def render_statement(statement: str, key: str, state: str = "approved") -> str:
     """Render a statement as a memory document with exactly one authored claim.
 
@@ -430,9 +444,7 @@ def resolve(statement: str, key: str | None = None, scope: str | None = None) ->
     they never supersede or conflict with each other, and `scope` is also
     prepended to the path so key, path and retries agree on one document.
     """
-    resolved = claim_key(statement, key)
-    if scope:
-        resolved = f"{scope}/{resolved}"
+    resolved = scoped_key(scope, claim_key(statement, key))
     path = memory_path(resolved)
     if scope:
         path = f"{scope}/{path}"
@@ -591,7 +603,13 @@ async def remember(
         # Scope isolates keys: with a scope the caller's topic_key stands alone
         # (the same key in two scopes is two documents); without a scope the
         # key itself retires whatever is active under it, exactly as today.
-        topic_key_for_write = topic_key if scope is not None else (topic_key or key)
+        # topic_key is scoped the same way as the authored key: under a scope it
+        # is ``<scope>/<key>``, so the archive resolves it against this write's
+        # own claim keys.
+        if scope is not None:
+            topic_key_for_write = scoped_key(scope, topic_key) if topic_key is not None else None
+        else:
+            topic_key_for_write = topic_key or key
         written = await _write(
             render_statement(statement, resolved_key, state),
             path,

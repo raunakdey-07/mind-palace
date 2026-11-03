@@ -125,7 +125,10 @@ inside the claim entry only when state is not "approved", and "approved" output
 is byte-identical to before. PR-1's `assign_states` never runs on documents
 with an authored `claims:` block, so frontmatter `status` alone does not set
 the claim's state -- a document with `status: draft` plus an authored
-`claims:` list still has approved claims (see the open issue below).
+`claims:` list still has approved claims (see the open issue below). With
+scope, the stored claim key is `<scope>/<key>`; the response's key is that full
+key, so sending it back as key with the same scope is the same memory, and
+topic_key is scoped the same way.
 
 Open issue: frontmatter `status` is ignored on documents with an authored
 `claims:` block, so a `status: draft` authored document's claims stay

@@ -388,7 +388,9 @@ async def test_scoped_key_round_trip_is_idempotent():
             scope="campaigns/spring",
         )
         assert first["key"] == "campaigns/spring/spring.headline", first
-        assert first["path"] == "campaigns/spring/" + memory_path("campaigns/spring/spring.headline"), first
+        assert first["path"] == "campaigns/spring/" + memory_path(
+            "campaigns/spring/spring.headline"
+        ), first
         second = await remember(
             client,
             corpus,

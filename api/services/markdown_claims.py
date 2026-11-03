@@ -613,7 +613,11 @@ def _table_claims(
         if key in seen_claims:
             continue
         seen_claims.add(key)
-        out.append({"key": key, "claim": text, "value": text, "evidence": _limit_quote(raw)})
+        claim = {"key": key, "claim": text, "value": text, "evidence": _limit_quote(raw)}
+        claim_state = _heading_path_state(heading_path)
+        if claim_state is not None:
+            claim["info_state"] = claim_state
+        out.append(claim)
     return out
 
 
@@ -673,16 +677,18 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
         if key in seen_claims:
             return
         seen_claims.add(key)
-        claims.append(
-            {
-                "key": key,
-                "claim": text,
-                "value": value,
-                "evidence": _limit_quote(raw),
-                "extraction_mode": "deterministic",
-                "provenance_state": "direct_claim",
-            }
-        )
+        claim = {
+            "key": key,
+            "claim": text,
+            "value": value,
+            "evidence": _limit_quote(raw),
+            "extraction_mode": "deterministic",
+            "provenance_state": "direct_claim",
+        }
+        claim_state = _heading_path_state(pending_path)
+        if claim_state is not None:
+            claim["info_state"] = claim_state
+        claims.append(claim)
 
     for number, raw, kind in _scan(_HTML_COMMENT.sub("", body)):
         if kind == "heading":
@@ -814,33 +820,154 @@ def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quote
         )
 
 
-def detect_info_state(metadata: dict, body: str = "") -> str:
-    """Classify the authority state of a document/section. Defaults to 'approved'."""
-    text = " ".join(str(v) for v in (metadata or {}).values()).lower()
-    tags = metadata.get("tags", []) if isinstance(metadata, dict) else []
+#: Authority states from most to least restrictive.
+_STATE_RANK = {
+    "rejected": 5,
+    "superseded": 4,
+    "draft": 3,
+    "historical_observation": 2,
+    "inferred_insight": 1,
+    "approved": 0,
+}
+
+
+def _most_restrictive(*states: str) -> str:
+    """The most restrictive of the given states; `approved` when given none."""
+    best = "approved"
+    for state in states:
+        if _STATE_RANK[state] > _STATE_RANK[best]:
+            best = state
+    return best
+
+
+#: Whole frontmatter values, lowercased, that place a document in a state.
+#: Only `status`, `state` and `tags` are consulted; `title` and every other key
+#: are silent, and body text never sets state.
+_FRONTMATTER_STATE_VALUES = {
+    "approved": {"approved", "final", "published", "live", "current"},
+    "draft": {"draft", "wip", "work in progress", "brainstorm", "unapproved"},
+    "rejected": {"rejected"},
+    "superseded": {"superseded", "deprecated", "obsolete", "archived"},
+    "historical_observation": {"historical", "past campaign"},
+    "inferred_insight": {"inferred", "unreviewed"},
+}
+
+#: Heading words that declare a state, per state.
+_HEADING_STATE_WORDS = {
+    "draft": {"draft", "drafts", "brainstorm", "brainstorming", "work in progress", "wip"},
+    "rejected": {"rejected"},
+    "superseded": {"superseded", "deprecated", "obsolete", "archive", "archived"},
+    "historical_observation": {"past campaigns", "lessons learned", "performance report"},
+}
+
+
+def _state_for_value(low: str) -> str | None:
+    """The state a single lowercased frontmatter or tag value declares."""
+    for state, values in _FRONTMATTER_STATE_VALUES.items():
+        if low in values:
+            return state
+    return None
+
+
+def document_state(metadata: dict) -> tuple[str, list[str]]:
+    """The authority state a document declares in its frontmatter, and warnings.
+
+    Only `status`, `state` and `tags` count; `title` and every other key are
+    silent. An unknown `status`/`state` value falls back to approved and warns
+    `unknown_status:<value>`. Body text never sets state, and no frontmatter
+    means approved.
+    """
+    metadata = metadata or {}
+    warnings: list[str] = []
+    candidates: list[str] = []
+
+    for key in ("status", "state"):
+        value = metadata.get(key)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            continue
+        low = str(value).strip().lower()
+        state = _state_for_value(low)
+        if state is not None:
+            candidates.append(state)
+        else:
+            warnings.append(f"unknown_status:{low}")
+
+    tags = metadata.get("tags")
     if isinstance(tags, str):
-        tags = [t.strip() for t in tags.split(",")]
-    tag_text = " ".join(str(t).lower() for t in tags)
-    combined = text + " " + tag_text + " " + (body or "").lower()[:500]
-    if any(k in combined for k in ("rejected", "do not use", "prohibited strategy")):
-        return "rejected"
-    if any(k in combined for k in ("draft", "brainstorm", "unapproved", "work in progress")):
-        return "draft"
-    if any(k in combined for k in ("superseded", "deprecated", "obsolete")):
-        return "superseded"
-    if any(
-        k in combined
-        for k in (
-            "historical observation",
-            "performance report",
-            "past campaign",
-            "lessons learned",
-        )
-    ):
-        return "historical_observation"
-    if any(k in combined for k in ("inferred", "candidate interpretation", "unreviewed")):
-        return "inferred_insight"
-    return "approved"
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    if isinstance(tags, list):
+        for tag in tags:
+            low = str(tag).strip().lower()
+            if not low:
+                continue
+            state = _state_for_value(low)
+            if state is not None:
+                candidates.append(state)
+
+    if not candidates:
+        return "approved", warnings
+    return _most_restrictive(*candidates), warnings
+
+
+def heading_state(heading: str) -> str | None:
+    """The state one heading declares, or None when it declares nothing.
+
+    The heading is lowercased, trimmed and its inner spaces collapsed. It
+    matches a heading word when it equals it, or starts with it followed by a
+    space, a colon or a dash. "Draftsman tips" matches nothing.
+    """
+    normalized = " ".join((heading or "").strip().lower().split())
+    if not normalized:
+        return None
+    best: str | None = None
+    for state, words in _HEADING_STATE_WORDS.items():
+        for word in words:
+            if normalized == word:
+                matched = state
+            elif (
+                normalized.startswith(word + " ")
+                or normalized.startswith(word + ":")
+                or normalized.startswith(word + "-")
+            ):
+                matched = state
+            else:
+                continue
+            if best is None or _STATE_RANK[matched] > _STATE_RANK[best]:
+                best = matched
+    return best
+
+
+def _heading_path_state(heading_path: str) -> str | None:
+    """The most restrictive state declared by any part of a ` > `-joined path."""
+    best: str | None = None
+    for part in (heading_path or "").split(" > "):
+        part_state = heading_state(part)
+        if part_state is not None and (best is None or _STATE_RANK[part_state] > _STATE_RANK[best]):
+            best = part_state
+    return best
+
+
+def assign_states(claims: list[dict], metadata: dict) -> list[str]:
+    """Set each claim's info_state to the most restrictive of the document
+    state and the claim's own heading state (approved when absent).
+
+    Returns the document-state warnings so the caller can report them.
+    """
+    doc_state, warnings = document_state(metadata)
+    for claim in claims:
+        own = claim.get("info_state")
+        if own is None:
+            own = "approved"
+        claim["info_state"] = _most_restrictive(doc_state, own)
+    return warnings
+
+
+def detect_info_state(metadata: dict, body: str = "") -> str:
+    """Classify the authority state of a document/section. Defaults to 'approved'.
+
+    Body text never sets state: only frontmatter `status`/`state`/`tags` do.
+    """
+    return document_state(metadata)[0]
 
 
 def claims_for(metadata: dict, body: str, chunks: list[dict], *, path: str = ""):

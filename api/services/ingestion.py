@@ -22,6 +22,7 @@ from api.services.parser import (
     chunk_with_heading_paths,
     extract_sections_with_paths,
     extract_title,
+    FrontmatterWarning,
     parse_markdown,
 )
 from api.services.repository import (
@@ -448,9 +449,12 @@ class IngestionService:
             if derived and derived["claims"]:
                 from api.services import markdown_claims as _mc
 
-                _state = _mc.detect_info_state(metadata, body)
-                for _c in derived["claims"]:
-                    _c.setdefault("info_state", _state)
+                _warnings = _mc.assign_states(derived["claims"], metadata)
+                for _warning in _warnings:
+                    # `unknown_status:<value>`: report it like any other
+                    # frontmatter warning, code first, the value in `field`.
+                    _code, _, _value = _warning.partition(":")
+                    frontmatter_warnings.append(FrontmatterWarning(_code, path=path, field=_value))
                 # Re-validate against the augmented metadata. The extractor only
                 # emits evidence it has already located in an archived chunk, so
                 # this cannot fail on the quote rule -- but the archive is the

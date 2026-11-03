@@ -427,6 +427,164 @@ def test_scoped_key_unit_checks():
     assert scoped_key("a/b", "a/bk") == "a/b/a/bk"
 
 
+# ---------------------------------------------------------------------------
+# 17-19: supersession input errors are 422, not 500
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_unknown_topic_key_is_422():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        response = await client.post(
+            "/api/memory/remember",
+            json={
+                "corpus": corpus,
+                "statement": "Our voice is warm and consistent.",
+                "key": "brand.voice",
+                "topic_key": "brand.tone",
+            },
+        )
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "invalid_request", detail
+    assert "topic_key" in detail["message"], detail
+    assert detail["message"].startswith("topic_key"), detail
+
+
+@pytest.mark.asyncio
+async def test_unknown_full_claim_id_is_422():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        response = await client.post(
+            "/api/memory/remember",
+            json={
+                "corpus": corpus,
+                "statement": "Our voice is calm and friendly now.",
+                "key": "brand.voice2",
+                "supersedes_claim_id": "0" * 64,
+            },
+        )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"]["code"] == "invalid_request"
+    assert response.json()["detail"]["message"].startswith("supersedes_claim_id")
+
+
+@pytest.mark.asyncio
+async def test_topic_key_with_several_active_claims_is_422():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        # ingest two documents authoring the same claim key
+        r1 = await client.post(
+            "/api/ingest/file",
+            json={
+                "corpus": corpus,
+                "path": "brand/tone-a.md",
+                "content": (
+                    "---\n"
+                    "claims:\n"
+                    "  - key: brand.tone\n"
+                    '    claim: "Tone is warm and steady."\n'
+                    "    value: warm\n"
+                    '    evidence: "Tone is warm and steady."\n'
+                    "---\n"
+                    "\n"
+                    "# Tone A\n"
+                    "\n"
+                    "Tone is warm and steady.\n"
+                ),
+            },
+        )
+        assert r1.status_code == 200, r1.text
+        r2 = await client.post(
+            "/api/ingest/file",
+            json={
+                "corpus": corpus,
+                "path": "brand/tone-b.md",
+                "content": (
+                    "---\n"
+                    "claims:\n"
+                    "  - key: brand.tone\n"
+                    '    claim: "Tone is bold and direct."\n'
+                    "    value: bold\n"
+                    '    evidence: "Tone is bold and direct."\n'
+                    "---\n"
+                    "\n"
+                    "# Tone B\n"
+                    "\n"
+                    "Tone is bold and direct.\n"
+                ),
+            },
+        )
+        assert r2.status_code == 200, r2.text
+        response = await client.post(
+            "/api/memory/remember",
+            json={
+                "corpus": corpus,
+                "statement": "Tone is calm and friendly now.",
+                "key": "brand.tone",
+            },
+        )
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "invalid_request", detail
+    assert "brand.tone" in detail["message"], detail
+    assert detail["message"].startswith("topic_key"), detail
+
+
+@pytest.mark.asyncio
+async def test_supersedes_phrase_with_no_match_is_422():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        response = await client.post(
+            "/api/memory/remember",
+            json={
+                "corpus": corpus,
+                "statement": "Our voice is calm and friendly now.",
+                "key": "brand.voice2",
+                "supersedes_claim_id": "zebra giraffe platypus",
+            },
+        )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"]["code"] == "invalid_request"
+
+
+@pytest.mark.asyncio
+async def test_supersedes_phrase_with_several_matches_is_422():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        first = await remember(
+            client,
+            corpus,
+            statement="Our voice is warm and consistent.",
+            key="voice.a",
+        )
+        assert first["event"] == "NEW", first
+        second = await remember(
+            client,
+            corpus,
+            statement="Our voice is warm and very consistent.",
+            key="voice.b",
+        )
+        assert second["event"] == "NEW", second
+        response = await client.post(
+            "/api/memory/remember",
+            json={
+                "corpus": corpus,
+                "statement": "Our voice is bold and direct always.",
+                "key": "voice.c",
+                "supersedes_claim_id": "voice warm consistent",
+            },
+        )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"]["code"] == "invalid_request"
+
+
 def _invoke(args, base_url_env: str | None = None):
     from cli.main import app
 

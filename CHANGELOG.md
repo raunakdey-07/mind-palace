@@ -6,6 +6,15 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+### Draft/rejected/superseded claims withheld by default (v0.10.0)
+
+`/api/memory/current` and `/api/memory/pack` now withhold claims whose
+`info_state` is `draft`, `rejected` or `superseded`. history and query are
+unchanged. Claim carries `info_state` (excluded when `approved`), and
+`MemoryResponse` carries `withheld_counts` (present only when something was
+withheld). The new request field `include_states` opts individual states back
+in; an unknown state is `422 invalid_state`.
+
 ### Scope-token enforcement made loud (v0.10.0)
 
 A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) now refuses to

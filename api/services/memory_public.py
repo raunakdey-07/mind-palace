@@ -51,6 +51,13 @@ OPERATIONS = frozenset(
     {"current", "history", "changes", "evidence", "as-of", "snapshot", "replay", "pack", "query"}
 )
 
+#: Claim authority states a caller may ask to see via include_states.
+_PR1_STATES = frozenset(
+    {"approved", "draft", "rejected", "superseded", "historical_observation", "inferred_insight"}
+)
+#: States withheld by default from current and pack.
+_WITHHELD_STATES = frozenset({"draft", "rejected", "superseded"})
+
 
 def _validate(operation: str, request: MemoryRequest) -> None:
     if operation not in OPERATIONS:
@@ -60,14 +67,14 @@ def _validate(operation: str, request: MemoryRequest) -> None:
         raise MemoryError("invalid_request", f"{required[operation]} is required", 422)
     allowed = {"corpus", "query"}
     allowed |= {
-        "current": {"path", "valid_at"},
+        "current": {"path", "valid_at", "include_states"},
         "as-of": {"path", "as_of", "valid_at"},
         "history": {"path", "as_of", "valid_at"},
         "changes": {"path", "as_of", "valid_at"},
         "evidence": {"claim_id", "as_of", "valid_at"},
         "snapshot": {"as_of"},
         "replay": {"snapshot_id", "path"},
-        "pack": {"path", "as_of", "valid_at", "snapshot_id", "budget"},
+        "pack": {"path", "as_of", "valid_at", "snapshot_id", "budget", "include_states"},
         "query": {
             "path",
             "as_of",
@@ -87,6 +94,14 @@ def _validate(operation: str, request: MemoryRequest) -> None:
             and value != type(request).model_fields[name].default
         ):
             raise MemoryError("invalid_request", f"{name} is not supported for {operation}", 422)
+    if request.include_states is not None:
+        bad = [s for s in request.include_states if s not in _PR1_STATES]
+        if bad:
+            raise MemoryError(
+                "invalid_state",
+                f"unknown state(s) in include_states: {', '.join(sorted(bad))}",
+                422,
+            )
     if request.snapshot_id and (request.as_of or request.valid_at):
         raise MemoryError("invalid_request", "Snapshot replay fixes both temporal cutoffs", 422)
     if operation == "snapshot" and request.query:
@@ -103,6 +118,83 @@ def _claims(response: MemoryResponse) -> list[Claim]:
         + [c for group in response.conflicts for c in group.claims]
         + [c for change in response.changes for c in change.previous + change.current]
     )
+
+
+def _withhold(response: MemoryResponse, include_states: list[str] | None = None) -> None:
+    """Remove draft, rejected and superseded claims from current and pack responses.
+
+    Mutates the response in place. history and query are never passed here, so
+    they are unchanged. `include_states` names states the caller wants to keep;
+    they are not withheld. A conflict group reduced to a single claim promotes
+    that claim to current_memories; a change emptied on both sides is dropped.
+    Rebuilds evidence and sources so withheld text appears nowhere in the body,
+    and sets withheld_counts when anything was withheld.
+    """
+    include = set(include_states or [])
+    withheld: dict[str, set[str]] = {state: set() for state in _WITHHELD_STATES}
+    for claim in _claims(response):
+        if claim.info_state in _WITHHELD_STATES and claim.info_state not in include:
+            withheld[claim.info_state].add(claim.id)
+
+    for field in ("current_memories", "historical_memories", "uncertain_memories"):
+        kept = [
+            c
+            for c in getattr(response, field)
+            if c.info_state not in _WITHHELD_STATES or c.info_state in include
+        ]
+        setattr(response, field, kept)
+
+    promoted: list[Claim] = []
+    kept_conflicts: list[Conflict] = []
+    for group in response.conflicts:
+        kept = [
+            c
+            for c in group.claims
+            if c.info_state not in _WITHHELD_STATES or c.info_state in include
+        ]
+        if len(kept) >= 2:
+            kept_conflicts.append(Conflict(id=group.id, key=group.key, claims=kept))
+        elif len(kept) == 1:
+            promoted.append(kept[0])
+    response.conflicts = kept_conflicts
+    if promoted:
+        existing = {c.id for c in response.current_memories}
+        response.current_memories.extend(c for c in promoted if c.id not in existing)
+
+    kept_changes: list[Change] = []
+    for change in response.changes:
+        prev = [
+            c
+            for c in change.previous
+            if c.info_state not in _WITHHELD_STATES or c.info_state in include
+        ]
+        curr = [
+            c
+            for c in change.current
+            if c.info_state not in _WITHHELD_STATES or c.info_state in include
+        ]
+        if not prev and not curr:
+            continue
+        kept_changes.append(
+            Change(
+                version_id=change.version_id,
+                predecessor_id=change.predecessor_id,
+                event=change.event,
+                path=change.path,
+                observed_at=change.observed_at,
+                memory_changed=change.memory_changed,
+                relationship=change.relationship,
+                previous=prev,
+                current=curr,
+            )
+        )
+    response.changes = kept_changes
+
+    _attach(response, {e.id: e for e in response.evidence})
+
+    counts = {state: len(ids) for state, ids in withheld.items()}
+    if any(counts.values()):
+        response.withheld_counts = counts
 
 
 def _attach(response: MemoryResponse, evidence: dict[str, Evidence]) -> None:
@@ -208,6 +300,7 @@ def project(
                     "valid_from",
                     "valid_until",
                     "supersedes_id",
+                    "info_state",
                 )
             },
             evidence_ids=sorted(by_claim[cid]),
@@ -333,6 +426,7 @@ def bounded_pack(full: MemoryResponse, budget: int) -> MemoryResponse:
         # pack looks identical to an empty envelope and a consumer cannot tell
         # "nothing relevant" from "nothing sent".
         constraints=list(full.constraints),
+        withheld_counts=full.withheld_counts,
         # The ranking that produced this selection, not the pack that survived
         # it. Truncating the shortlist would hide exactly the near-misses the
         # caller needs in order to notice that the budget cost them the answer.
@@ -456,6 +550,8 @@ async def execute_in_session(db, operation: str, request: MemoryRequest, vectori
             request,
         )
     result = project(versions, request, operation, state, saved)
+    if operation in {"current", "pack"}:
+        _withhold(result, request.include_states)
     result = bounded_pack(result, request.budget) if operation == "pack" else result
     return _with_receipt(result, request)
 

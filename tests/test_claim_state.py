@@ -82,7 +82,11 @@ def test_heading_above_claim_sets_its_state():
 
 def test_do_not_use_heading_is_rules_not_state():
     # #4: "Do not use" is a list of rules, so both claims stay approved.
-    body = "## Do not use\n\n- Never use curated.\n- Never use bespoke.\n"
+    body = (
+        "## Do not use\n\n"
+        '- Never use the word "curated" in copy.\n'
+        '- Never call a product "bespoke" in ads.\n'
+    )
     claims = claimed(body)
     assert len(claims) == 2, claims
     for claim in claims:
@@ -163,35 +167,29 @@ def test_past_campaigns_heading_is_historical_observation():
 
 @pytest.mark.asyncio
 async def test_claim_state_survives_the_ingest_route():
-    # #13: test 3's document through POST /api/ingest/file.
-    url = os.getenv("MEMORY_TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if not url:
-        pytest.skip("set DATABASE_URL (or MEMORY_TEST_DATABASE_URL) for the ingest route test")
-    url = (
+    # #13: test 3's document through POST /api/ingest/file, into a corpus the
+    # test creates itself through the API (rule A1).
+    url = os.environ["DATABASE_URL"]
+    async_url = (
         url.replace("postgresql+psycopg://", "postgresql+asyncpg://")
         .replace("postgresql+psycopg2://", "postgresql+asyncpg://")
         .replace("postgresql://", "postgresql+asyncpg://")
     )
 
-    from hashlib import sha256
     from uuid import uuid4
+
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlalchemy.pool import NullPool
     from sqlalchemy import text
 
-    engine = create_async_engine(url, poolclass=NullPool)
-    corpus = sha256(uuid4().bytes).hexdigest()
-    name = "mp-claim-state-ingest"
+    engine = create_async_engine(async_url, poolclass=NullPool)
     try:
         async with engine.connect() as conn:
-            await conn.execute(
-                text("INSERT INTO corpora(id, name) VALUES (:id, :name)"),
-                {"id": corpus, "name": name},
-            )
-            await conn.commit()
+            await conn.execute(text("SELECT 1 FROM corpora LIMIT 1"))
     finally:
         await engine.dispose()
 
+    name = f"t{uuid4().hex[:12]}"
     body = (
         "# Guide\n\n"
         "## Voice\n\n"
@@ -204,13 +202,18 @@ async def test_claim_state_survives_the_ingest_route():
     from api.main import app
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post(
+        corpus_response = await client.post(
+            "/api/corpora",
+            json={"name": name},
+        )
+        assert corpus_response.status_code == 201, corpus_response.text
+        ingest_response = await client.post(
             "/api/ingest/file",
             json={"content": body, "path": "brand/guide.md", "corpus": name},
         )
-        assert response.status_code == 200, response.text
+        assert ingest_response.status_code == 200, ingest_response.text
 
-    engine = create_async_engine(url, poolclass=NullPool)
+    engine = create_async_engine(async_url, poolclass=NullPool)
     try:
         async with engine.connect() as conn:
             rows = (
@@ -219,9 +222,10 @@ async def test_claim_state_survives_the_ingest_route():
                         "SELECT c.claim, c.info_state "
                         "FROM memory_claims c "
                         "JOIN memory_documents d ON d.id = c.memory_document_id "
-                        "WHERE d.path = :p AND d.corpus_id = :c"
+                        "JOIN corpora k ON k.id = d.corpus_id "
+                        "WHERE k.name = :name AND d.path = :p"
                     ),
-                    {"p": "brand/guide.md", "c": corpus},
+                    {"name": name, "p": "brand/guide.md"},
                 )
             ).all()
     finally:

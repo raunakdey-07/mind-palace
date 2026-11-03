@@ -59,6 +59,30 @@ _PR1_STATES = frozenset(
 _WITHHELD_STATES = frozenset({"draft", "rejected", "superseded"})
 
 
+def _prefixes(request: MemoryRequest) -> tuple[str, ...]:
+    pp = request.path_prefix
+    if pp is None:
+        return ()
+    if isinstance(pp, str):
+        pp = [pp]
+    out: list[str] = []
+    seen: set[str] = set()
+    for p in pp:
+        if isinstance(p, str) and p.endswith("/"):
+            p = p[:-1]
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return tuple(out)
+
+
+def _in_scope(path: str, prefixes: tuple[str, ...]) -> bool:
+    for p in prefixes:
+        if path == p or path.startswith(p + "/"):
+            return True
+    return False
+
+
 def _validate(operation: str, request: MemoryRequest) -> None:
     if operation not in OPERATIONS:
         raise MemoryError("invalid_operation", "Unknown memory operation", 422)
@@ -67,16 +91,25 @@ def _validate(operation: str, request: MemoryRequest) -> None:
         raise MemoryError("invalid_request", f"{required[operation]} is required", 422)
     allowed = {"corpus", "query"}
     allowed |= {
-        "current": {"path", "valid_at", "include_states"},
+        "current": {"path", "path_prefix", "valid_at", "include_states"},
         "as-of": {"path", "as_of", "valid_at"},
-        "history": {"path", "as_of", "valid_at"},
+        "history": {"path", "path_prefix", "as_of", "valid_at"},
         "changes": {"path", "as_of", "valid_at"},
         "evidence": {"claim_id", "as_of", "valid_at"},
         "snapshot": {"as_of"},
         "replay": {"snapshot_id", "path"},
-        "pack": {"path", "as_of", "valid_at", "snapshot_id", "budget", "include_states"},
+        "pack": {
+            "path",
+            "path_prefix",
+            "as_of",
+            "valid_at",
+            "snapshot_id",
+            "budget",
+            "include_states",
+        },
         "query": {
             "path",
+            "path_prefix",
             "as_of",
             "valid_at",
             "snapshot_id",
@@ -102,6 +135,12 @@ def _validate(operation: str, request: MemoryRequest) -> None:
                 f"unknown state(s) in include_states: {', '.join(sorted(bad))}",
                 422,
             )
+    if request.path is not None and request.path_prefix is not None:
+        raise MemoryError("path_conflict", "path and path_prefix cannot both be set", 422)
+    if request.path_prefix is not None:
+        prefixes = _prefixes(request)
+        if not prefixes or any(p == "" for p in prefixes):
+            raise MemoryError("invalid_request", "path_prefix must not be empty", 422)
     if request.snapshot_id and (request.as_of or request.valid_at):
         raise MemoryError("invalid_request", "Snapshot replay fixes both temporal cutoffs", 422)
     if operation == "snapshot" and request.query:
@@ -195,6 +234,34 @@ def _withhold(response: MemoryResponse, include_states: list[str] | None = None)
     counts = {state: len(ids) for state, ids in withheld.items()}
     if any(counts.values()):
         response.withheld_counts = counts
+
+
+def _scope_conflicts(response: MemoryResponse, prefixes: tuple[str, ...]) -> None:
+    """Keep only the in-scope sides of each conflict group.
+
+    Markdown claim keys come from the heading path, not the file path, so two
+    documents built from one template (e.g. two campaign briefs) get the same
+    keys and conflict with each other. A scoped pack must not show the other
+    campaign's headline as "the other side".
+
+    A group with 2+ in-scope sides is kept with those sides. A group reduced
+    to one in-scope side promotes that claim into current_memories. A group
+    with none is dropped. Evidence and sources are rebuilt for the surviving
+    claims.
+    """
+    promoted: list[Claim] = []
+    kept_conflicts: list[Conflict] = []
+    for group in response.conflicts:
+        kept = [c for c in group.claims if _in_scope(c.path, prefixes)]
+        if len(kept) >= 2:
+            kept_conflicts.append(Conflict(id=group.id, key=group.key, claims=kept))
+        elif len(kept) == 1:
+            promoted.append(kept[0])
+    response.conflicts = kept_conflicts
+    if promoted:
+        existing = {c.id for c in response.current_memories}
+        response.current_memories.extend(c for c in promoted if c.id not in existing)
+    _attach(response, {e.id: e for e in response.evidence})
 
 
 def _attach(response: MemoryResponse, evidence: dict[str, Evidence]) -> None:
@@ -313,6 +380,9 @@ def project(
     matched_ids.update(c["id"] for g in matched["conflicts"] for c in g["claims"])
     if request.path:
         matched_ids = {cid for cid in matched_ids if claims[cid].path == request.path}
+    elif request.path_prefix is not None:
+        prefixes = _prefixes(request)
+        matched_ids = {cid for cid in matched_ids if _in_scope(claims[cid].path, prefixes)}
     if request.claim_id:
         if request.claim_id not in claims:
             raise MemoryError("claim_not_found", "Claim not found in this corpus/state", 404)
@@ -353,6 +423,8 @@ def project(
                         seen_targets.add(target_id)
                         before.append(claims[target_id])
             if request.path and v["path"] != request.path:
+                continue
+            if request.path_prefix is not None and not _in_scope(v["path"], _prefixes(request)):
                 continue
             if operation in {"history", "changes"}:
                 # A version can carry several claims; only the ones on the matched
@@ -543,13 +615,19 @@ async def execute_in_session(db, operation: str, request: MemoryRequest, vectori
 
         # Resolve the COMPLETE scoped state before applying any relevance filter.
         full = project(
-            versions, request.model_copy(update={"query": "", "path": None}), "pack", state, saved
+            versions,
+            request.model_copy(update={"query": "", "path": None}),
+            "pack",
+            state,
+            saved,
         )
-        return _with_receipt(
-            await query(full, request, db=db, corpus_id=corpus["id"], vectorized=vectorized),
-            request,
-        )
+        result = await query(full, request, db=db, corpus_id=corpus["id"], vectorized=vectorized)
+        if request.path_prefix is not None:
+            _scope_conflicts(result, _prefixes(request))
+        return _with_receipt(result, request)
     result = project(versions, request, operation, state, saved)
+    if request.path_prefix is not None:
+        _scope_conflicts(result, _prefixes(request))
     if operation in {"current", "pack"}:
         _withhold(result, request.include_states)
     result = bounded_pack(result, request.budget) if operation == "pack" else result

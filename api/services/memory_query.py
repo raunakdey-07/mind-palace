@@ -514,7 +514,7 @@ def select(
     projection determines which claim in that key is CURRENT. A 0.30 cosine floor
     and 90% top-score band are relevance heuristics, not truth/authority scores.
     """
-    from api.services.memory_public import _attach, _claims
+    from api.services.memory_public import _attach, _claims, _in_scope, _prefixes
 
     claims = {c.id: c for c in _claims(full)}
     from api.services.memory_relevance import RelevancePolicy, relevance
@@ -535,7 +535,9 @@ def select(
     selected = {
         c.id
         for c in claims.values()
-        if c.key in keys and (not request.path or c.path == request.path)
+        if c.key in keys
+        and (not request.path or c.path == request.path)
+        and (request.path_prefix is None or _in_scope(c.path, _prefixes(request)))
     }
     if intent.name in {"historical", "change", "provenance"}:
         # Follow the supersession edges backwards. A claim read out of plain
@@ -554,6 +556,7 @@ def select(
             if claim.key in keys
             and claim.supersedes_id
             and (not request.path or claim.path == request.path)
+            and (request.path_prefix is None or _in_scope(claim.path, _prefixes(request)))
         }
     result = MemoryResponse(query=request.query, corpus=full.corpus, state=full.state)
     fields = ["current_memories"]

@@ -16,7 +16,6 @@ from httpx import ASGITransport, AsyncClient
 from api.main import app
 from api.services import authz
 from api.services import db as db_module
-from api.services.remember import memory_path
 
 API_BASE = "http://test"
 
@@ -123,7 +122,13 @@ async def test_path_and_path_prefix_conflict():
         await seed_standard(client, corpus)
         response = await client.post(
             "/api/memory/pack",
-            json={"corpus": corpus, "query": "", "budget": 8000, "path": "brand/voice.md", "path_prefix": "brand"},
+            json={
+                "corpus": corpus,
+                "query": "",
+                "budget": 8000,
+                "path": "brand/voice.md",
+                "path_prefix": "brand",
+            },
         )
     assert response.status_code == 422, response.text
     assert response.json()["detail"]["code"] == "path_conflict"
@@ -149,32 +154,42 @@ async def test_scoped_conflicts_match_unscoped():
     corpus = corpus_name()
     async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
         await create_corpus(client, corpus)
-        await ingest(client, corpus, "brand/decision.md", (
-            "---\n"
-            "claims:\n"
-            "  - key: decision\n"
-            "    claim: \"Decision is red.\"\n"
-            "    value: red\n"
-            "    evidence: \"Decision is red.\"\n"
-            "---\n"
-            "\n"
-            "# Brand decision\n"
-            "\n"
-            "Decision is red.\n"
-        ))
-        await ingest(client, corpus, "campaigns/a/decision.md", (
-            "---\n"
-            "claims:\n"
-            "  - key: decision\n"
-            "    claim: \"Decision is blue.\"\n"
-            "    value: blue\n"
-            "    evidence: \"Decision is blue.\"\n"
-            "---\n"
-            "\n"
-            "# Campaign A decision\n"
-            "\n"
-            "Decision is blue.\n"
-        ))
+        await ingest(
+            client,
+            corpus,
+            "brand/decision.md",
+            (
+                "---\n"
+                "claims:\n"
+                "  - key: decision\n"
+                '    claim: "Decision is red."\n'
+                "    value: red\n"
+                '    evidence: "Decision is red."\n'
+                "---\n"
+                "\n"
+                "# Brand decision\n"
+                "\n"
+                "Decision is red.\n"
+            ),
+        )
+        await ingest(
+            client,
+            corpus,
+            "campaigns/a/decision.md",
+            (
+                "---\n"
+                "claims:\n"
+                "  - key: decision\n"
+                '    claim: "Decision is blue."\n'
+                "    value: blue\n"
+                '    evidence: "Decision is blue."\n'
+                "---\n"
+                "\n"
+                "# Campaign A decision\n"
+                "\n"
+                "Decision is blue.\n"
+            ),
+        )
         scoped = await pack(client, corpus, path_prefix=["brand", "campaigns/a"])
         unscoped = await pack(client, corpus)
     assert len(scoped.get("conflicts", [])) == len(unscoped.get("conflicts", [])) == 1
@@ -193,6 +208,7 @@ async def test_path_prefix_does_not_bypass_corpus_authorization(monkeypatch):
     async with db_module.admin_session_scope() as db:
         with db_module.principal_scope(authz.ADMIN_PRINCIPAL):
             from api.services.corpora import get_or_create_corpus
+
             await get_or_create_corpus(db, name_x)
             await get_or_create_corpus(db, name_y)
             issued = await authz.issue_credential(db, "pp-test", [name_x], "read_only")
@@ -223,7 +239,12 @@ async def test_path_prefix_literal_underscore_percent():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
         await create_corpus(client, corpus)
         await seed_standard(client, corpus)
-        await ingest(client, corpus, "campaigns/aXb/x.md", "# Campaign AXB note\n\n- Campaign AXB launch targets dog walkers.\n")
+        await ingest(
+            client,
+            corpus,
+            "campaigns/aXb/x.md",
+            "# Campaign AXB note\n\n- Campaign AXB launch targets dog walkers.\n",
+        )
         body = await pack(client, corpus, path_prefix="campaigns/a_b")
     text = str(body)
     assert "dog walkers" not in text
@@ -257,11 +278,24 @@ async def test_scoped_conflict_isolates_campaign():
     corpus = corpus_name()
     async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
         await create_corpus(client, corpus)
-        await ingest(client, corpus, "campaigns/spring/brief.md", "# Campaign brief\n\n## Headline\n\n- Headline is Summer of Speed now.\n")
-        await ingest(client, corpus, "campaigns/autumn/brief.md", "# Campaign brief\n\n## Headline\n\n- Headline is Autumn Glow Sale now.\n")
+        await ingest(
+            client,
+            corpus,
+            "campaigns/spring/brief.md",
+            "# Campaign brief\n\n## Headline\n\n- Headline is Summer of Speed now.\n",
+        )
+        await ingest(
+            client,
+            corpus,
+            "campaigns/autumn/brief.md",
+            "# Campaign brief\n\n## Headline\n\n- Headline is Autumn Glow Sale now.\n",
+        )
         body1 = await pack(client, corpus)
         conflicts1 = body1.get("conflicts", [])
-        assert len(conflicts1) == 1, (conflicts1, [c.get("claim") for c in body1.get("current_memories", [])])
+        assert len(conflicts1) == 1, (
+            conflicts1,
+            [c.get("claim") for c in body1.get("current_memories", [])],
+        )
         body2 = await pack(client, corpus, path_prefix=["campaigns/spring"])
     text2 = str(body2)
     assert "Autumn Glow" not in text2
@@ -345,11 +379,33 @@ def test_sdk_pack_sends_path_prefix():
 
     def handle(request: httpx.Request) -> httpx.Response:
         captured["body"] = request.read().decode()
-        import json
-        return httpx.Response(200, json={"schema_version": 1, "query": "", "corpus": corpus, "state": {"as_of": None, "valid_at": "2026-01-01T00:00:00Z", "snapshot": None}, "current_memories": [], "historical_memories": [], "uncertain_memories": [], "changes": [], "conflicts": [], "constraints": [], "evidence": [], "sources": [], "truncated": False, "budget_unit": "unicode_characters", "match_status": "abstained", "match_margin": None, "candidates": [], "unmatched_subparts": []})
+        return httpx.Response(
+            200,
+            json={
+                "schema_version": 1,
+                "query": "",
+                "corpus": corpus,
+                "state": {"as_of": None, "valid_at": "2026-01-01T00:00:00Z", "snapshot": None},
+                "current_memories": [],
+                "historical_memories": [],
+                "uncertain_memories": [],
+                "changes": [],
+                "conflicts": [],
+                "constraints": [],
+                "evidence": [],
+                "sources": [],
+                "truncated": False,
+                "budget_unit": "unicode_characters",
+                "match_status": "abstained",
+                "match_margin": None,
+                "candidates": [],
+                "unmatched_subparts": [],
+            },
+        )
 
     client = httpx.Client(transport=httpx.MockTransport(handle))
     import json as _json
+
     mp = MindPalace(corpus, base_url="http://test")
     # monkeypatch httpx.post globally? The SDK uses httpx.post directly.
     orig_post = httpx.post
@@ -360,3 +416,41 @@ def test_sdk_pack_sends_path_prefix():
         httpx.post = orig_post
     body = _json.loads(captured["body"])
     assert body.get("path_prefix") == ["brand", "campaigns/a"], body
+
+
+# ---------------------------------------------------------------------------
+# 15: scoped reads keep cross-document supersession
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_scoped_read_keeps_cross_document_supersession():
+    corpus = corpus_name()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=API_BASE) as client:
+        await create_corpus(client, corpus)
+        await ingest(
+            client,
+            corpus,
+            "brand/voice.md",
+            "# Brand voice\n\n- Brand voice stays warm for every launch.\n",
+        )
+        r1 = await client.post(
+            "/api/memory/remember",
+            json={
+                "corpus": corpus,
+                "statement": "Brand voice is bold for every launch now.",
+                "key": "brand.voice.v2",
+                "supersedes_claim_id": "Brand voice stays warm for every launch",
+            },
+        )
+        assert r1.status_code == 200, r1.text
+        body_pack = await pack(client, corpus, path_prefix=["brand"])
+        body_query_resp = await client.post(
+            "/api/memory/query",
+            json={"corpus": corpus, "query": "launch", "path_prefix": ["brand"], "budget": 8000},
+        )
+        assert body_query_resp.status_code == 200, body_query_resp.text
+        body_query = body_query_resp.json()
+    for body in (body_pack, body_query):
+        claims = body.get("current_memories", [])
+        assert not any("stays warm" in c.get("claim", "") for c in claims), body

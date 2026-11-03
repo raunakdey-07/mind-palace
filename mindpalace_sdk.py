@@ -710,6 +710,7 @@ class MemoryClient:
         corpus: str | None = None,
         *,
         as_of: datetime | str | None = None,
+        path_prefix: str | list[str] | None = None,
     ) -> MemoryResponse:
         """Answer a question from memory, with its source and the time it was true.
 
@@ -723,10 +724,15 @@ class MemoryClient:
 
         The corpus defaults to ``default``. Pass one to scope memory explicitly.
         """
-        return self._execute("query", corpus, question, as_of=as_of)
+        return self._execute("query", corpus, question, as_of=as_of, path_prefix=path_prefix)
 
     def explain(
-        self, question: str, corpus: str | None = None, *, as_of: datetime | str | None = None
+        self,
+        question: str,
+        corpus: str | None = None,
+        *,
+        as_of: datetime | str | None = None,
+        path_prefix: str | list[str] | None = None,
     ) -> MemoryResponse:
         """Answer a question and attach why it was returned.
 
@@ -739,7 +745,9 @@ class MemoryClient:
         trace, and it does not establish that the original source was factually
         correct.
         """
-        return self._execute("query", corpus, question, as_of=as_of, include_receipt=True)
+        return self._execute(
+            "query", corpus, question, as_of=as_of, path_prefix=path_prefix, include_receipt=True
+        )
 
     def query(
         self,
@@ -753,6 +761,7 @@ class MemoryClient:
         as_of: datetime | str | None = None,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        path_prefix: str | list[str] | None = None,
         claim_id: str | None = None,
         snapshot_id: str | None = None,
         include_receipt: bool = False,
@@ -778,6 +787,7 @@ class MemoryClient:
             as_of=as_of,
             valid_at=valid_at,
             path=path,
+            path_prefix=path_prefix,
             claim_id=claim_id,
             snapshot_id=snapshot_id,
             include_receipt=include_receipt,
@@ -790,10 +800,17 @@ class MemoryClient:
         *,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        path_prefix: str | list[str] | None = None,
         include_states: list[str] | None = None,
     ) -> MemoryResponse:
         return self._execute(
-            "current", corpus, query, valid_at=valid_at, path=path, include_states=include_states
+            "current",
+            corpus,
+            query,
+            valid_at=valid_at,
+            path=path,
+            path_prefix=path_prefix,
+            include_states=include_states,
         )
 
     def history(
@@ -804,8 +821,17 @@ class MemoryClient:
         as_of: datetime | str | None = None,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        path_prefix: str | list[str] | None = None,
     ) -> MemoryResponse:
-        return self._execute("history", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+        return self._execute(
+            "history",
+            corpus,
+            query,
+            as_of=as_of,
+            valid_at=valid_at,
+            path=path,
+            path_prefix=path_prefix,
+        )
 
     def changes(
         self,
@@ -924,6 +950,7 @@ class MemoryClient:
         as_of: datetime | str | None = None,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        path_prefix: str | list[str] | None = None,
         snapshot_id: str | None = None,
         include_states: list[str] | None = None,
     ) -> MemoryResponse:
@@ -935,6 +962,7 @@ class MemoryClient:
             as_of=as_of,
             valid_at=valid_at,
             path=path,
+            path_prefix=path_prefix,
             snapshot_id=snapshot_id,
             include_states=include_states,
         )
@@ -1196,7 +1224,12 @@ class MindPalace:
         )
 
     def recall(
-        self, question: str, *, corpus: str | None = None, as_of: datetime | str | None = None
+        self,
+        question: str,
+        *,
+        corpus: str | None = None,
+        as_of: datetime | str | None = None,
+        path_prefix: str | list[str] | None = None,
     ) -> MemoryResponse:
         """Answer a question from memory, with its source and the time it was true.
 
@@ -1207,9 +1240,17 @@ class MindPalace:
         ``as_of`` reconstructs the answer from an earlier instant, so "what did we
         decide back then?" is answerable after the decision changes.
         """
-        return self.memory.recall(question, corpus or self.name or DEFAULT_CORPUS, as_of=as_of)
+        return self.memory.recall(
+            question, corpus or self.name or DEFAULT_CORPUS, as_of=as_of, path_prefix=path_prefix
+        )
 
-    def explain(self, question: str, *, corpus: str | None = None) -> MemoryResponse:
+    def explain(
+        self,
+        question: str,
+        *,
+        corpus: str | None = None,
+        path_prefix: str | list[str] | None = None,
+    ) -> MemoryResponse:
         """Answer a question and attach why it was returned.
 
         The same answer as :meth:`recall`, with the Memory Receipt attached: the
@@ -1220,9 +1261,17 @@ class MindPalace:
         trace, and it does not establish that the original source was factually
         correct.
         """
-        return self.memory.explain(question, corpus or self.name or DEFAULT_CORPUS)
+        return self.memory.explain(
+            question, corpus or self.name or DEFAULT_CORPUS, path_prefix=path_prefix
+        )
 
-    def history(self, question: str = "", *, corpus: str | None = None) -> MemoryResponse:
+    def history(
+        self,
+        question: str = "",
+        *,
+        corpus: str | None = None,
+        path_prefix: str | list[str] | None = None,
+    ) -> MemoryResponse:
         """Read what a memory said before, and what replaced it.
 
         Reads the real supersession chain from the archive. Nothing here is
@@ -1231,7 +1280,9 @@ class MindPalace:
         corpus.
         """
         return self.memory.history(
-            corpus=corpus or self.name or DEFAULT_CORPUS, query=question or ""
+            corpus=corpus or self.name or DEFAULT_CORPUS,
+            query=question or "",
+            path_prefix=path_prefix,
         )
 
     def context(

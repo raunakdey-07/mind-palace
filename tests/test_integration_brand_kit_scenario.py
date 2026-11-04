@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mindpalace_sdk import MemoryClientError, MindPalace
 
-from live_server import live_server  # noqa: F401  module-scoped server fixture
+from live_server import live_server  # noqa: F401,F811  module-scoped server fixture
 from tenant_harness import RUNTIME_ROLE, apply_as_runtime, runtime_url
 
 SCOPE = ["brand", "campaigns/spring"]
@@ -34,17 +34,11 @@ BRAND_GUIDE = (
     "## Brainstorming\n\n- Maybe try a playful pirate theme someday.\n"
 )
 
-BRAND_SPECS = (
-    "# Trailhead product specs\n\n- The Trailhead 2 bike weighs 9.8 kilograms.\n"
-)
+BRAND_SPECS = "# Trailhead product specs\n\n- The Trailhead 2 bike weighs 9.8 kilograms.\n"
 
-SPRING_BRIEF = (
-    "# Campaign brief\n\n## Facts\n\n- The spring launch date is 14 March 2027.\n"
-)
+SPRING_BRIEF = "# Campaign brief\n\n## Facts\n\n- The spring launch date is 14 March 2027.\n"
 
-AUTUMN_BRIEF = (
-    "# Campaign brief\n\n## Facts\n\n- The autumn launch date is 9 September 2027.\n"
-)
+AUTUMN_BRIEF = "# Campaign brief\n\n## Facts\n\n- The autumn launch date is 9 September 2027.\n"
 
 MODIFIED_GUIDE = (
     "---\nstatus: approved\n---\n\n# Trailhead brand guide\n\n## Voice\n\n"
@@ -69,7 +63,7 @@ def _ingest(srv, key, content, path, corpus="acme"):
 # ---------------------------------------------------------------------------
 
 
-def test_role_properties(live_server):
+def test_role_properties():
     """The app connects as the least-privileged runtime role."""
     engine = apply_as_runtime(runtime_url())
     try:
@@ -103,7 +97,7 @@ def test_role_properties(live_server):
 # ---------------------------------------------------------------------------
 
 
-def test_brand_kit_lifecycle(live_server):
+def test_brand_kit_lifecycle(live_server):  # noqa: F811
     key = live_server.keys["acme"]
     mp = MindPalace("acme", base_url=live_server.url, api_key=key, timeout=5, retries=1)
 
@@ -124,18 +118,13 @@ def test_brand_kit_lifecycle(live_server):
     assert "9.8 kilograms" in blob, f"step 3: spec missing: {blob}"
     assert "9 September" not in blob, f"step 3: autumn date leaked: {blob}"
     assert "pirate" not in blob, f"step 3: brainstorming leaked: {blob}"
-    assert (p.withheld_counts or {}).get("draft", 0) >= 1, (
-        f"step 3: expected at least one withheld draft, got {p.withheld_counts}"
-    )
+    assert (p.withheld_counts or {}).get(
+        "draft", 0
+    ) >= 1, f"step 3: expected at least one withheld draft, got {p.withheld_counts}"
     assert p.truncated is False, f"step 3: pack truncated: {p.truncated}"
     assert p.conflicts == [], f"step 3: unexpected conflicts: {p.conflicts}"
-    voice_id = next(
-        c.id for c in p.current_memories if "warm, plain and confident" in c.claim
-    )
-    print(
-        f"step 3: len(current_memories)={len(p.current_memories)} "
-        f"len(json)={len(blob)}"
-    )
+    voice_id = next(c.id for c in p.current_memories if "warm, plain and confident" in c.claim)
+    print(f"step 3: len(current_memories)={len(p.current_memories)} " f"len(json)={len(blob)}")
     p_small = mp.memory.pack(query="", budget=4000, path_prefix=SCOPE)
     print(
         f"step 3 (budget=4000): len(current_memories)={len(p_small.current_memories)} "
@@ -152,9 +141,7 @@ def test_brand_kit_lifecycle(live_server):
     p2 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
     blob2 = p2.model_dump_json()
     assert "Ride Into Spring" not in blob2, f"step 4: rejected copy still in pack: {blob2}"
-    p3 = mp.memory.pack(
-        query="", budget=8000, path_prefix=SCOPE, include_states=["rejected"]
-    )
+    p3 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE, include_states=["rejected"])
     found = next(
         (
             c
@@ -163,7 +150,9 @@ def test_brand_kit_lifecycle(live_server):
         ),
         None,
     )
-    assert found is not None, f"step 4: rejected claim not found with include_states: {p3.model_dump_json()}"
+    assert (
+        found is not None
+    ), f"step 4: rejected claim not found with include_states: {p3.model_dump_json()}"
 
     # 5. Reviewer corrects the voice.
     r = mp.memory.remember(
@@ -182,9 +171,7 @@ def test_brand_kit_lifecycle(live_server):
     ), f"step 5: old voice still current: {blob4}"
     h = mp.memory.history(query="", path=r.path)
     assert any(
-        "warm, plain and confident" in c.claim
-        for change in h.changes
-        for c in change.previous
+        "warm, plain and confident" in c.claim for change in h.changes for c in change.previous
     ), f"step 5: history previous missing old voice: {h.model_dump_json()}"
 
     # 6. Brand team edits the guide.
@@ -194,9 +181,9 @@ def test_brand_kit_lifecycle(live_server):
         "free shipping" in c.claim for c in p5.current_memories
     ), f"step 6: free shipping still current: {p5.model_dump_json()}"
     h2 = mp.memory.history(query="", path="brand/guide.md")
-    assert "free shipping" in h2.model_dump_json(), (
-        f"step 6: history missing free shipping: {h2.model_dump_json()}"
-    )
+    assert (
+        "free shipping" in h2.model_dump_json()
+    ), f"step 6: history missing free shipping: {h2.model_dump_json()}"
 
     # 7. Withdraw a remembered rule.
     mp.memory.remember(
@@ -219,9 +206,9 @@ def test_brand_kit_lifecycle(live_server):
     assert not any(
         "Never mention competitors by name" in c.claim for c in p7.current_memories
     ), f"step 7: rejected rule still current: {p7.model_dump_json()}"
-    assert (p7.withheld_counts or {}).get("rejected", 0) >= 1, (
-        f"step 7: expected withheld rejected, got {p7.withheld_counts}"
-    )
+    assert (p7.withheld_counts or {}).get(
+        "rejected", 0
+    ) >= 1, f"step 7: expected withheld rejected, got {p7.withheld_counts}"
 
     # 10. Retry safety: same rejected remember again -> UNCHANGED.
     r3 = mp.memory.remember(
@@ -238,7 +225,7 @@ def test_brand_kit_lifecycle(live_server):
 # ---------------------------------------------------------------------------
 
 
-def test_isolation(live_server):
+def test_isolation(live_server):  # noqa: F811
     key = live_server.keys["acme"]
     mp = MindPalace("acme", base_url=live_server.url, api_key=key, timeout=5, retries=1)
 
@@ -249,9 +236,10 @@ def test_isolation(live_server):
     ):
         with pytest.raises(MemoryClientError) as exc:
             method(**kwargs)
-        assert exc.value.status_code in (403, 404), (
-            f"step 8: {method.__name__} on globex gave {exc.value.status_code}"
-        )
+        assert exc.value.status_code in (
+            403,
+            404,
+        ), f"step 8: {method.__name__} on globex gave {exc.value.status_code}"
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +249,9 @@ def test_isolation(live_server):
 
 def test_memory_down():
     start = time.monotonic()
-    mp_down = MindPalace("acme", base_url="http://127.0.0.1:19999", api_key="x", timeout=1, retries=1)
+    mp_down = MindPalace(
+        "acme", base_url="http://127.0.0.1:19999", api_key="x", timeout=1, retries=1
+    )
     try:
         mp_down.memory.pack(query="")
     except MemoryClientError as exc:
@@ -277,14 +267,35 @@ def test_memory_down():
 # ---------------------------------------------------------------------------
 
 
-def test_latency(live_server):
+def test_latency(live_server):  # noqa: F811
     key = live_server.keys["globex"]
     mp = MindPalace("globex", base_url=live_server.url, api_key=key, timeout=5, retries=1)
 
     WORD_LIST = [
-        "the", "quick", "brown", "fox", "jumps", "over", "lazy", "dog",
-        "bright", "silent", "river", "flows", "under", "old", "stone", "bridge",
-        "cold", "wind", "blows", "through", "empty", "streets", "at", "night",
+        "the",
+        "quick",
+        "brown",
+        "fox",
+        "jumps",
+        "over",
+        "lazy",
+        "dog",
+        "bright",
+        "silent",
+        "river",
+        "flows",
+        "under",
+        "old",
+        "stone",
+        "bridge",
+        "cold",
+        "wind",
+        "blows",
+        "through",
+        "empty",
+        "streets",
+        "at",
+        "night",
     ]
 
     def doc_text(i: int) -> str:
@@ -300,7 +311,7 @@ def test_latency(live_server):
     times = []
     for _ in range(20):
         t0 = time.monotonic()
-        p = mp.memory.pack(query="", budget=8000)
+        _ = mp.memory.pack(query="", budget=8000)
         times.append((time.monotonic() - t0) * 1000)
 
     qs = statistics.quantiles(times, n=100)

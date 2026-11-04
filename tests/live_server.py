@@ -18,7 +18,6 @@ import httpx
 import pytest
 import sqlalchemy as sa
 
-import tenant_harness
 from tenant_harness import (
     _restore_secret_and_disable,
     _rotate_and_enable,
@@ -79,7 +78,7 @@ def live_server(tmp_path_factory):
     Yields an object with `.url`, `.keys = {"acme": "...", "globex": "..."}` and
     `.stderr_path`.
     """
-    with pytest.MonkeyPatch.context() as mp:
+    with pytest.MonkeyPatch.context():
         # 1. Provision the runtime role, rotate the scope secret, enable enforcement.
         apply_provision_sql()
         secret, original = _rotate_and_enable(os.environ["DATABASE_URL"])

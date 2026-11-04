@@ -221,3 +221,104 @@ async def test_an_ambiguous_reference_still_fails_the_document(store):
         ).ingest_file(content=body, path="ad-003.md", corpus_id=store.corpus)
     assert "a/0001.md" in str(raised.value) and "b/0001.md" in str(raised.value)
     assert not any("PostgreSQL 16" in c["claim"] for c in await live(store))
+
+
+# ---------------------------------------------------------------------------
+# history(path=<new doc>) cross-document supersession (closes #152)
+# ---------------------------------------------------------------------------
+
+GUIDE = (
+    "# Brand guide\n\n## Voice\n\n- Our voice is warm, plain and confident.\n\n"
+    "## Tagline\n\n- Tagline is Ride further every day.\n"
+)
+
+
+async def _ingest_raw(store, content, path):
+    """Ingest raw content as a file through IngestionService (not render_statement)."""
+    await ingestion_service.IngestionService(
+        memory_enabled=True, require_embeddings=False
+    ).ingest_file(content=content, path=path, corpus_id=store.corpus)
+
+
+async def _seed_voice(store):
+    """Ingest the brand guide; return the voice claim id."""
+    await _ingest_raw(store, GUIDE, "brand/guide.md")
+    target = next(c for c in await live(store) if "warm, plain and confident" in c["claim"])
+    return target["id"]
+
+
+async def test_history_by_new_document_path_shows_cross_document_supersession(store):
+    """history(path=<remember path>) must show the superseded cross-document
+    claim in changes[].previous (closes #152)."""
+    from api.services.memory_public import execute_in_session
+
+    voice_id = await _seed_voice(store)
+    written = await remember(
+        "Our voice is warm, plain and direct.",
+        corpus=store.name,
+        key="brand.voice",
+        supersedes_claim_id=voice_id,
+    )
+    assert written["path"], "remember response must carry the new document path"
+
+    hist = await execute_in_session(
+        store.db,
+        "history",
+        MemoryRequest(corpus=store.name, query="", path=written["path"]),
+    )
+    prev_claims = [c.claim for change in hist.changes for c in change.previous]
+    assert any(
+        "warm, plain and confident" in c for c in prev_claims
+    ), f"cross-document supersession missing from history previous: {prev_claims}"
+    assert not any(
+        "Ride further" in c for c in prev_claims
+    ), f"sibling leaked into history previous: {prev_claims}"
+
+
+async def test_history_by_original_document_path_first_version_unchanged(store):
+    """history(path=brand/guide.md) first version: previous == [] and current
+    contains both bullets (unchanged behaviour)."""
+    from api.services.memory_public import execute_in_session
+
+    voice_id = await _seed_voice(store)
+    await remember(
+        "Our voice is warm, plain and direct.",
+        corpus=store.name,
+        key="brand.voice",
+        supersedes_claim_id=voice_id,
+    )
+
+    hist = await execute_in_session(
+        store.db,
+        "history",
+        MemoryRequest(corpus=store.name, query="", path="brand/guide.md"),
+    )
+    assert hist.changes, "history must return at least one change"
+    first = hist.changes[0]
+    assert first.previous == [], f"first version previous must be [], got {first.previous}"
+    assert any(
+        "warm, plain and confident" in c.claim for c in first.current
+    ), "first version current must contain the voice bullet"
+    assert any(
+        "Ride further" in c.claim for c in first.current
+    ), "first version current must contain the tagline bullet"
+
+
+async def test_history_without_path_shows_cross_document_supersession(store):
+    """history with no path: some change's previous contains the superseded
+    voice claim (unchanged behaviour)."""
+    from api.services.memory_public import execute_in_session
+
+    voice_id = await _seed_voice(store)
+    await remember(
+        "Our voice is warm, plain and direct.",
+        corpus=store.name,
+        key="brand.voice",
+        supersedes_claim_id=voice_id,
+    )
+
+    hist = await execute_in_session(store.db, "history", MemoryRequest(corpus=store.name, query=""))
+    prev_claims = [c.claim for change in hist.changes for c in change.previous]
+    assert any(
+        "warm, plain and confident" in c for c in prev_claims
+    ), f"missing cross-document supersession in unfiltered history: {prev_claims}"

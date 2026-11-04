@@ -100,6 +100,15 @@ be combined with `state` or `scope` and is refused with `invalid_request` before
 the SDK is called; `DecisionError` keeps its code (`invalid_state`,
 `invalid_scope`) instead of being reported as `invalid_evidence`.
 
+### History shows cross-document supersessions
+
+`history(path=...)` and `changes(path=...)` now include superseded claims from
+other documents in `changes[].previous` when the superseding claim's
+`supersedes_id` points at them. The lineage filter keeps `after` claims that
+are on the matched lineage first, then also keeps any `before` claim that is
+the `supersedes_id` target of a kept `after` claim. Superseded siblings from
+the same document still filter out, so no unrelated claim leaks.
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.

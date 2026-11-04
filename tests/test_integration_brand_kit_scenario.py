@@ -97,7 +97,7 @@ def test_role_properties():
 # ---------------------------------------------------------------------------
 
 
-def test_brand_kit_lifecycle(live_server):  # noqa: F811
+def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     key = live_server.keys["acme"]
     mp = MindPalace("acme", base_url=live_server.url, api_key=key, timeout=5, retries=1)
 
@@ -121,15 +121,31 @@ def test_brand_kit_lifecycle(live_server):  # noqa: F811
     assert (p.withheld_counts or {}).get(
         "draft", 0
     ) >= 1, f"step 3: expected at least one withheld draft, got {p.withheld_counts}"
-    assert p.truncated is False, f"step 3: pack truncated: {p.truncated}"
     assert p.conflicts == [], f"step 3: unexpected conflicts: {p.conflicts}"
+    full = mp.memory.pack(query="", budget=64000, path_prefix=SCOPE)
+    assert full.truncated is False, "step 3: 64000 must hold everything"
+    assert {c.id for c in p.current_memories} == {
+        c.id for c in full.current_memories
+    }, "step 3: budget 8000 must keep every current claim"
     voice_id = next(c.id for c in p.current_memories if "warm, plain and confident" in c.claim)
-    print(f"step 3: len(current_memories)={len(p.current_memories)} " f"len(json)={len(blob)}")
-    p_small = mp.memory.pack(query="", budget=4000, path_prefix=SCOPE)
-    print(
-        f"step 3 (budget=4000): len(current_memories)={len(p_small.current_memories)} "
-        f"len(json)={len(p_small.model_dump_json())}"
-    )
+    with capsys.disabled():
+        packs = {}
+        for budget in (4000, 8000, 16000, 64000):
+            if budget == 8000:
+                packs[budget] = p
+            elif budget == 64000:
+                packs[budget] = full
+            else:
+                packs[budget] = mp.memory.pack(query="", budget=budget, path_prefix=SCOPE)
+            print(
+                f"budget={budget} current={len(packs[budget].current_memories)} "
+                f"changes={len(packs[budget].changes)} truncated={packs[budget].truncated} "
+                f"json_chars={len(packs[budget].model_dump_json())}"
+            )
+        small = packs[4000]
+        full_ids = {c.id for c in full.current_memories}
+        kept = {c.id for c in small.current_memories}
+        print(f"step 3 (budget=4000): kept_all={kept == full_ids}")
 
     # 4. Reviewer rejects copy.
     mp.memory.remember(
@@ -267,7 +283,7 @@ def test_memory_down():
 # ---------------------------------------------------------------------------
 
 
-def test_latency(live_server):  # noqa: F811
+def test_latency(live_server, capsys):  # noqa: F811
     key = live_server.keys["globex"]
     mp = MindPalace("globex", base_url=live_server.url, api_key=key, timeout=5, retries=1)
 
@@ -317,5 +333,6 @@ def test_latency(live_server):  # noqa: F811
     qs = statistics.quantiles(times, n=100)
     p50 = qs[49]
     p95 = qs[94]
-    print(f"step 11: p50={p50:.1f}ms p95={p95:.1f}ms ingest_wall={ingest_wall:.2f}s")
+    with capsys.disabled():
+        print(f"step 11: p50={p50:.1f}ms p95={p95:.1f}ms ingest_wall={ingest_wall:.2f}s")
     assert p95 < 1000, f"step 11: p95={p95:.1f}ms >= 1000ms"

@@ -141,12 +141,18 @@ class MemoryClientError(Exception):
 
     Adapter-generated codes are timeout (504), transport_error (503),
     invalid_response (502), and http_error (the HTTP response status).
+
+    ``attempts`` is how many remote calls were made before the failure: one
+    when nothing is retried, ``retries + 1`` when the bound is exhausted. A
+    final 502/503/504 response is returned to the caller rather than turned
+    into an error here, so the call site's own mapping still decides the code.
     """
 
-    def __init__(self, code: str, message: str, status_code: int):
+    def __init__(self, code: str, message: str, status_code: int, *, attempts: int = 1):
         self.code = code
         self.message = message
         self.status_code = status_code
+        self.attempts = attempts
         super().__init__(message)
 
 
@@ -190,7 +196,7 @@ def _as_client_error(exc: Exception) -> Exception:
     return exc
 
 
-def _remote_error(response, default_message: str) -> MemoryClientError:
+def _remote_error(response, default_message: str, attempts: int = 1) -> MemoryClientError:
     """Preserve the server's stable error code without exposing its body."""
     code = "http_error"
     message = default_message
@@ -205,7 +211,11 @@ def _remote_error(response, default_message: str) -> MemoryClientError:
                     message = detail["message"]
     except ValueError:
         pass
-    return MemoryClientError(code, message, response.status_code)
+    return MemoryClientError(code, message, response.status_code, attempts=attempts)
+
+
+#: HTTP statuses the SDK will retry on. 4xx is never retried.
+_RETRYABLE_STATUSES = (502, 503, 504)
 
 
 def _discard_stale_runtime() -> None:
@@ -238,6 +248,78 @@ class MemoryClient:
         # should be told so, not silently routed somewhere. The convenience default
         # lives on MindPalace's short methods, which name it for you.
         return self._client.name if corpus is None else corpus
+
+    def _send(
+        self,
+        method: str,
+        url: str,
+        *,
+        timeout_message: str = "Memory request timed out",
+        **kwargs,
+    ) -> tuple[httpx.Response, int]:
+        """One remote HTTP call, with the client's bounded retry and backoff.
+
+        ``method`` is looked up on ``httpx`` at call time (``getattr(httpx,
+        method)``) so a test that monkeypatches ``httpx.post`` or ``httpx.get``
+        still applies; the SDK never uses ``httpx.Client`` or ``httpx.request``.
+
+        At most ``retries + 1`` attempts are made. Only ``httpx.TimeoutException``,
+        ``httpx.RequestError`` and a 502/503/504 response are retried; every other
+        status is returned as-is. Before retry ``n`` the call sleeps
+        ``backoff * 2 ** (n - 1)`` seconds (no jitter).
+
+        After the last attempt a timeout becomes ``MemoryClientError("timeout", ...,
+        504)`` and a transport error becomes ``MemoryClientError("transport_error",
+        ..., 503)``, both carrying ``attempts``. A final 502/503/504 response is
+        returned with its attempt count so the call site's own error mapping still
+        decides the code.
+        """
+        import httpx
+        import time
+
+        retries = self._client.retries
+        backoff = self._client.backoff
+        response = None
+        attempts = 0
+        for attempt in range(1, retries + 2):
+            attempts = attempt
+            try:
+                response = getattr(httpx, method)(
+                    url,
+                    timeout=self._client.timeout,
+                    headers=self._client.headers,
+                    **kwargs,
+                )
+            except httpx.TimeoutException as exc:
+                if attempt <= retries:
+                    if backoff:
+                        time.sleep(backoff * (2 ** (attempt - 1)))
+                    continue
+                raise MemoryClientError(
+                    "timeout", timeout_message, 504, attempts=attempt
+                ) from exc
+            except httpx.RequestError as exc:
+                if attempt <= retries:
+                    if backoff:
+                        time.sleep(backoff * (2 ** (attempt - 1)))
+                    continue
+                raise MemoryClientError(
+                    "transport_error", "Memory service is unavailable", 503, attempts=attempt
+                ) from exc
+
+            if response.is_success:
+                break
+            if response.status_code in _RETRYABLE_STATUSES and attempt <= retries:
+                if backoff:
+                    time.sleep(backoff * (2 ** (attempt - 1)))
+                continue
+            break
+
+        if response is None:
+            raise MemoryClientError(
+                "transport_error", "Memory service is unavailable", 503, attempts=attempts
+            )
+        return response, attempts
 
     def _through_runtime(self, operation: str, request) -> "MemoryResponse | None":
         """Ask a running local runtime, if the caller opted in and one is up.
@@ -323,27 +405,23 @@ class MemoryClient:
 
         import httpx
 
-        try:
-            response = httpx.post(
-                f"{self._client.base_url}/api/memory/{operation}",
-                json=request.model_dump(mode="json"),
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Memory request timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
-
+        response, attempts = self._send(
+            "post",
+            f"{self._client.base_url}/api/memory/{operation}",
+            json=request.model_dump(mode="json"),
+        )
         if not response.is_success:
-            raise _remote_error(response, f"Memory request failed (HTTP {response.status_code})")
+            raise _remote_error(
+                response, f"Memory request failed (HTTP {response.status_code})", attempts=attempts
+            )
         try:
             return MemoryResponse.model_validate(response.json())
         except ValueError as exc:
             raise MemoryClientError(
-                "invalid_response", "Memory service returned an invalid response", 502
+                "invalid_response",
+                "Memory service returned an invalid response",
+                502,
+                attempts=attempts,
             ) from exc
 
     def remember(
@@ -367,6 +445,9 @@ class MemoryClient:
 
         Remembering the same statement twice returns ``unchanged=True`` and the
         same ``version_id``: submitting identical memory is not duplication.
+        The remembered document carries today's date, so identical arguments sent
+        on the same day resolve to the same memory -- a retried write never
+        creates a second version.
         Remembering the same ``key`` with new text supersedes the previous value.
 
         ``state`` is the decision state of the claim: "approved" (default),
@@ -441,8 +522,6 @@ class MemoryClient:
             except Exception as exc:  # noqa: BLE001 - one exception type, whichever path ran
                 raise _as_client_error(exc) from exc
 
-        import httpx
-
         if file is not None:
             # The HTTP contract is statement-only, on purpose: an unauthenticated
             # endpoint must not read a path on the server. Say so here rather than
@@ -453,6 +532,7 @@ class MemoryClient:
                 "Read the file and send its content as the statement.",
                 422,
             )
+
         payload = {
             k: v
             for k, v in {
@@ -466,21 +546,16 @@ class MemoryClient:
             }.items()
             if v is not None
         }
-        try:
-            response = httpx.post(
-                f"{self._client.base_url}/api/memory/remember",
-                json=payload,
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Memory write timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+        response, attempts = self._send(
+            "post",
+            f"{self._client.base_url}/api/memory/remember",
+            json=payload,
+            timeout_message="Memory write timed out",
+        )
         if not response.is_success:
-            raise _remote_error(response, f"Memory write failed (HTTP {response.status_code})")
+            raise _remote_error(
+                response, f"Memory write failed (HTTP {response.status_code})", attempts=attempts
+            )
 
         from api.models.remember import RememberResult as WireResult
 
@@ -623,25 +698,22 @@ class MemoryClient:
             if valid_at is not None:
                 payload["valid_at"] = valid_at
         payload["include_drift"] = include_drift
-        try:
-            response = httpx.post(
-                f"{self._client.base_url}/api/memory/revalidate",
-                json=payload,
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Revalidation timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+        response, attempts = self._send(
+            "post",
+            f"{self._client.base_url}/api/memory/revalidate",
+            json=payload,
+            timeout_message="Revalidation timed out",
+        )
         if not response.is_success:
-            raise _remote_error(response, f"Revalidation failed (HTTP {response.status_code})")
+            raise _remote_error(
+                response, f"Revalidation failed (HTTP {response.status_code})", attempts=attempts
+            )
         try:
             return response.json()
         except ValueError as exc:
-            raise MemoryClientError("invalid_response", "Invalid response", 502) from exc
+            raise MemoryClientError(
+                "invalid_response", "Invalid response", 502, attempts=attempts
+            ) from exc
 
     def _remember_via_runtime(
         self,
@@ -871,28 +943,26 @@ class MemoryClient:
         params = {"corpus": corpus_name, "page_size": page_size}
         if cursor is not None:
             params["cursor"] = cursor
-        try:
-            response = httpx.get(
-                f"{self._client.base_url}/api/memory/feed",
-                params=params,
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Memory feed request timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+        response, attempts = self._send(
+            "get",
+            f"{self._client.base_url}/api/memory/feed",
+            params=params,
+            timeout_message="Memory feed request timed out",
+        )
         if not response.is_success:
-            raise _remote_error(response, f"Memory feed failed (HTTP {response.status_code})")
+            raise _remote_error(
+                response, f"Memory feed failed (HTTP {response.status_code})", attempts=attempts
+            )
         from api.models.memory import FeedResponse
 
         try:
             return FeedResponse.model_validate(response.json())
         except (TypeError, ValueError) as exc:
             raise MemoryClientError(
-                "invalid_response", "Memory feed returned an invalid response", 502
+                "invalid_response",
+                "Memory feed returned an invalid response",
+                502,
+                attempts=attempts,
             ) from exc
 
     def evidence(
@@ -980,6 +1050,8 @@ class MindPalace:
         headers: Mapping[str, str] | None = None,
         api_key: str | None = None,
         timeout: float = 30,
+        retries: int = 2,
+        backoff: float = 0.2,
         runtime: bool = False,
     ):
         self.name = name
@@ -992,7 +1064,15 @@ class MindPalace:
             # client also authenticates, as `api_key` plus the tenant scope it
             # resolves to.
             self.headers.setdefault("Authorization", f"Bearer {api_key}")
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
         self.timeout = timeout
+        if retries < 0:
+            raise ValueError("retries must not be negative")
+        self.retries = retries
+        if backoff < 0:
+            raise ValueError("backoff must not be negative")
+        self.backoff = backoff
         # Off by default, on purpose. A long-lived application pays the model import
         # once and then has it resident, so a runtime would only add a socket hop and
         # a second copy of the model. It exists for the caller who pays per call --
@@ -1172,6 +1252,9 @@ class MindPalace:
 
         Remembering the same statement twice returns ``unchanged=True`` and the
         same ``version_id``: submitting identical memory is not duplication.
+        The remembered document carries today's date, so identical arguments sent
+        on the same day resolve to the same memory -- a retried write never
+        creates a second version.
         Remembering the same ``key`` with new text supersedes the previous value,
         which is what :meth:`history` then shows.
 

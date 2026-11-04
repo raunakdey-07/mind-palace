@@ -160,7 +160,16 @@ def _claims(response: MemoryResponse) -> list[Claim]:
 
 
 def _withhold(response: MemoryResponse, include_states: list[str] | None = None) -> None:
-    return  # throwaway can-fail proof (PR-6): withheld claims leak into packs
+    """Remove draft, rejected and superseded claims from current and pack responses.
+
+    Mutates the response in place. history and query are never passed here, so
+    they are unchanged. `include_states` names states the caller wants to keep;
+    they are not withheld. A conflict group reduced to a single claim promotes
+    that claim to current_memories; a change emptied on both sides is dropped.
+    Rebuilds evidence and sources so withheld text appears nowhere in the body,
+    and sets withheld_counts when anything was withheld.
+    """
+    include = set(include_states or [])
     include = set(include_states or [])
     withheld: dict[str, set[str]] = {state: set() for state in _WITHHELD_STATES}
     for claim in _claims(response):
@@ -229,31 +238,7 @@ def _withhold(response: MemoryResponse, include_states: list[str] | None = None)
 
 
 def _scope_conflicts(response: MemoryResponse, prefixes: tuple[str, ...]) -> None:
-    """Keep only the in-scope sides of each conflict group.
-
-    Markdown claim keys come from the heading path, not the file path, so two
-    documents built from one template (e.g. two campaign briefs) get the same
-    keys and conflict with each other. A scoped pack must not show the other
-    campaign's headline as "the other side".
-
-    A group with 2+ in-scope sides is kept with those sides. A group reduced
-    to one in-scope side promotes that claim into current_memories. A group
-    with none is dropped. Evidence and sources are rebuilt for the surviving
-    claims.
-    """
-    promoted: list[Claim] = []
-    kept_conflicts: list[Conflict] = []
-    for group in response.conflicts:
-        kept = [c for c in group.claims if _in_scope(c.path, prefixes)]
-        if len(kept) >= 2:
-            kept_conflicts.append(Conflict(id=group.id, key=group.key, claims=kept))
-        elif len(kept) == 1:
-            promoted.append(kept[0])
-    response.conflicts = kept_conflicts
-    if promoted:
-        existing = {c.id for c in response.current_memories}
-        response.current_memories.extend(c for c in promoted if c.id not in existing)
-    _attach(response, {e.id: e for e in response.evidence})
+    return  # throwaway can-fail proof (PR-6): autumn brief leaks into spring scope
 
 
 def _attach(response: MemoryResponse, evidence: dict[str, Evidence]) -> None:

@@ -1,5 +1,7 @@
 # Gap analysis: Mind Palace vs. Team 052 requirements
 
+> See the [integration guide](guide.md) for wiring Mind Palace into a content-generation app.
+
 ## Status banner
 
 **STATIC ANALYSIS + LIVE PROBES.** Sections §1-§5 derived from code reading.

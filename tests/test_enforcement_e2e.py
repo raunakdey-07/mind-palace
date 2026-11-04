@@ -31,7 +31,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
-import secrets as _secrets
 import sys
 import time
 
@@ -46,6 +45,8 @@ from api.services.db import principal_scope
 from tenant_harness import (
     ALPHA_CORPORA,
     BETA_CORPORA,
+    _restore_secret_and_disable,
+    _rotate_and_enable,
     apply_provision_sql,
     apply_as_runtime,
     requires_tenant_db,
@@ -63,51 +64,6 @@ def corpus_id_for(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Session setup: rotate a random secret into the DB and enable enforcement.
 # ---------------------------------------------------------------------------
-
-
-def _rotate_and_enable(url: str) -> str:
-    """Rotate a random scope HMAC secret into memory_server_secrets and turn
-    enforcement on. Returns the rotated secret."""
-    secret = _secrets.token_hex(32)
-    engine = sa.create_engine(sync_url())
-    try:
-        with engine.begin() as conn:
-            row = conn.execute(
-                sa.text(
-                    "SELECT value FROM memory_server_secrets " "WHERE name = 'scope_hmac_secret'"
-                )
-            ).scalar()
-            original_secret = row if row is not None else "dev-scope-secret"
-            conn.execute(
-                sa.text(
-                    "INSERT INTO memory_server_secrets (name, value) VALUES "
-                    "('scope_hmac_secret', :v) "
-                    "ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value"
-                ),
-                {"v": secret},
-            )
-            conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
-    finally:
-        engine.dispose()
-    return secret, original_secret
-
-
-def _restore_secret_and_disable(url: str, original_secret: str) -> None:
-    """Restore the default scope secret and turn enforcement off."""
-    engine = sa.create_engine(sync_url())
-    try:
-        with engine.begin() as conn:
-            conn.execute(
-                sa.text(
-                    "INSERT INTO memory_server_secrets (name, value) VALUES "
-                    "('scope_hmac_secret', :v) "
-                    "ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value"
-                ),
-                {"v": original_secret},
-            )
-            conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(false)"))
-    finally:
-        engine.dispose()
 
 
 @pytest.fixture

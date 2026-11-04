@@ -100,6 +100,11 @@ be combined with `state` or `scope` and is refused with `invalid_request` before
 the SDK is called; `DecisionError` keeps its code (`invalid_state`,
 `invalid_scope`) instead of being reported as `invalid_evidence`.
 
+### Tests
+
+`tests/test_integration_brand_kit_scenario.py`: end-to-end brand-kit lifecycle over real HTTP
+with scope-token enforcement on, reusing the shared `tests/live_server.py` fixture.
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.

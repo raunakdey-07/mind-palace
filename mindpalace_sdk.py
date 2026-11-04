@@ -249,7 +249,14 @@ class MemoryClient:
         # lives on MindPalace's short methods, which name it for you.
         return self._client.name if corpus is None else corpus
 
-    def _send(self, method: str, url: str, **kwargs) -> tuple[httpx.Response, int]:
+    def _send(
+        self,
+        method: str,
+        url: str,
+        *,
+        timeout_message: str = "Memory request timed out",
+        **kwargs,
+    ) -> tuple[httpx.Response, int]:
         """One remote HTTP call, with the client's bounded retry and backoff.
 
         ``method`` is looked up on ``httpx`` at call time (``getattr(httpx,
@@ -288,7 +295,9 @@ class MemoryClient:
                     if backoff:
                         time.sleep(backoff * (2 ** (attempt - 1)))
                     continue
-                raise MemoryClientError("timeout", "Memory request timed out", 504, attempts=attempt) from exc
+                raise MemoryClientError(
+                    "timeout", timeout_message, 504, attempts=attempt
+                ) from exc
             except httpx.RequestError as exc:
                 if attempt <= retries:
                     if backoff:
@@ -307,7 +316,9 @@ class MemoryClient:
             break
 
         if response is None:
-            raise MemoryClientError("transport_error", "Memory service is unavailable", 503, attempts=attempts)
+            raise MemoryClientError(
+                "transport_error", "Memory service is unavailable", 503, attempts=attempts
+            )
         return response, attempts
 
     def _through_runtime(self, operation: str, request) -> "MemoryResponse | None":
@@ -407,7 +418,10 @@ class MemoryClient:
             return MemoryResponse.model_validate(response.json())
         except ValueError as exc:
             raise MemoryClientError(
-                "invalid_response", "Memory service returned an invalid response", 502, attempts=attempts
+                "invalid_response",
+                "Memory service returned an invalid response",
+                502,
+                attempts=attempts,
             ) from exc
 
     def remember(
@@ -508,6 +522,17 @@ class MemoryClient:
             except Exception as exc:  # noqa: BLE001 - one exception type, whichever path ran
                 raise _as_client_error(exc) from exc
 
+        if file is not None:
+            # The HTTP contract is statement-only, on purpose: an unauthenticated
+            # endpoint must not read a path on the server. Say so here rather than
+            # sending a request that can only 422.
+            raise MemoryClientError(
+                "invalid_request",
+                "file= reads a path on this machine, which a remote service cannot do. "
+                "Read the file and send its content as the statement.",
+                422,
+            )
+
         payload = {
             k: v
             for k, v in {
@@ -525,6 +550,7 @@ class MemoryClient:
             "post",
             f"{self._client.base_url}/api/memory/remember",
             json=payload,
+            timeout_message="Memory write timed out",
         )
         if not response.is_success:
             raise _remote_error(
@@ -676,6 +702,7 @@ class MemoryClient:
             "post",
             f"{self._client.base_url}/api/memory/revalidate",
             json=payload,
+            timeout_message="Revalidation timed out",
         )
         if not response.is_success:
             raise _remote_error(
@@ -684,7 +711,9 @@ class MemoryClient:
         try:
             return response.json()
         except ValueError as exc:
-            raise MemoryClientError("invalid_response", "Invalid response", 502, attempts=attempts) from exc
+            raise MemoryClientError(
+                "invalid_response", "Invalid response", 502, attempts=attempts
+            ) from exc
 
     def _remember_via_runtime(
         self,
@@ -918,6 +947,7 @@ class MemoryClient:
             "get",
             f"{self._client.base_url}/api/memory/feed",
             params=params,
+            timeout_message="Memory feed request timed out",
         )
         if not response.is_success:
             raise _remote_error(
@@ -929,7 +959,10 @@ class MemoryClient:
             return FeedResponse.model_validate(response.json())
         except (TypeError, ValueError) as exc:
             raise MemoryClientError(
-                "invalid_response", "Memory feed returned an invalid response", 502, attempts=attempts
+                "invalid_response",
+                "Memory feed returned an invalid response",
+                502,
+                attempts=attempts,
             ) from exc
 
     def evidence(

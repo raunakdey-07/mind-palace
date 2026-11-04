@@ -103,7 +103,10 @@ def test_explicit_base_url_still_uses_the_http_client(monkeypatch):
         client.close()
 
     assert result.exit_code == 1
-    assert len(calls) == 1
+    # Default retries=2: a 503 is attempted retries + 1 = 3 times before the
+    # structured error is reported. The error-reporting assertion below is the
+    # point of the test; the call count follows the SDK default.
+    assert len(calls) == 3
     assert str(calls[0].url) == "http://127.0.0.1:8000/api/memory/pack"
     assert "service_unavailable: not ready" in result.stderr
 

@@ -190,7 +190,9 @@ Verified from code (`mindpalace_sdk.py`):
 - `httpx.RequestError` → `MemoryClientError("transport_error", ..., 503)` (`mindpalace_sdk.py:336,451,606,821`).
 
 **Verified by probe g (run 41287500689, raw output issue #105 comment 6555683810):**
-- No automatic retry found in SDK code (no retry loop/retry library import observed). **Probe g confirmed:** connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang, no retry. SDK default timeout 30s confirmed from source (`mindpalace_sdk.py:918`).
+- Connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang. SDK default timeout 30s confirmed from source (`mindpalace_sdk.py:918`).
+
+The SDK now defaults to `retries=2` and `backoff=0.2` alongside the 30 s timeout, so a brief blip is retried at most `retries + 1` times with exponential backoff (0.2 s, 0.4 s) before `MemoryClientError("timeout", ..., 504)` or `MemoryClientError("transport_error", ..., 503)`. `retries=0` turns retrying off. A retried `remember` is safe because identical arguments on the same day return `UNCHANGED`, so a retry never writes a second version.
 
 ## 3. Prioritised new issues (owner decides cut line)
 

@@ -101,6 +101,13 @@ already holds claims that read like the one being written. Each row carries
 `channel`, which is `vector` for a cosine over the whole corpus or `lexical` for
 token overlap. A lexical row is noisier; a vector row is not.
 
+`memory_remember` also accepts `state` ("approved", "draft" or "rejected") and
+`scope` (a relative folder such as "campaigns/spring"). With `scope`, the stored
+claim key is `"<scope>/<key>"`, so the same key in two campaigns is two memories
+that never supersede or conflict. A `state` or `scope` that the SDK refuses
+comes back as a readable refusal (`invalid_state` / `invalid_scope`) rather than
+a broken server, and `file=` cannot be combined with `state` or `scope`.
+
 `query_id` appears on both reads and writes, and is what `mindpalace feedback`
 grades.
 

@@ -166,6 +166,8 @@ def memory_remember(
     file: str | None = None,
     supersedes_claim_id: str | None = None,
     topic_key: str | None = None,
+    state: str | None = None,
+    scope: str | None = None,
 ) -> CallToolResult:
     """Record one statement as authoritative memory, with exact-substring evidence.
 
@@ -193,6 +195,16 @@ def memory_remember(
     exactly one live claim, and a phrase that matches two is refused with their
     ids in the message.
 
+    ``state`` is the decision state of the claim: "approved" (default), "draft" or
+    "rejected". With ``state="rejected"`` the same key can be withdrawn without a
+    replacement statement; draft and rejected claims are withheld from current and
+    pack by default, and history keeps both versions.
+
+    ``scope`` is an optional relative folder the document is filed under, e.g.
+    "campaigns/spring". With scope the stored claim key is ``"<scope>/<key>"``; the
+    same key in two scopes is two documents, so they never supersede or conflict,
+    and topic_key is scoped the same way.
+
     When the result carries `related_active_claims`, the corpus already holds
     claims that read like this one. It does not know whether they contradict,
     duplicate or should be replaced: pass `supersedes_claim_id` to settle it.
@@ -203,7 +215,7 @@ def memory_remember(
     """
     from api.services.authz import AuthorizationError
     from api.services.ingest_paths import IngestPathRefused, require_permitted
-    from api.services.remember import RememberError
+    from api.services.remember import DecisionError, RememberError
     from mindpalace_sdk import MemoryClientError
 
     try:
@@ -212,6 +224,17 @@ def memory_remember(
         return _refusal("ingest_path_refused", str(exc))
     except RememberError as exc:
         return _refusal("invalid_evidence", str(exc))
+
+    # `file=` reads a local path, so it cannot be combined with a decision
+    # `state` or a campaign `scope`. Refuse here, before the SDK is called, so
+    # the SDK's ValueError never surfaces as a broken MCP server.
+    if file is not None and (state is not None or scope is not None):
+        return _refusal(
+            "invalid_request",
+            "state and scope are not supported with file=; file= reads a local "
+            "path on this machine. Read the file and send its content as the "
+            "statement.",
+        )
 
     try:
         # `_caller()` resolves the credential on entry, so the authorization
@@ -225,6 +248,8 @@ def memory_remember(
                 file=resolved,
                 supersedes_claim_id=supersedes_claim_id,
                 topic_key=topic_key,
+                state=state,
+                scope=scope,
             )
     except AuthorizationError as exc:
         # Caught like `_execute_memory` catches it. Anything else escapes as a
@@ -239,6 +264,11 @@ def memory_remember(
         if isinstance(exc.__cause__, AuthorizationError):
             return _refusal("forbidden", str(exc.__cause__))
         raise
+    except DecisionError as exc:
+        # A decision the validation refused (invalid_state / invalid_scope)
+        # keeps its code instead of being reported as invalid_evidence or a
+        # broken server.
+        return _refusal(exc.code, str(exc))
     except RememberError as exc:
         return _refusal("invalid_evidence", str(exc))
     except MemoryClientError as exc:

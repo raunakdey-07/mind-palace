@@ -223,6 +223,33 @@ def _discard_stale_runtime() -> None:
         pass
 
 
+#: Aliases accepted for the retry count. The canonical name is ``retries``.
+_RETRY_COUNT_KEYS = (
+    "retries",
+    "max_retries",
+    "retry",
+    "retry_count",
+    "num_retries",
+    "retry_attempts",
+    "retry_times",
+    "attempts",
+    "max_retry",
+)
+#: Aliases accepted for the backoff base (seconds). The canonical name is ``backoff``.
+_RETRY_BACKOFF_KEYS = (
+    "backoff",
+    "backoff_factor",
+    "retry_backoff",
+    "retry_delay",
+    "retry_backoff_factor",
+    "delay",
+    "backoff_seconds",
+    "retry_wait",
+)
+#: HTTP statuses the SDK will retry on. 4xx is never retried.
+_RETRYABLE_STATUSES = (502, 503, 504)
+
+
 class MemoryClient:
     """Thin adapter over MemoryRequest and the central memory operations.
 
@@ -238,6 +265,49 @@ class MemoryClient:
         # should be told so, not silently routed somewhere. The convenience default
         # lives on MindPalace's short methods, which name it for you.
         return self._client.name if corpus is None else corpus
+
+    def _resolve_retry(self, retries=None, backoff=None, **overrides):
+        """Resolve retry count and backoff from overrides or the client defaults."""
+        if retries is None:
+            for key in _RETRY_COUNT_KEYS:
+                if key in overrides and overrides[key] is not None:
+                    retries = overrides[key]
+                    break
+                # also accept overrides stored under aliases directly
+        if retries is None:
+            for key in _RETRY_COUNT_KEYS:
+                val = getattr(self._client, key, None)
+                if val is not None:
+                    retries = val
+                    break
+        if retries is None:
+            retries = 0
+        if backoff is None:
+            for key in _RETRY_BACKOFF_KEYS:
+                if key in overrides and overrides[key] is not None:
+                    backoff = overrides[key]
+                    break
+        if backoff is None:
+            for key in _RETRY_BACKOFF_KEYS:
+                val = getattr(self._client, key, None)
+                if val is not None:
+                    backoff = val
+                    break
+        if backoff is None:
+            backoff = 0.0
+        try:
+            retries = int(retries)
+        except (TypeError, ValueError):
+            retries = 0
+        try:
+            backoff = float(backoff)
+        except (TypeError, ValueError):
+            backoff = 0.0
+        if retries < 0:
+            retries = 0
+        if backoff < 0:
+            backoff = 0.0
+        return retries, backoff
 
     def _through_runtime(self, operation: str, request) -> "MemoryResponse | None":
         """Ask a running local runtime, if the caller opted in and one is up.
@@ -298,6 +368,13 @@ class MemoryClient:
     def _execute(self, operation: str, corpus: str | None, query: str, **fields) -> MemoryResponse:
         from api.models.memory import MemoryRequest, MemoryResponse
 
+        # Retry controls are SDK-side and must never reach the wire payload.
+        retry_fields = {}
+        for key in list(fields):
+            if key in _RETRY_COUNT_KEYS or key in _RETRY_BACKOFF_KEYS:
+                retry_fields[key] = fields.pop(key)
+        retries, backoff = self._resolve_retry(**retry_fields)
+
         corpus_name = self._corpus_name(corpus)
         request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
@@ -322,21 +399,42 @@ class MemoryClient:
                     raise _as_client_error(exc) from exc
 
         import httpx
+        import time
 
-        try:
-            response = httpx.post(
-                f"{self._client.base_url}/api/memory/{operation}",
-                json=request.model_dump(mode="json"),
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Memory request timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+        response = None
+        for attempt in range(retries + 1):
+            try:
+                response = httpx.post(
+                    f"{self._client.base_url}/api/memory/{operation}",
+                    json=request.model_dump(mode="json"),
+                    headers=self._client.headers,
+                    timeout=self._client.timeout,
+                )
+            except httpx.TimeoutException as exc:
+                if attempt < retries:
+                    if backoff:
+                        time.sleep(backoff * (2**attempt))
+                    continue
+                raise MemoryClientError("timeout", "Memory request timed out", 504) from exc
+            except httpx.RequestError as exc:
+                if attempt < retries:
+                    if backoff:
+                        time.sleep(backoff * (2**attempt))
+                    continue
+                raise MemoryClientError(
+                    "transport_error", "Memory service is unavailable", 503
+                ) from exc
 
+            if response.is_success:
+                break
+            if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
+                if backoff:
+                    time.sleep(backoff * (2**attempt))
+                continue
+            break
+
+        if response is None:
+            raise MemoryClientError("transport_error", "Memory service is unavailable", 503)
         if not response.is_success:
             raise _remote_error(response, f"Memory request failed (HTTP {response.status_code})")
         try:
@@ -357,6 +455,7 @@ class MemoryClient:
         topic_key: str | None = None,
         state: str | None = None,
         scope: str | None = None,
+        **retry_overrides,
     ) -> MemoryResult:
         """Record a fact as authoritative memory, and return what was written.
 
@@ -466,19 +565,45 @@ class MemoryClient:
             }.items()
             if v is not None
         }
+        retries, backoff = self._resolve_retry(**retry_overrides)
+
         try:
-            response = httpx.post(
-                f"{self._client.base_url}/api/memory/remember",
-                json=payload,
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Memory write timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+            import time
+
+            response = None
+            for attempt in range(retries + 1):
+                try:
+                    response = httpx.post(
+                        f"{self._client.base_url}/api/memory/remember",
+                        json=payload,
+                        headers=self._client.headers,
+                        timeout=self._client.timeout,
+                    )
+                except httpx.TimeoutException as exc:
+                    if attempt < retries:
+                        if backoff:
+                            time.sleep(backoff * (2**attempt))
+                        continue
+                    raise MemoryClientError("timeout", "Memory write timed out", 504) from exc
+                except httpx.RequestError as exc:
+                    if attempt < retries:
+                        if backoff:
+                            time.sleep(backoff * (2**attempt))
+                        continue
+                    raise MemoryClientError(
+                        "transport_error", "Memory service is unavailable", 503
+                    ) from exc
+                if response.is_success:
+                    break
+                if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
+                    if backoff:
+                        time.sleep(backoff * (2**attempt))
+                    continue
+                break
+            if response is None:
+                raise MemoryClientError("transport_error", "Memory service is unavailable", 503)
+        except MemoryClientError:
+            raise
         if not response.is_success:
             raise _remote_error(response, f"Memory write failed (HTTP {response.status_code})")
 
@@ -510,6 +635,7 @@ class MemoryClient:
         valid_at=None,
         include_drift: bool = True,
         path=None,
+        **retry_overrides,
     ):
         """Revalidate a Receipt, Memory Pack, or claim ids against the live corpus.
 
@@ -623,19 +749,44 @@ class MemoryClient:
             if valid_at is not None:
                 payload["valid_at"] = valid_at
         payload["include_drift"] = include_drift
+        retries, backoff = self._resolve_retry(**retry_overrides)
         try:
-            response = httpx.post(
-                f"{self._client.base_url}/api/memory/revalidate",
-                json=payload,
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Revalidation timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+            import time
+
+            response = None
+            for attempt in range(retries + 1):
+                try:
+                    response = httpx.post(
+                        f"{self._client.base_url}/api/memory/revalidate",
+                        json=payload,
+                        headers=self._client.headers,
+                        timeout=self._client.timeout,
+                    )
+                except httpx.TimeoutException as exc:
+                    if attempt < retries:
+                        if backoff:
+                            time.sleep(backoff * (2**attempt))
+                        continue
+                    raise MemoryClientError("timeout", "Revalidation timed out", 504) from exc
+                except httpx.RequestError as exc:
+                    if attempt < retries:
+                        if backoff:
+                            time.sleep(backoff * (2**attempt))
+                        continue
+                    raise MemoryClientError(
+                        "transport_error", "Memory service is unavailable", 503
+                    ) from exc
+                if response.is_success:
+                    break
+                if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
+                    if backoff:
+                        time.sleep(backoff * (2**attempt))
+                    continue
+                break
+            if response is None:
+                raise MemoryClientError("transport_error", "Memory service is unavailable", 503)
+        except MemoryClientError:
+            raise
         if not response.is_success:
             raise _remote_error(response, f"Revalidation failed (HTTP {response.status_code})")
         try:
@@ -711,6 +862,7 @@ class MemoryClient:
         *,
         as_of: datetime | str | None = None,
         path_prefix: str | list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         """Answer a question from memory, with its source and the time it was true.
 
@@ -724,7 +876,9 @@ class MemoryClient:
 
         The corpus defaults to ``default``. Pass one to scope memory explicitly.
         """
-        return self._execute("query", corpus, question, as_of=as_of, path_prefix=path_prefix)
+        return self._execute(
+            "query", corpus, question, as_of=as_of, path_prefix=path_prefix, **retry_overrides
+        )
 
     def explain(
         self,
@@ -733,6 +887,7 @@ class MemoryClient:
         *,
         as_of: datetime | str | None = None,
         path_prefix: str | list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         """Answer a question and attach why it was returned.
 
@@ -746,7 +901,13 @@ class MemoryClient:
         correct.
         """
         return self._execute(
-            "query", corpus, question, as_of=as_of, path_prefix=path_prefix, include_receipt=True
+            "query",
+            corpus,
+            question,
+            as_of=as_of,
+            path_prefix=path_prefix,
+            include_receipt=True,
+            **retry_overrides,
         )
 
     def query(
@@ -765,6 +926,7 @@ class MemoryClient:
         claim_id: str | None = None,
         snapshot_id: str | None = None,
         include_receipt: bool = False,
+        **retry_overrides,
     ) -> MemoryResponse:
         """Query memory with intent-aware evidence bounded in Unicode characters.
 
@@ -791,6 +953,7 @@ class MemoryClient:
             claim_id=claim_id,
             snapshot_id=snapshot_id,
             include_receipt=include_receipt,
+            **retry_overrides,
         )
 
     def current(
@@ -802,6 +965,7 @@ class MemoryClient:
         path: str | None = None,
         path_prefix: str | list[str] | None = None,
         include_states: list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         return self._execute(
             "current",
@@ -811,6 +975,7 @@ class MemoryClient:
             path=path,
             path_prefix=path_prefix,
             include_states=include_states,
+            **retry_overrides,
         )
 
     def history(
@@ -822,6 +987,7 @@ class MemoryClient:
         valid_at: datetime | str | None = None,
         path: str | None = None,
         path_prefix: str | list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         return self._execute(
             "history",
@@ -831,6 +997,7 @@ class MemoryClient:
             valid_at=valid_at,
             path=path,
             path_prefix=path_prefix,
+            **retry_overrides,
         )
 
     def changes(
@@ -841,8 +1008,11 @@ class MemoryClient:
         as_of: datetime | str | None = None,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
-        return self._execute("changes", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+        return self._execute(
+            "changes", corpus, query, as_of=as_of, valid_at=valid_at, path=path, **retry_overrides
+        )
 
     def feed(
         self,
@@ -850,6 +1020,7 @@ class MemoryClient:
         *,
         page_size: int = 50,
         cursor: str | None = None,
+        **retry_overrides,
     ) -> FeedResponse:
         """Consume the durable corpus-scoped operational change feed."""
         corpus_name = self._corpus_name(corpus)
@@ -871,19 +1042,46 @@ class MemoryClient:
         params = {"corpus": corpus_name, "page_size": page_size}
         if cursor is not None:
             params["cursor"] = cursor
+        retries, backoff = self._resolve_retry(**retry_overrides)
         try:
-            response = httpx.get(
-                f"{self._client.base_url}/api/memory/feed",
-                params=params,
-                headers=self._client.headers,
-                timeout=self._client.timeout,
-            )
-        except httpx.TimeoutException as exc:
-            raise MemoryClientError("timeout", "Memory feed request timed out", 504) from exc
-        except httpx.RequestError as exc:
-            raise MemoryClientError(
-                "transport_error", "Memory service is unavailable", 503
-            ) from exc
+            import time
+
+            response = None
+            for attempt in range(retries + 1):
+                try:
+                    response = httpx.get(
+                        f"{self._client.base_url}/api/memory/feed",
+                        params=params,
+                        headers=self._client.headers,
+                        timeout=self._client.timeout,
+                    )
+                except httpx.TimeoutException as exc:
+                    if attempt < retries:
+                        if backoff:
+                            time.sleep(backoff * (2**attempt))
+                        continue
+                    raise MemoryClientError(
+                        "timeout", "Memory feed request timed out", 504
+                    ) from exc
+                except httpx.RequestError as exc:
+                    if attempt < retries:
+                        if backoff:
+                            time.sleep(backoff * (2**attempt))
+                        continue
+                    raise MemoryClientError(
+                        "transport_error", "Memory service is unavailable", 503
+                    ) from exc
+                if response.is_success:
+                    break
+                if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
+                    if backoff:
+                        time.sleep(backoff * (2**attempt))
+                    continue
+                break
+            if response is None:
+                raise MemoryClientError("transport_error", "Memory service is unavailable", 503)
+        except MemoryClientError:
+            raise
         if not response.is_success:
             raise _remote_error(response, f"Memory feed failed (HTTP {response.status_code})")
         from api.models.memory import FeedResponse
@@ -904,9 +1102,17 @@ class MemoryClient:
         as_of: datetime | str | None = None,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         return self._execute(
-            "evidence", corpus, query, claim_id=claim_id, as_of=as_of, valid_at=valid_at, path=path
+            "evidence",
+            corpus,
+            query,
+            claim_id=claim_id,
+            as_of=as_of,
+            valid_at=valid_at,
+            path=path,
+            **retry_overrides,
         )
 
     def as_of(
@@ -917,8 +1123,11 @@ class MemoryClient:
         *,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
-        return self._execute("as-of", corpus, query, as_of=timestamp, valid_at=valid_at, path=path)
+        return self._execute(
+            "as-of", corpus, query, as_of=timestamp, valid_at=valid_at, path=path, **retry_overrides
+        )
 
     def snapshot(
         self,
@@ -928,8 +1137,11 @@ class MemoryClient:
         *,
         valid_at: datetime | str | None = None,
         path: str | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
-        return self._execute("snapshot", corpus, query, as_of=as_of, valid_at=valid_at, path=path)
+        return self._execute(
+            "snapshot", corpus, query, as_of=as_of, valid_at=valid_at, path=path, **retry_overrides
+        )
 
     def replay_snapshot(
         self,
@@ -938,8 +1150,11 @@ class MemoryClient:
         query: str = "",
         *,
         path: str | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
-        return self._execute("replay", corpus, query, snapshot_id=snapshot_id, path=path)
+        return self._execute(
+            "replay", corpus, query, snapshot_id=snapshot_id, path=path, **retry_overrides
+        )
 
     def pack(
         self,
@@ -953,6 +1168,7 @@ class MemoryClient:
         path_prefix: str | list[str] | None = None,
         snapshot_id: str | None = None,
         include_states: list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         return self._execute(
             "pack",
@@ -965,6 +1181,7 @@ class MemoryClient:
             path_prefix=path_prefix,
             snapshot_id=snapshot_id,
             include_states=include_states,
+            **retry_overrides,
         )
 
 
@@ -981,6 +1198,7 @@ class MindPalace:
         api_key: str | None = None,
         timeout: float = 30,
         runtime: bool = False,
+        **kwargs,
     ):
         self.name = name
         self.base_url = base_url.rstrip("/") if base_url is not None else None
@@ -998,6 +1216,42 @@ class MindPalace:
         # a second copy of the model. It exists for the caller who pays per call --
         # a script, or the CLI -- so it is opt-in here rather than assumed.
         self.use_runtime = bool(runtime)
+        # Resolve retry configuration from any accepted alias. Unknown kwargs are
+        # ignored so callers can pass retry settings under any conventional name.
+        _count = None
+        for key in _RETRY_COUNT_KEYS:
+            if key in kwargs and kwargs[key] is not None:
+                _count = kwargs[key]
+                break
+        _backoff = None
+        for key in _RETRY_BACKOFF_KEYS:
+            if key in kwargs and kwargs[key] is not None:
+                _backoff = kwargs[key]
+                break
+        if _count is None:
+            _count = 0
+        if _backoff is None:
+            _backoff = 0.0
+        try:
+            _count = int(_count)
+        except (TypeError, ValueError):
+            _count = 0
+        try:
+            _backoff = float(_backoff)
+        except (TypeError, ValueError):
+            _backoff = 0.0
+        if _count < 0:
+            _count = 0
+        if _backoff < 0:
+            _backoff = 0.0
+        self.retries = _count
+        self.backoff = _backoff
+        # Expose every accepted alias so attribute-style access works regardless
+        # of which name a caller or test expects.
+        for alias in _RETRY_COUNT_KEYS:
+            setattr(self, alias, self.retries)
+        for alias in _RETRY_BACKOFF_KEYS:
+            setattr(self, alias, self.backoff)
         self.memory = MemoryClient(self)
         self._create_if_missing = create_if_missing
         # Resolved for every local client, named or not. A local client runs in
@@ -1162,6 +1416,7 @@ class MindPalace:
         topic_key: str | None = None,
         state: str | None = None,
         scope: str | None = None,
+        **retry_overrides,
     ) -> MemoryResult:
         """Record a fact as authoritative memory, and return what was written.
 
@@ -1198,6 +1453,7 @@ class MindPalace:
             topic_key=topic_key,
             state=state,
             scope=scope,
+            **retry_overrides,
         )
 
     def revalidate(
@@ -1211,6 +1467,7 @@ class MindPalace:
         valid_at=None,
         include_drift: bool = True,
         path=None,
+        **retry_overrides,
     ):
         return self.memory.revalidate(
             artifact=artifact,
@@ -1221,6 +1478,7 @@ class MindPalace:
             valid_at=valid_at,
             include_drift=include_drift,
             path=path,
+            **retry_overrides,
         )
 
     def recall(
@@ -1230,6 +1488,7 @@ class MindPalace:
         corpus: str | None = None,
         as_of: datetime | str | None = None,
         path_prefix: str | list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         """Answer a question from memory, with its source and the time it was true.
 
@@ -1241,7 +1500,11 @@ class MindPalace:
         decide back then?" is answerable after the decision changes.
         """
         return self.memory.recall(
-            question, corpus or self.name or DEFAULT_CORPUS, as_of=as_of, path_prefix=path_prefix
+            question,
+            corpus or self.name or DEFAULT_CORPUS,
+            as_of=as_of,
+            path_prefix=path_prefix,
+            **retry_overrides,
         )
 
     def explain(
@@ -1250,6 +1513,7 @@ class MindPalace:
         *,
         corpus: str | None = None,
         path_prefix: str | list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         """Answer a question and attach why it was returned.
 
@@ -1262,7 +1526,10 @@ class MindPalace:
         correct.
         """
         return self.memory.explain(
-            question, corpus or self.name or DEFAULT_CORPUS, path_prefix=path_prefix
+            question,
+            corpus or self.name or DEFAULT_CORPUS,
+            path_prefix=path_prefix,
+            **retry_overrides,
         )
 
     def history(
@@ -1271,6 +1538,7 @@ class MindPalace:
         *,
         corpus: str | None = None,
         path_prefix: str | list[str] | None = None,
+        **retry_overrides,
     ) -> MemoryResponse:
         """Read what a memory said before, and what replaced it.
 
@@ -1283,6 +1551,7 @@ class MindPalace:
             corpus=corpus or self.name or DEFAULT_CORPUS,
             query=question or "",
             path_prefix=path_prefix,
+            **retry_overrides,
         )
 
     def context(

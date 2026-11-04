@@ -85,11 +85,12 @@ def test_role_properties(live_server):
                         )
                     )
                 ).one()
+            await engine.dispose()
             return row
 
         row = asyncio.run(_run())
     finally:
-        engine.dispose()
+        pass
 
     current_user, rolsuper, rolbypassrls = row
     assert current_user == RUNTIME_ROLE, f"current_user={current_user!r} != {RUNTIME_ROLE!r}"
@@ -118,7 +119,7 @@ def test_brand_kit_lifecycle(live_server):
     p = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
     blob = p.model_dump_json()
     assert "warm, plain and confident" in blob, f"step 3: voice missing: {blob}"
-    assert 'Never use the word \"curated\"' in blob, f"step 3: curated rule missing: {blob}"
+    assert 'Never use the word \\"curated\\"' in blob, f"step 3: curated rule missing: {blob}"
     assert "14 March 2027" in blob, f"step 3: spring date missing: {blob}"
     assert "9.8 kilograms" in blob, f"step 3: spec missing: {blob}"
     assert "9 September" not in blob, f"step 3: autumn date leaked: {blob}"

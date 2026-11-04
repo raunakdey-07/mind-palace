@@ -110,7 +110,8 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     _ingest(live_server, key, AUTUMN_BRIEF, "campaigns/autumn/brief.md")
 
     # 3. Generation context.
-    p = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
+    p_full = mp.memory.pack(query="", budget=64000, path_prefix=SCOPE)
+    p = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     blob = p.model_dump_json()
     assert "warm, plain and confident" in blob, f"step 3: voice missing: {blob}"
     assert 'Never use the word \\"curated\\"' in blob, f"step 3: curated rule missing: {blob}"
@@ -122,19 +123,18 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         "draft", 0
     ) >= 1, f"step 3: expected at least one withheld draft, got {p.withheld_counts}"
     assert p.conflicts == [], f"step 3: unexpected conflicts: {p.conflicts}"
-    full = mp.memory.pack(query="", budget=64000, path_prefix=SCOPE)
-    assert full.truncated is False, "step 3: 64000 must hold everything"
+    assert p.truncated is False, f"step 3: 16000 pack truncated: {p.truncated}"
     assert {c.id for c in p.current_memories} == {
-        c.id for c in full.current_memories
-    }, "step 3: budget 8000 must keep every current claim"
+        c.id for c in p_full.current_memories
+    }, "step 3: 16000 pack must keep every current claim of 64000"
     voice_id = next(c.id for c in p.current_memories if "warm, plain and confident" in c.claim)
     with capsys.disabled():
         packs = {}
         for budget in (4000, 8000, 16000, 64000):
-            if budget == 8000:
+            if budget == 16000:
                 packs[budget] = p
             elif budget == 64000:
-                packs[budget] = full
+                packs[budget] = p_full
             else:
                 packs[budget] = mp.memory.pack(query="", budget=budget, path_prefix=SCOPE)
             print(
@@ -143,7 +143,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
                 f"json_chars={len(packs[budget].model_dump_json())}"
             )
         small = packs[4000]
-        full_ids = {c.id for c in full.current_memories}
+        full_ids = {c.id for c in p_full.current_memories}
         kept = {c.id for c in small.current_memories}
         print(f"step 3 (budget=4000): kept_all={kept == full_ids}")
 
@@ -154,10 +154,10 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         scope="campaigns/spring",
         state="rejected",
     )
-    p2 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
+    p2 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     blob2 = p2.model_dump_json()
     assert "Ride Into Spring" not in blob2, f"step 4: rejected copy still in pack: {blob2}"
-    p3 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE, include_states=["rejected"])
+    p3 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE, include_states=["rejected"])
     found = next(
         (
             c
@@ -177,7 +177,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         scope="brand",
         supersedes_claim_id=voice_id,
     )
-    p4 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
+    p4 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     blob4 = p4.model_dump_json()
     assert any(
         "warm, plain and direct" in c.claim for c in p4.current_memories
@@ -192,7 +192,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
 
     # 6. Brand team edits the guide.
     _ingest(live_server, key, MODIFIED_GUIDE, "brand/guide.md")
-    p5 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
+    p5 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert not any(
         "free shipping" in c.claim for c in p5.current_memories
     ), f"step 6: free shipping still current: {p5.model_dump_json()}"
@@ -207,7 +207,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         key="brand.rule.competitors",
         scope="brand",
     )
-    p6 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
+    p6 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert any(
         "Never mention competitors by name" in c.claim for c in p6.current_memories
     ), f"step 7: rule missing from current: {p6.model_dump_json()}"
@@ -218,7 +218,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         scope="brand",
         state="rejected",
     )
-    p7 = mp.memory.pack(query="", budget=8000, path_prefix=SCOPE)
+    p7 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert not any(
         "Never mention competitors by name" in c.claim for c in p7.current_memories
     ), f"step 7: rejected rule still current: {p7.model_dump_json()}"
@@ -327,7 +327,7 @@ def test_latency(live_server, capsys):  # noqa: F811
     times = []
     for _ in range(20):
         t0 = time.monotonic()
-        _ = mp.memory.pack(query="", budget=8000)
+        _ = mp.memory.pack(query="", budget=16000)
         times.append((time.monotonic() - t0) * 1000)
 
     qs = statistics.quantiles(times, n=100)

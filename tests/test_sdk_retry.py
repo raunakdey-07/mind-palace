@@ -232,3 +232,25 @@ def test_retries_zero_single_attempt(server):
     assert caught.value.attempts == 1
     assert len(server.requests) == 1
     assert elapsed < 1.5, elapsed
+
+
+def test_remote_remember_refuses_file_before_sending(server):
+    """file= with a base_url raises invalid_request without any HTTP call."""
+    mp = _client(server, name="t12")
+    with pytest.raises(MemoryClientError) as caught:
+        mp.memory.remember(statement="Our voice is warm and consistent.", file="note.md")
+    assert caught.value.code == "invalid_request"
+    assert caught.value.status_code == 422
+    assert len(server.requests) == 0
+
+
+def test_remember_timeout_message_is_per_call(server):
+    """A timed-out remember carries its own message, not the default one."""
+    server.delay = 5
+    server.responses = [(200, _memory_body("t13"))]
+    mp = _client(server, name="t13", timeout=0.5, retries=0)
+    with pytest.raises(MemoryClientError) as caught:
+        mp.memory.remember(statement="Our voice is warm and consistent.", key="k")
+    assert caught.value.code == "timeout"
+    assert caught.value.status_code == 504
+    assert caught.value.message == "Memory write timed out"

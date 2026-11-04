@@ -160,15 +160,7 @@ def _claims(response: MemoryResponse) -> list[Claim]:
 
 
 def _withhold(response: MemoryResponse, include_states: list[str] | None = None) -> None:
-    """Remove draft, rejected and superseded claims from current and pack responses.
-
-    Mutates the response in place. history and query are never passed here, so
-    they are unchanged. `include_states` names states the caller wants to keep;
-    they are not withheld. A conflict group reduced to a single claim promotes
-    that claim to current_memories; a change emptied on both sides is dropped.
-    Rebuilds evidence and sources so withheld text appears nowhere in the body,
-    and sets withheld_counts when anything was withheld.
-    """
+    return  # throwaway can-fail proof (PR-6): withheld claims leak into packs
     include = set(include_states or [])
     withheld: dict[str, set[str]] = {state: set() for state in _WITHHELD_STATES}
     for claim in _claims(response):

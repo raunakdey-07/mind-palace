@@ -220,6 +220,62 @@ def test_a_refusal_carries_no_statement_content(tmp_path, monkeypatch, loop):
     assert "correct-horse-battery" not in message
 
 
+def test_rejected_remember_under_scope_is_withheld(fresh_corpus, loop):
+    """A rejected decision under a campaign scope is written, then withheld."""
+    result = _call(
+        loop,
+        statement="Headline: Ride Into Spring",
+        corpus=fresh_corpus,
+        key="spring.headline",
+        scope="campaigns/spring",
+        state="rejected",
+    )
+    assert not result.is_error, _payload(result)
+    body = _payload(result)
+    assert body["path"].startswith("campaigns/spring/memory/"), body
+
+    from mindpalace_sdk import MindPalace
+
+    current = MindPalace(fresh_corpus).memory.current(query="")
+    assert current.withheld_counts.get("rejected") == 1, current.withheld_counts
+
+
+def test_remember_with_invalid_state_is_refused(loop):
+    """state=superseded is not a decision state; the refusal keeps its code."""
+    _skip_without_db()
+    result = _call(loop, statement="Headline: Ride Into Spring", corpus=CORPUS, state="superseded")
+    assert result.is_error
+    assert _payload(result)["code"] == "invalid_state"
+
+
+def test_remember_with_bad_scope_is_refused(loop):
+    """An escaping scope is refused before the SDK is called."""
+    _skip_without_db()
+    result = _call(loop, statement="Headline: Ride Into Spring", corpus=CORPUS, scope="../x")
+    assert result.is_error
+    assert _payload(result)["code"] == "invalid_scope"
+
+
+def test_remember_file_with_state_is_refused(tmp_path, monkeypatch, loop):
+    """file= cannot be combined with a decision state; refused before the SDK."""
+    _skip_without_db()
+    root = tmp_path / "docs"
+    root.mkdir()
+    doc = root / "runbook.md"
+    doc.write_text("Revoke the old key only after publishing the new one.\n")
+    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+
+    result = _call(
+        loop,
+        statement="Revoke the old key only after publishing the new one.",
+        corpus=CORPUS,
+        file=str(doc),
+        state="rejected",
+    )
+    assert result.is_error
+    assert _payload(result)["code"] == "invalid_request"
+
+
 # ---------------------------------------------------------------------------
 # Authorization. The credential is read from the environment, never from an
 # argument, so a caller's role is decided before the tool body runs.

@@ -77,6 +77,19 @@ shows only its in-scope sides (one side left becomes current), and query ranks
 only claims in scope. The SDK's `query`, `current`, `history`, `pack`, `recall`
 and `explain` accept `path_prefix`.
 
+### SDK bounded retry and backoff
+
+The remote SDK now retries transient failures instead of failing the first time.
+`MindPalace(timeout=30, retries=2, backoff=0.2)` makes at most `retries + 1`
+attempts, retrying only on `httpx.TimeoutException`, `httpx.RequestError` and
+502/503/504 responses, sleeping `backoff * 2 ** (n - 1)` before retry `n`. A
+timeout becomes `MemoryClientError("timeout", ..., 504)`, a transport error
+`MemoryClientError("transport_error", ..., 503)`, both carrying `attempts`. All
+four remote call sites go through one private `_send` helper. `retries=0` turns
+retrying off; negative `retries`, `timeout <= 0` or negative `backoff` raise
+`ValueError`. A retried `remember` is safe because identical arguments on the
+same day return `UNCHANGED`, so a retry never writes a second version.
+
 ### MCP `memory_remember` accepts `state` and `scope`
 
 The one MCP write tool now accepts `state` ("approved", "draft" or "rejected")

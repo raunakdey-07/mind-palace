@@ -77,6 +77,16 @@ shows only its in-scope sides (one side left becomes current), and query ranks
 only claims in scope. The SDK's `query`, `current`, `history`, `pack`, `recall`
 and `explain` accept `path_prefix`.
 
+### MCP `memory_remember` accepts `state` and `scope`
+
+The one MCP write tool now accepts `state` ("approved", "draft" or "rejected")
+and `scope` (a relative folder such as "campaigns/spring"; with scope the stored
+claim key is `"<scope>/<key>"`). Both are passed through to the SDK's remember,
+so an agent can reject copy and file a decision under a campaign. `file=` cannot
+be combined with `state` or `scope` and is refused with `invalid_request` before
+the SDK is called; `DecisionError` keeps its code (`invalid_state`,
+`invalid_scope`) instead of being reported as `invalid_evidence`.
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.

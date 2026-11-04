@@ -431,8 +431,9 @@ def project(
                 # claim's own lineage belong in this timeline. Filtering here keeps
                 # an unrelated sibling claim from masquerading as the transition
                 # just because it sits at ordinal 0 of the superseding document.
-                before = [c for c in before if c.id in matched_ids]
                 after = [c for c in after if c.id in matched_ids]
+                targets = {c.supersedes_id for c in after if c.supersedes_id}
+                before = [c for c in before if c.id in matched_ids or c.id in targets]
             if request.query and not any(c.id in matched_ids for c in before + after):
                 continue
             if not before and not after:

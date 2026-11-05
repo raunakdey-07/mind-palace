@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from live_server import live_server  # noqa: E402,F401,F811  fixture
+
 sys.path.insert(
     0,
     str(Path(__file__).resolve().parents[1] / "examples" / "brand-memory-adapter"),
@@ -36,7 +38,7 @@ def test_context_for_closed_port_degrades(monkeypatch):
     assert elapsed < 5, f"degradation took {elapsed:.2f}s, expected under 5s"
 
 
-def test_rejected_decision_excluded_from_context(live_server, monkeypatch):
+def test_rejected_decision_excluded_from_context(live_server, monkeypatch):  # noqa: F811
     """record_decision(rejected) then context_for must leave the text out."""
     import brand_memory  # noqa: E402
 
@@ -74,7 +76,7 @@ def test_rejected_decision_excluded_from_context(live_server, monkeypatch):
     ), f"approved voice missing: {text!r}"
 
 
-def test_record_decision_rejects_invalid_decision(live_server, monkeypatch):
+def test_record_decision_rejects_invalid_decision(live_server, monkeypatch):  # noqa: F811
     """record_decision with an invalid decision raises ValueError before any call."""
     import brand_memory  # noqa: E402
 

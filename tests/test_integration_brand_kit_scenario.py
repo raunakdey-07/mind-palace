@@ -98,16 +98,18 @@ def test_role_properties():
 
 
 def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
-    key = live_server.keys["acme"]
-    mp = MindPalace("acme", base_url=live_server.url, api_key=key, timeout=5, retries=1)
+    key = live_server.keys[srv.corpora["acme"]]
+    mp = MindPalace(
+        srv.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
+    )
 
     # 1. Brand kit: ingest brand/guide.md and brand/specs.md.
-    _ingest(live_server, key, BRAND_GUIDE, "brand/guide.md")
-    _ingest(live_server, key, BRAND_SPECS, "brand/specs.md")
+    _ingest(live_server, key, BRAND_GUIDE, "brand/guide.md", corpus=srv.corpora["acme"])
+    _ingest(live_server, key, BRAND_SPECS, "brand/specs.md", corpus=srv.corpora["acme"])
 
     # 2. Campaigns: ingest both briefs.
-    _ingest(live_server, key, SPRING_BRIEF, "campaigns/spring/brief.md")
-    _ingest(live_server, key, AUTUMN_BRIEF, "campaigns/autumn/brief.md")
+    _ingest(live_server, key, SPRING_BRIEF, "campaigns/spring/brief.md", corpus=srv.corpora["acme"])
+    _ingest(live_server, key, AUTUMN_BRIEF, "campaigns/autumn/brief.md", corpus=srv.corpora["acme"])
 
     # 3. Generation context.
     p_full = mp.memory.pack(query="", budget=64000, path_prefix=SCOPE)
@@ -191,7 +193,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     ), f"step 5: history previous missing old voice: {h.model_dump_json()}"
 
     # 6. Brand team edits the guide.
-    _ingest(live_server, key, MODIFIED_GUIDE, "brand/guide.md")
+    _ingest(live_server, key, MODIFIED_GUIDE, "brand/guide.md", corpus=srv.corpora["acme"])
     p5 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert not any(
         "free shipping" in c.claim for c in p5.current_memories
@@ -242,13 +244,15 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
 
 
 def test_isolation(live_server):  # noqa: F811
-    key = live_server.keys["acme"]
-    mp = MindPalace("acme", base_url=live_server.url, api_key=key, timeout=5, retries=1)
+    key = live_server.keys[srv.corpora["acme"]]
+    mp = MindPalace(
+        srv.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
+    )
 
     for method, kwargs in (
-        (mp.memory.pack, {"corpus": "globex"}),
-        (mp.memory.current, {"corpus": "globex"}),
-        (mp.memory.history, {"corpus": "globex"}),
+        (mp.memory.pack, {"corpus": srv.corpora["globex"]}),
+        (mp.memory.current, {"corpus": srv.corpora["globex"]}),
+        (mp.memory.history, {"corpus": srv.corpora["globex"]}),
     ):
         with pytest.raises(MemoryClientError) as exc:
             method(**kwargs)
@@ -284,8 +288,10 @@ def test_memory_down():
 
 
 def test_latency(live_server, capsys):  # noqa: F811
-    key = live_server.keys["globex"]
-    mp = MindPalace("globex", base_url=live_server.url, api_key=key, timeout=5, retries=1)
+    key = live_server.keys[srv.corpora["globex"]]
+    mp = MindPalace(
+        srv.corpora["globex"], base_url=live_server.url, api_key=key, timeout=5, retries=1
+    )
 
     WORD_LIST = [
         "the",
@@ -321,7 +327,7 @@ def test_latency(live_server, capsys):  # noqa: F811
     start = time.monotonic()
     for i in range(200):
         content = f"# Note {i}\n\n{doc_text(i)}\n"
-        _ingest(live_server, key, content, f"notes/n{i:03d}.md", corpus="globex")
+        _ingest(live_server, key, content, f"notes/n{i:03d}.md", corpus=srv.corpora["globex"])
     ingest_wall = time.monotonic() - start
 
     times = []

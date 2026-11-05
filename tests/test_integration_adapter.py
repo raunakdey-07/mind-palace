@@ -7,7 +7,6 @@ No LLM calls. Two guarantees:
 
 from __future__ import annotations
 
-import os
 import sys
 import time
 from pathlib import Path
@@ -18,8 +17,6 @@ sys.path.insert(
     0,
     str(Path(__file__).resolve().parents[1] / "examples" / "brand-memory-adapter"),
 )
-
-from live_server import live_server  # noqa: E402,F401,F811  fixture
 
 
 def test_context_for_closed_port_degrades(monkeypatch):
@@ -47,7 +44,7 @@ def test_rejected_decision_excluded_from_context(live_server, monkeypatch):
     monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
 
     brand_memory.load_documents(
-        srv.corpora["acme"],
+        live_server.corpora["acme"],
         [
             (
                 "brand/guide.md",
@@ -62,10 +59,14 @@ def test_rejected_decision_excluded_from_context(live_server, monkeypatch):
     )
 
     brand_memory.record_decision(
-        srv.corpora["acme"], "spring", "spring.headline", "Headline: Ride Into Spring", "rejected"
+        live_server.corpora["acme"],
+        "spring",
+        "spring.headline",
+        "Headline: Ride Into Spring",
+        "rejected",
     )
 
-    text, ids, available = brand_memory.context_for(srv.corpora["acme"], "spring", 16000)
+    text, ids, available = brand_memory.context_for(live_server.corpora["acme"], "spring", 16000)
     assert available is True, "live server must answer"
     assert "Ride Into Spring" not in text, f"rejected text leaked: {text!r}"
     assert any(
@@ -82,5 +83,5 @@ def test_record_decision_rejects_invalid_decision(live_server, monkeypatch):
 
     with pytest.raises(ValueError, match="decision must be"):
         brand_memory.record_decision(
-            srv.corpora["acme"], "spring", "spring.headline", "Headline: X", "maybe"
+            live_server.corpora["acme"], "spring", "spring.headline", "Headline: X", "maybe"
         )

@@ -12,15 +12,12 @@ BRAND_MEMORY_KEY and BRAND_CORPUS are set from the fixture before the blocks run
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
-import pytest
-from typer.testing import CliRunner
-
 from cli.main import app  # noqa: E402
 from live_server import live_server  # noqa: E401,F401,F811  module-scoped server fixture
+from typer.testing import CliRunner
 
 ROOT = Path(__file__).resolve().parent.parent
 GUIDE = ROOT / "docs" / "integration" / "guide.md"
@@ -35,7 +32,7 @@ def _extract_blocks(text: str, pattern: re.Pattern[str]) -> list[str]:
     return pattern.findall(text)
 
 
-def test_guide_python_blocks_run(live_server, monkeypatch):
+def test_guide_python_blocks_run(live_server, monkeypatch):  # noqa: F811
     """Every python block in the guide executes in order against live_server."""
     guide = GUIDE.read_text(encoding="utf-8")
     blocks = _extract_blocks(guide, _PYTHON_BLOCK_RE)
@@ -43,7 +40,7 @@ def test_guide_python_blocks_run(live_server, monkeypatch):
 
     monkeypatch.setenv("MIND_PALACE_URL", live_server.url)
     monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
-    monkeypatch.setenv("BRAND_CORPUS", srv.corpora["acme"])
+    monkeypatch.setenv("BRAND_CORPUS", live_server.corpora["acme"])
 
     namespace: dict[str, object] = {}
     for i, block in enumerate(blocks, start=1):
@@ -77,13 +74,16 @@ def test_guide_shell_commands_appear_in_ci_or_readme():
                 assert result.exit_code == 0, f"--help failed for: {line}"
                 for token in line.split()[1:]:
                     if token.startswith("--"):
-                        assert token in result.output, f"flag {token} missing from --help for: {line}"
+                        assert (
+                            token in result.output
+                        ), f"flag {token} missing from --help for: {line}"
             else:
                 # All other commands must appear verbatim as a whole line.
                 if line not in combined:
                     missing.append(line)
 
-    assert not missing, (
-        "these shell commands from the guide do not appear in ci.yml or README:\n"
-        + "\n".join(missing)
+    assert (
+        not missing
+    ), "these shell commands from the guide do not appear in ci.yml or README:\n" + "\n".join(
+        missing
     )

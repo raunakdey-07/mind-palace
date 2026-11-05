@@ -22,7 +22,7 @@ The runtime is a transport over the existing `memory_public.execute` and `rememb
 It runs the same code in a longer-lived process, so what it returns is byte-identical
 to the in-process path: same claims, evidence, temporal state, conflicts,
 abstention, receipt digest and Memory Pack digest. That is
-`tests/test_m016_runtime_equivalence.py`.
+`tests/test_runtime_equivalence.py`.
 
 | | before | after |
 |---|---|---|
@@ -203,7 +203,7 @@ lexical column is unaffected by that and is the same number either way.
 
 The speed comes entirely from not importing the model stack: `import torch` is
 1.68 s, `import transformers` 1.20 s, and `sentence_transformers` adds 2.66 s on top
-of those. `tests/test_m016_lexical_mode.py` asserts both halves — that the imports do
+of those. `tests/test_lexical_mode.py` asserts both halves — that the imports do
 not happen, and that the command is measurably faster because of it — so the mode
 cannot quietly become a slower way of doing the same thing.
 
@@ -239,7 +239,7 @@ lexical mode is best understood as the model-free rung of the same relevance gat
 rather than a replacement scorer. Nothing was weakened to make the two agree — an
 answer that differs only in what it declines to say is still a wrong answer.
 
-`tests/test_m016_lexical_mode.py` asserts this divergence deliberately. If a future
+`tests/test_lexical_mode.py` asserts this divergence deliberately. If a future
 change makes the modes agree here, that test should be changed with a reason rather
 than left to fail or quietly deleted.
 
@@ -328,7 +328,7 @@ reason it is opt-in: semantic ranking is the better default, and most users shou
 have it without asking.
 
 What *is* guaranteed, and tested, is that nothing in the package needs the model stack
-merely to be imported or to run a command. `tests/test_m016_model_free_package.py`
+merely to be imported or to run a command. `tests/test_model_free_package.py`
 blocks `torch`, `transformers` and `sentence_transformers` at the import hook and
 checks that `--help`, `init`, `recall` and `explain` all still work. So the light path
 is real today, and revisiting the dependency model later would be a packaging change

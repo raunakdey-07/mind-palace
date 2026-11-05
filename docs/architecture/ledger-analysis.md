@@ -269,7 +269,7 @@ MEMORY_TEST_DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace \
   tests/test_memory_core.py tests/test_memory_public.py tests/test_memory_query.py \
   tests/test_memory_snapshot_seal.py tests/test_memory_multiple_evidence.py \
   tests/test_memory_ingestion.py tests/test_ingestion_lifecycle.py \
-  tests/test_m009_feed.py tests/test_m009_feed_integration.py \
+  tests/test_feed_cursor.py tests/test_feed_integration.py \
   tests/test_corpus_isolation.py tests/test_memory_http.py tests/test_sdk.py -q
 ```
 

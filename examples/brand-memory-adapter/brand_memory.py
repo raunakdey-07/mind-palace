@@ -47,9 +47,7 @@ def load_documents(tenant: str, files: list[tuple[str, str]]) -> None:
         resp.raise_for_status()
 
 
-def context_for(
-    tenant: str, campaign: str, budget_chars: int
-) -> tuple[str, list[str], bool]:
+def context_for(tenant: str, campaign: str, budget_chars: int) -> tuple[str, list[str], bool]:
     """Pack claim texts for generation in brand + campaign scope.
 
     Always packs with query="" so every current claim in scope is returned,
@@ -80,9 +78,7 @@ def record_decision(tenant: str, campaign: str, key: str, text: str, decision: s
     ("NEW" or "UNCHANGED").
     """
     if decision not in ("approved", "rejected"):
-        raise ValueError(
-            f"decision must be 'approved' or 'rejected', got {decision!r}"
-        )
+        raise ValueError(f"decision must be 'approved' or 'rejected', got {decision!r}")
     mp = _client(tenant)
     result = mp.memory.remember(
         statement=text,

@@ -104,7 +104,7 @@ the SDK is called; `DecisionError` keeps its code (`invalid_state`,
 
 New `docs/integration/guide.md`: wiring Mind Palace into a content-generation
 app in one afternoon. Every python block runs in CI against a live server
-(`tests/test_integration_guide_examples.py`). New `examples/marketing-campaign-memory/brand_memory.py`:
+(`tests/test_integration_guide_examples.py`). New `examples/brand-memory-adapter/brand_memory.py`:
 SDK-only adapter (`load_documents`, `context_for`, `record_decision`,
 `record_correction`). No LLM calls in tests; generation is simulated.
 

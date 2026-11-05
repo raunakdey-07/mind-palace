@@ -236,7 +236,9 @@ prev_claims = [c.claim for change in h.changes for c in change.previous]
 assert any("warm, plain and confident" in c for c in prev_claims), prev_claims
 
 ev = mp.memory.evidence(voice_id, query="")
-assert ev.current_memories or ev.historical_memories, "evidence must name its claim"
+assert any(c.id == voice_id for c in ev.historical_memories), (
+    "evidence must name the superseded claim"
+)
 ```
 
 ---

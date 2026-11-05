@@ -214,7 +214,6 @@ behaviour, and only the first two are Mind Palace's to guarantee.
 | `marketing_memory/generator.py`| the simulated generator                                           |
 | `marketing_memory/memory.py`   | the HTTP memory client — the only place Mind Palace is reached    |
 | `marketing_memory/provision.py`| onboarding: schema, corpora, credentials, seed facts               |
-| `brand_memory.py`          | the SDK-only adapter: `load_documents`, `context_for`, `record_decision`, `record_correction`; generation is simulated and no LLM is called |
 | `demo.py`                      | the runnable walkthrough                                          |
 
 Two databases, kept apart on purpose. This application owns `users`,

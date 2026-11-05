@@ -203,6 +203,7 @@ mindpalace credential list
 mindpalace credential revoke service-acme
 ```
 
+The secret is printed once and stored only as a hash.```
 The secret is printed once and stored only as a hash. Rotation is issue → deploy
 → revoke. These are local commands on purpose: there is no HTTP route that
 creates a corpus or mints a credential, because a network endpoint that does
@@ -215,6 +216,31 @@ roles and grants — so administrative commands need the maintenance role, the
 same way a migration does. A single-user local deployment sets one
 `DATABASE_URL` and never notices.
 
+### Scope-token enforcement
+
+The scope-token secret (`MIND_PALACE_SCOPE_SECRET`) signs each tenant scope
+token. The secret must be rotated into the database and enforcement enabled
+before a server deployment starts; a mismatch between the DB row and the
+environment variable causes every tenant-scoped query to return zero rows.
+`MIND_PALACE_ENFORCE_SCOPE_TOKEN=on` makes the server verify the secret at
+startup and refuse to start on a mismatch.
+
+```bash
+mindpalace secret rotate --database-url "$ADMIN_DATABASE_URL" --out scope-secret.txt
+```
+
+```bash
+psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "SET ROLE mindpalace_owner; SELECT mp_set_scope_token_enforcement(true);"
+```
+
+```bash
+MIND_PALACE_SCOPE_SECRET="$(cat scope-secret.txt)" MIND_PALACE_ENFORCE_SCOPE_TOKEN=on MIND_PALACE_AUTH_MODE=required MIND_PALACE_DEPLOYMENT=server MIND_PALACE_INGEST_ROOTS=/srv/brand-docs uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+The safe rotation order is: update the DB row first, then roll the environment
+variable, expecting a brief outage while the two are out of sync.
+
+### Tenant lifecycle
 ### Tenant lifecycle
 
 ```bash
@@ -250,6 +276,8 @@ arbitrarily.
 | `MIND_PALACE_ADMIN_DATABASE_URL` | `DATABASE_URL` | The maintenance role, for the administrative CLI commands. |
 | `MIND_PALACE_MAX_INGEST_CHARS` | `4000000` | Largest single document accepted. |
 | `MIND_PALACE_CURSOR_SECRET` | — | HMAC key for feed cursors. One per deployment. |
+| `MIND_PALACE_SCOPE_SECRET` | unset (in-process code falls back to `dev-scope-secret`, api/services/db.py:166) | The HMAC secret that signs the tenant scope token. Must equal the value rotated into the database with `mindpalace secret rotate`. A server deployment refuses to start when it is unset, is `dev-scope-secret`, or disagrees with the database row (api/main.py:135-176). |
+| `MIND_PALACE_ENFORCE_SCOPE_TOKEN` | `off` | `on` makes a server deployment verify at startup that enforcement is enabled in the database and the secret matches. With `off`, a server deployment refuses to start unless `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, and logs that tenant scope can be forged (api/main.py:120-133). |
 
 `MIND_PALACE_DEPLOYMENT=server` is the switch that stops a convenient local
 default from becoming an unauthenticated-looking shared service:

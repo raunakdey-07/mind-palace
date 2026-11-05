@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Small adapter on the public SDK only: brand memory for a content app.
+"""SDK-only adapter for brand memory in a content app.
 
 No imports from `api.services`, no SQL, no model. The four functions are the
 whole surface a FastAPI app needs to wire Mind Palace into generation:
@@ -44,22 +44,24 @@ def load_documents(tenant: str, files: list[tuple[str, str]]) -> None:
             json={"content": content, "path": path, "corpus": tenant},
             headers={"Authorization": f"Bearer {api_key}"},
         )
-        assert resp.status_code == 200, resp.text
+        resp.raise_for_status()
 
 
 def context_for(
-    tenant: str, campaign: str, task: str, budget_chars: int
+    tenant: str, campaign: str, budget_chars: int
 ) -> tuple[str, list[str], bool]:
-    """Pack claim texts for `task` in brand + campaign scope.
+    """Pack claim texts for generation in brand + campaign scope.
 
-    Returns (prompt_text, claim_ids, memory_available). Prompt text is built
-    from claim texts only, so the prompt stays small. On `MemoryClientError`,
-    returns ("", [], False) so generation can proceed without memory.
+    Always packs with query="" so every current claim in scope is returned,
+    rather than filtering by keyword relevance. Returns (prompt_text,
+    claim_ids, memory_available). Prompt text is built from claim texts only,
+    so the prompt stays small. On MemoryClientError, returns ("", [], False)
+    so generation can proceed without memory.
     """
     mp = _client(tenant)
     try:
         pack = mp.memory.pack(
-            query=task,
+            query="",
             budget=budget_chars,
             path_prefix=["brand", f"campaigns/{campaign}"],
         )
@@ -70,23 +72,28 @@ def context_for(
     return ("\n".join(texts), ids, True)
 
 
-def record_decision(tenant: str, campaign: str, text: str, decision: str) -> str:
+def record_decision(tenant: str, campaign: str, key: str, text: str, decision: str) -> str:
     """Record a reviewer decision under the campaign scope.
 
-    `decision` is "approved" or "rejected". Returns the result event
+    `decision` must be "approved" or "rejected"; anything else raises
+    ValueError before any remote call. Returns the result event
     ("NEW" or "UNCHANGED").
     """
+    if decision not in ("approved", "rejected"):
+        raise ValueError(
+            f"decision must be 'approved' or 'rejected', got {decision!r}"
+        )
     mp = _client(tenant)
     result = mp.memory.remember(
         statement=text,
-        key=f"{campaign}.headline",
+        key=key,
         scope=f"campaigns/{campaign}",
         state=decision,
     )
     return result.event
 
 
-def record_correction(tenant: str, claim_id: str, text: str) -> str:
+def record_correction(tenant: str, claim_id: str, key: str, text: str) -> str:
     """Supersede a claim with corrected text, in the brand scope.
 
     Returns the result event ("NEW" or "UNCHANGED").
@@ -94,7 +101,7 @@ def record_correction(tenant: str, claim_id: str, text: str) -> str:
     mp = _client(tenant)
     result = mp.memory.remember(
         statement=text,
-        key="brand.correction",
+        key=key,
         scope="brand",
         supersedes_claim_id=claim_id,
     )

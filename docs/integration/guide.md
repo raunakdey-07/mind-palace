@@ -34,7 +34,7 @@ python -m alembic -c migrations/alembic.ini upgrade head
 Provision the runtime role (idempotent):
 
 ```bash
-psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 -v runtime_password=choose-a-local-password -f scripts/db/runtime_roles.sql
+psql "$ADMIN_DATABASE_URL" -v runtime_password="$PW" -f scripts/db/runtime_roles.sql
 ```
 
 Rotate the scope secret and enable enforcement as the owner role. The secret
@@ -44,13 +44,15 @@ and the enforcement flag are a pair: the server computes HMAC tokens from
 tenant-scoped query returns zero rows.
 
 ```bash
-psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', 'choose-a-random-secret') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
+mindpalace secret rotate --database-url "$ADMIN_DATABASE_URL" --out scope-secret.txt
 ```
 
-Alternatively, use the documented CLI rotation:
+```bash
+psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "SET ROLE mindpalace_owner; SELECT mp_set_scope_token_enforcement(true);"
+```
 
 ```bash
-mindpalace secret rotate --database-url postgresql://mpadmin:secret@localhost:5432/mindpalace --out /tmp/scope-secret.txt
+MIND_PALACE_SCOPE_SECRET="$(cat scope-secret.txt)" MIND_PALACE_ENFORCE_SCOPE_TOKEN=on MIND_PALACE_AUTH_MODE=required MIND_PALACE_DEPLOYMENT=server MIND_PALACE_INGEST_ROOTS=/srv/brand-docs uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Rotation order and the brief outage window.** Update the database row first,
@@ -58,12 +60,6 @@ then roll the env var, expecting a brief outage. The safe order is: rotating the
 DB value without updating the environment makes every token fail verification,
 so requests return 0 rows until both sides agree. Readiness (`/health/ready`)
 reports `not_ready` while they differ.
-
-Start the server with the rotated secret:
-
-```bash
-MIND_PALACE_SCOPE_SECRET=choose-a-random-secret MIND_PALACE_ENFORCE_SCOPE_TOKEN=on MIND_PALACE_AUTH_MODE=required MIND_PALACE_DEPLOYMENT=server uvicorn api.main:app --host 127.0.0.1 --port 8000
-```
 
 Point your app at the server:
 
@@ -92,7 +88,8 @@ Create a credential for a new brand with the operator command (the maintenance
 role, not the app):
 
 ```bash
-mindpalace credential issue --database-url postgresql://mpadmin:secret@localhost:5432/mindpalace --label trailhead-rw --corpus trailhead --role read_write
+mindpalace corpus create trailhead
+mindpalace credential issue trailhead-backend --corpus trailhead --role read_write
 ```
 
 Hold the secret server-side, in the same environment that serves the app. A
@@ -125,10 +122,10 @@ import httpx
 def ingest(content: str, path: str):
     resp = httpx.post(
         f"{client_url}/api/ingest/file",
-        json={"content": content, "path": path, "corpus": "acme"},
+        json={"content": content, "path": path, "corpus": os.environ["BRAND_CORPUS"]},
         headers={"Authorization": f"Bearer {BRAND_MEMORY_KEY}"},
     )
-    assert resp.status_code == 200, resp.text
+    resp.raise_for_status()
     return resp
 
 brand_guide = (
@@ -173,7 +170,7 @@ corpus, including sibling campaigns and unapproved drafts.
 from mindpalace_sdk import MindPalace
 
 mp = MindPalace(
-    "acme",
+    os.environ["BRAND_CORPUS"],
     base_url=client_url,
     api_key=BRAND_MEMORY_KEY,
     timeout=3,
@@ -311,7 +308,7 @@ Configure the client with `timeout=3, retries=1` on the generation path. On
 from mindpalace_sdk import MemoryClientError
 
 gen_client = MindPalace(
-    "acme",
+    os.environ["BRAND_CORPUS"],
     base_url=client_url,
     api_key=BRAND_MEMORY_KEY,
     timeout=3,
@@ -401,10 +398,7 @@ live server on a hosted runner; runner timings vary — an earlier run,
 `p95 < 1000 ms` is asserted in the test; the measured p95 is an order of
 magnitude below the bound.
 
-```python
-# p95 must stay well under 1000 ms for a generation path.
-assert 97.6 < 1000  # CI run 41902031212, hosted runner; timings vary by runner
-```
+Runner timings vary by runner.
 
 ---
 

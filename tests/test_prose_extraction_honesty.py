@@ -12,9 +12,10 @@ What is asserted here:
 
 * a sentence wrapped over two physical lines extracts as ONE claim whose text
   is the whole sentence, with the internal line break kept verbatim;
-* prose that produced no claim is reported once per document with the code
-  `prose_not_extracted`, a count, and a hint, through the same warning list
-  the frontmatter warnings use;
+* in a document whose prose no claim was read from, skipped sentences are
+  reported once with the code `prose_not_extracted`, a count and a hint,
+  through the same warning list the frontmatter warnings use;
+* in a document with claims, prose paragraphs are ignored and not reported;
 * the ingest HTTP response carries those warnings, and carries nothing at all
   when there is nothing to say;
 * bullet, field and table extraction is unchanged, byte for byte.
@@ -114,19 +115,16 @@ def test_a_wrapped_sentence_extracts_whole():
 
 
 # ---------------------------------------------------------------------------
-# 2: prose beside a claim is reported, not dropped
+# 2: prose beside a claim is not reported yet
 # ---------------------------------------------------------------------------
 
 
-def test_dropped_prose_beside_a_claim_is_reported():
+def test_prose_beside_bullets_is_not_reported_yet():
+    """No prose_not_extracted while a document has any structural claim; see #158."""
     claims, warnings = extract(BULLET_AND_PROSE, chunks_for(BULLET_AND_PROSE), path="guide.md")
     bullet = [claim for claim in claims if claim["claim"] == "Our voice is warm."]
     assert len(bullet) == 1, claims
-    skipped = prose_warnings(warnings)
-    assert (
-        skipped
-    ), f"expected a prose_not_extracted warning, got: {[w.as_dict() for w in warnings]}"
-    assert all(getattr(w, "count", 0) >= 1 for w in skipped)
+    assert prose_warnings(warnings) == []
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +160,12 @@ def test_a_wrapped_bullet_is_unchanged_and_reports_nothing():
 async def test_ingest_response_carries_prose_warnings():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         corpus = await make_corpus(client)
-        response = await ingest(client, corpus, BULLET_AND_PROSE, "brand/guide.md")
+        # A document with no bullets at all takes the memory path once the
+        # corpus holds an archive; seed one so the test exercises what a
+        # brand corpus looks like after its first memory lands.
+        seed = await ingest(client, corpus, WRAPPED_BULLET, "brand/seed.md")
+        assert seed.status_code == 200, seed.text
+        response = await ingest(client, corpus, PROSE_ONLY, "brand/specs.md")
     assert response.status_code == 200, response.text
     warnings = response.json().get("warnings", [])
     assert any(w.get("code") == "prose_not_extracted" for w in warnings), response.text

@@ -185,6 +185,18 @@ print(f"{memory.claim}  [{memory.status}]")
   provenance, not the product.
 - **It does not authenticate its own history.** A receipt proves internal
   consistency. Trust requires an anchor you pinned yourself, outside this system.
+- **Query and chunk routes do not withhold.** `pack` and `current` withhold
+  draft/rejected/superseded claims; `query` does not (#138).
+- **Authored `claims:` blocks ignore frontmatter `status`.** A `claims:` block
+  in frontmatter is the authoring interface and wins outright; file-level
+  `status:` does not downgrade its claims (#140).
+- **No token budgets.** The `budget` argument is a character count of the JSON
+  response, not a token count.
+- **No metadata filters.** Scoping is by corpus and `path_prefix`.
+- **No single-claim deletion.** Withdrawal is a new `rejected` version of the
+  same key; the archive is append-only.
+- **No comparative benchmark result.** No number in this repository is evidence
+  of generalisation.
 - **A supersession retires one claim.** `--supersedes` names it, or `--topic-key`
   retires whatever is live under that key, and either works across files. Where two
   documents disagree under one key and neither is retired, recall reports the

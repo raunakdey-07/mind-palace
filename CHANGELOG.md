@@ -100,6 +100,14 @@ be combined with `state` or `scope` and is refused with `invalid_request` before
 the SDK is called; `DecisionError` keeps its code (`invalid_state`,
 `invalid_scope`) instead of being reported as `invalid_evidence`.
 
+### Integration guide and example adapter
+
+New `docs/integration/guide.md`: wiring Mind Palace into a content-generation
+app in one afternoon. Every python block runs in CI against a live server
+(`tests/test_integration_guide_examples.py`). New `examples/brand-memory-adapter/brand_memory.py`:
+SDK-only adapter (`load_documents`, `context_for`, `record_decision`,
+`record_correction`). No LLM calls in tests; generation is simulated.
+
 ### History shows cross-document supersessions
 
 `history(path=...)` and `changes(path=...)` now include superseded claims from

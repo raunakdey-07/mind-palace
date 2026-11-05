@@ -13,6 +13,7 @@ import socket
 import subprocess
 import sys
 import time
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -52,20 +53,20 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
-def _insert_corpora() -> None:
-    """Insert acme and globex as the maintenance role (sync_url), mirroring the
+def _insert_corpora(names: dict[str, str]) -> None:
+    """Insert corpora as the maintenance role (sync_url), mirroring the
     world fixture in tests/test_enforcement_e2e.py."""
     engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
-            for name in CORPORA:
+            for short_name, full_name in names.items():
                 conn.execute(
                     sa.text(
                         "INSERT INTO corpora (id, name, description) VALUES "
                         "(encode(sha256(convert_to('corpus:' || :n, 'UTF8')), 'hex'), "
                         ":n, '') ON CONFLICT DO NOTHING"
                     ),
-                    {"n": name},
+                    {"n": full_name},
                 )
     finally:
         engine.dispose()
@@ -83,11 +84,16 @@ def live_server(tmp_path_factory):
         apply_provision_sql()
         secret, original = _rotate_and_enable(os.environ["DATABASE_URL"])
 
-        # 2. Seed corpora as the maintenance role.
-        _insert_corpora()
+        # 2. Seed corpora as the maintenance role, with unique names per fixture
+        #    instance so parallel suites do not collide.
+        names = {name: f"{name}_{uuid4().hex[:8]}" for name in CORPORA}
+        _insert_corpora(names)
 
         # 3. Issue one read_write credential per corpus.
-        keys = {name: _issue_cred(f"live-{name}-rw", name, "read_write") for name in CORPORA}
+        keys = {
+            name: _issue_cred(f"live-{name}-rw", corp_name, "read_write")
+            for name, corp_name in names.items()
+        }
 
         # 4. Start the server as a subprocess.
         port = _find_free_port()
@@ -173,6 +179,7 @@ def live_server(tmp_path_factory):
         srv = _Server()
         srv.url = base_url
         srv.keys = keys
+        srv.corpora = names
         srv.stderr_path = stderr_path
 
         yield srv

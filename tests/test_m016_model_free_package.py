@@ -90,8 +90,8 @@ def _run(argv: list[str], lexical: bool = False) -> tuple[int, str, str]:
         + "captured = getattr(result, 'stderr', '')\n"
         + "if not captured:\n"
         + "    captured = result.output\n"
-        + "print('STDERR=' + (captured or '')[:10000])\n"
-        + "print('OUTPUT=' + result.output[:10000])\n"
+        + "print('STDERR=' + (captured or '')[:4000])\n"
+        + "print('OUTPUT=' + result.output[:4000])\n"
         + "print('HEAVY=' + repr(heavy))\n"
         + "sys.exit(result.exit_code)\n"
     )

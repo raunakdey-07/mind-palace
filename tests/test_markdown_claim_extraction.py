@@ -201,7 +201,7 @@ def test_prose_with_no_structure_produces_nothing_and_says_so():
     body = "Just a paragraph. No list, no heading, no field."
     found, warnings = extract(body, chunks_for(body))
     assert found == []
-    assert warnings == []
+    assert [w.code for w in warnings] == ["prose_not_extracted"]
     assert has_claims(body) is False
 
 

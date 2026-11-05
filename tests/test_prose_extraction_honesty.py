@@ -53,13 +53,7 @@ BULLET_AND_PROSE = (
     "This is a prose sentence that must be extracted too.\n"
 )
 
-PROSE_ONLY = (
-    "# Specs\n"
-    "\n"
-    "## Facts\n"
-    "\n"
-    "The Trailhead 2 bike weighs 9.8 kilograms.\n"
-)
+PROSE_ONLY = "# Specs\n\n## Facts\n\nThe Trailhead 2 bike weighs 9.8 kilograms.\n"
 
 WRAPPED_BULLET = (
     "# Guide\n"
@@ -129,7 +123,9 @@ def test_dropped_prose_beside_a_claim_is_reported():
     bullet = [claim for claim in claims if claim["claim"] == "Our voice is warm."]
     assert len(bullet) == 1, claims
     skipped = prose_warnings(warnings)
-    assert skipped, f"expected a prose_not_extracted warning, got: {[w.as_dict() for w in warnings]}"
+    assert (
+        skipped
+    ), f"expected a prose_not_extracted warning, got: {[w.as_dict() for w in warnings]}"
     assert all(getattr(w, "count", 0) >= 1 for w in skipped)
 
 

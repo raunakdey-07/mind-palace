@@ -273,7 +273,7 @@ r_withdraw = mp.memory.remember(
     scope="brand",
     state="rejected",
 )
-assert r_withdraw.event == "NEW", r_withdraw.event
+assert r_withdraw.event == "MODIFIED", r_withdraw.event
 
 p_after = mp.memory.pack(query="", budget=16000, path_prefix=["brand", "campaigns/spring"])
 assert not any(

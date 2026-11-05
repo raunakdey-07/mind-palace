@@ -25,7 +25,7 @@ GUIDE = ROOT / "docs" / "integration" / "guide.md"
 _PYTHON_BLOCK_RE = re.compile(r"```python\n(.*?)\n```", re.DOTALL)
 _SHELL_BLOCK_RE = re.compile(r"```bash\n(.*?)\n```", re.DOTALL)
 
-runner = CliRunner()
+runner = CliRunner(env={"COLUMNS": "200"})
 
 
 def _extract_blocks(text: str, pattern: re.Pattern[str]) -> list[str]:

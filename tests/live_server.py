@@ -13,7 +13,7 @@ import socket
 import subprocess
 import sys
 import time
-import uuid
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -90,7 +90,10 @@ def live_server(tmp_path_factory):
         _insert_corpora(names)
 
         # 3. Issue one read_write credential per corpus.
-        keys = {name: _issue_cred(f"live-{name}-rw", corp_name, "read_write") for name, corp_name in names.items()}
+        keys = {
+            name: _issue_cred(f"live-{name}-rw", corp_name, "read_write")
+            for name, corp_name in names.items()
+        }
 
         # 4. Start the server as a subprocess.
         port = _find_free_port()

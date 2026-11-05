@@ -12,7 +12,6 @@ BRAND_MEMORY_KEY and BRAND_CORPUS are set from the fixture before the blocks run
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
@@ -26,11 +25,9 @@ GUIDE = ROOT / "docs" / "integration" / "guide.md"
 _PYTHON_BLOCK_RE = re.compile(r"```python\n(.*?)\n```", re.DOTALL)
 _SHELL_BLOCK_RE = re.compile(r"```bash\n(.*?)\n```", re.DOTALL)
 
-# Rich (which typer uses for --help) reads terminal width from os.environ["COLUMNS"].
-# CliRunner's env= kwarg does not update os.environ, so set it directly to avoid
-# rich truncating option names in narrow CI terminals.
-_OLD_COLUMNS = os.environ.get("COLUMNS")
-os.environ["COLUMNS"] = "200"
+# Rich (which typer uses for --help) wraps/truncates option names in narrow
+# terminals. Strip ANSI codes and collapse whitespace so flag names survive.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
 runner = CliRunner()
 
@@ -86,11 +83,10 @@ def test_guide_shell_commands_appear_in_ci_or_readme():
                     path_tokens.append(t)
                 result = runner.invoke(app, path_tokens + ["--help"])
                 assert result.exit_code == 0, f"--help failed for: {line}"
+                clean = " ".join(_ANSI_RE.sub("", result.output).split())
                 for token in tokens:
                     if token.startswith("--"):
-                        assert (
-                            token in result.output
-                        ), f"flag {token} missing from --help for: {line}"
+                        assert token in clean, f"flag {token} missing from --help for: {line}"
             else:
                 # All other commands must appear verbatim as a whole line.
                 if line not in combined:

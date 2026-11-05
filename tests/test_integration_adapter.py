@@ -1,8 +1,9 @@
 """Adapter tests for examples/brand-memory-adapter/brand_memory.py.
 
-No LLM calls. Two guarantees:
+No LLM calls. Three guarantees:
 - context_for degrades to ("", [], False) within 5 s against a closed port.
 - A rejected decision is withheld from context_for.
+- Approved decisions appear in context_for text.
 """
 
 from __future__ import annotations
@@ -74,6 +75,38 @@ def test_rejected_decision_excluded_from_context(live_server, monkeypatch):  # n
     assert any(
         "warm, plain and confident" in line for line in text.splitlines()
     ), f"approved voice missing: {text!r}"
+
+
+def test_approved_decisions_appear_in_context(live_server, monkeypatch):  # noqa: F811
+    """Approved decisions recorded with record_decision appear in context_for."""
+    import brand_memory  # noqa: E402
+
+    monkeypatch.setenv("MIND_PALACE_URL", live_server.url)
+    monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
+
+    corpus = live_server.corpora["acme"]
+
+    brand_memory.load_documents(
+        corpus,
+        [
+            (
+                "campaigns/spring/brief.md",
+                "# Campaign brief\n\n## Facts\n\n- The spring launch date is 14 March 2027.\n",
+            ),
+        ],
+    )
+
+    brand_memory.record_decision(
+        corpus, "spring", "spring.cta", "Call to action: Ride now", "approved"
+    )
+    brand_memory.record_decision(
+        corpus, "spring", "spring.tagline", "Tagline: Spring is for riding", "approved"
+    )
+
+    text, ids, available = brand_memory.context_for(corpus, "spring", 16000)
+    assert available is True, "live server must answer"
+    assert "Call to action: Ride now" in text, f"approved CTA missing: {text!r}"
+    assert "Tagline: Spring is for riding" in text, f"approved tagline missing: {text!r}"
 
 
 def test_record_decision_rejects_invalid_decision(live_server, monkeypatch):  # noqa: F811

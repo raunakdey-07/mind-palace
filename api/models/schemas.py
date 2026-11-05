@@ -69,6 +69,10 @@ class IngestResponse(BaseModel):
     document_id: str | None = None
     chunk_count: int = 0
     message: str = ""
+    #: Warnings the ingest produced (for example `prose_not_extracted` and the
+    #: frontmatter warnings). Absent rather than empty when there is nothing to
+    #: say, so a response without warnings is byte-identical to before.
+    warnings: list[dict] = Field(default_factory=list, exclude_if=lambda v: not v)
 
 
 # --- Search ---

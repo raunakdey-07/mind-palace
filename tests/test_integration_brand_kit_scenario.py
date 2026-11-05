@@ -98,7 +98,7 @@ def test_role_properties():
 
 
 def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
-    key = live_server.keys[live_server.corpora["acme"]]
+    key = live_server.keys["acme"]
     mp = MindPalace(
         live_server.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
@@ -256,7 +256,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
 
 
 def test_isolation(live_server):  # noqa: F811
-    key = live_server.keys[live_server.corpora["acme"]]
+    key = live_server.keys["acme"]
     mp = MindPalace(
         live_server.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
@@ -300,7 +300,7 @@ def test_memory_down():
 
 
 def test_latency(live_server, capsys):  # noqa: F811
-    key = live_server.keys[live_server.corpora["globex"]]
+    key = live_server.keys["globex"]
     mp = MindPalace(
         live_server.corpora["globex"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )

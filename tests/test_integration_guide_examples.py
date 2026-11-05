@@ -69,10 +69,17 @@ def test_guide_shell_commands_appear_in_ci_or_readme():
                 continue
             if line.startswith("mindpalace "):
                 # Mind Palace CLI commands are checked via --help.
-                subcommand = line.split()[1:]
-                result = runner.invoke(app, subcommand + ["--help"])
+                tokens = line.split()[1:]
+                # The command path is every token before the first --flag;
+                # everything after is a flag or its value.
+                path_tokens = []
+                for t in tokens:
+                    if t.startswith("--"):
+                        break
+                    path_tokens.append(t)
+                result = runner.invoke(app, path_tokens + ["--help"])
                 assert result.exit_code == 0, f"--help failed for: {line}"
-                for token in line.split()[1:]:
+                for token in tokens:
                     if token.startswith("--"):
                         assert (
                             token in result.output

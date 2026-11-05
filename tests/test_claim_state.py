@@ -13,6 +13,7 @@ import pytest
 
 from api.services.markdown_claims import (
     assign_states,
+    detect_info_state,
     document_state,
     extract,
 )
@@ -236,3 +237,21 @@ async def test_claim_state_survives_the_ingest_route():
     brainstorm = next(value for claim, value in states.items() if "playful tone" in claim)
     assert voice == "approved"
     assert brainstorm == "draft"
+
+
+# ---------------------------------------------------------------------------
+# Adopted from the M018 audit regressions (issue #157, section 9)
+# ---------------------------------------------------------------------------
+
+
+def test_approved_prohibition_is_extracted():
+    body = '## Approved\n\nDo not use the words "curated" or "bespoke."\n'
+    meta = {"status": "approved"}
+    assert detect_info_state(meta, body) == "approved"
+    chunks = [{"text": body, "order_index": 0}]
+    claims, _ = extract(body, chunks)
+    assert any("curated" in c["claim"] for c in claims)
+
+
+def test_plain_prose_is_not_draft():
+    assert detect_info_state({}, "We draft emails every Monday.") != "draft"

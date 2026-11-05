@@ -97,6 +97,10 @@ from typing import Any
 #: whole. Long enough to identify the claim, short enough to keep a pack readable.
 QUOTE_LIMIT = 240
 
+#: What an author should do when a document carried prose that produced no
+#: claim. Stated as an instruction, not as an apology.
+_PROSE_NOT_EXTRACTED_HINT = "write rules and facts as bullets or 'Field: value' lines"
+
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _BULLET = re.compile(r"^[-*+]\s+(?!\[[ xX]\])(.+)$")
 _NUMBERED = re.compile(r"^\d{1,3}[.)]\s+(.+)$")
@@ -264,21 +268,40 @@ class ExtractionWarning:
     could not be located in an archived chunk, which happens when a chunk
     boundary falls inside the line. The claim is dropped rather than stored with
     evidence nobody can verify, and this says which line was lost.
+
+    `PROSE_NOT_EXTRACTED` fires when prose produced no claim at all: paragraphs
+    that were not part of a statement, or sentences the prose reader could not
+    use. `count` says how many, and `hint` says what would have worked.
     """
 
     NO_QUOTE = "claim_extraction_no_quote"
-    __slots__ = ("path", "line", "field", "code")
+    PROSE_NOT_EXTRACTED = "prose_not_extracted"
+    __slots__ = ("path", "line", "field", "code", "count", "hint")
 
     def __init__(
-        self, code: str, *, path: str = "", line: int | None = None, field: str = ""
+        self,
+        code: str,
+        *,
+        path: str = "",
+        line: int | None = None,
+        field: str = "",
+        count: int | None = None,
+        hint: str | None = None,
     ) -> None:
         self.code = code
         self.path = path
         self.line = line
         self.field = field
+        self.count = count
+        self.hint = hint
 
     def as_dict(self) -> dict[str, Any]:
-        return {"code": self.code, "path": self.path, "line": self.line}
+        out: dict[str, Any] = {"code": self.code, "path": self.path, "line": self.line}
+        if self.count is not None:
+            out["count"] = self.count
+        if self.hint is not None:
+            out["hint"] = self.hint
+        return out
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
         where = f" {self.path}" if self.path else ""
@@ -621,6 +644,47 @@ def _table_claims(
     return out
 
 
+def _paragraph_line(raw: str) -> bool:
+    """Whether this line may hold ordinary prose.
+
+    Headings, tables, fences, rules, definitions and indented code never
+    reach here: `_scan` classifies them before this runs. Quotes and list
+    items are prose lines to the scanner but are not prose paragraphs to the
+    reader -- a quote is somebody else's words and a list item opens its own
+    statement.
+    """
+    stripped = raw.strip()
+    if not stripped:
+        return False
+    if stripped.startswith(">"):
+        return False
+    if _BULLET.match(raw) or _NUMBERED.match(raw):
+        return False
+    return True
+
+
+def _paragraph_groups(body: str) -> list[list[str]]:
+    """Group the body's prose lines into paragraphs.
+
+    A paragraph is a run of consecutive non-blank prose lines with nothing
+    structural between them. The lines are kept exactly as written, internal
+    line breaks included, because a sentence sliced out of the paragraph has
+    to be findable byte for byte in the archived chunks.
+    """
+    groups: list[list[str]] = []
+    current: list[str] = []
+    for _number, raw, kind in _scan(_HTML_COMMENT.sub("", body)):
+        if kind == "prose" and _paragraph_line(raw):
+            current.append(raw)
+            continue
+        if current:
+            groups.append(current)
+            current = []
+    if current:
+        groups.append(current)
+    return groups
+
+
 def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict], list[dict]]:
     """Return `(claims, warnings)` for a Markdown body.
 
@@ -755,8 +819,24 @@ def extract(body: str, chunks: list[dict], *, path: str = "") -> tuple[list[dict
     # Prose path: when the structural reader found nothing, fall back to
     # extracting normative/declarative sentences from ordinary paragraphs.
     # Every claim still carries an exact verbatim evidence span.
+    #
+    # The warning is tied to the fallback running. A document whose structural
+    # reader found a claim never produces it: its prose paragraphs are
+    # ignored, not reported. The count is what the fallback skipped, and the
+    # warning fires only when at least one sentence or paragraph was skipped.
     if not claims:
-        _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals)
+        unextracted = _prose_extract(
+            body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals
+        )
+        if unextracted:
+            warnings.append(
+                ExtractionWarning(
+                    ExtractionWarning.PROSE_NOT_EXTRACTED,
+                    path=path,
+                    count=unextracted,
+                    hint=_PROSE_NOT_EXTRACTED_HINT,
+                )
+            )
 
     claims.sort(key=lambda claim: claim["key"])
     return claims, warnings
@@ -770,54 +850,56 @@ _PROSE_SIGNALS = frozenset(
 
 
 def _prose_extract(body, chunks, path, claims, warnings, seen_claims, seen_quotes, ordinals):
+    """Read ordinary paragraphs for normative sentences. Returns the count skipped.
+
+    Paragraphs are runs of consecutive non-blank prose lines; each is joined
+    with newlines and split into sentences with the same regex the per-line
+    reader used, whose `\\s+` also splits at a newline that follows `. ! ?`.
+    A sentence keeps its exact original text, internal line breaks included,
+    because the archive checks evidence as an exact slice of the document.
+
+    Every sentence either becomes a claim or is accounted for in the number
+    this function returns: a sentence with no signal word, or one that could
+    not be located in any archived chunk. Sentences below MIN_CLAIM_CHARS
+    are fragments and are ignored, as they always were.
+    """
     haystacks = [c.get("text") or "" for c in chunks]
-    # Collect sentences from prose paragraphs.
-    sentences = []
-    for line in body.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or line.startswith("|") or line.startswith(">"):
-            continue
-        if (
-            line.startswith("-")
-            or line.startswith("*")
-            or line.startswith("+")
-            or re.match(r"^\d", line)
-        ):
-            continue
-        # split into sentences
-        for part in re.split(r"(?<=[.!?])\s+", line):
-            part = part.strip()
-            if len(part) < MIN_CLAIM_CHARS:
+    unextracted = 0
+    for group in _paragraph_groups(body):
+        joined = "\n".join(group)
+        for part in re.split(r"(?<=[.!?])\s+", joined):
+            sent = part
+            if len(sent.strip()) < MIN_CLAIM_CHARS:
                 continue
-            low = part.lower()
+            low = sent.lower()
             if not any(re.search(r"\b" + re.escape(sig) + r"\b", low) for sig in _PROSE_SIGNALS):
+                unextracted += 1
                 continue
-            sentences.append(part)
-    for sent in sentences:
-        if not any(sent in hay for hay in haystacks):
-            # try to find a chunk containing a substring
-            continue
-        sig = ("prose", sent)
-        if sig in seen_quotes:
-            continue
-        seen_quotes.add(sig)
-        key_base = "md:prose"
-        ordinal = ordinals.get(key_base, 0)
-        ordinals[key_base] = ordinal + 1
-        key = "%s:%d" % (key_base, ordinal)
-        if key in seen_claims:
-            continue
-        seen_claims.add(key)
-        claims.append(
-            {
-                "key": key,
-                "claim": sent,
-                "value": sent,
-                "evidence": _limit_quote(sent),
-                "extraction_mode": "prose",
-                "provenance_state": "direct_claim",
-            }
-        )
+            if not any(sent in hay for hay in haystacks):
+                unextracted += 1
+                continue
+            sig = ("prose", sent)
+            if sig in seen_quotes:
+                continue
+            seen_quotes.add(sig)
+            key_base = "md:prose"
+            ordinal = ordinals.get(key_base, 0)
+            ordinals[key_base] = ordinal + 1
+            key = "%s:%d" % (key_base, ordinal)
+            if key in seen_claims:
+                continue
+            seen_claims.add(key)
+            claims.append(
+                {
+                    "key": key,
+                    "claim": sent,
+                    "value": sent,
+                    "evidence": _limit_quote(sent),
+                    "extraction_mode": "prose",
+                    "provenance_state": "direct_claim",
+                }
+            )
+    return unextracted
 
 
 #: Authority states from most to least restrictive.

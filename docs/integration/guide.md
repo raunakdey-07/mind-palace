@@ -298,6 +298,34 @@ assert found is not None, "rejected claim must be visible with include_states"
 assert found.info_state == "rejected", found.info_state
 ```
 
+### Writing a brand kit Mind Palace can read
+
+Write rules and facts as bullets or `Field: value` lines, one per line. A
+wrapped bullet is one statement and is read whole, from its first line to the
+last line of the wrap; the break is preserved in the evidence.
+
+In a document that has bullets, prose paragraphs are ignored and not reported;
+put every rule and fact in a bullet. A document with no bullets at all is read
+for rule-like sentences — only sentences with words like *must*, *never*,
+*always* or *should* — and the ingest response warns `prose_not_extracted`
+when it skipped any.
+
+The ingest response's `warnings` lists what was skipped.
+
+```markdown
+# Spring 2027 brand kit
+
+## Voice
+
+- Our voice is warm, plain and confident.
+- We never shout or use slang
+  in any of our launch copy.
+
+## Product facts
+
+Weight: 9.8 kilograms
+```
+
 ---
 
 ## 6. Failure handling: generation never fails because memory failed
@@ -411,6 +439,10 @@ Runner timings vary by runner.
 - **Authored `claims:` blocks ignore frontmatter `status`.** A `claims:` block
   in frontmatter is the authoring interface and wins outright; file-level
   `status:` does not downgrade its claims (#140).
+- **Prose is read only without bullets.** A document with bullets is read as
+  bullets, `Field: value` lines and tables; its prose paragraphs are not read
+  and not reported. Without bullets, only sentences with words like
+  must/never/always/should are read (#158).
 - **No token budgets.** `budget` is a character count of the JSON response.
 - **No metadata filters.** Scoping is by corpus and `path_prefix`; there is no
   tag or metadata filter parameter.

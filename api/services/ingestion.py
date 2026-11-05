@@ -325,6 +325,7 @@ class IngestionService:
         if not doc_id:
             return {
                 "success": True,
+                "warnings": [w.as_dict() for w in frontmatter_warnings],
                 "message": "Document unchanged, skipped",
                 "chunk_count": 0,
             }
@@ -806,7 +807,17 @@ class IngestionService:
                     # the exact shape of the dogfood failure: indexed as text,
                     # invisible to recall. Saying so is the whole point of this
                     # field.
-                    if not claims_for_doc and not result.get("warnings"):
+                    #
+                    # A `prose_not_extracted` warning does not disqualify the
+                    # document: it declares no claims, and the warning only
+                    # explains why. Every other warning still does.
+                    blocking = [
+                        w
+                        for w in (result.get("warnings") or [])
+                        if (w or {}).get("code")
+                        != markdown_claims.ExtractionWarning.PROSE_NOT_EXTRACTED
+                    ]
+                    if not claims_for_doc and not blocking:
                         entry["reason"] = "no_claims_declared"
                         if len(errors) < MAX_SYNC_ERRORS:
                             errors.append(f"{rel_path}: no_claims_declared")

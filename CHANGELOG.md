@@ -6,6 +6,19 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+### Prose extraction never truncates and no longer drops prose silently
+
+A wrapped sentence is one claim, internal line break included, not a claim
+cut at the line break. A document with no bullets at all is read for
+rule-like sentences; `extract()` now returns a `prose_not_extracted` warning
+for prose that produces no claim; previously it returned no warning. In a
+document that has bullets, prose paragraphs are ignored and not reported;
+put every rule and fact in a bullet. Ingest responses now carry `warnings`
+(`prose_not_extracted` and the existing frontmatter warnings); responses
+without warnings are unchanged. Prose limitation: paragraphs in a document
+with bullets are not read and not reported, and without bullets only
+sentences with words like must/never/always/should are read (#158).
+
 ### Draft/rejected/superseded claims withheld by default (v0.10.0)
 
 `/api/memory/current` and `/api/memory/pack` now withhold claims whose

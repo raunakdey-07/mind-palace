@@ -12,6 +12,7 @@ BRAND_MEMORY_KEY and BRAND_CORPUS are set from the fixture before the blocks run
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -25,7 +26,13 @@ GUIDE = ROOT / "docs" / "integration" / "guide.md"
 _PYTHON_BLOCK_RE = re.compile(r"```python\n(.*?)\n```", re.DOTALL)
 _SHELL_BLOCK_RE = re.compile(r"```bash\n(.*?)\n```", re.DOTALL)
 
-runner = CliRunner(env={"COLUMNS": "200"})
+# Rich (which typer uses for --help) reads terminal width from os.environ["COLUMNS"].
+# CliRunner's env= kwarg does not update os.environ, so set it directly to avoid
+# rich truncating option names in narrow CI terminals.
+_OLD_COLUMNS = os.environ.get("COLUMNS")
+os.environ["COLUMNS"] = "200"
+
+runner = CliRunner()
 
 
 def _extract_blocks(text: str, pattern: re.Pattern[str]) -> list[str]:

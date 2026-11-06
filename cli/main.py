@@ -378,8 +378,7 @@ def init(
     typer.echo("\nThen ask about it:\n")
     typer.echo('  verilore recall "What database does production use?"')
     typer.echo(
-        "\nAlready have Markdown? Point it at the directory:\n"
-        "  verilore ingest-repo ./docs/adr"
+        "\nAlready have Markdown? Point it at the directory:\n" "  verilore ingest-repo ./docs/adr"
     )
 
 

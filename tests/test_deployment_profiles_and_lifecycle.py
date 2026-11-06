@@ -442,9 +442,7 @@ async def test_a_credential_does_not_acquire_a_corpus_created_later():
 
 async def _corpus_names(db):
     rows = await db.execute(
-        text(
-            "SELECT c.name FROM corpora c " "WHERE verilore_allowed_corpus(c.id) ORDER BY c.name"
-        )
+        text("SELECT c.name FROM corpora c " "WHERE verilore_allowed_corpus(c.id) ORDER BY c.name")
     )
     return list(rows.scalars())
 

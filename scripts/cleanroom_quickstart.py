@@ -409,8 +409,7 @@ def main() -> int:
         # It is not extracted from the README because SKIP_PATTERNS excludes
         # receipt commands, so this line is the single place it is written.
         result = runner.sh(
-            'verilore receipt "What is the primary datastore?" '
-            "--corpus project -o receipt.json",
+            'verilore receipt "What is the primary datastore?" ' "--corpus project -o receipt.json",
             label="receipt",
         )
         bad = {**runner.env, "DATABASE_URL": "postgresql://nobody:nobody@127.0.0.1:1/nothing"}

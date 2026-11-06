@@ -463,12 +463,8 @@ async def test_verified_scope_corpora_call_count(two_tenants):
         await db.execute(_t("SELECT set_config('track_functions', 'all', true)"))
         await db.execute(_t("SELECT pg_stat_reset()"))
     async with _session("runtime") as conn:
-        await conn.execute(
-            _t("SELECT set_config('verilore.tenant_scope', :s, true)"), {"s": alpha}
-        )
-        await conn.execute(
-            _t("SELECT set_config('verilore.scope_token', :t, true)"), {"t": token}
-        )
+        await conn.execute(_t("SELECT set_config('verilore.tenant_scope', :s, true)"), {"s": alpha})
+        await conn.execute(_t("SELECT set_config('verilore.scope_token', :t, true)"), {"t": token})
         await conn.execute(_t("SELECT count(*) FROM memory_claims"))
     async with _session("maintenance") as db:
         r = await db.execute(

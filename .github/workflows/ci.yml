@@ -940,7 +940,7 @@ jobs:
           bundle = receipt_for_response(response)
           assert bundle["receipt_count"] == 1, bundle["receipt_count"]
 
-          document = json.loads(response.model_duvl_json())
+          document = json.loads(response.model_dump_json())
           checked = verify_response_receipt(bundle, document)
           assert checked["verified"] is True, checked
           assert checked["receipts_checked"] >= 1, checked

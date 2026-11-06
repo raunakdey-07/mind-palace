@@ -11,16 +11,16 @@ used a disposable PostgreSQL database created by
 
 | Gate | Evidence | Status |
 |---|---|---|
-| keyset feed | `api/services/memory_feed.py`; `tests/test_m009_feed_integration.py` | PASS |
-| signed cursor | `tests/test_m009_feed.py`; `tests/test_m009_adapters.py` | PASS |
+| keyset feed | `api/services/memory_feed.py`; `tests/test_feed_integration.py` | PASS |
+| signed cursor | `tests/test_feed_cursor.py`; `tests/test_feed_adapters.py` | PASS |
 | corpus binding | integration tests; live wrong-corpus check | PASS |
 | REST | `docs/m009/live-interface-validation.json` | PASS |
 | SDK | `docs/m009/live-interface-validation.json` | PASS |
 | CLI | `docs/m009/live-interface-validation.json`; `docs/m009/cli-validation.txt` | PASS |
 | REST/SDK/CLI equivalence | live artifact: identical sequence digest across all three interfaces | PASS |
-| concurrency | `docs/m009/concurrency-validation.json`; `tests/test_m009_feed_integration.py` | PASS |
-| health live | `tests/test_m009_health.py` | PASS |
-| health ready | `tests/test_m009_health.py`; schema/timeout/failure cases | PASS |
+| concurrency | `docs/m009/concurrency-validation.json`; `tests/test_feed_integration.py` | PASS |
+| health live | `tests/test_health_endpoints.py` | PASS |
+| health ready | `tests/test_health_endpoints.py`; schema/timeout/failure cases | PASS |
 | scale 100 | `docs/m009/scale-benchmark.json` | PASS |
 | scale 1k | `docs/m009/scale-benchmark.json` | PASS |
 | scale 10k | `docs/m009/scale-benchmark.json` | PASS |

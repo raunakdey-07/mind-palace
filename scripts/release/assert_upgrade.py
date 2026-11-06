@@ -124,7 +124,7 @@ def main() -> int:
     # and the pack's canonical bytes include it. Comparing raw digests would
     # report a migration regression every single time. The product's own
     # determinism test pins it for the same reason
-    # (tests/test_m016_json_contract.py:211), so the assertion here has to as
+    # (tests/test_cli_json_contract.py:211), so the assertion here has to as
     # well, or it is measuring the clock rather than the archive.
     PINNED = "2026-01-01T00:00:00+00:00"
     old_pinned = _pin(json.loads((before / "pack.json").read_text()), PINNED)

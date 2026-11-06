@@ -132,7 +132,7 @@ find it.
 byte-identical to the in-process path — same claim identities, evidence, temporal
 state, conflicts, abstention, receipt digest and Memory Pack digest, across ordinary,
 weakly related, absent, temporal, conflict and multi-topic queries. That is
-`tests/test_m016_runtime_equivalence.py`, asserted rather than claimed.
+`tests/test_runtime_equivalence.py`, asserted rather than claimed.
 
 Five behaviour changes, all deliberate and measured:
 
@@ -255,7 +255,7 @@ ships instead, which is the same rung taken on purpose. See
 
 **First-use path.** `mindpalace init → remember → recall → explain → history →
 receipt → verify`, run as documented in a fresh environment against a fresh
-database, offline. Asserted by `tests/test_m015_golden_path.py` and by a
+database, offline. Asserted by `tests/test_five_minute_path.py` and by a
 dedicated CI job.
 
 **Latency.** 200 remembered statements, on mains power: remember p50 10.8 ms /
@@ -971,8 +971,8 @@ read by whatever probes the service. See [security.md](security.md).
 `scripts/` was in the distribution's `include` list from `v0.6.0`. Measured: **54
 files, 590 KB of 1,328 KB unpacked — 44% of the distribution** — of which 48 were
 `scripts/benchmark/`. Nothing in `api/`, `cli/` or any top-level module imports it;
-the three test modules that do (`test_m009_feed_integration`,
-`test_verifiable_memory_release`, `test_m00675_reproducibility`) run from a checkout,
+the three test modules that do (`test_feed_integration`,
+`test_verifiable_memory_release`, `test_eval_reproducibility`) run from a checkout,
 where `scripts/` is present.
 
 The wheel is now **227 KB / 74 files, down from 425 KB / 129**. The repository still

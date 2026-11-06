@@ -190,7 +190,7 @@ The experiment succeeded as an experiment. Nothing shipped.
 Memory semantics are untouched. Claim identities, evidence, provenance, temporal
 validity, supersession, conflicts and abstention are byte-identical between the
 runtime and the in-process path across ordinary, weakly related, absent, temporal,
-conflict and multi-topic queries — `tests/test_m016_runtime_equivalence.py`.
+conflict and multi-topic queries — `tests/test_runtime_equivalence.py`.
 
 Memory Pack stays at version 1. Receipt stays at version 1. No migration.
 

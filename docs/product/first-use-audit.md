@@ -113,7 +113,7 @@ lives and the test that holds it.
 
 ### What the tests hold
 
-`tests/test_m015_golden_path.py` is the permanent contract for all of the above.
+`tests/test_five_minute_path.py` is the permanent contract for all of the above.
 The properties it protects, in the order a developer meets them: a statement
 becomes memory with exact-substring evidence; recall answers and abstains; a
 multi-line statement and a Markdown file both work; the same write twice,

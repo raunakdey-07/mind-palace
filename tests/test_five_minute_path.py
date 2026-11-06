@@ -45,6 +45,33 @@ from api.services.memory_public import execute_in_session
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
+@pytest.fixture
+def isolated_runtime(tmp_path, monkeypatch):
+    """Point the local runtime at a private state dir and stop it afterwards.
+
+    The five-minute path spawns a real `mindpalace_runtime` in the default
+    state directory and never stops it, so anything else on the machine then
+    talks to a runtime attached to this session's database instead of the
+    path it means to exercise. The runtime is stopped here through the
+    product's own stop command; nothing outlives the test.
+    """
+    monkeypatch.setenv("MIND_PALACE_STATE_DIR", str(tmp_path))
+    yield
+    subprocess.run(
+        [sys.executable, "-m", "cli.main", "runtime", "stop"],
+        cwd=ROOT,
+        env={
+            "PATH": "/usr/bin:/bin",
+            "PYTHONPATH": str(ROOT),
+            "MIND_PALACE_STATE_DIR": str(tmp_path),
+        },
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
 #: Pinned so every surface resolves the same temporal state instead of sampling
 #: four different clocks.
 WHEN = datetime(2026, 1, 15, tzinfo=timezone.utc)
@@ -1249,7 +1276,7 @@ async def test_the_wheel_ships_what_verification_needs():
 @pytest.mark.skipif(
     not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL for the live CLI subprocess"
 )
-def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path):
+def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path, isolated_runtime):
     """The documented command sequence, run exactly as written.
 
     No test-only flags, no internal imports, no direct database manipulation: the
@@ -1276,6 +1303,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path):
                 "TRANSFORMERS_OFFLINE": "1",
                 "PYTHONPATH": str(ROOT),
                 "MIND_PALACE_QUERY_LOG": recorder_path,
+                "MIND_PALACE_STATE_DIR": str(tmp_path),
             },
             timeout=180,
         )
@@ -1293,6 +1321,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path):
             "HF_HUB_OFFLINE": "1",
             "PYTHONPATH": str(ROOT),
             "MIND_PALACE_QUERY_LOG": recorder_path,
+            "MIND_PALACE_STATE_DIR": str(tmp_path),
         },
         timeout=180,
     )

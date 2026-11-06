@@ -547,7 +547,7 @@ maintenance database and rewritten by the session hook, `MIND_PALACE_TEST_DB=ses
 and `MEMORY_TEST_DATABASE_URL` set to a separate migrated database, which is
 exactly the split `.github/workflows/ci.yml` creates for the `Run tests` step:
 
-    $ pytest tests/test_m016_json_contract.py -q -rs
+    $ pytest tests/test_cli_json_contract.py -q -rs
     5 passed in 22.49s
 
 One candidate was found and is named so the next session does not re-derive it:

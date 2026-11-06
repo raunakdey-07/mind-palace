@@ -114,7 +114,7 @@ changes so the useful part comes first.
 `remember` returns `changed=false` and the same `version_id` for an identical
 statement. Four concurrent identical writes produce exactly one version and one
 claim, enforced by the existing corpus advisory lock and content fingerprint.
-`tests/test_m015_golden_path.py` asserts all three cases against real PostgreSQL.
+`tests/test_five_minute_path.py` asserts all three cases against real PostgreSQL.
 
 ## Sync diagnostics
 

@@ -196,7 +196,7 @@ def session_recorder_isolation(tmp_path_factory):
 
     The teardown check is what makes this hold. Setting the variable covers every
     subprocess that inherits the environment; the handful that hand-build their
-    own `env=` dict -- `test_m015_golden_path.py` runs the documented CLI sequence
+    own `env=` dict -- `test_five_minute_path.py` runs the documented CLI sequence
     that way, on purpose -- do not, and each one has to pass `recorder_path()`
     explicitly. A new one that forgets would put invented rows back into the user's
     log and nothing else would notice, so the count is compared on the way out and

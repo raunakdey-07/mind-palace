@@ -11,9 +11,7 @@ history read says whether it found anything.
   document that declares `supersedes: <that id>` has to resolve it.
 * **Tables.** The primary metrics in a benchmark table were invisible to
   `recall`, because a table is not prose.
-* **The margin.** The banner said "these score almost the same" next to two
-  numbers that differed by a fifth, and a response of one claim reported a
-  margin of `score - 0.0` -- a decisive win over nobody.
+* **The margin.** Covered in `tests/test_retrieval_match_status.py`.
 * **The ingest report.** It counted chunks and never said how many claims the
   corpus ended up with.
 * **The history status.** A history read that found claims said `abstained` on
@@ -257,43 +255,6 @@ def _records(body: str) -> list[dict]:
         {**chunk, "order_index": index}
         for index, chunk in enumerate(chunk_with_heading_paths(extract_sections_with_paths(body)))
     ]
-
-
-# --- 3. The margin and the scores it is printed next to --------------------
-
-
-def test_the_margin_and_the_candidate_scores_are_on_one_scale():
-    """The banner must not contradict the numbers printed beside it.
-
-    The CLI prints a candidate's score next to a banner that calls it a
-    near-tie. The margin used to be the raw-cosine difference while the score
-    beside it was the coverage-adjusted one, so the banner said "almost the
-    same" about 0.755 and 0.556 -- a gap of 0.199.
-    """
-    from tests.test_retrieval_match_status import QUOTES, TWO, adjudicate_scored
-
-    result = adjudicate_scored({"datastore": 0.72, "search": 0.30}, TWO, QUOTES)
-    scores = [c.score for c in result.candidates]
-    assert scores
-    assert result.match_margin == pytest.approx(max(scores) - min(scores))
-
-
-def test_a_response_of_one_claim_is_not_a_decisive_win_over_nobody():
-    """`score - 0.0` reads like a win over a field that was never there."""
-    from tests.test_retrieval_match_status import QUOTES, TWO, adjudicate_scored
-
-    result = adjudicate_scored({"datastore": 0.70, "search": 0.69}, TWO[:1], QUOTES, corpus=TWO)
-    assert result.match_margin == pytest.approx(0.01)
-    assert result.match_margin != pytest.approx(0.70)
-
-
-def test_the_runner_up_is_listed_when_the_answer_is_ambiguous():
-    """A near-tie the reader is not shown is a near-tie they cannot adjudicate."""
-    from tests.test_retrieval_match_status import QUOTES, TWO, adjudicate_scored
-
-    result = adjudicate_scored({"datastore": 0.70, "search": 0.69}, TWO[:1], QUOTES, corpus=TWO)
-    assert result.match_status == "ambiguous"
-    assert {c.key for c in result.candidates} == {"datastore", "search"}
 
 
 # --- 4. The ingest report --------------------------------------------------

@@ -30,6 +30,9 @@ INTENTS = ("auto", "current", "historical", "temporal", "change", "conflict", "p
 
 @pytest.fixture
 def service(monkeypatch):
+    # Every test using this fixture means the in-process mocked service, never a
+    # local runtime; disable the runtime probe so a leaked one cannot answer.
+    monkeypatch.setenv("MIND_PALACE_RUNTIME", "0")
     module = ModuleType("api.services.memory_public")
 
     class MemoryError(Exception):

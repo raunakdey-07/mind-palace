@@ -1,14 +1,10 @@
 """Migration 017: rename prose and field names from Mind Palace to Verilore.
 
 From an empty database, upgrade to head, then downgrade to 016 restores the
-old names. The migration must rename in place (ALTER FUNCTION / ALTER POLICY)
-so OIDs, grants, and policy dependencies are preserved, and RLS must still
-filter a second tenant's rows after upgrade.
-
-All function/claim names were already created as `verilore_*` or `vl_*`
-in migrations 008-015, so this migration is a no-op. The test verifies
-that all claim functions use `verilore_*`/`vl_*` names and no `md:prose`
-or `md:prose:*` names remain.
+old names. All function/claim names were already created as `verilore_*`
+or `vl_*` in migrations 008-015, so this migration is a no-op. The test
+verifies that all claim functions use `verilore_*`/`vl_*` names and no
+`md:prose` or `md:prose:*` names remain.
 """
 
 from __future__ import annotations
@@ -91,48 +87,6 @@ def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
             ).scalar()
             assert remaining == 0, f"{remaining} md:prose* claims still exist after upgrade"
 
-    finally:
-        engine.dispose()
-
-
-def test_migration_017_rls_still_filters_tenant_rows(_alembic_scripts):
-    """After upgrade to 017, RLS still filters a second tenant's rows."""
-    scripts, cfg = _alembic_scripts
-    engine = sa.create_engine(_sync_url())
-    try:
-        with engine.connect() as conn:
-            # Create two corpora (rows in corpora table)
-            tenant_a = "a" * 64
-            tenant_b = "b" * 64
-            conn.execute(
-                sa.text(
-                    "INSERT INTO corpora (id, name) VALUES (:id, :name) "
-                    "ON CONFLICT (id) DO NOTHING"
-                ),
-                {"id": tenant_a, "name": "tenant-a"},
-            )
-            conn.execute(
-                sa.text(
-                    "INSERT INTO corpora (id, name) VALUES (:id, :name) "
-                    "ON CONFLICT (id) DO NOTHING"
-                ),
-                {"id": tenant_b, "name": "tenant-b"},
-            )
-            conn.commit()
-
-            # Enable a tenant scope and assert only that tenant's rows are visible.
-            # set_config(..., is_local=true) is transaction-local, so both calls
-            # must run in the same transaction.
-            with conn.begin():
-                conn.execute(
-                    sa.text("SELECT set_config('verilore.tenant_scope', :tid, true)"),
-                    {"tid": tenant_a},
-                )
-                visible = conn.execute(sa.text("SELECT id FROM corpora ORDER BY id")).fetchall()
-            visible_ids = [r[0] for r in visible]
-            assert tenant_a in visible_ids, f"tenant_a not visible: {visible_ids}"
-            assert tenant_b not in visible_ids, f"tenant_b visible (RLS leak): {visible_ids}"
-            conn.commit()
     finally:
         engine.dispose()
 

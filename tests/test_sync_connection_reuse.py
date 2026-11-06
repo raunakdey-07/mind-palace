@@ -211,7 +211,7 @@ def test_a_corpus_label_becomes_a_disposable_corpus_name():
     """
     from scripts.benchmark.ingest_profile import DISPOSABLE_PREFIX, _disposable_name
 
-    assert _disposable_name("verilore") == "_profile_mind_palace"
+    assert _disposable_name("verilore") == "_profile_verilore"
     assert _disposable_name("cv-embed") == "_profile_cv_embed"
     assert _disposable_name("cv embed") == "_profile_cv_embed"
     # A name that already carries the prefix is used as it stands, so a caller

@@ -120,12 +120,17 @@ def test_migration_017_rls_still_filters_tenant_rows(_alembic_scripts):
             )
             conn.commit()
 
-            # Enable a tenant scope and assert only that tenant's rows are visible
-            conn.execute(
-                sa.text("SELECT set_config('verilore.tenant_scope', :tid, true)"),
-                {"tid": tenant_a},
-            )
-            visible = conn.execute(sa.text("SELECT id FROM corpora ORDER BY id")).fetchall()
+            # Enable a tenant scope and assert only that tenant's rows are visible.
+            # set_config(..., is_local=true) is transaction-local, so both calls
+            # must run in the same transaction.
+            with conn.begin():
+                conn.execute(
+                    sa.text("SELECT set_config('verilore.tenant_scope', :tid, true)"),
+                    {"tid": tenant_a},
+                )
+                visible = conn.execute(
+                    sa.text("SELECT id FROM corpora ORDER BY id")
+                ).fetchall()
             visible_ids = [r[0] for r in visible]
             assert tenant_a in visible_ids, f"tenant_a not visible: {visible_ids}"
             assert tenant_b not in visible_ids, f"tenant_b visible (RLS leak): {visible_ids}"

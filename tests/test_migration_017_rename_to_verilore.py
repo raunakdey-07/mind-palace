@@ -42,9 +42,7 @@ def _db_available() -> bool:
         return False
 
 
-requires_db = pytest.mark.skipif(
-    not _db_available(), reason="no reachable DATABASE_URL"
-)
+requires_db = pytest.mark.skipif(not _db_available(), reason="no reachable DATABASE_URL")
 
 
 @pytest.fixture(scope="module")
@@ -71,10 +69,16 @@ def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
             assert version == "017_rename_to_verilore", f"version is {version!r}"
 
             # All prose claim functions use `verilore_*` naming (not `md:prose`)
-            for func_name in ("verilore_allowed_corpus", "verilore_resolve_credential",
-                              "verilore_locate_credential", "verilore_erase_corpus",
-                              "vl_verified_scope_corpora", "vl_set_scope_token_enforcement",
-                              "vl_scope_enforcement_status", "vl_verify_scope_token"):
+            for func_name in (
+                "verilore_allowed_corpus",
+                "verilore_resolve_credential",
+                "verilore_locate_credential",
+                "verilore_erase_corpus",
+                "vl_verified_scope_corpora",
+                "vl_set_scope_token_enforcement",
+                "vl_scope_enforcement_status",
+                "vl_verify_scope_token",
+            ):
                 func = conn.execute(
                     sa.text("SELECT proname FROM pg_proc WHERE proname = :name"),
                     {"name": func_name},
@@ -83,9 +87,7 @@ def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
 
             # No `md:prose` or `md:prose:*` claim functions remain
             remaining = conn.execute(
-                sa.text(
-                    "SELECT count(*) FROM pg_proc WHERE proname LIKE 'md:prose%'"
-                )
+                sa.text("SELECT count(*) FROM pg_proc WHERE proname LIKE 'md:prose%'")
             ).scalar()
             assert remaining == 0, f"{remaining} md:prose* claims still exist after upgrade"
 
@@ -123,9 +125,7 @@ def test_migration_017_rls_still_filters_tenant_rows(_alembic_scripts):
                 sa.text("SELECT set_config('verilore.tenant_scope', :tid, true)"),
                 {"tid": tenant_a},
             )
-            visible = conn.execute(
-                sa.text("SELECT id FROM corpora ORDER BY id")
-            ).fetchall()
+            visible = conn.execute(sa.text("SELECT id FROM corpora ORDER BY id")).fetchall()
             visible_ids = [r[0] for r in visible]
             assert tenant_a in visible_ids, f"tenant_a not visible: {visible_ids}"
             assert tenant_b not in visible_ids, f"tenant_b visible (RLS leak): {visible_ids}"
@@ -154,11 +154,11 @@ def test_migration_017_downgrade_restores_verilore_names(_alembic_scripts):
             # `verilore_allowed_corpora` still exists (it was created in migration 008,
             # not renamed by 017, so downgrading to 016 keeps it)
             func = conn.execute(
-                sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'verilore_allowed_corpus'"
-                )
+                sa.text("SELECT proname FROM pg_proc WHERE proname = 'verilore_allowed_corpus'")
             ).scalar()
-            assert func == "verilore_allowed_corpus", "verilore_allowed_corpus not present after downgrade"
+            assert (
+                func == "verilore_allowed_corpus"
+            ), "verilore_allowed_corpus not present after downgrade"
 
             # `verilore_tenant` policy still exists (created in migration 008,
             # not renamed by 017)

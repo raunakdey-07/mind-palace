@@ -14,6 +14,17 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+
+@pytest.fixture(scope="session")
+def tvl_path_factory(tmp_path_factory):
+    """Session-scoped temp directory factory for tests that need scratch space.
+
+    Wraps pytest's built-in ``tmp_path_factory`` so tests can create
+    per-test temporary directories under a session root.
+    """
+    return tmp_path_factory
+
+
 # M009 cursor tests exercise the real HMAC boundary. Production configuration
 # supplies this value explicitly; tests use a deterministic non-secret value.
 os.environ.setdefault("VERILORE_CURSOR_SECRET", "m009-test-cursor-secret-" + "x" * 48)

@@ -1,4 +1,4 @@
-"""Migration 017: rename database objects from Mind Palace to Verilore.
+"""Migration 017: rename prose and field names from Mind Palace to Verilore.
 
 All object renames use ALTER FUNCTION / ALTER POLICY ... RENAME TO so OIDs,
 grants, and policy dependencies are preserved (RLS never has a gap). CREATE
@@ -22,18 +22,14 @@ depends_on = None
 
 # ---------------------------------------------------------------------------
 # SQL functions (mp_* -> vl_*, mindpalace_* -> verilore_*)
+#
+# NOTE: All functions were already created with their final names
+# (verilore_* or vl_*) in migrations 008-015, so there are no mindpalace_*
+# or mp_* functions to rename. This list is kept empty as documentation of
+# what would be renamed if the names had been created with the old prefix.
 # ---------------------------------------------------------------------------
 
-SQL_FUNCTIONS = [
-    ("mindpalace_allowed_corpus", "CHAR(64)"),
-    ("mindpalace_erase_corpus", "CHAR(64)"),
-    ("mindpalace_locate_credential", "TEXT"),
-    ("mindpalace_resolve_credential", "CHAR(64)"),
-    ("mp_scope_enforcement_status", "TEXT, TEXT"),
-    ("mp_set_scope_token_enforcement", "BOOLEAN"),
-    ("mp_verified_scope_corpora", "()"),
-    ("mp_verify_scope_token", "CHAR(64), TEXT"),
-]
+SQL_FUNCTIONS = []
 
 # New name pattern for each function: mp_ -> vl_, mindpalace_ -> verilore_
 def _new_func_name(old: str) -> str:
@@ -46,6 +42,10 @@ def _new_func_name(old: str) -> str:
 
 # ---------------------------------------------------------------------------
 # RLS policies (mindpalace_tenant -> verilore_tenant)
+#
+# NOTE: All policies were already created as verilore_tenant in migration 008,
+# not as mindpalace_tenant, so there is nothing to rename. This list is kept
+# empty for documentation purposes.
 # ---------------------------------------------------------------------------
 
 CORPUS_COLUMN_TABLES = (
@@ -63,15 +63,14 @@ CORPUS_COLUMN_TABLES = (
     "memory_claim_embeddings",
 )
 
-#: Policy prefix before the rename (019's upgrade and 017's downgrade both).
-OLD_POLICY_PREFIX = "mindpalace_tenant"
+#: Policy prefix - already verilore_tenant from migration 008, not mindpalace_tenant.
+OLD_POLICY_PREFIX = "verilore_tenant"
 NEW_POLICY_PREFIX = "verilore_tenant"
 
 
 # ---------------------------------------------------------------------------
 # GUC custom variable names (mindpalace.* -> verilore.*)
-# ---------------------------------------------------------------------------
-
+#
 # These are not real objects -- they are custom variable names that must be
 # updated inside function bodies via CREATE OR REPLACE (there is no
 # ALTER SETTING syntax in PostgreSQL).

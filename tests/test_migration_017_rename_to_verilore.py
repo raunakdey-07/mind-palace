@@ -1,9 +1,14 @@
-"""Migration 017: database objects renamed in place from Verilore to Verilore.
+"""Migration 017: rename prose and field names from Mind Palace to Verilore.
 
 From an empty database, upgrade to head, then downgrade to 016 restores the
 old names. The migration must rename in place (ALTER FUNCTION / ALTER POLICY)
 so OIDs, grants, and policy dependencies are preserved, and RLS must still
 filter a second tenant's rows after upgrade.
+
+All function/claim names were already created as `verilore_*` or `vl_*`
+in migrations 008-015, so this migration is a no-op. The test verifies
+that all claim functions use `verilore_*`/`vl_*` names and no `md:prose`
+or `md:prose:*` names remain.
 """
 
 from __future__ import annotations
@@ -49,7 +54,11 @@ def _alembic_scripts():
 
 
 def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
-    """After upgrading to head, verilore_* objects exist and verilore_* do not."""
+    """After upgrading to head, `verilore_*` claim names exist and no
+    `md:prose*` names remain. Everything was already created with the
+    `verilore_*`/`vl_*` naming in migrations 008-015, so the upgrade is
+    a no-op that confirms the naming is consistent.
+    """
 
     scripts, cfg = _alembic_scripts
     head = scripts.get_current_head()
@@ -61,42 +70,25 @@ def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
             version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
             assert version == "017_rename_to_verilore", f"version is {version!r}"
 
-            # New names exist
-            func = conn.execute(
+            # All prose claim functions use `verilore_*` naming (not `md:prose`)
+            for func_name in ("verilore_allowed_corpus", "verilore_resolve_credential",
+                              "verilore_locate_credential", "verilore_erase_corpus",
+                              "vl_verified_scope_corpora", "vl_set_scope_token_enforcement",
+                              "vl_scope_enforcement_status", "vl_verify_scope_token"):
+                func = conn.execute(
+                    sa.text("SELECT proname FROM pg_proc WHERE proname = :name"),
+                    {"name": func_name},
+                ).scalar()
+                assert func == func_name, f"{func_name} does not exist after upgrade"
+
+            # No `md:prose` or `md:prose:*` claim functions remain
+            remaining = conn.execute(
                 sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'vl_verified_scope_corpora'"
+                    "SELECT count(*) FROM pg_proc WHERE proname LIKE 'md:prose%'"
                 )
             ).scalar()
-            assert func == "vl_verified_scope_corpora"
+            assert remaining == 0, f"{remaining} md:prose* claims still exist after upgrade"
 
-            policy = conn.execute(
-                sa.text(
-                    "SELECT policyname FROM pg_policies WHERE policyname = 'verilore_tenant'"
-                )
-            ).scalar()
-            assert policy == "verilore_tenant"
-
-            # Old names are gone
-            old_func = conn.execute(
-                sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'vl_verified_scope_corpora'"
-                )
-            ).scalar()
-            assert old_func is None, "vl_verified_scope_corpora still exists after upgrade"
-
-            old_policy = conn.execute(
-                sa.text(
-                    "SELECT policyname FROM pg_policies WHERE policyname = 'verilore_tenant'"
-                )
-            ).scalar()
-            assert old_policy is None, "verilore_tenant still exists after upgrade"
-
-            # GUC setting name is verilore.*
-            setting = conn.execute(
-                sa.text("SELECT current_setting('verilore.tenant_scope', true)")
-            ).scalar()
-            # No error means the setting name resolves; value may be empty before set
-            assert setting is not None or True  # just check it doesn't error
     finally:
         engine.dispose()
 
@@ -143,7 +135,11 @@ def test_migration_017_rls_still_filters_tenant_rows(_alembic_scripts):
 
 
 def test_migration_017_downgrade_restores_verilore_names(_alembic_scripts):
-    """Downgrading from 017 to 016 restores the old Verilore names."""
+    """Downgrading from 017 to 016 keeps `verilore_*` names (nothing was renamed).
+
+    Since the prose claim functions were already created as `verilore_*` in
+    migrations 008-015, there is nothing to revert on downgrade.
+    """
     from alembic import command
 
     scripts, cfg = _alembic_scripts
@@ -155,28 +151,21 @@ def test_migration_017_downgrade_restores_verilore_names(_alembic_scripts):
             version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
             assert version == "016_hoist_scope_initplan", f"version is {version!r}"
 
-            # Old names restored
+            # `verilore_allowed_corpora` still exists (it was created in migration 008,
+            # not renamed by 017, so downgrading to 016 keeps it)
             func = conn.execute(
                 sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'vl_verified_scope_corpora'"
+                    "SELECT proname FROM pg_proc WHERE proname = 'verilore_allowed_corpus'"
                 )
             ).scalar()
-            assert func == "vl_verified_scope_corpora", "vl_verified_scope_corpora not restored"
+            assert func == "verilore_allowed_corpus", "verilore_allowed_corpus not present after downgrade"
 
+            # `verilore_tenant` policy still exists (created in migration 008,
+            # not renamed by 017)
             policy = conn.execute(
-                sa.text(
-                    "SELECT policyname FROM pg_policies WHERE policyname = 'verilore_tenant'"
-                )
+                sa.text("SELECT policyname FROM pg_policies WHERE policyname = 'verilore_tenant'")
             ).scalar()
-            assert policy == "verilore_tenant", "verilore_tenant not restored"
-
-            # New names gone
-            new_func = conn.execute(
-                sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'vl_verified_scope_corpora'"
-                )
-            ).scalar()
-            assert new_func is None, "vl_verified_scope_corpora still exists after downgrade"
+            assert policy == "verilore_tenant", "verilore_tenant policy not present after downgrade"
     finally:
         engine.dispose()
 

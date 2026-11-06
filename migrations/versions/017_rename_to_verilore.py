@@ -10,6 +10,12 @@ Downgrade reverses identically.
 Roles (mindpalace_runtime/mindpalace_owner) are cluster-wide and are NOT
 renamed here -- they are handled by scripts/db/rename_roles_v0100.sql, run by
 an operator before `alembic upgrade head`.
+
+NOTE: All functions were created as ``verilore_*`` or ``vl_*`` in migrations
+008-015, and all policies were created as ``verilore_tenant`` in migration
+008. There are no ``mindpalace_*`` or ``mp_*`` functions to rename, so this
+migration is a no-op. It exists to document the naming convention that was
+already applied in earlier migrations.
 """
 
 from alembic import op
@@ -23,13 +29,13 @@ depends_on = None
 # ---------------------------------------------------------------------------
 # SQL functions (mp_* -> vl_*, mindpalace_* -> verilore_*)
 #
-# NOTE: All functions were already created with their final names
-# (verilore_* or vl_*) in migrations 008-015, so there are no mindpalace_*
-# or mp_* functions to rename. This list is kept empty as documentation of
-# what would be renamed if the names had been created with the old prefix.
+# All functions were already created as ``verilore_*`` or ``vl_*`` in
+# migrations 008-015, so there are no ``mindpalace_*`` or ``mp_*`` functions
+# to rename. This list is kept empty for documentation purposes.
 # ---------------------------------------------------------------------------
 
-SQL_FUNCTIONS = []
+SQL_FUNCTIONS: list[tuple[str, str]] = []
+
 
 # New name pattern for each function: mp_ -> vl_, mindpalace_ -> verilore_
 def _new_func_name(old: str) -> str:
@@ -41,50 +47,12 @@ def _new_func_name(old: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# RLS policies (mindpalace_tenant -> verilore_tenant)
+# RLS policies (verilore_tenant -> verilore_tenant)
 #
-# NOTE: All policies were already created as verilore_tenant in migration 008,
-# not as mindpalace_tenant, so there is nothing to rename. This list is kept
+# All policies were created as ``verilore_tenant`` in migration 008, not as
+# ``mindpalace_tenant``, so there is nothing to rename. This list is kept
 # empty for documentation purposes.
 # ---------------------------------------------------------------------------
-
-CORPUS_COLUMN_TABLES = (
-    "corpora",
-    "documents",
-    "ingestion_manifest",
-    "memory_documents",
-    "memory_versions",
-    "memory_chunks",
-    "memory_claims",
-    "memory_evidence",
-    "memory_snapshots",
-    "memory_snapshot_versions",
-    "memory_snapshot_seals",
-    "memory_claim_embeddings",
-)
-
-#: Policy prefix - already verilore_tenant from migration 008, not mindpalace_tenant.
-OLD_POLICY_PREFIX = "verilore_tenant"
-NEW_POLICY_PREFIX = "verilore_tenant"
-
-
-# ---------------------------------------------------------------------------
-# GUC custom variable names (mindpalace.* -> verilore.*)
-#
-# These are not real objects -- they are custom variable names that must be
-# updated inside function bodies via CREATE OR REPLACE (there is no
-# ALTER SETTING syntax in PostgreSQL).
-GUC_RENAMES = {
-    "mindpalace.acting_principal": "verilore.acting_principal",
-    "mindpalace.api": "verilore.api",
-    "mindpalace.erasure": "verilore.erasure",
-    "mindpalace.internal": "verilore.internal",
-    "mindpalace.ops": "verilore.ops",
-    "mindpalace.runtime_password": "verilore.runtime_password",
-    "mindpalace.scope_token": "verilore.scope_token",
-    "mindpalace.skip_password": "verilore.skip_password",
-    "mindpalace.tenant_scope": "verilore.tenant_scope",
-}
 
 
 def upgrade() -> None:
@@ -94,19 +62,13 @@ def upgrade() -> None:
         op.execute(f"ALTER FUNCTION {old} RENAME TO {new}")
 
     # 2. Rename RLS policies in place (preserves dependencies).
-    for table in CORPUS_COLUMN_TABLES:
-        op.execute(
-            f"ALTER POLICY {OLD_POLICY_PREFIX} ON {table} RENAME TO {NEW_POLICY_PREFIX}"
-        )
+    # No policies to rename -- all were created as ``verilore_tenant`` in
+    # migration 008, not as ``mindpalace_tenant``.
+    pass
 
 
 def downgrade() -> None:
     # Reverse the renames identically.
-    for table in CORPUS_COLUMN_TABLES:
-        op.execute(
-            f"ALTER POLICY {NEW_POLICY_PREFIX} ON {table} RENAME TO {OLD_POLICY_PREFIX}"
-        )
-
     for old, _sig in SQL_FUNCTIONS:
         new = _new_func_name(old)
         op.execute(f"ALTER FUNCTION {new} RENAME TO {old}")

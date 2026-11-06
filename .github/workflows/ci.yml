@@ -901,6 +901,7 @@ jobs:
       - name: Run wheel-content test
         env:
           MIND_PALACE_TEST_BUILD_WHEEL: "1"
+          MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC: "1"
         run: |
           set -o pipefail
           /tmp/wheelenv/bin/pip install --quiet pytest build

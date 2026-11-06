@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-"""`mindpalace runtime` — control and inspect the local runtime.
+"""`verilore runtime` — control and inspect the local runtime.
 
-The runtime is an implementation detail. `mindpalace recall` uses one when it is
+The runtime is an implementation detail. `verilore recall` uses one when it is
 there and does not care when it is not, so these commands exist for the two moments
 a person actually needs them: "is it running, and why is this slow?" and "stop
 using it".
@@ -43,7 +43,7 @@ def start(
     if wait:
         _await_ready()
     else:
-        typer.echo("  status: mindpalace runtime status")
+        typer.echo("  status: verilore runtime status")
 
 
 @app.command("stop")
@@ -98,7 +98,7 @@ def status(
     if current.state == "unreachable":
         typer.echo("Runtime is not running.")
         typer.echo("  commands still work; each one starts its own runtime if you want a warm one")
-        typer.echo("  start it with: mindpalace runtime start")
+        typer.echo("  start it with: verilore runtime start")
         return
     typer.echo(current.line())
     if current.detail:
@@ -130,7 +130,7 @@ def _await_ready(timeout: float = 120.0) -> None:
             typer.echo(f"Runtime failed: {current.detail or 'unknown reason'}")
             raise typer.Exit(code=1)
         if current.state == "unreachable" and time.monotonic() > grace:
-            typer.echo("Runtime did not start. Check with: mindpalace runtime status")
+            typer.echo("Runtime did not start. Check with: verilore runtime status")
             raise typer.Exit(code=1)
         time.sleep(0.25)
-    typer.echo("Still loading. Check with: mindpalace runtime status")
+    typer.echo("Still loading. Check with: verilore runtime status")

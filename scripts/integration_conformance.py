@@ -10,7 +10,7 @@ misconfigured deployment.
 
 Run it directly:
 
-    DATABASE_URL=... MIND_PALACE_URL=http://localhost:8000 \\
+    DATABASE_URL=... VERILORE_URL=http://localhost:8000 \\
         venvmp/bin/python -m scripts.integration_conformance
 """
 
@@ -22,7 +22,7 @@ import sys
 
 #: What the SDK imports, versus what the SDK exposes. An integrator's first
 #: failure is usually an import that used to work.
-REQUIRED_SDK_SYMBOLS = ("MindPalace", "MemoryClient", "MemoryClientError", "verify_receipt")
+REQUIRED_SDK_SYMBOLS = ("Verilore", "MemoryClient", "MemoryClientError", "verify_receipt")
 
 
 class Check:
@@ -37,16 +37,16 @@ class Check:
 
 
 async def run() -> int:
-    base_url = os.environ.get("MIND_PALACE_URL", "http://127.0.0.1:8000")
-    api_key = os.environ.get("MIND_PALACE_API_KEY")
-    corpus = os.environ.get("MIND_PALACE_CORPUS", "default")
+    base_url = os.environ.get("VERILORE_URL", "http://127.0.0.1:8000")
+    api_key = os.environ.get("VERILORE_API_KEY")
+    corpus = os.environ.get("VERILORE_CORPUS", "default")
     checks: list[Check] = []
 
     # 1. The public SDK imports, and exposes what is documented.
     try:
-        import mindpalace_sdk
+        import verilore_sdk
 
-        missing = [s for s in REQUIRED_SDK_SYMBOLS if not hasattr(mindpalace_sdk, s)]
+        missing = [s for s in REQUIRED_SDK_SYMBOLS if not hasattr(verilore_sdk, s)]
         checks.append(
             Check(
                 "the public SDK imports and exposes its documented symbols",
@@ -59,12 +59,12 @@ async def run() -> int:
 
     # 2. The error taxonomy is importable and distinguishes components.
     try:
-        from mindpalace_errors import COMPONENTS, MindPalaceError
+        from verilore_errors import COMPONENTS, VeriloreError
 
         checks.append(
             Check(
                 "the error taxonomy is importable and typed",
-                "provider" in COMPONENTS and issubclass(MindPalaceError, Exception),
+                "provider" in COMPONENTS and issubclass(VeriloreError, Exception),
                 f"components: {', '.join(COMPONENTS)}",
             )
         )
@@ -116,7 +116,7 @@ async def run() -> int:
                     Check(
                         "authenticated read/write, cross-tenant denial, evidence and history",
                         True,
-                        "skipped -- set MIND_PALACE_API_KEY to run the authenticated checks",
+                        "skipped -- set VERILORE_API_KEY to run the authenticated checks",
                         skipped=True,
                     )
                 )

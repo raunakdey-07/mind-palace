@@ -3,7 +3,7 @@
 
 """The one place that explains a dead database.
 
-Both `mindpalace init` and the per-command failure text need to say the same
+Both `verilore init` and the per-command failure text need to say the same
 thing, so the guidance lives here and is imported rather than restated. The
 underlying exception is never the only thing a developer sees, and never the
 first: it is appended for debugging, after the reason and the command to run.
@@ -32,7 +32,7 @@ def database_hint() -> str:
 def _url() -> str:
     import os
 
-    return os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    return os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/verilore")
 
 
 def storage_unavailable(exc: Exception | None = None) -> str:
@@ -51,5 +51,5 @@ def storage_unavailable(exc: Exception | None = None) -> str:
         "\n"
         "Then check it works:\n"
         "  python -m alembic -c migrations/alembic.ini upgrade head\n"
-        "  mindpalace init" + detail
+        "  verilore init" + detail
     )

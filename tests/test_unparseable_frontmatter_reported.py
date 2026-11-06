@@ -69,8 +69,8 @@ def _ingest(tmp_path, body: str, corpus: str) -> str:
     # with the first.
     env = {
         **os.environ,
-        "MIND_PALACE_INGEST_ROOTS": str(tmp_path),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(tmp_path),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }
@@ -129,8 +129,8 @@ def test_a_clean_document_is_not_warned_about(tmp_path):
     )
     env = {
         **os.environ,
-        "MIND_PALACE_INGEST_ROOTS": str(tmp_path),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(tmp_path),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }

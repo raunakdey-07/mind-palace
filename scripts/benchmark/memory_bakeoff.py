@@ -20,7 +20,7 @@ that the corpus is small and authored, so the numbers are correctness bounds, no
 retrieval benchmark at scale.
 
 Usage:
-    DATABASE_URL=postgresql://USER:PASS@localhost:5432/mindpalace \\
+    DATABASE_URL=postgresql://USER:PASS@localhost:5432/verilore \\
         venvmp/bin/python scripts/benchmark/memory_bakeoff.py
 
 Writes docs/performance/memory-bakeoff.json and prints a summary table.

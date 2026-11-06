@@ -144,7 +144,7 @@ def _uses_default_local_credentials() -> bool:
     """Whether DATABASE_URL is the documented local default."""
     import os
 
-    url = os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    url = os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/verilore")
     lowered = url.lower()
     return (
         "mpadmin:secret@" in lowered
@@ -310,7 +310,7 @@ def explain(exc: Exception) -> Advice:
             code,
             "That corpus does not exist.",
             f"No memory is stored under the name {getattr(exc, 'corpus', None) or 'given'!r}.",
-            "List the corpora you have with: mindpalace corpora",
+            "List the corpora you have with: verilore corpora",
             404,
         )
     if code in {"claim_not_found", "document_not_found", "snapshot_not_found"}:
@@ -318,7 +318,7 @@ def explain(exc: Exception) -> Advice:
             code,
             "That memory does not exist here.",
             detail,
-            'Recall what you can see with: mindpalace recall "<question>"',
+            'Recall what you can see with: verilore recall "<question>"',
             404,
         )
     if code == "invalid_query":
@@ -326,7 +326,7 @@ def explain(exc: Exception) -> Advice:
             code,
             "That is not a question I can search with.",
             detail,
-            'Ask a question with content, e.g. mindpalace recall "what is the datastore"',
+            'Ask a question with content, e.g. verilore recall "what is the datastore"',
             422,
         )
     if code in {"invalid_request", "invalid_timestamp", "invalid_budget"}:
@@ -376,7 +376,7 @@ def _unreadable_advice(exc: Exception) -> Advice:
         "invalid_request",
         "That file could not be read.",
         str(exc).split(": ", 1)[-1],
-        "Check the path. A receipt is written by: mindpalace receipt "
+        "Check the path. A receipt is written by: verilore receipt "
         '"<question>" -o receipt.json',
         2,
     )

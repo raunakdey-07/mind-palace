@@ -74,9 +74,9 @@ def _invoke(args, roots: str | None = None):
 
     env = dict(os.environ)
     if roots is None:
-        env.pop("MIND_PALACE_INGEST_ROOTS", None)
+        env.pop("VERILORE_INGEST_ROOTS", None)
     else:
-        env["MIND_PALACE_INGEST_ROOTS"] = roots
+        env["VERILORE_INGEST_ROOTS"] = roots
     return CliRunner().invoke(app, args, env=env)
 
 

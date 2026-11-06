@@ -29,7 +29,7 @@ from api.services.authz import (
 )
 from api.services.db import principal_scope
 from api.services.posture import inspect as inspect_posture
-from mindpalace_errors import MindPalaceError
+from verilore_errors import VeriloreError
 
 logger = logging.getLogger("mindpalace.api")
 
@@ -37,7 +37,7 @@ logger = logging.getLogger("mindpalace.api")
 def create_app() -> FastAPI:
     """Build the application, refusing a configuration that must not serve.
 
-    `MIND_PALACE_DEPLOYMENT=server` plus `MIND_PALACE_AUTH_MODE=off` is an
+    `VERILORE_DEPLOYMENT=server` plus `VERILORE_AUTH_MODE=off` is an
     unauthenticated service on a network, and it is exactly what a default
     `uvicorn api.main:app` or `docker compose up` produces. Exiting with a reason
     here is louder than a log line in a container nobody tails.
@@ -50,7 +50,7 @@ def create_app() -> FastAPI:
     return FastAPI(
         title="Mind Palace API",
         description="The Durable AI Memory Substrate",
-        version=importlib.metadata.version("mindpalace-os"),
+        version=importlib.metadata.version("verilore-os"),
         lifespan=_lifespan,
     )
 
@@ -59,7 +59,7 @@ async def _probe_scope_token(db) -> tuple[bool, bool, bool] | None:
     """Probe scope-token enforcement via `mp_scope_enforcement_status`.
 
     Computes the token this process would send (HMAC-SHA256 of the probe scope
-    under `MIND_PALACE_SCOPE_SECRET`, the same inputs `_apply_tenant_scope`
+    under `VERILORE_SCOPE_SECRET`, the same inputs `_apply_tenant_scope`
     uses) and asks the database whether it verifies.
 
     Returns ``(enforced, using_default_secret, secret_matches)``, or ``None``
@@ -73,7 +73,7 @@ async def _probe_scope_token(db) -> tuple[bool, bool, bool] | None:
 
     from sqlalchemy import text as _text
 
-    secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
+    secret = os.getenv("VERILORE_SCOPE_SECRET", "")
     probe_scope = "{*}"
     probe_token = hmac.new(secret.encode(), probe_scope.encode(), hashlib.sha256).hexdigest()
     try:
@@ -95,8 +95,8 @@ async def _probe_scope_token(db) -> tuple[bool, bool, bool] | None:
 
 _SCOPE_ROTATION_ORDER = (
     "Rotate in this order: (1) set the new secret in the database with "
-    "`mindpalace secret rotate --out FILE` as mindpalace_owner, "
-    "(2) update MIND_PALACE_SCOPE_SECRET in the service environment to match, "
+    "`verilore secret rotate --out FILE` as mindpalace_owner, "
+    "(2) update VERILORE_SCOPE_SECRET in the service environment to match, "
     "(3) restart the service. Expect a brief outage."
 )
 
@@ -117,25 +117,25 @@ async def _enforce_scope_token_startup() -> None:
     if mode != authz.DEPLOYMENT_SERVER:
         return
 
-    if os.getenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off").lower() == "off":
+    if os.getenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off").lower() == "off":
         import logging as _logging
 
         _logging.getLogger(__name__).warning(
-            "MIND_PALACE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
+            "VERILORE_ENFORCE_SCOPE_TOKEN=off: scope-token enforcement is DISABLED; "
             "tenant scope can be forged. Run mp_set_scope_token_enforcement(true) to close it."
         )
-        if os.getenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "") != "1":
+        if os.getenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", "") != "1":
             raise RuntimeError(
                 "refusing to start: scope-token enforcement is disabled (off). "
-                "Set MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1 to acknowledge, "
+                "Set VERILORE_I_UNDERSTAND_SCOPE_FORGERY=1 to acknowledge, "
                 "or run mp_set_scope_token_enforcement(true)."
             )
         return
 
-    secret = os.getenv("MIND_PALACE_SCOPE_SECRET", "")
+    secret = os.getenv("VERILORE_SCOPE_SECRET", "")
     if secret == "" or secret == "dev-scope-secret":
         raise RuntimeError(
-            "refusing to start: MIND_PALACE_SCOPE_SECRET is unset or uses the "
+            "refusing to start: VERILORE_SCOPE_SECRET is unset or uses the "
             "default dev value. " + _SCOPE_ROTATION_ORDER
         )
 
@@ -170,7 +170,7 @@ async def _enforce_scope_token_startup() -> None:
         )
     if not secret_matches:
         raise RuntimeError(
-            "refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the "
+            "refusing to start: VERILORE_SCOPE_SECRET disagrees with the "
             "database row. " + _SCOPE_ROTATION_ORDER
         )
 
@@ -218,9 +218,9 @@ async def enforce_startup_posture() -> None:
             posture = await inspect(db)
     except Exception as exc:  # noqa: BLE001 - a posture that cannot be read is not a pass
         raise RuntimeError(
-            "refusing to start: MIND_PALACE_DEPLOYMENT=server could not verify the "
+            "refusing to start: VERILORE_DEPLOYMENT=server could not verify the "
             f"database role ({type(exc).__name__}). Start with "
-            "MIND_PALACE_DEPLOYMENT=local to run without this check."
+            "VERILORE_DEPLOYMENT=local to run without this check."
         ) from exc
     unsafe = posture.server_problems()
     if unsafe:
@@ -308,7 +308,7 @@ async def identify_request(request: Request, call_next):
     hostile header cannot smuggle control characters into a log line: anything
     that is not a short printable token is replaced.
     """
-    from mindpalace_errors import RequestId
+    from verilore_errors import RequestId
 
     inbound = request.headers.get("x-request-id", "")
     request_id = inbound if _is_safe_request_id(inbound) else RequestId.ensure()
@@ -341,8 +341,8 @@ async def authorization_error(request: Request, exc: AuthorizationError):
     )
 
 
-@app.exception_handler(MindPalaceError)
-async def taxonomy_error(request: Request, exc: MindPalaceError):
+@app.exception_handler(VeriloreError)
+async def taxonomy_error(request: Request, exc: VeriloreError):
     """Render any taxonomy failure with its own status and retryability.
 
     The existing `detail` shape is preserved verbatim -- `code` and `message`,
@@ -361,7 +361,7 @@ def _detail(code: str, message: str) -> dict:
     contract already is, and quietly replacing it would break every integrator
     who reads `code` from it.
     """
-    from mindpalace_errors import RequestId
+    from verilore_errors import RequestId
 
     return {"code": code, "message": message, "request_id": RequestId.ensure()}
 
@@ -454,7 +454,7 @@ class RedactFailures:
             # A taxonomy failure that reached here has no handler above it, so it
             # gets its own status and its own retryability rather than being
             # flattened into a 500. The `detail` shape is identical either way.
-            from mindpalace_errors import envelope
+            from verilore_errors import envelope
 
             body = envelope(exc)
             logger.error(
@@ -465,7 +465,7 @@ class RedactFailures:
                 body["code"],
                 body["request_id"],
             )
-            status = exc.status_code if isinstance(exc, MindPalaceError) else 500
+            status = exc.status_code if isinstance(exc, VeriloreError) else 500
             response = JSONResponse(
                 status_code=status,
                 content={"detail": body},
@@ -510,7 +510,7 @@ async def readiness() -> JSONResponse:
 
     from api.services.db import session_scope
 
-    timeout_seconds = float(os.getenv("MIND_PALACE_READINESS_TIMEOUT_SECONDS", "2"))
+    timeout_seconds = float(os.getenv("VERILORE_READINESS_TIMEOUT_SECONDS", "2"))
     auth = describe_authz()
     try:
         async with asyncio.timeout(timeout_seconds):
@@ -539,7 +539,7 @@ async def readiness() -> JSONResponse:
                 # whether it held `BYPASSRLS`, whether it could enumerate
                 # credential hashes, and which archive tables it could `DELETE`.
                 # None of that belongs in an anonymous response, and the half that
-                # is useful -- the detail -- is what `mindpalace posture` prints
+                # is useful -- the detail -- is what `verilore posture` prints
                 # for an operator who already holds database credentials.
                 #
                 # The verdict is only a verdict in `server` mode. In `local` there
@@ -585,7 +585,7 @@ async def readiness() -> JSONResponse:
                                 },
                                 "auth": auth,
                                 "reason": (
-                                    "MIND_PALACE_SCOPE_SECRET disagrees with the "
+                                    "VERILORE_SCOPE_SECRET disagrees with the "
                                     "database row, or the scope-token probe is "
                                     "unavailable. Rotate the secret in the database "
                                     "first, then in the service environment, then "

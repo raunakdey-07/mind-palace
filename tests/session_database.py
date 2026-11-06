@@ -26,7 +26,7 @@ wrong" from "someone changed the database". This module removes the category.
 
 ## What it does
 
-At session start, if `MIND_PALACE_TEST_DB=session` (the default):
+At session start, if `VERILORE_TEST_DB=session` (the default):
 
 1. connect to the maintenance database named in `DATABASE_URL`;
 2. `CREATE DATABASE mindpalace_test_<pid>_<n>`;
@@ -41,7 +41,7 @@ built during this session, and that nothing survives it.
 
 ## Opting out
 
-`MIND_PALACE_TEST_DB=off` runs against `DATABASE_URL` as-is, and prints that it
+`VERILORE_TEST_DB=off` runs against `DATABASE_URL` as-is, and prints that it
 is doing so. Use it only when deliberately pointing the suite at a database whose
 contents are the thing under examination.
 """
@@ -60,7 +60,7 @@ ROOT = Path(__file__).resolve().parents[1]
 #: exist; the suite never creates a cluster. `tenant_harness` needs the same name
 #: to sweep the cluster when it removes the per-session role, and the two are
 #: read from the same variable so they cannot disagree.
-MAINTENANCE_DB = os.getenv("MIND_PALACE_TEST_MAINTENANCE_DB", "postgres")
+MAINTENANCE_DB = os.getenv("VERILORE_TEST_MAINTENANCE_DB", "postgres")
 
 
 def _with_database(url: str, database: str) -> str:
@@ -76,7 +76,7 @@ def _sync_url(url: str) -> str:
     2.1 resolves it to psycopg (v3). CI installs `psycopg2-binary` and not
     `psycopg`, so on a 2.1 runner every `CREATE DATABASE` raised
     `No module named 'psycopg'`, the session database was never created, and
-    the suite quietly fell back to running against the shared `mindpalace`
+    the suite quietly fell back to running against the shared `verilore`
     database -- printing "this run is NOT hermetic" and going on to report
     eight skips as though they were the design.
 
@@ -120,7 +120,7 @@ def _database_statement(base_url: str, statement: str) -> None:
 def _database_name() -> str:
     # The pid keeps two concurrent sessions apart; the counter keeps two sessions
     # in the same second apart, which a reused pid would otherwise collide on.
-    counter = os.environ.get("MIND_PALACE_TEST_DB_COUNTER", "0")
+    counter = os.environ.get("VERILORE_TEST_DB_COUNTER", "0")
     return f"mindpalace_test_{os.getpid()}_{counter}"
 
 

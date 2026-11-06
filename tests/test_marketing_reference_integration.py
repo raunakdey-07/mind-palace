@@ -50,7 +50,7 @@ def memory_service_url():
     the example used to import `api.main.app`. A consumer of Mind Palace connects
     to a URL, so the example connects to a URL too, and this suite proves it.
 
-    The subprocess inherits `DATABASE_URL` and `MIND_PALACE_AUTH_MODE`, so the
+    The subprocess inherits `DATABASE_URL` and `VERILORE_AUTH_MODE`, so the
     server under test is configured exactly as a deployment would be.
     """
     import contextlib
@@ -76,8 +76,8 @@ def memory_service_url():
     # process environment is global. Keep them apart.
     environment = {
         **os.environ,
-        "MIND_PALACE_AUTH_MODE": "required",
-        "MIND_PALACE_DEPLOYMENT": "local",  # a test server is not a deployment
+        "VERILORE_AUTH_MODE": "required",
+        "VERILORE_DEPLOYMENT": "local",  # a test server is not a deployment
     }
     process = subprocess.Popen(
         [
@@ -512,7 +512,7 @@ async def test_the_example_imports_no_mind_palace_internals_at_all():
     willing to miss. There is no exception list here any more: **no file in the
     example may import `api`, `cli`, `migrations`, or the SDK.** Corpus creation
     and credential issuance, which genuinely have no HTTP route, go through the
-    documented `mindpalace` operator commands as subprocesses; the demo connects
+    documented `verilore` operator commands as subprocesses; the demo connects
     to a URL; and the suite starts a real server for it to talk to.
     """
     root = Path(__file__).resolve().parents[1] / "examples" / "marketing-campaign-memory"
@@ -521,7 +521,7 @@ async def test_the_example_imports_no_mind_palace_internals_at_all():
         hits = [
             line.strip()
             for line in path.read_text(encoding="utf-8").splitlines()
-            if re.search(r"^\s*(from|import)\s+(api|cli|migrations|mindpalace_sdk)\b", line)
+            if re.search(r"^\s*(from|import)\s+(api|cli|migrations|verilore_sdk)\b", line)
         ]
         if hits:
             offenders[path.name] = hits

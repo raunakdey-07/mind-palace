@@ -148,7 +148,7 @@ def test_reader_imports_nothing_from_the_server():
         "import memory_pack;"
         "p = memory_pack.MemoryPack.from_dict(json.loads(sys.stdin.read()));"
         "banned = [m for m in ('api', 'sqlalchemy', 'torch', 'asyncpg', 'fastapi',"
-        " 'mindpalace_sdk', 'sentence_transformers') if m in sys.modules];"
+        " 'verilore_sdk', 'sentence_transformers') if m in sys.modules];"
         "print(json.dumps({'banned': banned, 'digest': p.digest()}))" % str(ROOT)
     )
     result = subprocess.run(

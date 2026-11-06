@@ -18,7 +18,7 @@ What it does:
 Run it:
 
     pip install -e .
-    export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+    export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore
     python -m alembic -c migrations/alembic.ini upgrade head
     python examples/project-log/project_log.py
 
@@ -34,11 +34,11 @@ from pathlib import Path
 
 # Work from a checkout as well as from an installed package. `pip install -e .` is
 # the documented install and this is a no-op there; without it, the repository root
-# has to be importable for `mindpalace_sdk` and the standard-library verifier to
+# has to be importable for `verilore_sdk` and the standard-library verifier to
 # resolve. Deliberately the only path manipulation in the file.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from mindpalace_sdk import MindPalace  # noqa: E402
+from verilore_sdk import Verilore  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DECISIONS = HERE / "decisions.md"
@@ -61,7 +61,7 @@ QUESTIONS = [
 def load_decisions() -> list[dict]:
     """Read decisions.md, in the document format Mind Palace already understands.
 
-    The same frontmatter shape `mindpalace remember --file` accepts, so a project can
+    The same frontmatter shape `verilore remember --file` accepts, so a project can
     keep its decisions in a normal Markdown file next to its code and this example
     needs no parser of its own.
     """
@@ -76,7 +76,7 @@ def load_decisions() -> list[dict]:
 
 
 def main() -> int:
-    client = MindPalace(name=CORPUS, runtime=True)
+    client = Verilore(name=CORPUS, runtime=True)
 
     print("=" * 74)
     print("1. RECORD — every decision becomes memory with evidence")
@@ -158,7 +158,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"  wrote {path}")
-    print(f"  anyone can check it with: mindpalace verify {path.name}")
+    print(f"  anyone can check it with: verilore verify {path.name}")
     print("  no database, no model, no network, and no Mind Palace server")
 
     print()

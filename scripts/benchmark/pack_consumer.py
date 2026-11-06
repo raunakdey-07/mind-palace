@@ -177,7 +177,7 @@ def run(payload: str) -> int:
         return 2
 
     forbidden = [
-        m for m in ("api", "sqlalchemy", "torch", "asyncpg", "mindpalace_sdk") if m in sys.modules
+        m for m in ("api", "sqlalchemy", "torch", "asyncpg", "verilore_sdk") if m in sys.modules
     ]
     print(f"consumer: {CONSUMER_NAME}")
     print(f"schema_version: {pack.schema_version}")

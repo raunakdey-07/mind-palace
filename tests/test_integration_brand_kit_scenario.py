@@ -20,7 +20,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 from live_server import live_server  # noqa: F401,F811  module-scoped server fixture
 from tenant_harness import RUNTIME_ROLE, apply_as_runtime, runtime_url
@@ -99,7 +99,7 @@ def test_role_properties():
 
 def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     key = live_server.keys["acme"]
-    mp = MindPalace(
+    mp = Verilore(
         live_server.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
 
@@ -257,7 +257,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
 
 def test_isolation(live_server):  # noqa: F811
     key = live_server.keys["acme"]
-    mp = MindPalace(
+    mp = Verilore(
         live_server.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
 
@@ -281,7 +281,7 @@ def test_isolation(live_server):  # noqa: F811
 
 def test_memory_down():
     start = time.monotonic()
-    mp_down = MindPalace(
+    mp_down = Verilore(
         "acme", base_url="http://127.0.0.1:19999", api_key="x", timeout=1, retries=1
     )
     try:
@@ -301,7 +301,7 @@ def test_memory_down():
 
 def test_latency(live_server, capsys):  # noqa: F811
     key = live_server.keys["globex"]
-    mp = MindPalace(
+    mp = Verilore(
         live_server.corpora["globex"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
 

@@ -26,7 +26,7 @@ def test_context_for_closed_port_degrades(monkeypatch):
     """context_for returns memory_available=False within 5 s on a dead server."""
     import brand_memory  # noqa: E402
 
-    monkeypatch.setenv("MIND_PALACE_URL", "http://127.0.0.1:19999")
+    monkeypatch.setenv("VERILORE_URL", "http://127.0.0.1:19999")
     monkeypatch.setenv("BRAND_MEMORY_KEY", "x")
 
     start = time.monotonic()
@@ -43,7 +43,7 @@ def test_rejected_decision_excluded_from_context(live_server, monkeypatch):  # n
     """record_decision(rejected) then context_for must leave the text out."""
     import brand_memory  # noqa: E402
 
-    monkeypatch.setenv("MIND_PALACE_URL", live_server.url)
+    monkeypatch.setenv("VERILORE_URL", live_server.url)
     monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
 
     brand_memory.load_documents(
@@ -81,7 +81,7 @@ def test_approved_decisions_appear_in_context(live_server, monkeypatch):  # noqa
     """Approved decisions recorded with record_decision appear in context_for."""
     import brand_memory  # noqa: E402
 
-    monkeypatch.setenv("MIND_PALACE_URL", live_server.url)
+    monkeypatch.setenv("VERILORE_URL", live_server.url)
     monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
 
     corpus = live_server.corpora["acme"]
@@ -113,7 +113,7 @@ def test_record_decision_rejects_invalid_decision(live_server, monkeypatch):  # 
     """record_decision with an invalid decision raises ValueError before any call."""
     import brand_memory  # noqa: E402
 
-    monkeypatch.setenv("MIND_PALACE_URL", live_server.url)
+    monkeypatch.setenv("VERILORE_URL", live_server.url)
     monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
 
     with pytest.raises(ValueError, match="decision must be"):

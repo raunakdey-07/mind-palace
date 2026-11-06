@@ -68,9 +68,9 @@ async def test_the_profile_matrix_is_refused_where_it_must_be(monkeypatch):
 
     def configure(deployment: str | None, mode: str | None, roots: str | None):
         for name, value in (
-            ("MIND_PALACE_DEPLOYMENT", deployment),
-            ("MIND_PALACE_AUTH_MODE", mode),
-            ("MIND_PALACE_INGEST_ROOTS", roots),
+            ("VERILORE_DEPLOYMENT", deployment),
+            ("VERILORE_AUTH_MODE", mode),
+            ("VERILORE_INGEST_ROOTS", roots),
         ):
             if value is None:
                 monkeypatch.delenv(name, raising=False)
@@ -111,7 +111,7 @@ async def test_the_profile_matrix_is_refused_where_it_must_be(monkeypatch):
     for unknown in ("prod", "production", "shared", ""):
         configure(unknown, "required", None)
         problems = authz.server_mode_errors()
-        assert problems, f"MIND_PALACE_DEPLOYMENT={unknown!r} must be refused"
+        assert problems, f"VERILORE_DEPLOYMENT={unknown!r} must be refused"
         assert any("not a known deployment profile" in p for p in problems), problems
 
     # A differently-cased value is not a different profile; it is the same one.
@@ -124,9 +124,9 @@ async def test_a_local_deployment_is_never_refused_for_anything(monkeypatch):
     from api.services import authz
     from api.services.ingest_paths import server_mode_errors as ingest_problems
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.delenv("MIND_PALACE_INGEST_ROOTS", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.delenv("VERILORE_INGEST_ROOTS", raising=False)
     assert authz.server_mode_errors() == []
     assert ingest_problems() == []
     authz.assert_server_configuration()
@@ -135,7 +135,7 @@ async def test_a_local_deployment_is_never_refused_for_anything(monkeypatch):
 async def test_an_unknown_profile_refuses_before_the_database_is_touched():
     """The refusal is a configuration error, not a connection error.
 
-    It has to be reachable without a database, or `mindpalace init` and the
+    It has to be reachable without a database, or `verilore init` and the
     offline verification tools would break in the one situation an operator most
     needs a clear message.
     """
@@ -143,19 +143,19 @@ async def test_an_unknown_profile_refuses_before_the_database_is_touched():
 
     from api.services import authz
 
-    previous = os.environ.pop("MIND_PALACE_DEPLOYMENT", None)
-    os.environ["MIND_PALACE_DEPLOYMENT"] = "nonsense"
+    previous = os.environ.pop("VERILORE_DEPLOYMENT", None)
+    os.environ["VERILORE_DEPLOYMENT"] = "nonsense"
     try:
         with pytest.raises(ValueError, match="not a known deployment profile"):
             authz.deployment_mode()
     finally:
-        os.environ.pop("MIND_PALACE_DEPLOYMENT", None)
+        os.environ.pop("VERILORE_DEPLOYMENT", None)
         if previous is not None:
-            os.environ["MIND_PALACE_DEPLOYMENT"] = previous
+            os.environ["VERILORE_DEPLOYMENT"] = previous
 
 
 async def test_auth_required_cannot_claim_what_the_middleware_does_not_do(monkeypatch):
-    """`MIND_PALACE_AUTH_MODE=required` must mean the middleware is installed.
+    """`VERILORE_AUTH_MODE=required` must mean the middleware is installed.
 
     A variable that says "authentication is on" while the middleware has been
     removed, or the prefixes list has grown to cover `/api`, would leave a
@@ -178,7 +178,7 @@ async def test_auth_required_cannot_claim_what_the_middleware_does_not_do(monkey
     for expected in ("/health", "/metrics"):
         assert expected in prefixes
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     assert auth_required() is True
 
 
@@ -388,7 +388,7 @@ async def test_a_writer_cannot_create_a_corpus(world):
             with pytest.raises(authz.AuthorizationError) as caught:
                 await create_corpus(db, "escalation-corpus")
     assert caught.value.status_code == 403
-    assert "mindpalace corpus create" in caught.value.message
+    assert "verilore corpus create" in caught.value.message
 
 
 async def test_a_credential_does_not_acquire_a_corpus_created_later():
@@ -848,7 +848,7 @@ async def test_the_erased_corpus_stops_answering_requests(erasable, monkeypatch)
     from api.services.corpora import delete_corpus
     from api.services.db import principal_scope
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
     async with admin_session() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
@@ -1008,7 +1008,7 @@ async def test_authentication_still_works_for_a_credential_the_role_cannot_admin
     from api.services.authz import resolve_principal
     from api.services.db import principal_scope
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     await _seed_corpus("runtime-auth-probe-corpus")
     try:
         async with admin_session() as db:
@@ -1146,14 +1146,14 @@ async def test_the_startup_posture_check_agrees_with_the_profile(monkeypatch):
 
     # This suite's own database role is the migration superuser, which is
     # precisely the configuration `server` must refuse and `local` must permit.
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
     await enforce_startup_posture()
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     with pytest.raises(RuntimeError, match="refusing to start") as caught:
         await enforce_startup_posture()
     message = str(caught.value)
@@ -1161,12 +1161,12 @@ async def test_the_startup_posture_check_agrees_with_the_profile(monkeypatch):
 
 
 async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
-    """Unset MIND_PALACE_ENFORCE_SCOPE_TOKEN must default to the off path.
+    """Unset VERILORE_ENFORCE_SCOPE_TOKEN must default to the off path.
 
     Enforcement defaults to off (see docs/security.md). On the server profile an
     unset env var must therefore take the enforcement-off path and require
-    `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1`, not fall through to the
-    scope-secret check and refuse with "MIND_PALACE_SCOPE_SECRET is unset".
+    `VERILORE_I_UNDERSTAND_SCOPE_FORGERY=1`, not fall through to the
+    scope-secret check and refuse with "VERILORE_SCOPE_SECRET is unset".
     """
     from api.main import enforce_startup_posture
     from api.services import posture
@@ -1179,11 +1179,11 @@ async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
         return _FakePosture()
 
     monkeypatch.setattr(posture, "inspect", _fake_inspect, raising=True)
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.delenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", raising=False)
-    monkeypatch.delenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.delenv("VERILORE_ENFORCE_SCOPE_TOKEN", raising=False)
+    monkeypatch.delenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
 
     with pytest.raises(RuntimeError, match="I_UNDERSTAND_SCOPE_FORGERY"):
         await enforce_startup_posture()
@@ -1192,14 +1192,14 @@ async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
 async def test_the_startup_guard_prefers_the_environment_error(monkeypatch):
     """A configuration error must be reported as itself, not as a posture one.
 
-    An operator who has `MIND_PALACE_AUTH_MODE=off` needs to be told that, not
+    An operator who has `VERILORE_AUTH_MODE=off` needs to be told that, not
     shown a database complaint they did not cause and cannot fix there.
     """
     from api.main import enforce_startup_posture
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
     with pytest.raises(RuntimeError) as caught:
         await enforce_startup_posture()
     assert "AUTH_MODE" in str(caught.value)
@@ -1393,7 +1393,7 @@ def _alembic(command: str, database_url: str) -> None:
         env={
             **os.environ,
             "DATABASE_URL": database_url,
-            "MIND_PALACE_ADMIN_DATABASE_URL": database_url,
+            "VERILORE_ADMIN_DATABASE_URL": database_url,
             "MIGRATION_DATABASE_URL": database_url,
         },
         timeout=900,
@@ -1482,8 +1482,8 @@ def roundtrip_database():
 
 
 @pytest.mark.skipif(
-    not os.getenv("MIND_PALACE_MIGRATION_ROUNDTRIP"),
-    reason="set MIND_PALACE_MIGRATION_ROUNDTRIP=1 to exercise CREATE DATABASE",
+    not os.getenv("VERILORE_MIGRATION_ROUNDTRIP"),
+    reason="set VERILORE_MIGRATION_ROUNDTRIP=1 to exercise CREATE DATABASE",
 )
 async def test_migrations_apply_downgrade_and_reapply(roundtrip_database):
     """`head` -> `009` -> `head`, on a database built from nothing.

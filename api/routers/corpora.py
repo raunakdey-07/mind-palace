@@ -50,7 +50,7 @@ async def create_corpus(request: CorpusCreate, db: DbSession = None) -> CorpusRe
                     "message": (
                         "Creating a corpus over HTTP is not permitted for this "
                         "credential. Corpora are created by the operator with "
-                        "`mindpalace corpus create`."
+                        "`verilore corpus create`."
                     ),
                 },
             ) from e

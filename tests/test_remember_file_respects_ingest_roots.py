@@ -1,6 +1,6 @@
 """`remember --file` must obey the same ingest roots as `ingest-repo`.
 
-The deployment policy is `MIND_PALACE_INGEST_ROOTS`: filesystem reads happen
+The deployment policy is `VERILORE_INGEST_ROOTS`: filesystem reads happen
 only inside those directories. Two surfaces enforced it -- `POST /api/ingest/repo`
 and `POST /api/corpora/{name}/sync` -- and `remember(file=...)`, which reaches
 `api/services/remember.py::_read`, did not. A path the deployment refused came
@@ -45,8 +45,8 @@ def test_remember_file_refuses_a_path_outside_the_ingest_roots(tmp_path):
     outside.write_text("The root password is correct-horse-battery.\n")
 
     env = {
-        "MIND_PALACE_INGEST_ROOTS": str(allowed),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(allowed),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }
@@ -54,13 +54,13 @@ def test_remember_file_refuses_a_path_outside_the_ingest_roots(tmp_path):
 
     # The surface that already enforced it, for contrast.
     refused = _run(["ingest-repo", str(outside), "--corpus", corpus], env)
-    assert "outside MIND_PALACE_INGEST_ROOTS" in refused.stdout + refused.stderr, refused.stdout
+    assert "outside VERILORE_INGEST_ROOTS" in refused.stdout + refused.stderr, refused.stdout
 
     # The one that did not.
     allowed_write = _run(["remember", "--file", str(outside), "--corpus", corpus], env)
     shown = allowed_write.stdout + allowed_write.stderr
     assert "Remembered" not in shown, shown
-    assert "outside MIND_PALACE_INGEST_ROOTS" in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" in shown, shown
 
 
 def test_remember_file_still_works_inside_the_ingest_roots(tmp_path):
@@ -75,8 +75,8 @@ def test_remember_file_still_works_inside_the_ingest_roots(tmp_path):
     done = _run(
         ["remember", "--file", str(doc), "--corpus", "roots-allow-remember"],
         {
-            "MIND_PALACE_INGEST_ROOTS": str(root),
-            "MIND_PALACE_RUNTIME": "0",
+            "VERILORE_INGEST_ROOTS": str(root),
+            "VERILORE_RUNTIME": "0",
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
         },
@@ -97,8 +97,8 @@ def test_the_message_names_no_allowed_root(tmp_path):
     done = _run(
         ["remember", "--file", str(outside), "--corpus", "roots-leak-check"],
         {
-            "MIND_PALACE_INGEST_ROOTS": str(allowed),
-            "MIND_PALACE_RUNTIME": "0",
+            "VERILORE_INGEST_ROOTS": str(allowed),
+            "VERILORE_RUNTIME": "0",
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
         },

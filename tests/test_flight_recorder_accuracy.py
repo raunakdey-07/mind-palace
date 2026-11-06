@@ -1,6 +1,6 @@
 """The flight recorder describes the call that happened, and pytest does not use it.
 
-The log exists to grade two weeks of actual usage: `mindpalace feedback <query_id>`
+The log exists to grade two weeks of actual usage: `verilore feedback <query_id>`
 appends a verdict, and over a fortnight that is a graded sample of what a real
 agent asked. Two things made that file unusable, and both were invisible until the
 product was run on its own documentation.
@@ -34,7 +34,7 @@ from api.services import query_log
 @pytest.fixture
 def log(tmp_path, monkeypatch):
     path = tmp_path / "logs" / "queries.jsonl"
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", str(path))
+    monkeypatch.setenv("VERILORE_QUERY_LOG", str(path))
     return path
 
 
@@ -208,7 +208,7 @@ def test_the_operation_name_is_the_one_the_caller_passed():
 def test_feedback_round_trips_on_a_history_row(log):
     """Item 3 of the brief, end to end and offline.
 
-    `mindpalace feedback` reads the row by `query_id` and appends a second line
+    `verilore feedback` reads the row by `query_id` and appends a second line
     pointing at it. A history row used to carry no claim ids and a status of
     `abstained`, so this is the exact case that could not be graded.
     """
@@ -261,7 +261,7 @@ def test_recall_and_history_get_distinct_rows_for_one_question(log):
 def test_the_suite_does_not_write_to_the_user_log():
     """The autouse session fixture in `conftest.py`, asserted rather than hoped for.
 
-    The recorder's default path is `$MIND_PALACE_DATA_DIR/logs/queries.jsonl`,
+    The recorder's default path is `$VERILORE_DATA_DIR/logs/queries.jsonl`,
     which in this session points into pytest's `tmp_path`. If the fixture ever
     stops being autouse, or stops being session-scoped, this fails with the real
     home directory in the message rather than with 32,738 invented rows in a file

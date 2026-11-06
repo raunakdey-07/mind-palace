@@ -168,7 +168,7 @@ async def test_public_holds_no_execute_on_the_security_definer_functions():
         "SELECT p.proname::text AS name, "
         "       has_function_privilege('public', p.oid, 'EXECUTE') AS allowed "
         "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
-        "WHERE n.nspname = 'public' AND p.proname LIKE 'mindpalace%'"
+        "WHERE n.nspname = 'public' AND p.proname LIKE 'verilore%'"
     )
     rows = {row[0]: row[1] for row in rows}
 
@@ -191,7 +191,7 @@ async def test_the_runtime_role_keeps_execute_on_what_it_needs():
         "SELECT p.proname::text AS name, "
         "       has_function_privilege(current_user, p.oid, 'EXECUTE') AS allowed "
         "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
-        "WHERE n.nspname = 'public' AND p.proname LIKE 'mindpalace%'"
+        "WHERE n.nspname = 'public' AND p.proname LIKE 'verilore%'"
     )
     rows = {row[0]: row[1] for row in rows}
 

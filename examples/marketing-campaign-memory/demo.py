@@ -8,7 +8,7 @@
 Needs a PostgreSQL with the schema applied (`alembic upgrade head`). For the
 isolation half of the demonstration, also run it with
 
-    MIND_PALACE_AUTH_MODE=required
+    VERILORE_AUTH_MODE=required
 
 so that a cross-organisation read is refused rather than served. The demo prints
 which mode it is in, because a demo that quietly runs permissively is worse than
@@ -73,7 +73,7 @@ async def main() -> int:
     # imports none of it, not even the ASGI application object, because the thing
     # this example has to demonstrate is that an independent application can be
     # built on the documented interface and nothing else.
-    base_url = os.environ.get("MIND_PALACE_URL", "http://127.0.0.1:8000")
+    base_url = os.environ.get("VERILORE_URL", "http://127.0.0.1:8000")
 
     mode = await _authorization_mode(base_url)
     print(f"authorization mode: {mode} (at {base_url})")
@@ -163,7 +163,7 @@ async def main() -> int:
             print(
                 "\nNOTE: this ran with authorization off, so Mind Palace itself "
                 "answered every corpus. The refusals above are the *application's* "
-                "membership checks. Re-run with MIND_PALACE_AUTH_MODE=required to "
+                "membership checks. Re-run with VERILORE_AUTH_MODE=required to "
                 "exercise the memory layer's own boundary too."
             )
     return 0

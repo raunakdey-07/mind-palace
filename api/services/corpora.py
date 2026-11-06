@@ -83,7 +83,7 @@ async def create_corpus(
         raise AuthorizationError(
             "forbidden",
             "Creating a corpus over HTTP is not permitted for this credential. "
-            "Corpora are created by the operator with `mindpalace corpus create`.",
+            "Corpora are created by the operator with `verilore corpus create`.",
             403,
         )
     require_permission(principal, "manage_corpus", "create a corpus")

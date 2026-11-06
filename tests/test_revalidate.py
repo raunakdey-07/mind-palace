@@ -188,7 +188,7 @@ def test_integrity_exception_propagates():
 def test_load_artifact_path_confinement(tmp_path, monkeypatch):
     root = tmp_path / "docs"
     root.mkdir()
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
     from mcp_server import _load_artifact
 
     ok = root / "a.json"

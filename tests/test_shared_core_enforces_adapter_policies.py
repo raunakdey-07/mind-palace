@@ -4,7 +4,7 @@ Both were reported against surfaces that an audit table had already marked as
 enforcing the policy. Both were real.
 
 1. `sync_repo` never called `require_permitted`, so the SDK's `sync()` and the
-   MCP `sync` tool read outside `MIND_PALACE_INGEST_ROOTS` while the CLI and the
+   MCP `sync` tool read outside `VERILORE_INGEST_ROOTS` while the CLI and the
    two REST routes did not.
 
 2. The SDK's memory operations resolved their corpus with `write=False`, so a
@@ -23,7 +23,7 @@ import pytest
 def _env(**extra):
     env = {
         **os.environ,
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
         **extra,
@@ -35,7 +35,7 @@ def _env(**extra):
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
 def test_sdk_sync_refuses_a_path_outside_the_ingest_roots(tmp_path, monkeypatch):
     """The SDK and MCP `sync` are not special: they obey the same policy."""
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     allowed = tmp_path / "allowed"
     allowed.mkdir()
@@ -43,11 +43,11 @@ def test_sdk_sync_refuses_a_path_outside_the_ingest_roots(tmp_path, monkeypatch)
     outside.mkdir()
     (outside / "a.md").write_text("A document outside the configured root.\n")
 
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(allowed))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(allowed))
     try:
-        MindPalace("sdk-sync-roots").sync(str(outside))
+        Verilore("sdk-sync-roots").sync(str(outside))
     except Exception as exc:  # noqa: BLE001 - any refusal is a pass
-        assert "MIND_PALACE_INGEST_ROOTS" in str(exc) or "ingest_path" in str(exc).lower(), exc
+        assert "VERILORE_INGEST_ROOTS" in str(exc) or "ingest_path" in str(exc).lower(), exc
         return
     pytest.fail(f"sync({outside}) succeeded with roots={allowed}")
 
@@ -55,14 +55,14 @@ def test_sdk_sync_refuses_a_path_outside_the_ingest_roots(tmp_path, monkeypatch)
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
 def test_sdk_sync_still_works_inside_the_ingest_roots(tmp_path, monkeypatch):
     """A fix that refuses everything must not pass the test above."""
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     allowed = tmp_path / "allowed"
     allowed.mkdir()
     (allowed / "a.md").write_text("A document inside the configured root.\n")
 
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(allowed))
-    summary = MindPalace("sdk-sync-allow").sync(str(allowed))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(allowed))
+    summary = Verilore("sdk-sync-allow").sync(str(allowed))
     assert summary.added >= 1
 
 
@@ -100,8 +100,8 @@ def test_a_read_only_credential_cannot_snapshot_through_the_sdk(capsys):
     assert secret, "could not issue a read-only credential"
 
     probe = (
-        "from mindpalace_sdk import MindPalace\n"
-        f"c = MindPalace('default', api_key={secret!r})\n"
+        "from verilore_sdk import Verilore\n"
+        f"c = Verilore('default', api_key={secret!r})\n"
         "try:\n"
         "    c.memory.snapshot(corpus='default')\n"
         "    print('ALLOWED')\n"
@@ -111,7 +111,7 @@ def test_a_read_only_credential_cannot_snapshot_through_the_sdk(capsys):
     done = subprocess.run(
         [sys.executable, "-c", probe],
         cwd=root,
-        env=_env(MIND_PALACE_AUTH_MODE="required"),
+        env=_env(VERILORE_AUTH_MODE="required"),
         capture_output=True,
         text=True,
         timeout=300,

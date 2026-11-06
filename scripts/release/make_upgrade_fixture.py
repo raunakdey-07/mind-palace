@@ -165,16 +165,16 @@ def main() -> int:
     else:
         writes, snap = asyncio.run(build())
 
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    mp = MindPalace(name="default")
+    mp = Verilore(name="default")
     question = "What datastore does production use?"
 
     # Two artifacts, built the way the CLI builds them.
     #
     # The PACK is `memory.pack()`: the authoritative response, with no proof.
     # The RECEIPT is `memory.query(..., include_receipt=True)` wrapped in the
-    # same bundle `mindpalace receipt` writes -- response plus proof, so it can
+    # same bundle `verilore receipt` writes -- response plus proof, so it can
     # be verified offline with no database and no model.
     #
     # Asking pack() for a receipt and calling that a receipt does not work: the

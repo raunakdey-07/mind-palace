@@ -1,4 +1,4 @@
-"""`mindpalace ingest-repo` must work in-process.
+"""`verilore ingest-repo` must work in-process.
 
 It was an HTTP client to a hard-coded ``http://localhost:8000``, so the one
 command the README documents for getting a document in was also the only one
@@ -58,9 +58,9 @@ def _invoke(args, roots: str | None):
     env = dict(os.environ)
     env.pop("DATABASE_URL", None)
     if roots is None:
-        env.pop("MIND_PALACE_INGEST_ROOTS", None)
+        env.pop("VERILORE_INGEST_ROOTS", None)
     else:
-        env["MIND_PALACE_INGEST_ROOTS"] = roots
+        env["VERILORE_INGEST_ROOTS"] = roots
     return CliRunner().invoke(app, args, env=env)
 
 

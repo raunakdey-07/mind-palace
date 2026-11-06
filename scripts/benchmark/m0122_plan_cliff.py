@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts" / "benchmark"))
 
-URL = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+URL = "postgresql://mpadmin:secret@localhost:5432/verilore"
 
 
 def _migrations(conn):

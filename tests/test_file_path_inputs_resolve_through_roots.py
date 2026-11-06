@@ -25,8 +25,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def _run(args, roots):
     env = {
         **os.environ,
-        "MIND_PALACE_INGEST_ROOTS": str(roots),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(roots),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }
@@ -53,7 +53,7 @@ def test_remember_refuses_a_symlink_that_leaves_the_root(tmp_path):
     done = _run(["remember", "--file", str(link), "--corpus", "symlink-remember"], allowed)
     shown = done.stdout + done.stderr
     assert "Remembered" not in shown, shown
-    assert "outside MIND_PALACE_INGEST_ROOTS" in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" in shown, shown
 
 
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
@@ -67,7 +67,7 @@ def test_remember_refuses_a_dotdot_that_climbs_out(tmp_path):
     done = _run(["remember", "--file", str(escaping), "--corpus", "dotdot-remember"], allowed)
     shown = done.stdout + done.stderr
     assert "Remembered" not in shown, shown
-    assert "outside MIND_PALACE_INGEST_ROOTS" in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" in shown, shown
 
 
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
@@ -91,8 +91,8 @@ def test_remember_accepts_a_relative_path_inside_the_root(tmp_path):
         cwd=allowed,
         env={
             **os.environ,
-            "MIND_PALACE_INGEST_ROOTS": ".",
-            "MIND_PALACE_RUNTIME": "0",
+            "VERILORE_INGEST_ROOTS": ".",
+            "VERILORE_RUNTIME": "0",
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
             # The process runs from the root directory under test, so the
@@ -117,7 +117,7 @@ def test_ingest_refuses_a_path_outside_the_root(tmp_path):
 
     done = _run(["ingest", str(outside)], allowed)
     shown = done.stdout + done.stderr
-    assert "outside MIND_PALACE_INGEST_ROOTS" in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" in shown, shown
 
 
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
@@ -131,7 +131,7 @@ def test_ingest_refuses_a_symlink_that_leaves_the_root(tmp_path):
 
     done = _run(["ingest", str(link)], allowed)
     shown = done.stdout + done.stderr
-    assert "outside MIND_PALACE_INGEST_ROOTS" in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" in shown, shown
 
 
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL")
@@ -145,4 +145,4 @@ def test_ingest_accepts_a_file_inside_the_root(tmp_path):
     shown = done.stdout + done.stderr
     # `ingest` is an HTTP client, so a refused path and a missing server are
     # different failures. Only the refusal text is a failure here.
-    assert "outside MIND_PALACE_INGEST_ROOTS" not in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" not in shown, shown

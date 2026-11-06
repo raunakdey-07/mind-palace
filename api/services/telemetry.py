@@ -47,7 +47,7 @@ def _tracer():
     except Exception:  # noqa: BLE001 - not installed, or a broken installation
         return None
     try:
-        return trace.get_tracer("mindpalace")
+        return trace.get_tracer("verilore")
     except Exception:  # noqa: BLE001
         return None
 

@@ -10,7 +10,7 @@ cannot be moved to a different deployment of it, and would break the day the
 storage changed while the contract did not.
 
 So the whole client is three things: a URL, a bearer credential, and the public
-JSON contract. `MIND_PALACE_BASE_URL` names a remote service; `MIND_PALACE_APP_URL`
+JSON contract. `VERILORE_BASE_URL` names a remote service; `VERILORE_APP_URL`
 is the in-process ASGI application, used by the demo and the tests so they need
 no listening port. Both go through the same middleware, the same authorization
 choke point and the same row-level policies, so nothing here is a shortcut that
@@ -39,10 +39,10 @@ def base_url() -> str:
     Raises rather than defaulting: a memory client that silently invented its
     own endpoint would fail open somewhere less obvious.
     """
-    url = os.getenv("MIND_PALACE_BASE_URL", "").strip()
+    url = os.getenv("VERILORE_BASE_URL", "").strip()
     if not url:
         raise RuntimeError(
-            "MIND_PALACE_BASE_URL is not set. Point it at the Mind Palace service, "
+            "VERILORE_BASE_URL is not set. Point it at the Mind Palace service, "
             "for example http://mindpalace.internal:8000"
         )
     return url.rstrip("/")

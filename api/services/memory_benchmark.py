@@ -463,7 +463,7 @@ async def memory_benchmark_workload(file=DEFAULT_FILE, *, embeddings="fixture", 
     # Only two sources, and one of them is an argument.
     #
     # This used to read `MEMORY_TEST_DATABASE_URL` first. That is a test-only
-    # variable, in product code, on the path `mindpalace eval memory` takes --
+    # variable, in product code, on the path `verilore eval memory` takes --
     # both `run_memory_benchmark` and `_performance` call this with no
     # `database_url`, so anything that could set an environment variable for the
     # process could make the eval create its sandbox schema in a database other

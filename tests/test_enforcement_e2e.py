@@ -72,18 +72,18 @@ def enforced_secret(monkeypatch):
 
     Function-scoped with a restoring finalizer so the suite does not leave
     enforcement ON or a rotated secret behind for later tests (isolation).
-    Also sets MIND_PALACE_SCOPE_SECRET so the application's HMAC tokens match
+    Also sets VERILORE_SCOPE_SECRET so the application's HMAC tokens match
     the rotated DB secret. Restores both on teardown.
     """
     url = os.environ.get("DATABASE_URL")
     assert url, "DATABASE_URL must be set (conftest creates the session database)"
     secret, original_secret = _rotate_and_enable(url)
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", secret)
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", secret)
 
     yield secret
 
     _restore_secret_and_disable(url, original_secret)
-    monkeypatch.delenv("MIND_PALACE_SCOPE_SECRET", raising=False)
+    monkeypatch.delenv("VERILORE_SCOPE_SECRET", raising=False)
 
 
 # ---------------------------------------------------------------------------
@@ -125,11 +125,11 @@ class World:
 @pytest.fixture
 async def world(enforced_secret, monkeypatch):
     """Two organisations with credentials; app connected as runtime role;
-    enforcement ON via MIND_PALACE_SCOPE_SECRET (step-scoped env only)."""
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", enforced_secret)
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "on")
+    enforcement ON via VERILORE_SCOPE_SECRET (step-scoped env only)."""
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", enforced_secret)
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "on")
 
     from api.services.remember import remember
 
@@ -665,12 +665,12 @@ async def test_scope_and_token_always_set_together(world):
     mindpalace.scope_token, and the token matches HMAC(secret, scope).
 
     This is the C3 invariant: the app computes the token from
-    MIND_PALACE_SCOPE_SECRET env, and the DB verifies against
+    VERILORE_SCOPE_SECRET env, and the DB verifies against
     memory_server_secrets.scope_hmac_secret. If they diverge, RLS returns
     zero rows.
     """
     alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
-    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    secret = os.environ["VERILORE_SCOPE_SECRET"]
     expected_token = hmac.new(secret.encode(), alpha_cid.encode(), hashlib.sha256).hexdigest()
 
     engine = apply_as_runtime(runtime_url())
@@ -718,7 +718,7 @@ async def test_star_sentinel_under_enforcement(world):
     alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
 
     # 9a: maintenance role with {*} and a valid token can see every corpus.
-    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    secret = os.environ["VERILORE_SCOPE_SECRET"]
     star_token = hmac.new(secret.encode(), "{*}".encode(), hashlib.sha256).hexdigest()
     engine = sa.create_engine(sync_url())
     try:
@@ -928,7 +928,7 @@ async def test_latency_and_explain_initplan(world):
         reset_engine.dispose()
 
     scope = ",".join(cids)
-    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    secret = os.environ["VERILORE_SCOPE_SECRET"]
     token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
 
     # Run EXPLAIN as runtime role (sync engine, matching the manual measurement
@@ -1014,8 +1014,8 @@ async def test_latency_and_explain_initplan(world):
 async def test_operator_procedure_per_docs(world):
     """Follow docs/security.md verbatim:
 
-      mindpalace secret rotate  (as owner role, writes DB row + --out FILE)
-      export MIND_PALACE_SCOPE_SECRET=<new>
+      verilore secret rotate  (as owner role, writes DB row + --out FILE)
+      export VERILORE_SCOPE_SECRET=<new>
       SELECT mp_set_scope_token_enforcement(true)  (as mindpalace_owner)
       start the server process
       send a real request
@@ -1029,11 +1029,11 @@ async def test_operator_procedure_per_docs(world):
     url = os.environ.get("DATABASE_URL")
     assert url, "DATABASE_URL must be set"
 
-    old_secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
+    old_secret = os.environ.get("VERILORE_SCOPE_SECRET", "dev-scope-secret")
     secret_file = "/tmp/opencode/operator-secret.txt"
     os.makedirs(os.path.dirname(secret_file), exist_ok=True)
 
-    # Step 1: `mindpalace secret rotate` via the CLI (writes DB row + file).
+    # Step 1: `verilore secret rotate` via the CLI (writes DB row + file).
     result = subprocess.run(
         [
             sys.executable,
@@ -1051,10 +1051,10 @@ async def test_operator_procedure_per_docs(world):
     )
     assert result.returncode == 0, f"secret rotate failed: {result.stderr}"
     new_secret = open(secret_file).read().strip()
-    print(f"\nstep 1: mindpalace secret rotate -> wrote {secret_file}")
+    print(f"\nstep 1: verilore secret rotate -> wrote {secret_file}")
 
     # Step 2: set the env var (as docs instruct).
-    os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
+    os.environ["VERILORE_SCOPE_SECRET"] = new_secret
 
     # Step 3: enable enforcement as the owner role.
     engine = sa.create_engine(sync_url())
@@ -1108,12 +1108,12 @@ async def test_operator_procedure_per_docs(world):
 
     server_env = dict(os.environ)
     server_env["DATABASE_URL"] = runtime_db_url
-    server_env["MIND_PALACE_AUTH_MODE"] = "required"
-    server_env["MIND_PALACE_DEPLOYMENT"] = "server"
-    server_env["MIND_PALACE_SCOPE_SECRET"] = new_secret
-    server_env["MIND_PALACE_ENFORCE_SCOPE_TOKEN"] = "on"
-    server_env["MIND_PALACE_RUNTIME"] = "0"
-    server_env["MIND_PALACE_INGEST_ROOTS"] = "/content"
+    server_env["VERILORE_AUTH_MODE"] = "required"
+    server_env["VERILORE_DEPLOYMENT"] = "server"
+    server_env["VERILORE_SCOPE_SECRET"] = new_secret
+    server_env["VERILORE_ENFORCE_SCOPE_TOKEN"] = "on"
+    server_env["VERILORE_RUNTIME"] = "0"
+    server_env["VERILORE_INGEST_ROOTS"] = "/content"
 
     server_log = open("/tmp/opencode/operator-server.log", "w")
     server = subprocess.Popen(
@@ -1185,7 +1185,7 @@ async def test_operator_procedure_per_docs(world):
         server_log.close()
 
     # Step 3 (continued): mismatch window - old env secret vs new DB secret -> 0 rows.
-    os.environ["MIND_PALACE_SCOPE_SECRET"] = old_secret
+    os.environ["VERILORE_SCOPE_SECRET"] = old_secret
     try:
         engine = apply_as_runtime(runtime_url())
         try:
@@ -1211,7 +1211,7 @@ async def test_operator_procedure_per_docs(world):
             await engine.dispose()
         assert n == 0, f"mismatched secret read {n} rows (window should yield 0)"
     finally:
-        os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
+        os.environ["VERILORE_SCOPE_SECRET"] = new_secret
 
     print(
         "\noperator procedure OK: rotate writes DB row, enable enforcement, "
@@ -1226,10 +1226,10 @@ async def test_operator_procedure_per_docs(world):
 
 
 async def test_wrong_env_secret_fails(world):
-    """With enforcement ON but MIND_PALACE_SCOPE_SECRET deliberately wrong,
+    """With enforcement ON but VERILORE_SCOPE_SECRET deliberately wrong,
     scenarios 1-7 must fail: tokens don't verify, RLS returns zero rows."""
     # Set a deliberately wrong secret.
-    os.environ["MIND_PALACE_SCOPE_SECRET"] = "deadbeef" * 8
+    os.environ["VERILORE_SCOPE_SECRET"] = "deadbeef" * 8
     try:
         alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
 
@@ -1245,7 +1245,7 @@ async def test_wrong_env_secret_fails(world):
                 import hmac
 
                 token = hmac.new(
-                    os.environ["MIND_PALACE_SCOPE_SECRET"].encode(),
+                    os.environ["VERILORE_SCOPE_SECRET"].encode(),
                     alpha_cid.encode(),
                     hashlib.sha256,
                 ).hexdigest()
@@ -1284,6 +1284,6 @@ async def test_wrong_env_secret_fails(world):
             "operations to fail (0 rows, 403/404, empty listing)"
         )
     finally:
-        # monkeypatch (from the world fixture) restores MIND_PALACE_SCOPE_SECRET
+        # monkeypatch (from the world fixture) restores VERILORE_SCOPE_SECRET
         # to enforced_secret when the test ends.
         pass

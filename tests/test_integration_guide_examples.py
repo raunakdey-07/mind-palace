@@ -6,7 +6,7 @@ use names defined earlier. Shell blocks (```bash) are not run; instead every
 shell command in the guide must appear verbatim in .github/workflows/ci.yml
 or the README quickstart, and this test checks that.
 
-The live server is module-scoped (tests/live_server.py); MIND_PALACE_URL,
+The live server is module-scoped (tests/live_server.py); VERILORE_URL,
 BRAND_MEMORY_KEY and BRAND_CORPUS are set from the fixture before the blocks run.
 """
 
@@ -42,7 +42,7 @@ def test_guide_python_blocks_run(live_server, monkeypatch):  # noqa: F811
     blocks = _extract_blocks(guide, _PYTHON_BLOCK_RE)
     assert blocks, "the guide must contain python blocks"
 
-    monkeypatch.setenv("MIND_PALACE_URL", live_server.url)
+    monkeypatch.setenv("VERILORE_URL", live_server.url)
     monkeypatch.setenv("BRAND_MEMORY_KEY", live_server.keys["acme"])
     monkeypatch.setenv("BRAND_CORPUS", live_server.corpora["acme"])
 
@@ -71,7 +71,7 @@ def test_guide_shell_commands_appear_in_ci_or_readme():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            if line.startswith("mindpalace "):
+            if line.startswith("verilore "):
                 # Mind Palace CLI commands are checked via --help.
                 tokens = line.split()[1:]
                 # The command path is every token before the first --flag;

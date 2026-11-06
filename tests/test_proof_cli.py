@@ -463,7 +463,7 @@ def test_standalone_modules_are_declared_for_shipping():
     for module in STANDALONE_MODULES:
         stem = module.removesuffix(".py")
         assert f'"{stem}"' in text, f"{module} is not declared in py-modules"
-    assert 'mindpalace-proof = "memory_proof_cli:main"' in text
+    assert 'verilore-proof = "memory_proof_cli:main"' in text
 
 
 def test_cli_and_proof_import_nothing_heavy():
@@ -523,7 +523,7 @@ def test_built_wheel_contains_the_standalone_modules(wheel):
         .read([n for n in names if n.endswith("entry_points.txt")][0])
         .decode()
     )
-    assert "mindpalace-proof = memory_proof_cli:main" in entry
+    assert "verilore-proof = memory_proof_cli:main" in entry
 
 
 def test_the_installed_wheel_verifies_without_the_runtime(wheel, tmp_path):
@@ -547,7 +547,7 @@ def test_the_installed_wheel_verifies_without_the_runtime(wheel, tmp_path):
     env_dir = tmp_path / "env"
     venv.EnvBuilder(with_pip=True).create(str(env_dir))
     python = env_dir / "bin" / "python"
-    cli = env_dir / "bin" / "mindpalace-proof"
+    cli = env_dir / "bin" / "verilore-proof"
 
     install = subprocess.run(
         [str(python), "-m", "pip", "install", "--quiet", "--no-deps", str(wheel)],

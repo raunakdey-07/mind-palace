@@ -75,7 +75,7 @@ def test_host_postgres_port_conflict_remediation():
     assert "sudo systemctl stop postgresql" in msg
     assert "sudo service postgresql stop" in msg
     assert "DATABASE_URL" in msg
-    assert "mindpalace init" in msg
+    assert "verilore init" in msg
 
 
 def test_errors_socket_permission():
@@ -99,7 +99,7 @@ def test_errors_stopped_daemon_native(monkeypatch):
 
 
 def test_errors_host_postgres_default_creds(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/verilore")
 
     # auth error
     class E(Exception):
@@ -113,7 +113,7 @@ def test_errors_host_postgres_default_creds(monkeypatch):
 
 
 def test_errors_wrong_password_still_password(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:wrong@localhost:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:wrong@localhost:5432/verilore")
     exc = RuntimeError("password authentication failed for user mpadmin")
     advice = cli_errors.explain(exc)
     assert "password" in advice.do.lower()

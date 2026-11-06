@@ -102,7 +102,7 @@ def test_the_two_opt_in_skips_are_the_whole_allowlist():
         "test_a_built_wheel_contains_every_declared_module",
     }
     for name, (variable, why) in module.ALLOWLIST.items():
-        assert variable.startswith("MIND_PALACE_"), name
+        assert variable.startswith("VERILORE_"), name
         assert len(why) > 40, f"{name} needs a reason, not a placeholder"
 
 
@@ -126,7 +126,7 @@ def test_an_allowlisted_skip_passes(tmp_path, monkeypatch):
                 "tests.test_wheel_contents",
                 "test_a_built_wheel_contains_every_declared_module",
                 "skipped",
-                "set MIND_PALACE_TEST_BUILD_WHEEL=1 to build and inspect a wheel",
+                "set VERILORE_TEST_BUILD_WHEEL=1 to build and inspect a wheel",
             )
         ],
     )
@@ -277,7 +277,7 @@ def test_forbid_skips_also_refuses_the_two_opt_in_skips(tmp_path, monkeypatch):
                 "tests.test_migrations",
                 "test_migrations_apply_downgrade_and_reapply",
                 "skipped",
-                "set MIND_PALACE_MIGRATION_ROUNDTRIP=1",
+                "set VERILORE_MIGRATION_ROUNDTRIP=1",
             )
         ],
     )

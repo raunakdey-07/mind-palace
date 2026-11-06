@@ -3,7 +3,7 @@
 
 """Is row-level security actually in force for *this* connection?
 
-`MIND_PALACE_AUTH_MODE=required` is an application-layer switch. It says nothing
+`VERILORE_AUTH_MODE=required` is an application-layer switch. It says nothing
 about whether the database is enforcing anything underneath, and the answer is
 role-dependent in a way nothing in the request path can observe: PostgreSQL
 exempts a superuser, a `BYPASSRLS` role, and (without `FORCE`) the table owner

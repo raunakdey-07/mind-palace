@@ -16,7 +16,7 @@ who is subject to the policy, and only when a corpus id and a document id
 disagree.
 
 So this script runs a **real server** as `mindpalace_runtime` in
-`MIND_PALACE_AUTH_MODE=required`, presents a **real credential**, and reads the
+`VERILORE_AUTH_MODE=required`, presents a **real credential**, and reads the
 archive through the **public SDK** -- the same path a customer uses. The
 credential's grants decide what the policies let through, so the policy column is
 load-bearing rather than decorative.
@@ -52,7 +52,7 @@ import time
 import urllib.error
 import urllib.request
 
-# The repository root, because `mindpalace_sdk` is imported as a top-level module
+# The repository root, because `verilore_sdk` is imported as a top-level module
 # and imports `memory_receipt` the same way. Running this file by path puts
 # `scripts/release` on the path instead, and the import fails there.
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,7 +70,7 @@ def run(command: list[str], env: dict | None = None) -> tuple[int, str]:
         command,
         capture_output=True,
         text=True,
-        env={**os.environ, "MIND_PALACE_RUNTIME": "0", **(env or {})},
+        env={**os.environ, "VERILORE_RUNTIME": "0", **(env or {})},
     )
     return result.returncode, (result.stdout or "") + (result.stderr or "")
 
@@ -91,9 +91,9 @@ def main() -> int:
     # `api` import, because the engine is built from `DATABASE_URL` at import
     # time and `admin_session_scope` opens its own engine from it.
     os.environ["DATABASE_URL"] = args.runtime_url
-    os.environ["MIND_PALACE_AUTH_MODE"] = "required"
-    os.environ["MIND_PALACE_DEPLOYMENT"] = "server"
-    os.environ["MIND_PALACE_RUNTIME"] = "0"
+    os.environ["VERILORE_AUTH_MODE"] = "required"
+    os.environ["VERILORE_DEPLOYMENT"] = "server"
+    os.environ["VERILORE_RUNTIME"] = "0"
 
     def check(name: str, ok: bool, detail: str = "") -> None:
         print(f"  {'ok  ' if ok else 'FAIL'}  {name}" + (f"  -- {detail}" if detail else ""))
@@ -102,8 +102,8 @@ def main() -> int:
 
     superuser = {
         "DATABASE_URL": args.superuser_url,
-        "MIND_PALACE_AUTH_MODE": "off",
-        "MIND_PALACE_DEPLOYMENT": "local",
+        "VERILORE_AUTH_MODE": "off",
+        "VERILORE_DEPLOYMENT": "local",
     }
     expected = sorted(n for n in args.expect_corpora.split(",") if n)
     base = f"http://127.0.0.1:{PORT}"
@@ -147,13 +147,13 @@ def main() -> int:
     # -- 1. the server, as the least-privileged role --------------------------
     server_env = {
         "DATABASE_URL": args.runtime_url,
-        "MIND_PALACE_AUTH_MODE": "required",
-        "MIND_PALACE_DEPLOYMENT": "server",
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_AUTH_MODE": "required",
+        "VERILORE_DEPLOYMENT": "server",
+        "VERILORE_RUNTIME": "0",
         # Required in server mode, and the refusal is correct: without it a
         # caller can ask the service to read any directory the process can see.
         # This gate reads no files, so the two filesystem routes are disabled.
-        "MIND_PALACE_INGEST_ROOTS": "none",
+        "VERILORE_INGEST_ROOTS": "none",
     }
     # The server's own stderr goes to a file, never to DEVNULL.
     #
@@ -197,9 +197,9 @@ def main() -> int:
         check("no credential is refused", status in (401, 403), f"GET /corpora -> {status}")
 
         # -- 3. before any grant: exactly the issued corpus ------------------
-        from mindpalace_sdk import MindPalace  # noqa: E402 - after the env is set
+        from verilore_sdk import Verilore  # noqa: E402 - after the env is set
 
-        client = MindPalace(base_url=base, api_key=credential, runtime=False)
+        client = Verilore(base_url=base, api_key=credential, runtime=False)
         listed = _corpora(base, credential)
         check(
             "before any grant the reader sees only its issued corpus",
@@ -288,7 +288,7 @@ def main() -> int:
         # -- 7. and the runtime view equals the superuser view ---------------
         #     This one runs in-process rather than as a CLI command, and it has
         #     to: the superuser comparison needs the *scoped* principal, and a
-        #     subprocess launched with `MIND_PALACE_AUTH_MODE=off` would be
+        #     subprocess launched with `VERILORE_AUTH_MODE=off` would be
         #     unrestricted -- its policy predicate returns TRUE for every row,
         #     so it would agree with the superuser by construction and prove
         #     nothing. Only a principal carrying this credential's corpus ids
@@ -480,7 +480,7 @@ def _superuser_claim_ids(url: str) -> list[str]:
             "        [print(f'{a}={b}') for a,b in rows]\n"
             "asyncio.run(main())\n",
         ],
-        {"DATABASE_URL": url, "MIND_PALACE_AUTH_MODE": "off", "MIND_PALACE_DEPLOYMENT": "local"},
+        {"DATABASE_URL": url, "VERILORE_AUTH_MODE": "off", "VERILORE_DEPLOYMENT": "local"},
     )
     if code != 0:
         return []

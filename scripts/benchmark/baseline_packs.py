@@ -55,7 +55,7 @@ from m0115_dataset import build_corpus, build_questions  # noqa: E402
 
 VALID_AT = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
 CORPUS_NAME = "mp-baseline"
-URL = os.environ.get("DATABASE_URL") or ("postgresql://mpadmin:secret@localhost:5432/mindpalace")
+URL = os.environ.get("DATABASE_URL") or ("postgresql://mpadmin:secret@localhost:5432/verilore")
 
 
 def _migrations(conn):

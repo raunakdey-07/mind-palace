@@ -107,12 +107,12 @@ def live_server(tmp_path_factory):
         env = dict(os.environ)
         env["DATABASE_URL"] = runtime_url()
         env["ADMIN_DATABASE_URL"] = os.environ["DATABASE_URL"]
-        env["MIND_PALACE_SCOPE_SECRET"] = secret
-        env["MIND_PALACE_ENFORCE_SCOPE_TOKEN"] = "on"
-        env["MIND_PALACE_AUTH_MODE"] = "required"
-        env["MIND_PALACE_DEPLOYMENT"] = "server"
-        env["MIND_PALACE_RUNTIME"] = "0"
-        env["MIND_PALACE_INGEST_ROOTS"] = ingest_root
+        env["VERILORE_SCOPE_SECRET"] = secret
+        env["VERILORE_ENFORCE_SCOPE_TOKEN"] = "on"
+        env["VERILORE_AUTH_MODE"] = "required"
+        env["VERILORE_DEPLOYMENT"] = "server"
+        env["VERILORE_RUNTIME"] = "0"
+        env["VERILORE_INGEST_ROOTS"] = ingest_root
 
         stderr_file = open(stderr_path, "w")
         stdout_file = open(stdout_path, "w")

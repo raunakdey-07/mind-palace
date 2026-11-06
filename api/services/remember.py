@@ -424,7 +424,7 @@ def validate_statement(statement: str) -> str:
     if not statement:
         raise RememberError(
             "the statement is empty; remember something, "
-            'for example: mindpalace remember "Production uses PostgreSQL."'
+            'for example: verilore remember "Production uses PostgreSQL."'
         )
     if len(statement) > MAX_STATEMENT:
         raise RememberError(
@@ -589,7 +589,7 @@ async def remember(
         if statement is None:
             raise RememberError(
                 "nothing to remember; pass a statement, "
-                'for example: mindpalace remember "Production uses PostgreSQL."'
+                'for example: verilore remember "Production uses PostgreSQL."'
             )
 
         statement = validate_statement(statement)
@@ -654,7 +654,7 @@ def _read(file: str) -> str:
     The ingest-root check lives here rather than at each caller because every
     `file=` caller -- the CLI, `POST /api/memory/remember`, the SDK and the MCP
     tool -- routes through this one function. Two surfaces enforced
-    MIND_PALACE_INGEST_ROOTS (`/api/ingest/repo` and `/api/corpora/{name}/sync`)
+    VERILORE_INGEST_ROOTS (`/api/ingest/repo` and `/api/corpora/{name}/sync`)
     and this one did not, so a path the deployment refused came back through the
     other door. One guard here closes all four.
     """
@@ -695,7 +695,7 @@ async def _write(
 
     `require_embeddings=False`: a first memory must not depend on a model
     download. Ranking degrades to lexical; the claim and its evidence are recorded
-    either way, and `mindpalace reindex` fills the vectors in later.
+    either way, and `verilore reindex` fills the vectors in later.
     """
     from api.services.memory import SupersessionTargetUnresolved
 

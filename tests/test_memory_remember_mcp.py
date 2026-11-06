@@ -6,7 +6,7 @@ record a statement. This file pins the properties that make that safe to expose:
 * the arguments and the code path are the SDK's, so an agent and a script cannot
   write memory differently;
 * idempotency holds, so a retrying agent cannot duplicate or grow the corpus;
-* `file=` is bounded by MIND_PALACE_INGEST_ROOTS and by the exact-quote rule;
+* `file=` is bounded by VERILORE_INGEST_ROOTS and by the exact-quote rule;
 * a refusal is a readable result carrying a reason and **no memory content** --
   the tool runs on a path an attacker can influence, and an error message is the
   easiest place for what was written to leak back into a transcript.
@@ -102,7 +102,7 @@ def test_the_tool_is_registered_and_documented():
     assert tool.description
     properties = tool.input_schema["properties"]
     assert {"statement", "corpus", "key", "file"} <= set(properties)
-    # No credential parameter. The identity is MIND_PALACE_MCP_CREDENTIAL, and a
+    # No credential parameter. The identity is VERILORE_MCP_CREDENTIAL, and a
     # caller that could choose its own would need no authorization.
     assert "credential" not in properties
     assert "api_key" not in properties
@@ -153,7 +153,7 @@ def test_file_outside_the_ingest_roots_is_refused(tmp_path, monkeypatch, loop):
     allowed.mkdir()
     outside = tmp_path / "outside.md"
     outside.write_text("The secret is hunter2.\n")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(allowed))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(allowed))
 
     result = _call(loop, statement="The secret is hunter2.", corpus=CORPUS, file=str(outside))
 
@@ -170,7 +170,7 @@ def test_a_non_substring_statement_is_refused(tmp_path, monkeypatch, loop):
     root.mkdir()
     doc = root / "runbook.md"
     doc.write_text("Revoke the old key only after publishing the new one.\n")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
 
     result = _call(
         loop,
@@ -190,7 +190,7 @@ def test_an_exact_statement_inside_the_roots_is_accepted(tmp_path, monkeypatch, 
     root.mkdir()
     doc = root / "runbook.md"
     doc.write_text("Revoke the old key only after publishing the new one.\n")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
 
     result = _call(
         loop,
@@ -211,7 +211,7 @@ def test_a_refusal_carries_no_statement_content(tmp_path, monkeypatch, loop):
     allowed.mkdir()
     outside = tmp_path / "outside.md"
     outside.write_text(secret + "\n")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(allowed))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(allowed))
 
     result = _call(loop, statement=secret, corpus=CORPUS, file=str(outside))
     message = json.dumps(_payload(result))
@@ -234,9 +234,9 @@ def test_rejected_remember_under_scope_is_withheld(fresh_corpus, loop):
     body = _payload(result)
     assert body["path"].startswith("campaigns/spring/memory/"), body
 
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    current = MindPalace(fresh_corpus).memory.current(query="")
+    current = Verilore(fresh_corpus).memory.current(query="")
     assert current.withheld_counts.get("rejected") == 1, current.withheld_counts
 
 
@@ -263,7 +263,7 @@ def test_remember_file_with_state_is_refused(tmp_path, monkeypatch, loop):
     root.mkdir()
     doc = root / "runbook.md"
     doc.write_text("Revoke the old key only after publishing the new one.\n")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
 
     result = _call(
         loop,
@@ -315,7 +315,7 @@ def test_a_read_only_credential_cannot_remember(world, monkeypatch, loop):
     """
     import mcp_server
 
-    monkeypatch.setenv("MIND_PALACE_MCP_CREDENTIAL", world.credentials["alpha-reviewer"]["secret"])
+    monkeypatch.setenv("VERILORE_MCP_CREDENTIAL", world.credentials["alpha-reviewer"]["secret"])
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
 
     refused, detail = _refused(
@@ -328,8 +328,8 @@ def test_a_read_only_credential_cannot_remember(world, monkeypatch, loop):
 
 
 def test_no_credential_is_refused_in_required_mode(world, monkeypatch, loop):
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.delenv("MIND_PALACE_MCP_CREDENTIAL", raising=False)
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.delenv("VERILORE_MCP_CREDENTIAL", raising=False)
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
 
     refused, detail = _refused(

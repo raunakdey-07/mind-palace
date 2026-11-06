@@ -13,7 +13,7 @@ repository.
 The taxonomy answers three questions with three fields:
 
 * **component** -- *where* it broke: `memory`, `auth`, `database`, `transport`,
-  `provider`, or `mindpalace`.
+  `provider`, or `verilore`.
 * **code** -- *what* broke, stably and machine-readably.
 * **retryable** -- whether retrying the identical request could plausibly work.
 
@@ -47,7 +47,7 @@ __all__ = [
     "DatabaseSchemaError",
     "DatabaseUnavailableError",
     "InternalError",
-    "MindPalaceError",
+    "VeriloreError",
     "NotFoundError",
     "ProviderAuthenticationError",
     "ProviderError",
@@ -74,7 +74,7 @@ __all__ = [
 #: external generation model. Both are "a model provider we called". Keeping them
 #: under one component is honest -- Mind Palace cannot always tell which is which,
 #: and pretending otherwise would only move the ambiguity.
-COMPONENTS = ("memory", "auth", "database", "transport", "provider", "mindpalace")
+COMPONENTS = ("memory", "auth", "database", "transport", "provider", "verilore")
 
 
 def new_request_id() -> str:
@@ -94,7 +94,7 @@ class _RequestId:
         import contextvars
 
         self._var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-            "mindpalace_request_id", default=None
+            "verilore_request_id", default=None
         )
 
     def get(self) -> str | None:
@@ -117,7 +117,7 @@ class _RequestId:
 RequestId = _RequestId()
 
 
-class MindPalaceError(Exception):
+class VeriloreError(Exception):
     """Base class for every failure Mind Palace raises on purpose.
 
     Subclasses set `default_code` and `default_component`; instances may override
@@ -131,8 +131,8 @@ class MindPalaceError(Exception):
     retrying a bug just produces the same bug.
     """
 
-    default_code = "mp_error"
-    default_component = "mindpalace"
+    default_code = "vl_error"
+    default_component = "verilore"
     default_retryable = False
     #: The HTTP status this maps to when the failure reaches the API. Chosen so a
     #: proxy or a load balancer makes the same decision Mind Palace does.
@@ -187,15 +187,15 @@ class MindPalaceError(Exception):
 # ---------------------------------------------------------------------------
 
 
-class ValidationError(MindPalaceError):
+class ValidationError(VeriloreError):
     """The request does not satisfy the contract. The caller's to fix."""
 
-    default_code = "mp_invalid_request"
+    default_code = "vl_invalid_request"
     default_component = "memory"
     default_status = 422
 
 
-class NotFoundError(MindPalaceError):
+class NotFoundError(VeriloreError):
     """The resource is not visible to this caller.
 
     Also the answer for "exists but is not yours". A caller must not be able to
@@ -203,15 +203,15 @@ class NotFoundError(MindPalaceError):
     detail that the caller did not already supply.
     """
 
-    default_code = "mp_not_found"
+    default_code = "vl_not_found"
     default_component = "memory"
     default_status = 404
 
 
-class ConflictError(MindPalaceError):
+class ConflictError(VeriloreError):
     """The request contradicts current state: already exists, stale version."""
 
-    default_code = "mp_conflict"
+    default_code = "vl_conflict"
     default_component = "memory"
     default_status = 409
 
@@ -221,19 +221,19 @@ class ConflictError(MindPalaceError):
 # ---------------------------------------------------------------------------
 
 
-class AuthenticationError(MindPalaceError):
+class AuthenticationError(VeriloreError):
     """No credential, or one that cannot be resolved.
 
     Never says which part of the credential was wrong. Doing so tells an attacker
     whether a name exists.
     """
 
-    default_code = "mp_unauthenticated"
+    default_code = "vl_unauthenticated"
     default_component = "auth"
     default_status = 401
 
 
-class UnauthorizedError(MindPalaceError):
+class UnauthorizedError(VeriloreError):
     """Authenticated, and not allowed to do this.
 
     Raised only for a resource the caller has already proved it may name. A
@@ -241,7 +241,7 @@ class UnauthorizedError(MindPalaceError):
     resource never becomes visible as a distinguishable status.
     """
 
-    default_code = "mp_forbidden"
+    default_code = "vl_forbidden"
     default_component = "auth"
     default_status = 403
 
@@ -251,27 +251,27 @@ class UnauthorizedError(MindPalaceError):
 # ---------------------------------------------------------------------------
 
 
-class DatabaseUnavailableError(MindPalaceError):
+class DatabaseUnavailableError(VeriloreError):
     """PostgreSQL could not be reached, or a connection failed.
 
     Retryable: the same request against a recovered database is a reasonable
     thing for a caller to do.
     """
 
-    default_code = "mp_database_unavailable"
+    default_code = "vl_database_unavailable"
     default_component = "database"
     default_retryable = True
     default_status = 503
 
 
-class DatabaseSchemaError(MindPalaceError):
+class DatabaseSchemaError(VeriloreError):
     """PostgreSQL answered, and the schema is not what this version expects.
 
     Not retryable. A migration either has run or has not, and retrying produces
     the same answer until someone runs it.
     """
 
-    default_code = "mp_database_schema"
+    default_code = "vl_database_schema"
     default_component = "database"
     default_status = 503
 
@@ -281,7 +281,7 @@ class DatabaseSchemaError(MindPalaceError):
 # ---------------------------------------------------------------------------
 
 
-class TransportError(MindPalaceError):
+class TransportError(VeriloreError):
     """The local runtime or MCP transport failed.
 
     Named `transport` rather than folded into `provider`, because it means "the
@@ -289,7 +289,7 @@ class TransportError(MindPalaceError):
     operational problem from "a model answered badly".
     """
 
-    default_code = "mp_transport_error"
+    default_code = "vl_transport_error"
     default_component = "transport"
     default_retryable = True
     default_status = 503
@@ -300,7 +300,7 @@ class TransportError(MindPalaceError):
 # ---------------------------------------------------------------------------
 
 
-class ProviderError(MindPalaceError):
+class ProviderError(VeriloreError):
     """A model provider failed.
 
     Carries the provider's own request id when it gave one, because that is what
@@ -308,7 +308,7 @@ class ProviderError(MindPalaceError):
     provider error body routinely echoes the prompt, the key, or the request.
     """
 
-    default_code = "mp_provider_error"
+    default_code = "vl_provider_error"
     default_component = "provider"
     default_status = 503
 
@@ -327,14 +327,14 @@ class ProviderAuthenticationError(ProviderError):
     refusing them.
     """
 
-    default_code = "mp_provider_auth"
+    default_code = "vl_provider_auth"
     default_status = 502
 
 
 class ProviderTimeoutError(ProviderError):
     """The provider did not answer in time. Retryable, with the caller's own backoff."""
 
-    default_code = "mp_provider_timeout"
+    default_code = "vl_provider_timeout"
     default_retryable = True
     default_status = 504
 
@@ -342,7 +342,7 @@ class ProviderTimeoutError(ProviderError):
 class ProviderRateLimitError(ProviderError):
     """The provider is rate-limiting us. Retryable, after a delay it usually names."""
 
-    default_code = "mp_provider_rate_limited"
+    default_code = "vl_provider_rate_limited"
     default_retryable = True
     default_status = 429
 
@@ -350,7 +350,7 @@ class ProviderRateLimitError(ProviderError):
 class ProviderUnavailableError(ProviderError):
     """The provider is temporarily down. Retryable."""
 
-    default_code = "mp_provider_unavailable"
+    default_code = "vl_provider_unavailable"
     default_retryable = True
     default_status = 503
 
@@ -365,7 +365,7 @@ class ProviderMalformedResponseError(ProviderError):
     what the store contains.
     """
 
-    default_code = "mp_provider_malformed_response"
+    default_code = "vl_provider_malformed_response"
     default_status = 502
 
 
@@ -377,23 +377,23 @@ class ProviderIncompatibleModelError(ProviderError):
     system has, so it is refused rather than degraded.
     """
 
-    default_code = "mp_provider_incompatible_model"
+    default_code = "vl_provider_incompatible_model"
     default_status = 503
 
 
 class ProviderRefusedError(ProviderError):
     """The provider understood the request and declined it."""
 
-    default_code = "mp_provider_refused"
+    default_code = "vl_provider_refused"
     default_status = 502
 
 
 # ---------------------------------------------------------------------------
-# mindpalace -- our own defects
+# verilore -- our own defects
 # ---------------------------------------------------------------------------
 
 
-class InternalError(MindPalaceError):
+class InternalError(VeriloreError):
     """A defect in Mind Palace.
 
     Not retryable, and deliberately not dressed as a provider outage. A caller
@@ -401,13 +401,13 @@ class InternalError(MindPalaceError):
     move.
     """
 
-    default_code = "mp_internal_error"
+    default_code = "vl_internal_error"
     default_status = 500
 
 
 #: Status code -> class, so a response can be turned back into the type the SDK
 #: raises. The inverse of the mapping in `api/errors.py`.
-BY_STATUS: dict[int, type[MindPalaceError]] = {
+BY_STATUS: dict[int, type[VeriloreError]] = {
     401: AuthenticationError,
     403: UnauthorizedError,
     404: NotFoundError,
@@ -529,14 +529,14 @@ def envelope(exc: BaseException, *, request_id: str | None = None) -> dict[str, 
     That is the difference between this and `str(exc)`, which is what the code
     used to do.
     """
-    if isinstance(exc, MindPalaceError):
+    if isinstance(exc, VeriloreError):
         body = exc.to_dict()
         if request_id:
             body["request_id"] = request_id
         return body
     return {
-        "code": "mp_internal_error",
-        "component": "mindpalace",
+        "code": "vl_internal_error",
+        "component": "verilore",
         "message": "an internal error occurred",
         "retryable": False,
         "request_id": request_id or RequestId.ensure(),

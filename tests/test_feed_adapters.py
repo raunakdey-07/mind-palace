@@ -15,7 +15,7 @@ from api.main import app
 from api.models.memory import FeedItem, FeedResponse
 from api.services.memory_feed import decode_cursor, encode_cursor
 from api.services.memory_public import MemoryError
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 SECRET = "m009-adapter-test-secret-" + "x" * 48
 STAMP = "2026-01-01T00:00:00Z"
@@ -56,7 +56,7 @@ def _valid_body(**updates):
 
 
 def test_cursor_rejects_empty_non_string_and_signed_malformed_payloads(monkeypatch):
-    monkeypatch.setenv("MIND_PALACE_CURSOR_SECRET", SECRET)
+    monkeypatch.setenv("VERILORE_CURSOR_SECRET", SECRET)
     with pytest.raises(MemoryError) as empty:
         decode_cursor("", "adapter-corpus")
     assert empty.value.code == "invalid_cursor"
@@ -90,12 +90,12 @@ def test_cursor_rejects_empty_non_string_and_signed_malformed_payloads(monkeypat
 
 
 def test_cursor_requires_a_strong_configured_secret(monkeypatch):
-    monkeypatch.delenv("MIND_PALACE_CURSOR_SECRET", raising=False)
+    monkeypatch.delenv("VERILORE_CURSOR_SECRET", raising=False)
     with pytest.raises(MemoryError) as missing:
         encode_cursor("adapter-corpus", datetime(2026, 1, 1, tzinfo=UTC), "a" * 64)
     assert missing.value.code == "cursor_unavailable"
 
-    monkeypatch.setenv("MIND_PALACE_CURSOR_SECRET", "too-short")
+    monkeypatch.setenv("VERILORE_CURSOR_SECRET", "too-short")
     with pytest.raises(MemoryError) as weak:
         encode_cursor("adapter-corpus", datetime(2026, 1, 1, tzinfo=UTC), "a" * 64)
     assert weak.value.code == "cursor_unavailable"
@@ -113,7 +113,7 @@ def test_sdk_feed_preserves_structured_errors_and_validates_responses(monkeypatc
         )
 
     monkeypatch.setattr(httpx, "get", get)
-    client = MindPalace(base_url="https://memory.example").memory
+    client = Verilore(base_url="https://memory.example").memory
     with pytest.raises(MemoryClientError) as error:
         client.feed(corpus="adapter-corpus", page_size=5, cursor="bad")
     assert (error.value.code, error.value.status_code) == ("cursor_corpus_mismatch", 422)
@@ -140,7 +140,7 @@ def test_sdk_feed_returns_typed_page_and_omits_absent_cursor_parameter(monkeypat
         )
 
     monkeypatch.setattr(httpx, "get", get)
-    page = MindPalace(base_url="https://memory.example").memory.feed(
+    page = Verilore(base_url="https://memory.example").memory.feed(
         corpus="adapter-corpus", page_size=5
     )
     assert isinstance(page, FeedResponse)

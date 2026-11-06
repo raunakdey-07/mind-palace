@@ -8,12 +8,12 @@ Two things happen here, and the distinction matters:
 * **Workspace onboarding** creates the application's own rows, and creates the
   Mind Palace corpora the workspace will use. Creating a corpus is
   administrative -- a tenant-scoped credential cannot do it, and there is no HTTP
-  route that can -- so it happens through `mindpalace corpus create`, the
+  route that can -- so it happens through `verilore corpus create`, the
   documented operator command, by a process that already holds the maintenance
   database role. This is the one part of the setup that is not a request-handler
   operation, and it is deliberately the part no request handler performs.
 * **Per-workspace Mind Palace credentials** are then issued for exactly the
-  corpora that workspace owns, through `mindpalace credential issue` and the same
+  corpora that workspace owns, through `verilore credential issue` and the same
   documented command. From that point on nothing in the workflow constructs a
   corpus name from client input; it resolves from the rows created here, and Mind
   Palace checks it against the credential.
@@ -147,7 +147,7 @@ async def provision(db, base_url: str) -> Provisioned:
 
 
 def _mindpalace(*arguments: str) -> str:
-    """Run a documented `mindpalace` operator command and return its stdout.
+    """Run a documented `verilore` operator command and return its stdout.
 
     A subprocess, deliberately. An integrating application does not import Mind
     Palace's Python modules to create a corpus -- it runs the operator command, or
@@ -164,7 +164,7 @@ def _mindpalace(*arguments: str) -> str:
     )
     if result.returncode != 0:
         raise RuntimeError(
-            f"`mindpalace {' '.join(arguments)}` failed ({result.returncode}):\n"
+            f"`verilore {' '.join(arguments)}` failed ({result.returncode}):\n"
             f"{result.stderr[-2000:]}"
         )
     return result.stdout
@@ -190,7 +190,7 @@ def create_corpus(name: str, description: str = "") -> None:
         timeout=300,
     )
     if existing.returncode != 0 and "exists" not in (existing.stdout + existing.stderr).lower():
-        raise RuntimeError(f"`mindpalace corpus create {name}` failed:\n{existing.stderr[-2000:]}")
+        raise RuntimeError(f"`verilore corpus create {name}` failed:\n{existing.stderr[-2000:]}")
 
 
 def issue_credential(name: str, corpora: list[str], role: str = "read_write") -> str:

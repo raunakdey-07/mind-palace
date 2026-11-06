@@ -24,7 +24,7 @@ from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from api.models.memory import MemoryRequest, MemoryResponse
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 STAMP = "2026-09-01T12:00:00Z"
 CLAIM_ID = "a" * 64
@@ -190,7 +190,7 @@ OPERATIONS = [
 def test_remote_dispatch(contract, transport, method, kwargs, operation, fields):
     calls, reply = transport
     headers = {"Authorization": "Bearer test-token"}
-    mp = MindPalace("default", base_url="https://memory.example/", headers=headers, timeout=17)
+    mp = Verilore("default", base_url="https://memory.example/", headers=headers, timeout=17)
     headers.clear()
     result = getattr(mp.memory, method)(query="auth", **kwargs)
     assert isinstance(result, contract.response)
@@ -214,14 +214,14 @@ def test_remote_dispatch(contract, transport, method, kwargs, operation, fields)
 
 def test_defaults_override_and_datetime(contract, transport):
     calls, _ = transport
-    mp = MindPalace("default", base_url="https://memory.example")
+    mp = Verilore("default", base_url="https://memory.example")
     mp.memory.current(corpus="override")
     assert json.loads(calls[-1].content)["corpus"] == "override"
     assert json.loads(calls[-1].content)["query"] == ""
     assert calls[-1].extensions["timeout"]["read"] == 30
     mp.memory.pack()
     assert json.loads(calls[-1].content)["budget"] == 8000
-    MindPalace(base_url="https://memory.example").memory.as_of(
+    Verilore(base_url="https://memory.example").memory.as_of(
         datetime(2026, 9, 1, 12, tzinfo=UTC), corpus="explicit"
     )
     assert json.loads(calls[-1].content)["as_of"] == STAMP
@@ -261,7 +261,7 @@ def test_central_request_validation_precedes_transport(
     contract, transport, remote, method, kwargs, field
 ):
     calls, _ = transport
-    mp = MindPalace(base_url="https://memory.example" if remote else None)
+    mp = Verilore(base_url="https://memory.example" if remote else None)
     with pytest.raises(ValidationError) as caught:
         getattr(mp.memory, method)(**{"corpus": "test", **kwargs})
     assert caught.value.errors()[0]["loc"] == (field,)
@@ -272,7 +272,7 @@ def test_central_request_validation_precedes_transport(
 @pytest.mark.parametrize("budget", [512, 128000])
 def test_real_request_normalization_and_budget_boundaries(transport, budget):
     calls, _ = transport
-    MindPalace("test", base_url="https://memory.example").memory.pack(
+    Verilore("test", base_url="https://memory.example").memory.pack(
         query="  clé  ", budget=budget, as_of="2026-09-01T14:00:00+02:00"
     )
     request = MemoryRequest.model_validate_json(calls[0].content)
@@ -289,7 +289,7 @@ def test_stable_server_errors(contract, transport, envelope):
     reply.status = 404
     reply.body = {envelope: detail} if envelope else detail
     with pytest.raises(MemoryClientError) as caught:
-        MindPalace("test", base_url="https://memory.example").memory.replay_snapshot(SNAPSHOT_ID)
+        Verilore("test", base_url="https://memory.example").memory.replay_snapshot(SNAPSHOT_ID)
     assert caught.value.code == "snapshot_not_found"
     assert caught.value.message == "Snapshot does not exist"
     assert caught.value.status_code == 404
@@ -305,7 +305,7 @@ def test_stable_server_errors(contract, transport, envelope):
 def test_transport_errors(contract, monkeypatch, exception, code, status):
     monkeypatch.setattr(httpx, "post", Mock(side_effect=exception))
     with pytest.raises(MemoryClientError) as caught:
-        MindPalace("test", base_url="https://memory.example").memory.current()
+        Verilore("test", base_url="https://memory.example").memory.current()
     assert (caught.value.code, caught.value.status_code) == (code, status)
     assert "secret" not in str(caught.value)
 
@@ -322,7 +322,7 @@ def test_transport_errors(contract, monkeypatch, exception, code, status):
 def test_invalid_responses(contract, monkeypatch, status, body, code, error_status):
     monkeypatch.setattr(httpx, "post", Mock(return_value=httpx.Response(status, content=body)))
     with pytest.raises(MemoryClientError) as caught:
-        MindPalace("test", base_url="https://memory.example").memory.current()
+        Verilore("test", base_url="https://memory.example").memory.current()
     assert (caught.value.code, caught.value.status_code) == (code, error_status)
     assert "secret" not in str(caught.value)
 
@@ -348,7 +348,7 @@ def test_real_response_validation(transport, path, value):
         target = target[key]
     target[path[-1]] = value
     with pytest.raises(MemoryClientError) as caught:
-        MindPalace("test", base_url="https://memory.example").memory.current()
+        Verilore("test", base_url="https://memory.example").memory.current()
     assert len(calls) == 1
     assert (caught.value.code, caught.value.status_code) == ("invalid_response", 502)
     assert isinstance(caught.value.__cause__, ValidationError)
@@ -357,7 +357,7 @@ def test_real_response_validation(transport, path, value):
 
 @pytest.mark.parametrize("method,kwargs,operation,fields", OPERATIONS)
 def test_local_dispatch(contract, method, kwargs, operation, fields):
-    result = getattr(MindPalace().memory, method)(corpus="test", query="auth", **kwargs)
+    result = getattr(Verilore().memory, method)(corpus="test", query="auth", **kwargs)
     assert result is contract.service.execute.return_value
     contract.service.execute.assert_awaited_once()
     actual_operation, request = contract.service.execute.call_args.args
@@ -380,7 +380,7 @@ def test_local_error_propagates(contract):
     error = contract.service.MemoryError("corpus_not_found", "No corpus", 404)
     contract.service.execute.side_effect = error
     with pytest.raises(MemoryClientError) as caught:
-        MindPalace().memory.current(corpus="missing")
+        Verilore().memory.current(corpus="missing")
     assert caught.value.code == "corpus_not_found"
     assert caught.value.message == "No corpus"
     assert caught.value.status_code == 404
@@ -396,14 +396,14 @@ def test_a_defect_is_not_disguised_as_an_api_failure(contract):
     defect = TypeError("a real defect, not a service failure")
     contract.service.execute.side_effect = defect
     with pytest.raises(TypeError) as caught:
-        MindPalace().memory.current(corpus="test")
+        Verilore().memory.current(corpus="test")
     assert caught.value is defect
 
 
 def test_local_rejects_running_loop_without_creating_coroutine(contract):
     async def call():
         with pytest.raises(RuntimeError, match="active event loop"):
-            MindPalace().memory.current(corpus="test")
+            Verilore().memory.current(corpus="test")
 
     asyncio.run(call())
     contract.service.execute.assert_not_called()
@@ -417,9 +417,9 @@ class BlockServices:
         if fullname.startswith('api.services'):
             raise AssertionError('Remote SDK imported ' + fullname)
 sys.meta_path.insert(0, BlockServices())
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 from cli.main import app
-mp = MindPalace('test', base_url='https://memory.example')
+mp = Verilore('test', base_url='https://memory.example')
 assert not hasattr(mp, '_embedder')
 assert not hasattr(mp, '_ingestion')
 """
@@ -455,10 +455,10 @@ def test_legacy_named_initialization_and_sync(monkeypatch, create):
     monkeypatch.setitem(sys.modules, embedder.__name__, embedder)
     monkeypatch.setitem(sys.modules, ingestion.__name__, ingestion)
     ensure = AsyncMock()
-    monkeypatch.setattr(MindPalace, "_ensure_corpus", ensure)
-    monkeypatch.setattr(MindPalace, "_run", staticmethod(asyncio.run))
-    monkeypatch.setattr(MindPalace, "_corpus_id", Mock(return_value="corpus-id"))
-    mp = MindPalace("legacy", create_if_missing=create)
+    monkeypatch.setattr(Verilore, "_ensure_corpus", ensure)
+    monkeypatch.setattr(Verilore, "_run", staticmethod(asyncio.run))
+    monkeypatch.setattr(Verilore, "_corpus_id", Mock(return_value="corpus-id"))
+    mp = Verilore("legacy", create_if_missing=create)
     embedder.Embedder.assert_called_once_with()
     ingestion.IngestionService.assert_called_once_with()
     assert ensure.await_count == int(create)
@@ -505,8 +505,8 @@ def test_legacy_search_and_context(monkeypatch, strategy):
     builder.build_context = build_context
     for module in (db, corpora, retrieval, builder):
         monkeypatch.setitem(sys.modules, module.__name__, module)
-    monkeypatch.setattr(MindPalace, "_run", staticmethod(asyncio.run))
-    mp = MindPalace()
+    monkeypatch.setattr(Verilore, "_run", staticmethod(asyncio.run))
+    mp = Verilore()
     mp.name = "legacy"
     mp._embedder = Mock()
     mp._embedder.embed_single.return_value = [0.5]
@@ -538,7 +538,7 @@ def test_legacy_search_and_context(monkeypatch, strategy):
         "intent": None,
     }
     corpora.get_corpus_by_name.return_value = None
-    from mindpalace_sdk import CorpusNotFoundError
+    from verilore_sdk import CorpusNotFoundError
 
     with pytest.raises(CorpusNotFoundError, match="legacy"):
         mp.search("question")

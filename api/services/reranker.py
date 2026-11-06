@@ -46,7 +46,7 @@ class Reranker:
                     if CrossEncoder is None:
                         raise ImportError(
                             "reranking needs the [torch] extra; "
-                            "pip install 'mindpalace-os[torch]'"
+                            "pip install 'verilore-os[torch]'"
                         )
                     self._model = CrossEncoder(self.model_name)
         return self._model

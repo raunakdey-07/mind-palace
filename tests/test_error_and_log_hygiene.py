@@ -95,7 +95,7 @@ def unauthenticated_probe(monkeypatch):
     """Let the probe route through the authentication middleware.
 
     The suite runs in both modes, and CI runs it with
-    `MIND_PALACE_AUTH_MODE=required`. Without this the probe is answered `401`
+    `VERILORE_AUTH_MODE=required`. Without this the probe is answered `401`
     before it ever reaches the middleware under test -- and the test would pass
     for the wrong reason, having asserted a 500 it never got.
 

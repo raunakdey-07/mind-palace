@@ -576,7 +576,7 @@ async def interfaces(public_db, monkeypatch):
     import mcp_server
     from api.main import app
     from cli.main import app as cli_app
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     class SavepointSession:
         def begin(self):
@@ -603,7 +603,7 @@ async def interfaces(public_db, monkeypatch):
             return future.result(timeout=30)
 
         monkeypatch.setattr(httpx, "post", post)
-        sdk = MindPalace(base_url="http://memory-test").memory
+        sdk = Verilore(base_url="http://memory-test").memory
 
         async def sdk_call(operation, request):
             fields = request.model_dump(mode="json", exclude_unset=True)
@@ -701,7 +701,7 @@ async def test_real_rest_sdk_mcp_cli_consistency(public_db, interfaces, operatio
 async def test_missing_ids_errors_across_real_interfaces(
     public_db, interfaces, operation, fields, code, message
 ):
-    from mindpalace_sdk import MemoryClientError
+    from verilore_sdk import MemoryClientError
 
     request = MemoryRequest(**{"corpus": public_db.name, **fields})
     with pytest.raises(memory_public.MemoryError) as error:

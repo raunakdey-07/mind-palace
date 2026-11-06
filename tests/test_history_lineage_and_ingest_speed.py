@@ -2,7 +2,7 @@
 
 Four of them, and they are four different promises the product makes:
 
-* **History walks the supersession graph in both directions.** `mindpalace
+* **History walks the supersession graph in both directions.** `verilore
   history` anchored on a retired claim, found nothing to walk back to, and
   reported the retired claim as the one that is true now. The graph has edges in
   both directions and the reader has to follow both of them.

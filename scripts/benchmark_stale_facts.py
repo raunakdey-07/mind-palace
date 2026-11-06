@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from api.services.embedder import Embedder  # noqa: E402
-from mindpalace_sdk import MindPalace  # noqa: E402
+from verilore_sdk import Verilore  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Dataset
@@ -384,7 +384,7 @@ def run_benchmark():
     for name, content in DOCS.items():
         (docdir / name).write_text(content, encoding="utf-8")
 
-    mp = MindPalace(corpus_name)
+    mp = Verilore(corpus_name)
     try:
         mp.sync(str(docdir))
 

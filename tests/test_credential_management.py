@@ -5,7 +5,7 @@ others, because each is a separate process or a separate code path and a
 boundary that holds on one of them proves nothing about the others:
 
 * the **local runtime socket**, which is the default transport for the CLI and
-  for `MindPalace(runtime=True)`;
+  for `Verilore(runtime=True)`;
 * **SDK clients constructed without a corpus name**, which is exactly the shape
   the CLI builds;
 * **MCP**, which constructs its own clients;
@@ -78,7 +78,7 @@ async def test_the_runtime_socket_has_no_authorization_concept(world, monkeypatc
     # ... and the corpus name still arrives from the wire, which is exactly why
     # the principal has to be checked against it.
     assert 'request.get("corpus")' in source
-    assert "MIND_PALACE_RUNTIME_CREDENTIAL" in source
+    assert "VERILORE_RUNTIME_CREDENTIAL" in source
 
 
 async def test_the_runtime_refuses_every_corpus_without_a_credential(world, monkeypatch):
@@ -92,12 +92,12 @@ async def test_the_runtime_refuses_every_corpus_without_a_credential(world, monk
     from api.services import authz
     from api.runtime import _runtime_principal
 
-    monkeypatch.delenv("MIND_PALACE_RUNTIME_CREDENTIAL", raising=False)
+    monkeypatch.delenv("VERILORE_RUNTIME_CREDENTIAL", raising=False)
     with pytest.raises(authz.AuthorizationError):
         await _runtime_principal()
 
     monkeypatch.setenv(
-        "MIND_PALACE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
+        "VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
     )
     principal = await _runtime_principal()
     assert principal.unrestricted is False
@@ -114,7 +114,7 @@ async def test_a_runtime_credential_cannot_read_another_organisation(world, monk
     from api.runtime import _dispatch, _Runtime
 
     monkeypatch.setenv(
-        "MIND_PALACE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
+        "VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
     )
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
 
@@ -166,7 +166,7 @@ def run_sdk(action):
         # so the SDK reaches the database the same way a deployment would, and
         # never from a pool whose connections belong to the test's own loop.
         #
-        # Both names are redirected, not just the session factory: `MindPalace._run`
+        # Both names are redirected, not just the session factory: `Verilore._run`
         # disposes `async_engine` after every call, because asyncpg binds a
         # connection to the loop that opened it. Leaving it pointed at the
         # fixture's engine would dispose the wrong pool and leave this one holding
@@ -191,16 +191,16 @@ def run_sdk(action):
 async def test_an_unnamed_local_client_cannot_be_constructed_in_required_mode(world, monkeypatch):
     """The defect: `_local_principal` ran only when a corpus name was supplied.
 
-    `MindPalace()` without a name is the shape the CLI builds, so it skipped
+    `Verilore()` without a name is the shape the CLI builds, so it skipped
     authentication entirely: its operations ran as the default local principal,
     unrestricted, with a `{*}` database scope, even under
-    `MIND_PALACE_AUTH_MODE=required`.
+    `VERILORE_AUTH_MODE=required`.
     """
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     with pytest.raises(MemoryClientError) as caught:
-        MindPalace()
+        Verilore()
     assert caught.value.status_code == 401
 
 
@@ -210,12 +210,12 @@ async def test_a_named_local_client_needs_a_credential_in_required_mode(world, m
     `create_if_missing=False` keeps the client from touching the database, so
     this asserts the constructor and not the corpus bootstrap.
     """
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
     def build(api_key=None):
-        return MindPalace(ALPHA_CORPORA["brand"], api_key=api_key, create_if_missing=False)
+        return Verilore(ALPHA_CORPORA["brand"], api_key=api_key, create_if_missing=False)
 
     with pytest.raises(MemoryClientError):
         run_sdk(build)
@@ -226,11 +226,11 @@ async def test_a_named_local_client_needs_a_credential_in_required_mode(world, m
 
 async def test_a_local_client_cannot_read_a_corpus_it_was_not_granted(world, monkeypatch):
     """End to end through the SDK, which is how an integrator reaches memory."""
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     client = run_sdk(
-        lambda: MindPalace(
+        lambda: Verilore(
             ALPHA_CORPORA["brand"],
             api_key=world.credentials["alpha-creator"]["secret"],
             create_if_missing=False,
@@ -250,7 +250,7 @@ async def test_the_runtime_shortcut_runs_inside_the_client_scope(world, monkeypa
     """
     import inspect
 
-    from mindpalace_sdk import MemoryClient
+    from verilore_sdk import MemoryClient
 
     source = inspect.getsource(MemoryClient._execute)
     runtime_call = source.index("_through_runtime")
@@ -275,9 +275,9 @@ async def test_mcp_resolves_its_credential_as_a_bearer_header(world, monkeypatch
     import mcp_server
 
     monkeypatch.setenv(
-        "MIND_PALACE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
+        "VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
     )
-    monkeypatch.setenv("MIND_PALACE_MCP_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
+    monkeypatch.setenv("VERILORE_MCP_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
 
     principal = await mcp_server._resolved_principal()
@@ -289,15 +289,15 @@ async def test_mcp_refuses_every_tool_without_a_credential_in_required_mode(worl
     import mcp_server
     from api.services import authz
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.delenv("MIND_PALACE_MCP_CREDENTIAL", raising=False)
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.delenv("VERILORE_MCP_CREDENTIAL", raising=False)
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
     with pytest.raises(authz.AuthorizationError):
         await mcp_server._resolved_principal()
 
 
 async def test_mcp_hands_its_credential_to_the_clients_it_builds(world, monkeypatch):
-    """The defect: `_client()` built `MindPalace(corpus)` with no credential.
+    """The defect: `_client()` built `Verilore(corpus)` with no credential.
 
     `context`, `search` and `sync` go through that client. It authenticated in
     no mode, so those three tools bypassed the very scope the tool had just
@@ -307,8 +307,8 @@ async def test_mcp_hands_its_credential_to_the_clients_it_builds(world, monkeypa
     """
     import mcp_server
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_MCP_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_MCP_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
     mcp_server._clients.clear()
     try:
         client = run_sdk(lambda: mcp_server._client(ALPHA_CORPORA["brand"]))
@@ -343,7 +343,7 @@ async def test_a_read_only_credential_cannot_sync_its_own_corpus(world, tmp_path
 
 
 async def test_a_read_only_credential_cannot_reindex(world, tmp_path):
-    """`mindpalace reindex` wrote documents and archive rows with no scope at all.
+    """`verilore reindex` wrote documents and archive rows with no scope at all.
 
     It reached the authorization choke point, but against the *default* local
     principal, which is unrestricted in every mode -- so in `required` mode an
@@ -384,19 +384,19 @@ async def test_a_read_only_credential_cannot_reindex(world, tmp_path):
 def test_a_server_deployment_refuses_to_start_unauthenticated(monkeypatch):
     """The defect: nothing anywhere refused this.
 
-    `MIND_PALACE_DEPLOYMENT=server` with `MIND_PALACE_AUTH_MODE=off` is an
+    `VERILORE_DEPLOYMENT=server` with `VERILORE_AUTH_MODE=off` is an
     unauthenticated service on a network, and it is what a bare `uvicorn
     api.main:app` or `docker compose up` produces. There was no guard at all, so
     the safe-looking default was the unsafe one.
 
-    `MIND_PALACE_INGEST_ROOTS` is set so this isolates the authentication
+    `VERILORE_INGEST_ROOTS` is set so this isolates the authentication
     question; the directory guard is tested on its own below.
     """
     from api.services import authz
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
 
     problems = authz.server_mode_errors()
     assert problems, "a server deployment with authentication off must be refused"
@@ -404,7 +404,7 @@ def test_a_server_deployment_refuses_to_start_unauthenticated(monkeypatch):
     with pytest.raises(RuntimeError, match="refusing to start"):
         authz.assert_server_configuration()
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     assert authz.server_mode_errors() == []
     authz.assert_server_configuration()
 
@@ -413,18 +413,18 @@ def test_a_local_deployment_is_never_refused(monkeypatch):
     """The point of the guard is the server case; local use must not regress."""
     from api.services import authz
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.delenv("MIND_PALACE_INGEST_ROOTS", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.delenv("VERILORE_INGEST_ROOTS", raising=False)
     assert authz.server_mode_errors() == []
     authz.assert_server_configuration()
 
 
 def test_the_app_refuses_to_build_as_an_unauthenticated_server(monkeypatch):
     """End of the chain: the refusal reaches the application factory."""
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
     import api.main as main_module
 
     with pytest.raises(RuntimeError, match="refusing to start"):
@@ -456,7 +456,7 @@ async def test_readiness_reports_that_a_superuser_bypasses_the_policies(monkeypa
     """
     from api.main import app
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/health/ready")
     body = response.json()
@@ -464,7 +464,7 @@ async def test_readiness_reports_that_a_superuser_bypasses_the_policies(monkeypa
     # A verdict, not an inventory. The endpoint is read by probes and anything
     # else that can reach the port, so it says "not enforcing" and stops; the
     # role name, the `BYPASSRLS` flag and the table list are what
-    # `mindpalace posture` prints for an operator who already holds credentials.
+    # `verilore posture` prints for an operator who already holds credentials.
     assert (
         response.status_code == 503
     ), "readiness must not report ready on a role that bypasses the policies"
@@ -491,7 +491,7 @@ async def test_readiness_still_answers_in_local_mode(world, monkeypatch):
     """
     from api.main import app
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/health/ready")
     body = response.json()
@@ -624,14 +624,14 @@ async def test_readiness_says_the_schema_is_missing_without_leaking(world, monke
 async def test_a_local_client_in_required_mode_cannot_read_another_tenant(world, monkeypatch):
     """The end-to-end version of the bypass, and the reason it mattered.
 
-    Without the fix, `MindPalace()` -- the CLI's own construction -- reached every
-    corpus in the database under `MIND_PALACE_AUTH_MODE=required`.
+    Without the fix, `Verilore()` -- the CLI's own construction -- reached every
+    corpus in the database under `VERILORE_AUTH_MODE=required`.
     """
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     with pytest.raises(MemoryClientError) as caught:
-        run_sdk(lambda: MindPalace().recall("mesh bands", corpus=BETA_CORPORA["brand"]))
+        run_sdk(lambda: Verilore().recall("mesh bands", corpus=BETA_CORPORA["brand"]))
     assert caught.value.status_code in (401, 404)
 
 
@@ -681,11 +681,11 @@ async def test_revoking_by_prefix_revokes_exactly_one(world):
 
 async def test_a_revoked_credential_stops_the_sdk_client(world, monkeypatch):
     """Revocation has to reach an already-constructed local client."""
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     secret = world.credentials["alpha-creator"]["secret"]
-    build = lambda: MindPalace(  # noqa: E731 - a one-line factory used twice
+    build = lambda: Verilore(  # noqa: E731 - a one-line factory used twice
         ALPHA_CORPORA["brand"], api_key=secret, create_if_missing=False
     )
     client = run_sdk(build)
@@ -721,10 +721,10 @@ def test_no_environment_variable_is_logged_or_echoed():
     import api.runtime as runtime_module
 
     source = Path(runtime_module.__file__).read_text(encoding="utf-8")
-    assert "MIND_PALACE_RUNTIME_CREDENTIAL" in source, "the runtime must read it"
+    assert "VERILORE_RUNTIME_CREDENTIAL" in source, "the runtime must read it"
     # Every reply shape is a literal dict of a fixed code and message; none may
     # interpolate the credential.
-    assert 'os.getenv("MIND_PALACE_RUNTIME_CREDENTIAL") or None' in source
+    assert 'os.getenv("VERILORE_RUNTIME_CREDENTIAL") or None' in source
     for literal in (
         '{"ok": False, "error": {"code": "forbidden", "message": "bad runtime token"}}',
         '"runtime_failed", "message": str(exc)',
@@ -735,7 +735,7 @@ def test_no_environment_variable_is_logged_or_echoed():
 def test_the_mcp_credential_is_read_from_the_environment_not_a_tool_argument():
     """A tool argument is chosen by the caller; a credential must not be.
 
-    `MIND_PALACE_MCP_CREDENTIAL` is an environment variable precisely because an
+    `VERILORE_MCP_CREDENTIAL` is an environment variable precisely because an
     MCP client that could pass its own credential needs no authorization.
     """
     import inspect
@@ -743,7 +743,7 @@ def test_the_mcp_credential_is_read_from_the_environment_not_a_tool_argument():
     import mcp_server
 
     source = inspect.getsource(mcp_server)
-    assert "MIND_PALACE_MCP_CREDENTIAL" in source
+    assert "VERILORE_MCP_CREDENTIAL" in source
     # No MCP tool takes a credential parameter.
     assert "credential: str" not in source
     assert "api_key: str" not in source
@@ -801,10 +801,10 @@ def test_the_shipped_compose_file_does_not_ship_an_unauthenticated_superuser_ser
 
     text = Path("docker-compose.yml").read_text(encoding="utf-8")
     assert (
-        "MIND_PALACE_AUTH_MODE" in text
+        "VERILORE_AUTH_MODE" in text
     ), "docker-compose must state the authorization mode it ships with"
     assert (
-        "MIND_PALACE_DEPLOYMENT" in text
+        "VERILORE_DEPLOYMENT" in text
     ), "docker-compose must state which kind of deployment it is"
 
 
@@ -860,7 +860,7 @@ def test_an_ingest_path_outside_the_allowed_roots_is_refused(tmp_path, monkeypat
 
     inside = tmp_path / "content"
     inside.mkdir()
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(tmp_path))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(tmp_path))
 
     assert require_permitted(str(inside)) == inside.resolve()
     assert require_permitted(str(inside / ".." / "content")) == inside.resolve()
@@ -885,7 +885,7 @@ def test_an_ingest_path_cannot_escape_through_a_symlink(tmp_path, monkeypatch):
     link = allowed / "link"
     link.symlink_to(outside, target_is_directory=True)
 
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(allowed))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(allowed))
     with pytest.raises(IngestPathRefused):
         require_permitted(str(link))
 
@@ -894,7 +894,7 @@ def test_an_ingest_path_refusal_does_not_disclose_the_allowed_roots(tmp_path, mo
     """A caller refused a path should not learn the directory layout from it."""
     from api.services.ingest_paths import IngestPathRefused, require_permitted
 
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(tmp_path / "very-secret-place"))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(tmp_path / "very-secret-place"))
     with pytest.raises(IngestPathRefused) as caught:
         require_permitted("/etc")
     assert "very-secret-place" not in str(caught.value)
@@ -904,7 +904,7 @@ def test_unset_roots_preserve_the_local_single_operator_capability(monkeypatch):
     """Local use is not narrowed by a control that only matters when shared."""
     from api.services.ingest_paths import require_permitted
 
-    monkeypatch.delenv("MIND_PALACE_INGEST_ROOTS", raising=False)
+    monkeypatch.delenv("VERILORE_INGEST_ROOTS", raising=False)
     assert require_permitted("/tmp").as_posix() == "/tmp"
 
 
@@ -912,16 +912,16 @@ def test_a_server_deployment_refuses_to_start_without_ingest_roots(monkeypatch):
     """Same class of problem as authentication off, refused the same way."""
     from api.services import authz
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.delenv("MIND_PALACE_INGEST_ROOTS", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.delenv("VERILORE_INGEST_ROOTS", raising=False)
 
     problems = authz.server_mode_errors()
     assert any("INGEST_ROOTS" in problem for problem in problems), problems
     with pytest.raises(RuntimeError, match="refusing to start"):
         authz.assert_server_configuration()
 
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
     assert authz.server_mode_errors() == []
     authz.assert_server_configuration()
 
@@ -929,8 +929,8 @@ def test_a_server_deployment_refuses_to_start_without_ingest_roots(monkeypatch):
 def test_a_local_deployment_is_not_refused_for_ingest_roots(monkeypatch):
     from api.services import authz
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.delenv("MIND_PALACE_INGEST_ROOTS", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.delenv("VERILORE_INGEST_ROOTS", raising=False)
     assert authz.server_mode_errors() == []
 
 
@@ -942,7 +942,7 @@ async def test_the_sync_route_refuses_a_path_outside_the_roots(world, tmp_path, 
     allowed = tmp_path / "allowed"
     allowed.mkdir()
 
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(allowed))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(allowed))
     response = await world.post(
         f"/api/corpora/{ALPHA_CORPORA['brand']}/sync",
         "alpha-creator",
@@ -970,7 +970,7 @@ async def test_ingested_content_has_a_bound(world, monkeypatch):
 
 def test_no_request_serving_surface_reads_a_raw_file():
     """A raw file read on a request path is how the roots policy has been
-    bypassed three times now: `remember --file`, `mindpalace ingest`, and
+    bypassed three times now: `remember --file`, `verilore ingest`, and
     `sync_repo` reached directly by the SDK and MCP.
 
     This does not claim the allowlist below is safe. It claims that a *new* raw
@@ -1019,7 +1019,7 @@ def test_no_request_serving_surface_reads_a_raw_file():
         ("api/runtime.py", "_ensure_token"): "the runtime writes its own token, 0600",
         ("api/services/query_log.py", "record"): (
             "appends to the operator's own query log, at the path "
-            "MIND_PALACE_QUERY_LOG names. Not caller input, and append-only, so "
+            "VERILORE_QUERY_LOG names. Not caller input, and append-only, so "
             "there is nothing here for a request to disclose"
         ),
         ("api/services/query_log.py", "feedback"): (
@@ -1041,7 +1041,7 @@ def test_no_request_serving_surface_reads_a_raw_file():
             "reads /etc/os-release to detect the Linux distribution; machine's "
             "own configuration, not caller input"
         ),
-        ("mindpalace_sdk.py", "_load"): (
+        ("verilore_sdk.py", "_load"): (
             "reads a caller-supplied receipt or Memory Pack artifact, like the "
             "CLI revalidate exception"
         ),
@@ -1086,7 +1086,7 @@ def test_no_request_serving_surface_reads_a_raw_file():
         for p in list(Path("cli").rglob("*.py")) + list(Path("api").rglob("*.py"))
         if "__pycache__" not in str(p)
     ]
-    surfaces.append(Path("mindpalace_sdk.py"))
+    surfaces.append(Path("verilore_sdk.py"))
 
     offenders = []
     for path in surfaces:
@@ -1154,7 +1154,7 @@ async def test_a_read_only_credential_is_refused_on_every_surface(
     A read-only identity that can write on one door and not another is the
     defect, not the write.
     """
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     secret = world.credentials["alpha-reviewer"]["secret"]
 
@@ -1165,7 +1165,7 @@ async def test_a_read_only_credential_is_refused_on_every_surface(
         out = {}
 
         def run():
-            client = MindPalace(ALPHA_CORPORA["brand"], api_key=secret, create_if_missing=False)
+            client = Verilore(ALPHA_CORPORA["brand"], api_key=secret, create_if_missing=False)
             try:
                 if coro_name == "snapshot":
                     client.memory.snapshot(corpus=ALPHA_CORPORA["brand"])
@@ -1224,14 +1224,14 @@ async def test_a_read_only_credential_is_refused_on_mcp_and_the_runtime_socket(
     secret = world.credentials["alpha-reviewer"]["secret"]
     corpus = ALPHA_CORPORA["brand"]
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
     # The credential is resolved through the world's session factory, the same
     # way the existing MCP identity tests do it, so the tool sees a real
     # read_only credential rather than a hand-built principal. A hand-built
     # principal has no secret, and `_client()` needs one to build the SDK client.
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
-    monkeypatch.setenv("MIND_PALACE_MCP_CREDENTIAL", secret)
+    monkeypatch.setenv("VERILORE_MCP_CREDENTIAL", secret)
 
     # --- MCP --------------------------------------------------------------
     # A subprocess, for two reasons. MCP reaches its tools over stdio with no
@@ -1271,9 +1271,9 @@ async def test_a_read_only_credential_is_refused_on_mcp_and_the_runtime_socket(
             "    print('OK:' + repr(result))\n"
         )
         env = dict(_os.environ)
-        env["MIND_PALACE_AUTH_MODE"] = "required"
-        env["MIND_PALACE_MCP_CREDENTIAL"] = secret
-        env["MIND_PALACE_RUNTIME"] = "0"
+        env["VERILORE_AUTH_MODE"] = "required"
+        env["VERILORE_MCP_CREDENTIAL"] = secret
+        env["VERILORE_RUNTIME"] = "0"
         # The session database is named for this process's pid, so a child
         # process inherits a name that no longer exists. The world's engine
         # connects as the runtime role against the same database; use that URL.
@@ -1340,7 +1340,7 @@ async def test_a_read_only_credential_is_refused_on_mcp_and_the_runtime_socket(
             "# minted by the documented command. So start it the documented way,\n"
             "# in a private state directory, which also means a daemon left over\n"
             "# from another test cannot answer this probe.\n"
-            "state = pathlib.Path(os.environ['MIND_PALACE_STATE_DIR'])\n"
+            "state = pathlib.Path(os.environ['VERILORE_STATE_DIR'])\n"
             "state.mkdir(parents=True, exist_ok=True)\n"
             "started = subprocess.run(\n"
             "    [sys.executable, '-m', 'cli.main', 'runtime', 'start'],\n"
@@ -1360,8 +1360,8 @@ async def test_a_read_only_credential_is_refused_on_mcp_and_the_runtime_socket(
             "    print('REPLY:' + json.dumps(runtime.call(payload, timeout=180.0), default=str))\n"
         )
         env = dict(_os.environ)
-        env["MIND_PALACE_AUTH_MODE"] = "required"
-        env["MIND_PALACE_RUNTIME_CREDENTIAL"] = secret
+        env["VERILORE_AUTH_MODE"] = "required"
+        env["VERILORE_RUNTIME_CREDENTIAL"] = secret
         # As above: a child process cannot see a pid-named session database.
         env["DATABASE_URL"] = runtime_url()
         # A runtime is a long-lived daemon that outlives any single test. Sharing
@@ -1370,7 +1370,7 @@ async def test_a_read_only_credential_is_refused_on_mcp_and_the_runtime_socket(
         # fail with `build_mismatch`, an error about builds and not about
         # authorisation. A private state directory means the only runtime that
         # can answer is the one this probe starts.
-        env["MIND_PALACE_STATE_DIR"] = str(Path(state_dir))
+        env["VERILORE_STATE_DIR"] = str(Path(state_dir))
         completed = subprocess.run(
             [_sys.executable, "-c", program],
             cwd=str(Path(__file__).resolve().parents[1]),
@@ -1407,9 +1407,9 @@ MCP_OTHER_CORPUS = "mcp-scope-probe-other"
 # ---------------------------------------------------------------------------
 # Revocation, on a process that stays up.
 #
-# `mindpalace credential revoke` says "It stops working on the next request".
+# `verilore credential revoke` says "It stops working on the next request".
 # HTTP honours that. An MCP server does not: `_clients` caches one
-# `MindPalace` per corpus for the life of the process, and `MindPalace` resolves
+# `Verilore` per corpus for the life of the process, and `Verilore` resolves
 # its principal once in `__init__`. The second call after a revoke ran with the
 # revoked identity, and nothing in the tool said so.
 # ---------------------------------------------------------------------------
@@ -1423,7 +1423,7 @@ def test_a_revoked_credential_stops_working_in_a_live_mcp_process(monkeypatch):
     principal; that process builds a fresh client.
 
     This passes today, and is here so it stays that way. `_clients` caches one
-    `MindPalace` per corpus for the life of the process and `MindPalace` resolves
+    `Verilore` per corpus for the life of the process and `Verilore` resolves
     its principal once, in `__init__`, so a cache that outlived a revoke would be
     a real bypass. It does not, because every tool that reaches `_client()` does
     so inside `_caller()`, which re-resolves the credential on every call and
@@ -1435,21 +1435,21 @@ def test_a_revoked_credential_stops_working_in_a_live_mcp_process(monkeypatch):
     returns on this database at all, before or after, so it cannot be used to
     show a stale scope. Both facts are recorded rather than assumed.
     """
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
     program = f"""
 import asyncio, os
 
 CORPUS = {MCP_CORPUS!r}
 OTHER = {MCP_OTHER_CORPUS!r}
-os.environ["MIND_PALACE_AUTH_MODE"] = "off"
+os.environ["VERILORE_AUTH_MODE"] = "off"
 
 from api.services import authz
 from api.services.db import AsyncSessionLocal
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-MindPalace(CORPUS, runtime=False)
-MindPalace(OTHER, runtime=False)
+Verilore(CORPUS, runtime=False)
+Verilore(OTHER, runtime=False)
 
 
 async def issue():
@@ -1467,8 +1467,8 @@ async def revoke(identifier):
 # Provisioning and revocation are the operator's job, as the local principal.
 # The subject under test is the MCP process, which acts as the credential.
 issued = asyncio.run(issue())
-os.environ["MIND_PALACE_AUTH_MODE"] = "required"
-os.environ["MIND_PALACE_MCP_CREDENTIAL"] = issued["secret"]
+os.environ["VERILORE_AUTH_MODE"] = "required"
+os.environ["VERILORE_MCP_CREDENTIAL"] = issued["secret"]
 
 import mcp_server
 
@@ -1493,8 +1493,8 @@ probe("AFTER")
 
     root = Path(__file__).resolve().parents[1]
     env = dict(os.environ)
-    env["MIND_PALACE_AUTH_MODE"] = "required"
-    env["MIND_PALACE_RUNTIME"] = "0"
+    env["VERILORE_AUTH_MODE"] = "required"
+    env["VERILORE_RUNTIME"] = "0"
     done = subprocess.run(
         [sys.executable, "-c", program],
         cwd=str(root),

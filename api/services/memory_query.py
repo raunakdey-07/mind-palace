@@ -625,7 +625,7 @@ async def query(
     the next query the whole batch. The alternative -- filling the cache only on
     write -- leaves any corpus authored without embeddings re-encoded on every
     single read: measured at 3.2 s per recall at 200 statements, against 94 ms once
-    the cache is warm. `mindpalace remember` deliberately does not embed, because
+    the cache is warm. `verilore remember` deliberately does not embed, because
     importing the model costs 5.3 s and a first memory must not pay that.
 
     The write-back is bounded three ways, because a read that writes is a real
@@ -634,7 +634,7 @@ async def query(
     a read-only session, so a read-only connection still answers. And it is
     best-effort, so nothing here can fail a query that has already been answered.
     The cache holds no authority -- deleting the table costs latency and nothing else
-    -- and `mindpalace reindex` still rebuilds every row from immutable claim text.
+    -- and `verilore reindex` still rebuilds every row from immutable claim text.
     """
     from asyncio import to_thread
 
@@ -738,7 +738,7 @@ def _note_degraded() -> None:
     _DEGRADED_NOTED = True
     print(
         "retrieval: lexical (the embedding model could not be loaded, so relevance "
-        "fell back to token overlap; set MIND_PALACE_LEXICAL=1 to choose this on "
+        "fell back to token overlap; set VERILORE_LEXICAL=1 to choose this on "
         "purpose, or install the model for semantic ranking)",
         file=sys.stderr,
     )

@@ -22,7 +22,7 @@ import pytest
 
 from api.models.memory import MemoryResponse
 from api.models.remember import RememberResult
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -98,7 +98,7 @@ def _remember_body(corpus: str) -> bytes:
 
 
 def _client(server, *, name=None, retries=2, backoff=0.2, timeout=5):
-    return MindPalace(
+    return Verilore(
         name or ("t" + uuid4().hex[:12]),
         base_url=f"http://127.0.0.1:{server.server_address[1]}",
         retries=retries,
@@ -156,7 +156,7 @@ def test_closed_port_transport_error(server):
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
     sock.close()
-    mp = MindPalace("t5", base_url=f"http://127.0.0.1:{port}", retries=0, timeout=1)
+    mp = Verilore("t5", base_url=f"http://127.0.0.1:{port}", retries=0, timeout=1)
     started = time.monotonic()
     with pytest.raises(MemoryClientError) as caught:
         mp.memory.current(query="")
@@ -196,7 +196,7 @@ def test_remember_retries_with_identical_body(server):
 @pytest.mark.parametrize("kwargs", [{"retries": -1}, {"timeout": 0}, {"backoff": -0.1}])
 def test_constructor_rejects_invalid(kwargs):
     with pytest.raises(ValueError):
-        MindPalace("t8", **kwargs)
+        Verilore("t8", **kwargs)
 
 
 def test_invalid_response_not_retried(server):

@@ -57,7 +57,7 @@ def disposable_postgres_url() -> Generator[str, None, None]:
     database = validation.DisposableDatabase(source_url)
     try:
         database.create()
-        cursor_secret = os.environ.setdefault("MIND_PALACE_CURSOR_SECRET", CURSOR_SECRET)
+        cursor_secret = os.environ.setdefault("VERILORE_CURSOR_SECRET", CURSOR_SECRET)
         validation.run_migrations(database.url, cursor_secret)
         yield database.url
     finally:

@@ -903,6 +903,7 @@ jobs:
           MIND_PALACE_TEST_BUILD_WHEEL: "1"
           MIND_PALACE_TEST_DB: off
         run: |
+          echo "MIND_PALACE_TEST_BUILD_WHEEL=$MIND_PALACE_TEST_BUILD_WHEEL"
           /tmp/wheelenv/bin/pip install --quiet pytest build
           /tmp/wheelenv/bin/python -m pytest "$GITHUB_WORKSPACE/tests/test_wheel_contents.py::test_a_built_wheel_contains_every_declared_module" -v
 

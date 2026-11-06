@@ -25,6 +25,16 @@ def tvl_path_factory(tmp_path_factory):
     return tmp_path_factory
 
 
+@pytest.fixture
+def tvl_path(tvl_path_factory):
+    """Single temporary directory for tests that need scratch space.
+
+    Wraps pytest's built-in ``tmp_path`` so tests can write build artifacts
+    and other temporary files.
+    """
+    return tvl_path_factory.mktemp("tvl")
+
+
 # M009 cursor tests exercise the real HMAC boundary. Production configuration
 # supplies this value explicitly; tests use a deterministic non-secret value.
 os.environ.setdefault("VERILORE_CURSOR_SECRET", "m009-test-cursor-secret-" + "x" * 48)

@@ -910,7 +910,7 @@ a clean machine.
   `sentence-transformers` optional would mean a plain `pip install mindpalace-os`
   stopped ranking semantically, which is a silent behaviour change for the majority
   case. What *is* guaranteed, and tested, is that nothing needs the model merely to
-  import or run a command -- `tests/test_m016_model_free_package.py` blocks the stack
+  import or run a command -- `tests/test_model_free_package.py` blocks the stack
   at the import hook and checks `--help`, `init`, `recall` and `explain` still work.
 
 ### Measured, not changed
@@ -1022,7 +1022,7 @@ Carried forward unchanged from v0.8.0 and now reachable from every surface.
   with no CLI extra, because the receipt carries the response it describes.
 - **Cross-surface parity.** CLI, SDK, REST and MCP return the same authoritative
   memory, evidence, temporal state and receipt. The runtime path does too, asserted in
-  `tests/test_m016_runtime_equivalence.py`.
+  `tests/test_runtime_equivalence.py`.
 - **Memory Pack v1** unchanged, and byte-identical whether produced in-process or
   through the runtime.
 

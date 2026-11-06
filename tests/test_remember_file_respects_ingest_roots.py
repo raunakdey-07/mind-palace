@@ -1,6 +1,6 @@
 """`remember --file` must obey the same ingest roots as `ingest-repo`.
 
-The deployment policy is `MIND_PALACE_INGEST_ROOTS`: filesystem reads happen
+The deployment policy is `VERILORE_INGEST_ROOTS`: filesystem reads happen
 only inside those directories. Two surfaces enforced it -- `POST /api/ingest/repo`
 and `POST /api/corpora/{name}/sync` -- and `remember(file=...)`, which reaches
 `api/services/remember.py::_read`, did not. A path the deployment refused came
@@ -35,18 +35,18 @@ def _run(args, env_extra):
     return done
 
 
-def test_remember_file_refuses_a_path_outside_the_ingest_roots(tmp_path):
+def test_remember_file_refuses_a_path_outside_the_ingest_roots(tvl_path):
     """The reproducer: the same path that `ingest-repo` refuses."""
     if not os.getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
-    allowed = tmp_path / "allowed"
+    allowed = tvl_path / "allowed"
     allowed.mkdir()
-    outside = tmp_path / "outside.md"
+    outside = tvl_path / "outside.md"
     outside.write_text("The root password is correct-horse-battery.\n")
 
     env = {
-        "MIND_PALACE_INGEST_ROOTS": str(allowed),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(allowed),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }
@@ -54,20 +54,20 @@ def test_remember_file_refuses_a_path_outside_the_ingest_roots(tmp_path):
 
     # The surface that already enforced it, for contrast.
     refused = _run(["ingest-repo", str(outside), "--corpus", corpus], env)
-    assert "outside MIND_PALACE_INGEST_ROOTS" in refused.stdout + refused.stderr, refused.stdout
+    assert "outside VERILORE_INGEST_ROOTS" in refused.stdout + refused.stderr, refused.stdout
 
     # The one that did not.
     allowed_write = _run(["remember", "--file", str(outside), "--corpus", corpus], env)
     shown = allowed_write.stdout + allowed_write.stderr
     assert "Remembered" not in shown, shown
-    assert "outside MIND_PALACE_INGEST_ROOTS" in shown, shown
+    assert "outside VERILORE_INGEST_ROOTS" in shown, shown
 
 
-def test_remember_file_still_works_inside_the_ingest_roots(tmp_path):
+def test_remember_file_still_works_inside_the_ingest_roots(tvl_path):
     """A fix that refuses everything would pass the test above. This one fails."""
     if not os.getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
-    root = tmp_path / "docs"
+    root = tvl_path / "docs"
     root.mkdir()
     doc = root / "note.md"
     doc.write_text("The cache is warm on every runner.\n")
@@ -75,8 +75,8 @@ def test_remember_file_still_works_inside_the_ingest_roots(tmp_path):
     done = _run(
         ["remember", "--file", str(doc), "--corpus", "roots-allow-remember"],
         {
-            "MIND_PALACE_INGEST_ROOTS": str(root),
-            "MIND_PALACE_RUNTIME": "0",
+            "VERILORE_INGEST_ROOTS": str(root),
+            "VERILORE_RUNTIME": "0",
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
         },
@@ -85,20 +85,20 @@ def test_remember_file_still_works_inside_the_ingest_roots(tmp_path):
     assert "Remembered" in shown, shown
 
 
-def test_the_message_names_no_allowed_root(tmp_path):
+def test_the_message_names_no_allowed_root(tvl_path):
     """A refusal that names the roots tells a caller what to aim at."""
     if not os.getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
-    allowed = tmp_path / "secret-root-dir"
+    allowed = tvl_path / "secret-root-dir"
     allowed.mkdir()
-    outside = tmp_path / "outside.md"
+    outside = tvl_path / "outside.md"
     outside.write_text("content\n")
 
     done = _run(
         ["remember", "--file", str(outside), "--corpus", "roots-leak-check"],
         {
-            "MIND_PALACE_INGEST_ROOTS": str(allowed),
-            "MIND_PALACE_RUNTIME": "0",
+            "VERILORE_INGEST_ROOTS": str(allowed),
+            "VERILORE_RUNTIME": "0",
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
         },

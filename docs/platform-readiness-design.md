@@ -15,7 +15,7 @@ report.
 * Every tenant table is scoped by `corpus_id` alone. There is **no** resource- or
   document-level ownership column anywhere.
 * Thirteen tables carry row-level security; every policy is one of two shapes:
-  `mindpalace_allowed_corpus(corpus_id)`, or — for `chunks` — an `EXISTS` against
+  `verilore_allowed_corpus(corpus_id)`, or — for `chunks` — an `EXISTS` against
   the parent `documents` row.
 * `api/errors.py` and `cli/errors.py` exist but are *message* helpers, not a type
   hierarchy. The SDK has exactly two exception classes.
@@ -88,7 +88,7 @@ refuses rather than degrades, which is the only safe failure mode.
 
 Not implemented, and not implementable here with a claim of completeness. It needs
 a key provider outside the database, a migration of every plaintext column
-including vectors, and a documented answer for backups that Mind Palace does not
+including vectors, and a documented answer for backups that Verilore does not
 control. Building half of it and calling it erasure is the failure the task names
 explicitly.
 
@@ -140,7 +140,7 @@ running it:
    interpolates the schema it is running in.
 2. **Permissive policies are OR'd.** Migration `008`'s policies were still present,
    so the new ones were installed, correct, and inert. The first run of the peer
-   test failed for that reason alone. `011` now drops `mindpalace_tenant` before
+   test failed for that reason alone. `011` now drops `verilore_tenant` before
    creating its replacements.
 3. **`ON DELETE SET NULL` cannot work on an append-only table.** The FK action
    issues an `UPDATE`, which `memory_reject_mutation` refuses — so deleting a
@@ -148,7 +148,7 @@ running it:
    `RESTRICT` is the coherent choice: a principal who owns a document cannot be
    deleted until it is erased or shared.
 
-**The error taxonomy and request ids are implemented** (`mindpalace_errors.py`,
+**The error taxonomy and request ids are implemented** (`verilore_errors.py`,
 `identify_request` middleware). The existing `detail` shape is preserved; the new
 fields were added beside it.
 

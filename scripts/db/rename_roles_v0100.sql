@@ -1,7 +1,7 @@
--- Rename database roles from Mind Palace to Verilore.
+-- Rename database roles from Verilore to Verilore.
 --
 -- Run this once, as a superuser, before `alembic upgrade head` when the
--- database already has the mindpalace_* roles:
+-- database already has the verilore_* roles:
 --
 --     psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/db/rename_roles_v0100.sql
 --
@@ -17,14 +17,14 @@
 
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_owner') AND
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_owner') AND
        NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_owner') THEN
-        ALTER ROLE mindpalace_owner RENAME TO verilore_owner;
+        ALTER ROLE verilore_owner RENAME TO verilore_owner;
     END IF;
 
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_runtime') AND
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_runtime') AND
        NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_runtime') THEN
-        ALTER ROLE mindpalace_runtime RENAME TO verilore_runtime;
+        ALTER ROLE verilore_runtime RENAME TO verilore_runtime;
     END IF;
 END
 $$;

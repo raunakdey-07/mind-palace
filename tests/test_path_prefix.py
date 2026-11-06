@@ -202,7 +202,7 @@ async def test_scoped_conflicts_match_unscoped():
 
 @pytest.mark.asyncio
 async def test_path_prefix_does_not_bypass_corpus_authorization(monkeypatch):
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     name_x = "tx" + uuid.uuid4().hex[:8]
     name_y = "ty" + uuid.uuid4().hex[:8]
     async with db_module.admin_session_scope() as db:
@@ -372,7 +372,7 @@ async def test_path_prefix_empty_is_422():
 
 def test_sdk_pack_sends_path_prefix():
     corpus = corpus_name()
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
     import httpx
 
     captured = {}
@@ -406,7 +406,7 @@ def test_sdk_pack_sends_path_prefix():
     client = httpx.Client(transport=httpx.MockTransport(handle))
     import json as _json
 
-    mp = MindPalace(corpus, base_url="http://test")
+    mp = Verilore(corpus, base_url="http://test")
     # monkeypatch httpx.post globally? The SDK uses httpx.post directly.
     orig_post = httpx.post
     httpx.post = client.post

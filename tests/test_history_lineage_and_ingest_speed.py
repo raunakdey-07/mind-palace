@@ -2,7 +2,7 @@
 
 Four of them, and they are four different promises the product makes:
 
-* **History walks the supersession graph in both directions.** `mindpalace
+* **History walks the supersession graph in both directions.** `verilore
   history` anchored on a retired claim, found nothing to walk back to, and
   reported the retired claim as the one that is true now. The graph has edges in
   both directions and the reader has to follow both of them.
@@ -36,12 +36,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #: The first was written at 11:25 and the second at 11:30, in two different
 #: documents, and the second retired the first across the document boundary.
 OLD_CLAIM = (
-    "Mind Palace's default install is 216 MB total (79 MB embedding stack) using "
+    "Verilore's default install is 216 MB total (79 MB embedding stack) using "
     "onnxruntime as the default embedding backend, with sentence-transformers moved "
     "to the optional [torch] extra."
 )
 NEW_CLAIM = (
-    "Mind Palace replaced the default 5.1 GB PyTorch embedder with a 216 MB default "
+    "Verilore replaced the default 5.1 GB PyTorch embedder with a 216 MB default "
     "ONNX runtime backend (79 MB embedding stack, min cosine 0.99999833), cutting "
     "cold recall latency from 7.63s to 1.42s (0.32s warm)."
 )

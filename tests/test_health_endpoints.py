@@ -68,7 +68,7 @@ def test_readiness_reports_healthy_schema(monkeypatch):
     # The posture verdict is here for the same reason: `required: true` says the
     # application checks credentials, not that the database enforces anything
     # underneath. Readiness reports the verdict and stops -- the role, the
-    # BYPASSRLS flag and the table inventory are `mindpalace posture`'s job, for
+    # BYPASSRLS flag and the table inventory are `verilore posture`'s job, for
     # an operator who already holds database credentials, not for anything that
     # can reach the port. See `test_credential_management.py` for the real role.
     body = response.json()
@@ -108,7 +108,7 @@ def test_readiness_reports_timeout_without_details(monkeypatch):
             await asyncio.sleep(0.05)
             return type("Result", (), {"one": lambda self: (True, True, True)})()
 
-    monkeypatch.setenv("MIND_PALACE_READINESS_TIMEOUT_SECONDS", "0.001")
+    monkeypatch.setenv("VERILORE_READINESS_TIMEOUT_SECONDS", "0.001")
     monkeypatch.setattr("api.services.db.session_scope", lambda: SlowSession())
     with TestClient(app) as client:
         response = client.get("/health/ready")

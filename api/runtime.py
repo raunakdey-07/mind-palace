@@ -4,7 +4,7 @@
 """A local runtime that keeps the embedding model and the database pool warm.
 
 Why this exists, measured and not assumed. On mains power a one-shot
-`mindpalace recall` costs 6.53 s, of which the memory work is 61 ms:
+`verilore recall` costs 6.53 s, of which the memory work is 61 ms:
 
     interpreter start                          0.038 s
     CLI + api imports                          0.515 s
@@ -14,7 +14,7 @@ Why this exists, measured and not assumed. On mains power a one-shot
     import sentence_transformers            +    2.660 s
     model construct + first embed          +    0.486 s
     ------------------------------------------------------------------
-    one-shot `mindpalace recall`               6.53 s
+    one-shot `verilore recall`               6.53 s
     in-process warm recall + receipt           0.061 s
 
 89% of the wall clock is Python import and model construction for a CLI that exits
@@ -40,7 +40,7 @@ Boundaries, in one place so they are auditable:
   runtime never wedges the CLI.
 * Bounded. An idle runtime exits, so it does not outlive the session that made it,
   and a burst is bounded so `to_thread` cannot queue without limit.
-* Never required. `MIND_PALACE_RUNTIME=0` or `--no-runtime` runs in-process, which
+* Never required. `VERILORE_RUNTIME=0` or `--no-runtime` runs in-process, which
   is the pre-existing behaviour and remains fully supported for the SDK and server.
 """
 
@@ -92,10 +92,10 @@ def build_hash() -> str:
     `PROTOCOL` is a hand-maintained integer. It does not change when the code
     changes, so a runtime started before an edit keeps answering with the old
     code and nothing notices. That is not hypothetical: during the first-hour
-    audit, `mindpalace remember` on the CLI kept failing with a stale
+    audit, `verilore remember` on the CLI kept failing with a stale
     CheckViolationError *after* the fix was applied and the Python API had been
     verified working, because the CLI routes through a long-lived runtime that had
-    loaded the old module. `MIND_PALACE_RUNTIME=0` diagnosed it in one command and
+    loaded the old module. `VERILORE_RUNTIME=0` diagnosed it in one command and
     the error said nothing about a process that had not reloaded.
 
     A client that can see the runtime's build can refuse to talk to it, and say
@@ -115,7 +115,7 @@ def build_hash() -> str:
 
     digest = hashlib.sha256()
     try:
-        digest.update(importlib.metadata.version("mindpalace-os").encode())
+        digest.update(importlib.metadata.version("verilore-os").encode())
     except importlib.metadata.PackageNotFoundError:
         # A source checkout that was never installed. The file walk below still
         # gives a stable identity, which is what the handshake needs.
@@ -200,13 +200,13 @@ def state_dir() -> Path:
     0700 because the socket inside it is the authorisation boundary, and the
     fallback token lives beside it.
     """
-    base = os.getenv("MIND_PALACE_STATE_DIR")
+    base = os.getenv("VERILORE_STATE_DIR")
     if base:
         return Path(base)
     runtime = os.getenv("XDG_RUNTIME_DIR")
     if runtime:
-        return Path(runtime) / "mindpalace"
-    return Path(os.getenv("LOCALAPPDATA") or Path.home() / ".cache") / "mindpalace"
+        return Path(runtime) / "verilore"
+    return Path(os.getenv("LOCALAPPDATA") or Path.home() / ".cache") / "verilore"
 
 
 def socket_path() -> Path:
@@ -282,7 +282,7 @@ def call(payload: dict, *, timeout: float = 30.0, connect_timeout: float = CONNE
 
     Synchronous because every caller is synchronous. The socket work is async
     internally, and the event loop is created and closed here so that no caller has
-    to own one -- `mindpalace runtime status` is not a program with a loop.
+    to own one -- `verilore runtime status` is not a program with a loop.
     """
     if not use_unix():
         raise RuntimeError_("this platform has no Unix domain sockets")
@@ -345,7 +345,7 @@ def enabled() -> bool:
     off. Every caller checks this first, so the opt-out is one environment variable
     and it applies to the CLI, the SDK and the runtime command alike.
     """
-    return os.getenv("MIND_PALACE_RUNTIME") != "0" and use_unix()
+    return os.getenv("VERILORE_RUNTIME") != "0" and use_unix()
 
 
 def reachable() -> bool:
@@ -370,7 +370,7 @@ def status() -> RuntimeStatus:
     try:
         reply = call({"op": "status"}, timeout=2.0)
     except Exception as exc:  # noqa: BLE001 - status is diagnostic, so it cannot fail
-        return RuntimeStatus(detail=str(exc) if os.getenv("MIND_PALACE_VERBOSE") else None)
+        return RuntimeStatus(detail=str(exc) if os.getenv("VERILORE_VERBOSE") else None)
     if not reply.get("ok"):
         return RuntimeStatus(state="failed", detail=reply.get("error", {}).get("message"))
     result = reply["result"]
@@ -389,7 +389,7 @@ def spawn() -> bool:
 
     Never waits, and cannot: the runtime is a long-lived process that exits on idle,
     so joining it would hang the caller forever. A caller that wants to know when the
-    model is ready polls `status()` instead -- `mindpalace runtime start --wait` does
+    model is ready polls `status()` instead -- `verilore runtime start --wait` does
     exactly that.
 
     Not waiting is also the point. The interesting property is that the *next*
@@ -410,7 +410,7 @@ def spawn() -> bool:
 
     import subprocess
 
-    argv = [sys.executable, "-m", "mindpalace_runtime"]
+    argv = [sys.executable, "-m", "verilore_runtime"]
     kwargs = {}
     if sys.platform == "win32":  # pragma: no cover - platform specific
         kwargs["creationflags"] = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
@@ -475,7 +475,7 @@ async def serve() -> int:
         os.chmod(directory, 0o700)
     token = _read_token()
     if not token:
-        raise RuntimeError_("no runtime token; start with `mindpalace runtime start`")
+        raise RuntimeError_("no runtime token; start with `verilore runtime start`")
 
     path = socket_path()
     with contextlib.suppress(OSError):
@@ -555,7 +555,7 @@ async def _warm(runtime: _Runtime) -> None:
 def _load_model() -> None:
     from api.services.embedder import Embedder
 
-    Embedder().embed(["mind palace runtime warmup"])
+    Embedder().embed(["verilore runtime warmup"])
 
 
 async def _idle_watch(runtime: _Runtime, stop: asyncio.Event) -> None:
@@ -621,7 +621,7 @@ async def _serve_one(
                 "code": "protocol_mismatch",
                 "message": (
                     f"this runtime speaks protocol {PROTOCOL}; the client asked for "
-                    f"{request.get('protocol')}. Restart it with `mindpalace runtime stop`."
+                    f"{request.get('protocol')}. Restart it with `verilore runtime stop`."
                 ),
             },
         }
@@ -638,8 +638,8 @@ async def _serve_one(
                 "code": "build_mismatch",
                 "message": (
                     f"the running runtime is build {build_id()} but this command is "
-                    f"{asked_build}. Run `mindpalace runtime stop` to discard it, or "
-                    f"MIND_PALACE_RUNTIME=0 to bypass it."
+                    f"{asked_build}. Run `verilore runtime stop` to discard it, or "
+                    f"VERILORE_RUNTIME=0 to bypass it."
                 ),
             },
         }
@@ -657,8 +657,8 @@ async def _serve_one(
                 "message": (
                     f"the running runtime is attached to database "
                     f"{database_id()} but this command names {asked_database}. "
-                    f"Run `mindpalace runtime stop` to discard it, or "
-                    f"MIND_PALACE_RUNTIME=0 to bypass it."
+                    f"Run `verilore runtime stop` to discard it, or "
+                    f"VERILORE_RUNTIME=0 to bypass it."
                 ),
             },
         }
@@ -715,7 +715,7 @@ async def _dispatch(operation: str, request: dict, runtime: _Runtime) -> dict:
     decide which corpora the caller may reach. That is the same split as the HTTP
     surface, where the request proves nothing about authority on its own.
 
-    So the runtime resolves a principal once, from `MIND_PALACE_RUNTIME_CREDENTIAL`,
+    So the runtime resolves a principal once, from `VERILORE_RUNTIME_CREDENTIAL`,
     and every operation below runs inside that scope. Without it, the ContextVar
     holds the default local principal -- unrestricted, with a `{*}` database
     scope -- and a wire-supplied corpus name would select any corpus in the
@@ -737,7 +737,7 @@ async def _runtime_principal():
     from api.services.authz import AuthorizationError, auth_required, resolve_principal
     from api.services.db import AsyncSessionLocal
 
-    credential = os.getenv("MIND_PALACE_RUNTIME_CREDENTIAL") or None
+    credential = os.getenv("VERILORE_RUNTIME_CREDENTIAL") or None
     if credential is None and auth_required():
         # Refused before the lookup rather than after it, so the message names
         # the setting the operator has to set. `resolve_principal` would refuse
@@ -745,7 +745,7 @@ async def _runtime_principal():
         # operator nothing about a runtime that has no way to present one.
         raise AuthorizationError(
             "unauthenticated",
-            "the runtime has no credential configured; set MIND_PALACE_RUNTIME_CREDENTIAL",
+            "the runtime has no credential configured; set VERILORE_RUNTIME_CREDENTIAL",
             401,
         )
     async with AsyncSessionLocal() as db:

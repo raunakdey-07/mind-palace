@@ -20,7 +20,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 from live_server import live_server  # noqa: F401,F811  module-scoped server fixture
 from tenant_harness import RUNTIME_ROLE, apply_as_runtime, runtime_url
@@ -99,7 +99,7 @@ def test_role_properties():
 
 def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     key = live_server.keys["acme"]
-    mp = MindPalace(
+    mp = Verilore(
         live_server.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
 
@@ -126,7 +126,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     # 3. Generation context.
     p_full = mp.memory.pack(query="", budget=64000, path_prefix=SCOPE)
     p = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
-    blob = p.model_dump_json()
+    blob = p.model_duvl_json()
     assert "warm, plain and confident" in blob, f"step 3: voice missing: {blob}"
     assert 'Never use the word \\"curated\\"' in blob, f"step 3: curated rule missing: {blob}"
     assert "14 March 2027" in blob, f"step 3: spring date missing: {blob}"
@@ -154,7 +154,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
             print(
                 f"budget={budget} current={len(packs[budget].current_memories)} "
                 f"changes={len(packs[budget].changes)} truncated={packs[budget].truncated} "
-                f"json_chars={len(packs[budget].model_dump_json())}"
+                f"json_chars={len(packs[budget].model_duvl_json())}"
             )
         small = packs[4000]
         full_ids = {c.id for c in p_full.current_memories}
@@ -169,7 +169,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         state="rejected",
     )
     p2 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
-    blob2 = p2.model_dump_json()
+    blob2 = p2.model_duvl_json()
     assert "Ride Into Spring" not in blob2, f"step 4: rejected copy still in pack: {blob2}"
     p3 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE, include_states=["rejected"])
     found = next(
@@ -182,7 +182,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     )
     assert (
         found is not None
-    ), f"step 4: rejected claim not found with include_states: {p3.model_dump_json()}"
+    ), f"step 4: rejected claim not found with include_states: {p3.model_duvl_json()}"
 
     # 5. Reviewer corrects the voice.
     r = mp.memory.remember(
@@ -192,7 +192,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
         supersedes_claim_id=voice_id,
     )
     p4 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
-    blob4 = p4.model_dump_json()
+    blob4 = p4.model_duvl_json()
     assert any(
         "warm, plain and direct" in c.claim for c in p4.current_memories
     ), f"step 5: corrected voice missing: {blob4}"
@@ -202,18 +202,18 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     h = mp.memory.history(query="", path=r.path)
     assert any(
         "warm, plain and confident" in c.claim for change in h.changes for c in change.previous
-    ), f"step 5: history previous missing old voice: {h.model_dump_json()}"
+    ), f"step 5: history previous missing old voice: {h.model_duvl_json()}"
 
     # 6. Brand team edits the guide.
     _ingest(live_server, key, MODIFIED_GUIDE, "brand/guide.md", corpus=live_server.corpora["acme"])
     p5 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert not any(
         "free shipping" in c.claim for c in p5.current_memories
-    ), f"step 6: free shipping still current: {p5.model_dump_json()}"
+    ), f"step 6: free shipping still current: {p5.model_duvl_json()}"
     h2 = mp.memory.history(query="", path="brand/guide.md")
     assert (
-        "free shipping" in h2.model_dump_json()
-    ), f"step 6: history missing free shipping: {h2.model_dump_json()}"
+        "free shipping" in h2.model_duvl_json()
+    ), f"step 6: history missing free shipping: {h2.model_duvl_json()}"
 
     # 7. Withdraw a remembered rule.
     mp.memory.remember(
@@ -224,7 +224,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     p6 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert any(
         "Never mention competitors by name" in c.claim for c in p6.current_memories
-    ), f"step 7: rule missing from current: {p6.model_dump_json()}"
+    ), f"step 7: rule missing from current: {p6.model_duvl_json()}"
 
     mp.memory.remember(
         statement="Never mention competitors by name.",
@@ -235,7 +235,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
     p7 = mp.memory.pack(query="", budget=16000, path_prefix=SCOPE)
     assert not any(
         "Never mention competitors by name" in c.claim for c in p7.current_memories
-    ), f"step 7: rejected rule still current: {p7.model_dump_json()}"
+    ), f"step 7: rejected rule still current: {p7.model_duvl_json()}"
     assert (p7.withheld_counts or {}).get(
         "rejected", 0
     ) >= 1, f"step 7: expected withheld rejected, got {p7.withheld_counts}"
@@ -257,7 +257,7 @@ def test_brand_kit_lifecycle(live_server, capsys):  # noqa: F811
 
 def test_isolation(live_server):  # noqa: F811
     key = live_server.keys["acme"]
-    mp = MindPalace(
+    mp = Verilore(
         live_server.corpora["acme"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
 
@@ -281,11 +281,11 @@ def test_isolation(live_server):  # noqa: F811
 
 def test_memory_down():
     start = time.monotonic()
-    mp_down = MindPalace(
+    vl_down = Verilore(
         "acme", base_url="http://127.0.0.1:19999", api_key="x", timeout=1, retries=1
     )
     try:
-        mp_down.memory.pack(query="")
+        vl_down.memory.pack(query="")
     except MemoryClientError as exc:
         elapsed = time.monotonic() - start
         assert exc.code == "transport_error", f"step 9: code={exc.code!r}"
@@ -301,7 +301,7 @@ def test_memory_down():
 
 def test_latency(live_server, capsys):  # noqa: F811
     key = live_server.keys["globex"]
-    mp = MindPalace(
+    mp = Verilore(
         live_server.corpora["globex"], base_url=live_server.url, api_key=key, timeout=5, retries=1
     )
 

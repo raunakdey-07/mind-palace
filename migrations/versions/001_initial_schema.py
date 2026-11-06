@@ -1,4 +1,4 @@
-"""Initial schema migration for Mind Palace."""
+"""Initial schema migration for Verilore."""
 
 from __future__ import annotations
 

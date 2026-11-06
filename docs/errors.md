@@ -7,22 +7,22 @@ provider's.
 
 ## One vocabulary
 
-Every failure Mind Palace raises on purpose is a subclass of `MindPalaceError`,
+Every failure Verilore raises on purpose is a subclass of `VeriloreError`,
 importable from the public SDK:
 
 ```python
-from mindpalace_sdk import (
-    MindPalaceError,
-    MindPalaceValidationError,   # 422, memory
-    MindPalaceNotFoundError,     # 404, memory
-    MindPalaceUnauthorizedError, # 403, auth
-    MindPalaceAuthenticationError,  # 401, auth
+from verilore_sdk import (
+    VeriloreError,
+    VeriloreValidationError,   # 422, memory
+    VeriloreNotFoundError,     # 404, memory
+    VeriloreUnauthorizedError, # 403, auth
+    VeriloreAuthenticationError,  # 401, auth
     ProviderError,               # 503, provider  (and its subtypes)
     ProviderTimeoutError,        # 504, provider, retryable
     ProviderRateLimitError,      # 429, provider, retryable
     DatabaseUnavailableError,    # 503, database, retryable
-    MindPalaceTransportError,    # 503, transport, retryable
-    MindPalaceInternalError,     # 500, mindpalace
+    VeriloreTransportError,    # 503, transport, retryable
+    VeriloreInternalError,     # 500, verilore
 )
 ```
 
@@ -30,7 +30,7 @@ The wire envelope is identical everywhere — SDK, REST, runtime socket, CLI, MC
 
 ```json
 {
-  "code": "mp_provider_timeout",
+  "code": "vl_provider_timeout",
   "component": "provider",
   "message": "the provider did not answer in time",
   "retryable": true,
@@ -41,7 +41,7 @@ The wire envelope is identical everywhere — SDK, REST, runtime socket, CLI, MC
 
 * **`code`** — stable and machine-readable. Switch on this.
 * **`component`** — where it broke: `memory`, `auth`, `database`, `transport`,
-  `provider`, `mindpalace`.
+  `provider`, `verilore`.
 * **`message`** — safe for a log line a stranger may hold for a year.
 * **`retryable`** — whether asking again could plausibly work.
 * **`request_id`** — quote this in a bug report.
@@ -65,13 +65,13 @@ except ProviderError as exc:
         schedule_retry(delay=backoff(exc.code))
     else:
         page_oncall(exc.request_id)          # our provider, or its credentials
-except MindPalaceUnauthorizedError:
+except VeriloreUnauthorizedError:
     show_permission_error()                 # yours: the credential's scope
-except MindPalaceValidationError:
+except VeriloreValidationError:
     show_input_error(exc.message)            # yours: the request
 except DatabaseUnavailableError:
     queue_for_later(exc.request_id)         # ours, temporarily
-except MindPalaceError as exc:
+except VeriloreError as exc:
     page_oncall(exc.request_id)             # ours: a defect
 ```
 
@@ -95,7 +95,7 @@ even when the body is empty.
 $ curl -si localhost:8000/api/memory/query -H 'X-Request-Id: trace-7f3a' ...
 HTTP/1.1 504
 X-Request-Id: trace-7f3a
-{"detail":{"code":"mp_provider_timeout","component":"provider",...,"request_id":"trace-7f3a"}}
+{"detail":{"code":"vl_provider_timeout","component":"provider",...,"request_id":"trace-7f3a"}}
 ```
 
 ## What is never in an error
@@ -117,9 +117,9 @@ X-Request-Id: trace-7f3a
 ## CLI
 
 ```
-$ mindpalace corpus delete acme-brand
-error: mp_database_unavailable [database] not retryable=false request_id=9f2c1a7b
-  Mind Palace needs persistent storage, and it could not reach it.
+$ verilore corpus delete acme-brand
+error: vl_database_unavailable [database] not retryable=false request_id=9f2c1a7b
+  Verilore needs persistent storage, and it could not reach it.
   ...
 ```
 

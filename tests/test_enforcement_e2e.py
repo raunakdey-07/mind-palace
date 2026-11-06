@@ -72,18 +72,18 @@ def enforced_secret(monkeypatch):
 
     Function-scoped with a restoring finalizer so the suite does not leave
     enforcement ON or a rotated secret behind for later tests (isolation).
-    Also sets MIND_PALACE_SCOPE_SECRET so the application's HMAC tokens match
+    Also sets VERILORE_SCOPE_SECRET so the application's HMAC tokens match
     the rotated DB secret. Restores both on teardown.
     """
     url = os.environ.get("DATABASE_URL")
     assert url, "DATABASE_URL must be set (conftest creates the session database)"
     secret, original_secret = _rotate_and_enable(url)
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", secret)
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", secret)
 
     yield secret
 
     _restore_secret_and_disable(url, original_secret)
-    monkeypatch.delenv("MIND_PALACE_SCOPE_SECRET", raising=False)
+    monkeypatch.delenv("VERILORE_SCOPE_SECRET", raising=False)
 
 
 # ---------------------------------------------------------------------------
@@ -125,11 +125,11 @@ class World:
 @pytest.fixture
 async def world(enforced_secret, monkeypatch):
     """Two organisations with credentials; app connected as runtime role;
-    enforcement ON via MIND_PALACE_SCOPE_SECRET (step-scoped env only)."""
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", enforced_secret)
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "on")
+    enforcement ON via VERILORE_SCOPE_SECRET (step-scoped env only)."""
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", enforced_secret)
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "on")
 
     from api.services.remember import remember
 
@@ -506,7 +506,7 @@ async def test_erasure_removes_rows(world):
     # Erase the target corpus via the admin function (the CLI/operator route).
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": target_cid})
+            await db.execute(sa.text("SELECT verilore_erase_corpus(:c)"), {"c": target_cid})
             await db.commit()
 
     # Assert target corpus rows are 0.
@@ -538,7 +538,7 @@ async def test_erasure_removes_rows(world):
     # Clean up neighbour.
     async with world.db_module.admin_session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": neighbour_cid})
+            await db.execute(sa.text("SELECT verilore_erase_corpus(:c)"), {"c": neighbour_cid})
             await db.commit()
             await db.execute(sa.text("DELETE FROM corpora WHERE id = :c"), {"c": neighbour_cid})
             await db.commit()
@@ -624,12 +624,12 @@ async def test_forgery_fails_closed(world):
             factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
-                    sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                    sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                     {"s": scope},
                 )
                 if token is not None:
                     await session.execute(
-                        sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                        sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                         {"t": token},
                     )
                 result = await session.execute(
@@ -661,16 +661,16 @@ async def test_forgery_fails_closed(world):
 
 
 async def test_scope_and_token_always_set_together(world):
-    """Every transaction that sets mindpalace.tenant_scope also sets
-    mindpalace.scope_token, and the token matches HMAC(secret, scope).
+    """Every transaction that sets verilore.tenant_scope also sets
+    verilore.scope_token, and the token matches HMAC(secret, scope).
 
     This is the C3 invariant: the app computes the token from
-    MIND_PALACE_SCOPE_SECRET env, and the DB verifies against
+    VERILORE_SCOPE_SECRET env, and the DB verifies against
     memory_server_secrets.scope_hmac_secret. If they diverge, RLS returns
     zero rows.
     """
     alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
-    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    secret = os.environ["VERILORE_SCOPE_SECRET"]
     expected_token = hmac.new(secret.encode(), alpha_cid.encode(), hashlib.sha256).hexdigest()
 
     engine = apply_as_runtime(runtime_url())
@@ -680,23 +680,23 @@ async def test_scope_and_token_always_set_together(world):
             # A real API operation goes through _apply_tenant_scope on
             # after_begin. Read both settings within the same transaction.
             await session.execute(
-                sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                 {"s": alpha_cid},
             )
             # Manually trigger what _apply_tenant_scope does: set both.
             token = hmac.new(secret.encode(), alpha_cid.encode(), hashlib.sha256).hexdigest()
             await session.execute(
-                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                 {"t": token},
             )
             scope_val = (
                 await session.execute(
-                    sa.text("SELECT current_setting('mindpalace.tenant_scope', true)")
+                    sa.text("SELECT current_setting('verilore.tenant_scope', true)")
                 )
             ).scalar()
             token_val = (
                 await session.execute(
-                    sa.text("SELECT current_setting('mindpalace.scope_token', true)")
+                    sa.text("SELECT current_setting('verilore.scope_token', true)")
                 )
             ).scalar()
             print(f"\nscope/token invariant: scope={scope_val} token={token_val[:16]}...")
@@ -718,20 +718,20 @@ async def test_star_sentinel_under_enforcement(world):
     alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
 
     # 9a: maintenance role with {*} and a valid token can see every corpus.
-    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    secret = os.environ["VERILORE_SCOPE_SECRET"]
     star_token = hmac.new(secret.encode(), "{*}".encode(), hashlib.sha256).hexdigest()
     engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
             conn.execute(
-                sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                 {"s": "{*}"},
             )
             conn.execute(
-                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                 {"t": star_token},
             )
-            result = conn.execute(sa.text("SELECT mp_verified_scope_corpora()"))
+            result = conn.execute(sa.text("SELECT vl_verified_scope_corpora()"))
             assert "*" in result.scalar(), "{*} token not verified for maintenance"
     finally:
         engine.dispose()
@@ -743,7 +743,7 @@ async def test_star_sentinel_under_enforcement(world):
             factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
-                    sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                    sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                     {"s": scope},
                 )
                 result = await session.execute(
@@ -810,17 +810,17 @@ async def test_latency_and_explain_initplan(world):
     """Deterministic EXPLAIN plan-shape + function-call check for scope-token
     enforcement.
 
-    Migration 016 puts `(SELECT mp_verified_scope_corpora())` directly in each
-    `mindpalace_tenant` policy USING / WITH CHECK expression so the planner can
+    Migration 016 puts `(SELECT vl_verified_scope_corpora())` directly in each
+    `verilore_tenant` policy USING / WITH CHECK expression so the planner can
     evaluate it once as an InitPlan instead of once per row.
 
     Asserts:
-      * the RLS scope check is applied (mp_verified_scope_corpora present in
+      * the RLS scope check is applied (vl_verified_scope_corpora present in
         the plan);
-      * mp_verified_scope_corpora() is hoisted to an InitPlan (evaluated once
+      * vl_verified_scope_corpora() is hoisted to an InitPlan (evaluated once
         per query, not per row) -- an InitPlan line MUST be present;
-      * function-call counts for mp_verified_scope_corpora,
-        mp_verify_scope_token and mindpalace_allowed_corpus are at most 2
+      * function-call counts for vl_verified_scope_corpora,
+        vl_verify_scope_token and verilore_allowed_corpus are at most 2
         (one InitPlan evaluation plus at most one cache hit), not 50,000+.
 
     Latency numbers live in scripts/bench_enforcement_latency.py.
@@ -917,9 +917,9 @@ async def test_latency_and_explain_initplan(world):
     try:
         with reset_engine.begin() as conn:
             for fn in (
-                "mp_verified_scope_corpora()",
-                "mp_verify_scope_token(CHAR(64),TEXT)",
-                "mindpalace_allowed_corpus(CHAR(64))",
+                "vl_verified_scope_corpora()",
+                "vl_verify_scope_token(CHAR(64),TEXT)",
+                "verilore_allowed_corpus(CHAR(64))",
             ):
                 conn.execute(
                     sa.text(f"SELECT pg_stat_reset_single_function_counters('{fn}'::regprocedure)")
@@ -928,7 +928,7 @@ async def test_latency_and_explain_initplan(world):
         reset_engine.dispose()
 
     scope = ",".join(cids)
-    secret = os.environ["MIND_PALACE_SCOPE_SECRET"]
+    secret = os.environ["VERILORE_SCOPE_SECRET"]
     token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
 
     # Run EXPLAIN as runtime role (sync engine, matching the manual measurement
@@ -943,11 +943,11 @@ async def test_latency_and_explain_initplan(world):
     try:
         with rt_engine.begin() as conn:
             conn.execute(
-                sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                 {"s": scope},
             )
             conn.execute(
-                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                 {"t": token},
             )
             result = conn.execute(
@@ -960,9 +960,9 @@ async def test_latency_and_explain_initplan(world):
 
     has_initplan = "InitPlan" in plan
     # Migration 016 inlines the scope check into the policy, so the plan now
-    # references mp_verified_scope_corpora (via InitPlan) rather than calling
-    # mindpalace_allowed_corpus per row.
-    has_scope_expr = "mp_verified_scope_corpora" in plan
+    # references vl_verified_scope_corpora (via InitPlan) rather than calling
+    # verilore_allowed_corpus per row.
+    has_scope_expr = "vl_verified_scope_corpora" in plan
 
     assert has_scope_expr, f"RLS scope check not applied in EXPLAIN:\n{plan}"
 
@@ -973,8 +973,8 @@ async def test_latency_and_explain_initplan(world):
             rows = conn.execute(
                 sa.text(
                     "SELECT funcname, calls FROM pg_stat_user_functions "
-                    "WHERE funcname IN ('mp_verified_scope_corpora', "
-                    "'mp_verify_scope_token', 'mindpalace_allowed_corpus')"
+                    "WHERE funcname IN ('vl_verified_scope_corpora', "
+                    "'vl_verify_scope_token', 'verilore_allowed_corpus')"
                 )
             ).fetchall()
     finally:
@@ -982,23 +982,23 @@ async def test_latency_and_explain_initplan(world):
     calls = {r[0]: r[1] for r in rows}
     print(f"\nFunction-call counts: {calls}")
 
-    mac = calls.get("mindpalace_allowed_corpus", 0)
-    mpc = calls.get("mp_verified_scope_corpora", 0)
-    mvt = calls.get("mp_verify_scope_token", 0)
+    mac = calls.get("verilore_allowed_corpus", 0)
+    mpc = calls.get("vl_verified_scope_corpora", 0)
+    mvt = calls.get("vl_verify_scope_token", 0)
 
     # Unconditional assertions (pass after the migration 016 InitPlan fix).
     assert (
         has_initplan
-    ), f"Expected an InitPlan hoisting mp_verified_scope_corpora(); none found.\n{plan}"
+    ), f"Expected an InitPlan hoisting vl_verified_scope_corpora(); none found.\n{plan}"
     assert mac <= 2, (
-        f"mindpalace_allowed_corpus called {mac} times (per-row trap); "
+        f"verilore_allowed_corpus called {mac} times (per-row trap); "
         f"expected at most 2 (InitPlan evaluated once).\n{plan}"
     )
     assert mpc <= 2, (
-        f"mp_verified_scope_corpora called {mpc} times (per-row trap); "
+        f"vl_verified_scope_corpora called {mpc} times (per-row trap); "
         f"expected at most 2.\n{plan}"
     )
-    assert mvt <= 2, f"mp_verify_scope_token called {mvt} times; expected at most 2.\n{plan}"
+    assert mvt <= 2, f"vl_verify_scope_token called {mvt} times; expected at most 2.\n{plan}"
 
 
 # ---------------------------------------------------------------------------
@@ -1014,9 +1014,9 @@ async def test_latency_and_explain_initplan(world):
 async def test_operator_procedure_per_docs(world):
     """Follow docs/security.md verbatim:
 
-      mindpalace secret rotate  (as owner role, writes DB row + --out FILE)
-      export MIND_PALACE_SCOPE_SECRET=<new>
-      SELECT mp_set_scope_token_enforcement(true)  (as mindpalace_owner)
+      verilore secret rotate  (as owner role, writes DB row + --out FILE)
+      export VERILORE_SCOPE_SECRET=<new>
+      SELECT vl_set_scope_token_enforcement(true)  (as verilore_owner)
       start the server process
       send a real request
 
@@ -1029,11 +1029,11 @@ async def test_operator_procedure_per_docs(world):
     url = os.environ.get("DATABASE_URL")
     assert url, "DATABASE_URL must be set"
 
-    old_secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
+    old_secret = os.environ.get("VERILORE_SCOPE_SECRET", "dev-scope-secret")
     secret_file = "/tmp/opencode/operator-secret.txt"
     os.makedirs(os.path.dirname(secret_file), exist_ok=True)
 
-    # Step 1: `mindpalace secret rotate` via the CLI (writes DB row + file).
+    # Step 1: `verilore secret rotate` via the CLI (writes DB row + file).
     result = subprocess.run(
         [
             sys.executable,
@@ -1051,16 +1051,16 @@ async def test_operator_procedure_per_docs(world):
     )
     assert result.returncode == 0, f"secret rotate failed: {result.stderr}"
     new_secret = open(secret_file).read().strip()
-    print(f"\nstep 1: mindpalace secret rotate -> wrote {secret_file}")
+    print(f"\nstep 1: verilore secret rotate -> wrote {secret_file}")
 
     # Step 2: set the env var (as docs instruct).
-    os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
+    os.environ["VERILORE_SCOPE_SECRET"] = new_secret
 
     # Step 3: enable enforcement as the owner role.
     engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
-            conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
+            conn.execute(sa.text("SELECT vl_set_scope_token_enforcement(true)"))
             row = conn.execute(
                 sa.text("SELECT value FROM memory_server_secrets WHERE name = 'scope_hmac_secret'")
             ).scalar()
@@ -1085,10 +1085,10 @@ async def test_operator_procedure_per_docs(world):
             )
 
     # Step 4: start the server process with the new secret + enforcement ON.
-    # Provision mindpalace_runtime on the session database so the server can connect.
+    # Provision verilore_runtime on the session database so the server can connect.
     parts = sa.engine.url.make_url(url)
     runtime_db_url = (
-        f"postgresql+psycopg2://mindpalace_runtime:ci-runtime-role-password@"
+        f"postgresql+psycopg2://verilore_runtime:ci-runtime-role-password@"
         f"{parts.host}:{parts.port or 5432}/{parts.database}"
     )
     # Apply runtime_roles.sql to the session database.
@@ -1108,12 +1108,12 @@ async def test_operator_procedure_per_docs(world):
 
     server_env = dict(os.environ)
     server_env["DATABASE_URL"] = runtime_db_url
-    server_env["MIND_PALACE_AUTH_MODE"] = "required"
-    server_env["MIND_PALACE_DEPLOYMENT"] = "server"
-    server_env["MIND_PALACE_SCOPE_SECRET"] = new_secret
-    server_env["MIND_PALACE_ENFORCE_SCOPE_TOKEN"] = "on"
-    server_env["MIND_PALACE_RUNTIME"] = "0"
-    server_env["MIND_PALACE_INGEST_ROOTS"] = "/content"
+    server_env["VERILORE_AUTH_MODE"] = "required"
+    server_env["VERILORE_DEPLOYMENT"] = "server"
+    server_env["VERILORE_SCOPE_SECRET"] = new_secret
+    server_env["VERILORE_ENFORCE_SCOPE_TOKEN"] = "on"
+    server_env["VERILORE_RUNTIME"] = "0"
+    server_env["VERILORE_INGEST_ROOTS"] = "/content"
 
     server_log = open("/tmp/opencode/operator-server.log", "w")
     server = subprocess.Popen(
@@ -1185,21 +1185,21 @@ async def test_operator_procedure_per_docs(world):
         server_log.close()
 
     # Step 3 (continued): mismatch window - old env secret vs new DB secret -> 0 rows.
-    os.environ["MIND_PALACE_SCOPE_SECRET"] = old_secret
+    os.environ["VERILORE_SCOPE_SECRET"] = old_secret
     try:
         engine = apply_as_runtime(runtime_url())
         try:
             factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
-                    sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                    sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                     {"s": alpha_cid},
                 )
                 token = hmac.new(
                     old_secret.encode(), alpha_cid.encode(), hashlib.sha256
                 ).hexdigest()
                 await session.execute(
-                    sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                    sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                     {"t": token},
                 )
                 result = await session.execute(
@@ -1211,7 +1211,7 @@ async def test_operator_procedure_per_docs(world):
             await engine.dispose()
         assert n == 0, f"mismatched secret read {n} rows (window should yield 0)"
     finally:
-        os.environ["MIND_PALACE_SCOPE_SECRET"] = new_secret
+        os.environ["VERILORE_SCOPE_SECRET"] = new_secret
 
     print(
         "\noperator procedure OK: rotate writes DB row, enable enforcement, "
@@ -1226,10 +1226,10 @@ async def test_operator_procedure_per_docs(world):
 
 
 async def test_wrong_env_secret_fails(world):
-    """With enforcement ON but MIND_PALACE_SCOPE_SECRET deliberately wrong,
+    """With enforcement ON but VERILORE_SCOPE_SECRET deliberately wrong,
     scenarios 1-7 must fail: tokens don't verify, RLS returns zero rows."""
     # Set a deliberately wrong secret.
-    os.environ["MIND_PALACE_SCOPE_SECRET"] = "deadbeef" * 8
+    os.environ["VERILORE_SCOPE_SECRET"] = "deadbeef" * 8
     try:
         alpha_cid = corpus_id_for(ALPHA_CORPORA["brand"])
 
@@ -1239,18 +1239,18 @@ async def test_wrong_env_secret_fails(world):
             factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
             async with factory() as session:
                 await session.execute(
-                    sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+                    sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
                     {"s": alpha_cid},
                 )
                 import hmac
 
                 token = hmac.new(
-                    os.environ["MIND_PALACE_SCOPE_SECRET"].encode(),
+                    os.environ["VERILORE_SCOPE_SECRET"].encode(),
                     alpha_cid.encode(),
                     hashlib.sha256,
                 ).hexdigest()
                 await session.execute(
-                    sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                    sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                     {"t": token},
                 )
                 result = await session.execute(
@@ -1284,6 +1284,6 @@ async def test_wrong_env_secret_fails(world):
             "operations to fail (0 rows, 403/404, empty listing)"
         )
     finally:
-        # monkeypatch (from the world fixture) restores MIND_PALACE_SCOPE_SECRET
+        # monkeypatch (from the world fixture) restores VERILORE_SCOPE_SECRET
         # to enforced_secret when the test ends.
         pass

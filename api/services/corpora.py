@@ -3,7 +3,7 @@
 
 """Corpus management: explicit namespaces for isolated document collections.
 
-A corpus is the unit of tenancy in Mind Palace. Documents, chunks, and
+A corpus is the unit of tenancy in Verilore. Documents, chunks, and
 embeddings all belong to exactly one corpus; retrieval and ingestion are
 always corpus-scoped so data cannot leak across corpora.
 
@@ -83,7 +83,7 @@ async def create_corpus(
         raise AuthorizationError(
             "forbidden",
             "Creating a corpus over HTTP is not permitted for this credential. "
-            "Corpora are created by the operator with `mindpalace corpus create`.",
+            "Corpora are created by the operator with `verilore corpus create`.",
             403,
         )
     require_permission(principal, "manage_corpus", "create a corpus")
@@ -289,7 +289,7 @@ async def delete_corpus(db: AsyncSession, name: str) -> dict:
     function then re-checks the same transaction-local scope itself, so the two
     cannot disagree.
 
-    The work is done by `mindpalace_erase_corpus`, a `SECURITY DEFINER`
+    The work is done by `verilore_erase_corpus`, a `SECURITY DEFINER`
     function. The runtime role holds no `DELETE` on any archive table, and the
     archive's append-only triggers still reject a `DELETE` that does not come
     through that function -- so there is exactly one way to erase, and it is this
@@ -301,7 +301,7 @@ async def delete_corpus(db: AsyncSession, name: str) -> dict:
     require_permission(current_principal(), "manage_corpus", "delete a corpus")
 
     result = await db.execute(
-        text("SELECT mindpalace_erase_corpus(:cid)"),
+        text("SELECT verilore_erase_corpus(:cid)"),
         {"cid": corpus["id"]},
     )
     report = result.scalar_one()

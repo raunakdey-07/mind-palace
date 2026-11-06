@@ -50,7 +50,7 @@ def _capture_api_logs() -> tuple[logging.Handler, io.StringIO]:
     """Collect what the application logger writes while the block runs."""
     stream = io.StringIO()
     handler = logging.StreamHandler(stream)
-    logger = logging.getLogger("mindpalace.api")
+    logger = logging.getLogger("verilore.api")
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
     return handler, stream
@@ -62,7 +62,7 @@ def api_logs():
     try:
         yield stream
     finally:
-        logging.getLogger("mindpalace.api").removeHandler(handler)
+        logging.getLogger("verilore.api").removeHandler(handler)
 
 
 def _mount_failing_route(app, exc: Exception):
@@ -95,7 +95,7 @@ def unauthenticated_probe(monkeypatch):
     """Let the probe route through the authentication middleware.
 
     The suite runs in both modes, and CI runs it with
-    `MIND_PALACE_AUTH_MODE=required`. Without this the probe is answered `401`
+    `VERILORE_AUTH_MODE=required`. Without this the probe is answered `401`
     before it ever reaches the middleware under test -- and the test would pass
     for the wrong reason, having asserted a 500 it never got.
 
@@ -252,14 +252,14 @@ async def test_health_endpoints_reveal_no_deployment_internals():
 
     for response in (live, ready):
         body = response.text
-        # Both role names, not one: `mindpalace_runtime` is the shipped role and
+        # Both role names, not one: `verilore_runtime` is the shipped role and
         # `RUNTIME_ROLE` is the one this session connected as. The leak this test
         # guards against is an unauthenticated caller learning which database role
         # the server runs as, and only the live name would actually tell them.
         secrets = (
-            "mindpalace_runtime",
+            "verilore_runtime",
             RUNTIME_ROLE,
-            "mpadmin",
+            "vladmin",
             "postgres://",
             "postgresql://",
             CANARY,

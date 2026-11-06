@@ -188,7 +188,7 @@ def test_metrics_on_ranked_results():
     """MRR must reflect true ordering: relevant doc at rank 1 > rank 3."""
     expected = ["BirdCLEF"]
     at_rank1 = ["BirdCLEF", "Finalysis"]
-    at_rank3 = ["Finalysis", "Mind Palace", "BirdCLEF"]
+    at_rank3 = ["Finalysis", "Verilore", "BirdCLEF"]
     assert reciprocal_rank(expected, at_rank1) == 1.0
     assert reciprocal_rank(expected, at_rank3) == pytest.approx(1 / 3)
     assert recall_at_k(expected, at_rank3, 5) == 1.0

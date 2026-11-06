@@ -253,8 +253,8 @@ def main() -> None:
         r"^## Quickstart$",
         "README opens on the Quickstart",
     )
-    require(readme, r"mindpalace remember", "README shows the documented command")
-    require(readme, r"mindpalace verify", "README shows offline verification")
+    require(readme, r"verilore remember", "README shows the documented command")
+    require(readme, r"verilore verify", "README shows offline verification")
     require(release_map, r"\| M015\.2\b.*\| `v0\.9\.0` \|", "M015.2 release mapping")
 
     # M015.2 and M016 are one release, and the map has to say so rather than leaving a
@@ -275,8 +275,8 @@ def main() -> None:
         r"would have made `NO_RELEVANT_MEMORY` depend on",
         "the fast path's reason for rejection",
     )
-    require(readme, r"mindpalace runtime status", "README says how to check the runtime")
-    require(readme, r"MIND_PALACE_LEXICAL", "README documents the model-free mode")
+    require(readme, r"verilore runtime status", "README says how to check the runtime")
+    require(readme, r"VERILORE_LEXICAL", "README documents the model-free mode")
     require(readme, r"131/157", "README keeps the held-out research figure honest")
     # The frozen benchmark's accuracy and its safety invariants are different
     # numbers. A release must not report one as the other.

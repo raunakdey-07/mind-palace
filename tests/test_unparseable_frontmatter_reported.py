@@ -54,13 +54,13 @@ note: the value is X
 SECRET = "correct-horse-battery-staple"
 
 
-def _ingest(tmp_path, body: str, corpus: str) -> str:
+def _ingest(tvl_path, body: str, corpus: str) -> str:
     """Run the command as a user runs it, and return what they are shown.
 
     `ingest-repo` has no --json, so this asserts on the text. That is the point:
     the text is where a wrong report does its damage.
     """
-    d = tmp_path / "docs"
+    d = tvl_path / "docs"
     d.mkdir(exist_ok=True)
     (d / "bad.md").write_text(body)
     # Pinned to the session database explicitly. Inherited, the subprocess would
@@ -69,8 +69,8 @@ def _ingest(tmp_path, body: str, corpus: str) -> str:
     # with the first.
     env = {
         **os.environ,
-        "MIND_PALACE_INGEST_ROOTS": str(tmp_path),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(tvl_path),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }
@@ -94,10 +94,10 @@ def _ingest(tmp_path, body: str, corpus: str) -> str:
     ("body", "case"),
     [(BACKTICKED, "backtick"), (COLONED, "colon")],
 )
-def test_an_unparseable_claims_block_is_reported_as_such(tmp_path, body, case):
+def test_an_unparseable_claims_block_is_reported_as_such(tvl_path, body, case):
     if not os.getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
-    shown = _ingest(tmp_path, body, f"unparseable-{case}")
+    shown = _ingest(tvl_path, body, f"unparseable-{case}")
 
     # Not `no_claims_declared`: that tells the author the wrong thing.
     assert "no_claims_declared" not in shown, shown
@@ -105,22 +105,22 @@ def test_an_unparseable_claims_block_is_reported_as_such(tmp_path, body, case):
     assert "bad.md: frontmatter_unparseable" in shown, shown
 
 
-def test_the_warning_carries_no_document_content(tmp_path):
+def test_the_warning_carries_no_document_content(tvl_path):
     """The reason must be safe to print, paste into an issue, or log."""
     if not os.getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
     body = BACKTICKED.replace("get-shit-done-cc", SECRET)
-    shown = _ingest(tmp_path, body, "unparseable-secret")
+    shown = _ingest(tvl_path, body, "unparseable-secret")
 
     assert "frontmatter_unparseable" in shown, shown
     assert SECRET not in shown
 
 
-def test_a_clean_document_is_not_warned_about(tmp_path):
+def test_a_clean_document_is_not_warned_about(tvl_path):
     """A warning that fires on healthy documents is a warning nobody reads."""
     if not os.getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
-    d = tmp_path / "docs"
+    d = tvl_path / "docs"
     d.mkdir()
     (d / "ok.md").write_text(
         "---\ntitle: Fine\nclaims:\n  - key: a.b\n    value: v\n"
@@ -129,8 +129,8 @@ def test_a_clean_document_is_not_warned_about(tmp_path):
     )
     env = {
         **os.environ,
-        "MIND_PALACE_INGEST_ROOTS": str(tmp_path),
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_INGEST_ROOTS": str(tvl_path),
+        "VERILORE_RUNTIME": "0",
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }

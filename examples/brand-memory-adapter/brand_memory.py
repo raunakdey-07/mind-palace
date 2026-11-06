@@ -4,14 +4,14 @@
 """SDK-only adapter for brand memory in a content app.
 
 No imports from `api.services`, no SQL, no model. The four functions are the
-whole surface a FastAPI app needs to wire Mind Palace into generation:
+whole surface a FastAPI app needs to wire Verilore into generation:
 
 - `load_documents` — ingest (path, content) pairs over HTTP
 - `context_for` — pack claim texts for the prompt; degrades to no memory
 - `record_decision` — remember a reviewer verdict under a campaign scope
 - `record_correction` — supersede a claim, in the brand scope
 
-Server URL and credential come from `MIND_PALACE_URL` and `BRAND_MEMORY_KEY`
+Server URL and credential come from `VERILORE_URL` and `BRAND_MEMORY_KEY`
 environment variables, the same names the integration guide uses.
 """
 
@@ -21,13 +21,13 @@ import os
 
 import httpx
 
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 
-def _client(tenant: str) -> MindPalace:
-    return MindPalace(
+def _client(tenant: str) -> Verilore:
+    return Verilore(
         tenant,
-        base_url=os.environ["MIND_PALACE_URL"],
+        base_url=os.environ["VERILORE_URL"],
         api_key=os.environ["BRAND_MEMORY_KEY"],
         timeout=3,
         retries=1,
@@ -36,7 +36,7 @@ def _client(tenant: str) -> MindPalace:
 
 def load_documents(tenant: str, files: list[tuple[str, str]]) -> None:
     """Ingest each (path, content) pair into the tenant's corpus over HTTP."""
-    base_url = os.environ["MIND_PALACE_URL"]
+    base_url = os.environ["VERILORE_URL"]
     api_key = os.environ["BRAND_MEMORY_KEY"]
     for path, content in files:
         resp = httpx.post(

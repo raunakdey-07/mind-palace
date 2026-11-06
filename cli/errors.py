@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Human-facing failure text for the Mind Palace CLI.
+"""Human-facing failure text for the Verilore CLI.
 
 An error should answer three questions: what happened, why, and what to run next.
 The repository already produces stable machine codes (`memory_unavailable`,
@@ -26,7 +26,7 @@ class Advice(NamedTuple):
     status: int = 1
 
 
-#: Where Mind Palace believes the database is. One function, because the guidance
+#: Where Verilore believes the database is. One function, because the guidance
 #: for a dead database must not be able to drift between two surfaces.
 def database_hint() -> str:
     """The host and port this process would actually connect to."""
@@ -144,10 +144,10 @@ def _uses_default_local_credentials() -> bool:
     """Whether DATABASE_URL is the documented local default."""
     import os
 
-    url = os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    url = os.getenv("DATABASE_URL", "postgresql://vladmin:secret@localhost:5432/verilore")
     lowered = url.lower()
     return (
-        "mpadmin:secret@" in lowered
+        "vladmin:secret@" in lowered
         and ("localhost" in lowered or "127.0.0.1" in lowered)
         and ":5432" in lowered
     )
@@ -205,7 +205,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             "container_runtime_unavailable",
             "The container runtime daemon is stopped.",
-            "Mind Palace could not talk to the container runtime.",
+            "Verilore could not talk to the container runtime.",
             remediation,
             503,
         )
@@ -219,7 +219,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             "container_runtime_unavailable",
             "No container runtime is installed.",
-            "Mind Palace could not find podman or docker on PATH.",
+            "Verilore could not find podman or docker on PATH.",
             remediation,
             503,
         )
@@ -242,7 +242,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             "authentication_failed",
             "The database rejected the credentials.",
-            f"Mind Palace could not authenticate to PostgreSQL at {database_hint()}.",
+            f"Verilore could not authenticate to PostgreSQL at {database_hint()}.",
             remediation,
             503,
         )
@@ -254,7 +254,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             code,
             "The memory database is unavailable.",
-            "Mind Palace connected, but the memory schema is not applied.",
+            "Verilore connected, but the memory schema is not applied.",
             _APPLY_SCHEMA,
             503,
         )
@@ -262,7 +262,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             code,
             "The memory database is unavailable.",
-            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            f"Verilore could not connect to PostgreSQL at {database_hint()}.",
             _START_DATABASE,
             503,
         )
@@ -283,7 +283,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             "database_unavailable",
             "The memory database is unavailable.",
-            f"Mind Palace could not connect to PostgreSQL at {database_hint()}.",
+            f"Verilore could not connect to PostgreSQL at {database_hint()}.",
             remediation,
             503,
         )
@@ -292,7 +292,7 @@ def explain(exc: Exception) -> Advice:
     if code == "transport_error":
         return Advice(
             code,
-            "Mind Palace could not reach the memory service.",
+            "Verilore could not reach the memory service.",
             f"Nothing is listening at {getattr(exc, 'base_url', None) or 'the configured API'}.",
             "Check that the service is running, or point --base-url at the right host.",
             503,
@@ -301,7 +301,7 @@ def explain(exc: Exception) -> Advice:
         return Advice(
             code,
             "The memory request timed out.",
-            "Mind Palace waited longer than the configured timeout.",
+            "Verilore waited longer than the configured timeout.",
             "Retry, or raise it with --timeout <seconds>.",
             504,
         )
@@ -310,7 +310,7 @@ def explain(exc: Exception) -> Advice:
             code,
             "That corpus does not exist.",
             f"No memory is stored under the name {getattr(exc, 'corpus', None) or 'given'!r}.",
-            "List the corpora you have with: mindpalace corpora",
+            "List the corpora you have with: verilore corpora",
             404,
         )
     if code in {"claim_not_found", "document_not_found", "snapshot_not_found"}:
@@ -318,7 +318,7 @@ def explain(exc: Exception) -> Advice:
             code,
             "That memory does not exist here.",
             detail,
-            'Recall what you can see with: mindpalace recall "<question>"',
+            'Recall what you can see with: verilore recall "<question>"',
             404,
         )
     if code == "invalid_query":
@@ -326,7 +326,7 @@ def explain(exc: Exception) -> Advice:
             code,
             "That is not a question I can search with.",
             detail,
-            'Ask a question with content, e.g. mindpalace recall "what is the datastore"',
+            'Ask a question with content, e.g. verilore recall "what is the datastore"',
             422,
         )
     if code in {"invalid_request", "invalid_timestamp", "invalid_budget"}:
@@ -346,7 +346,7 @@ def explain(exc: Exception) -> Advice:
             "This usually means a version mismatch between client and server.",
             502,
         )
-    return Advice(code or "error", "Mind Palace could not complete that.", detail, "", status)
+    return Advice(code or "error", "Verilore could not complete that.", detail, "", status)
 
 
 def _validation_advice(exc: Exception) -> Advice:
@@ -376,7 +376,7 @@ def _unreadable_advice(exc: Exception) -> Advice:
         "invalid_request",
         "That file could not be read.",
         str(exc).split(": ", 1)[-1],
-        "Check the path. A receipt is written by: mindpalace receipt "
+        "Check the path. A receipt is written by: verilore receipt "
         '"<question>" -o receipt.json',
         2,
     )

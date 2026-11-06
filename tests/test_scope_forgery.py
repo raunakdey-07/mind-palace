@@ -1,7 +1,7 @@
 """The tenant scope is a session setting, so it must not be authority.
 
 Every isolation guarantee in this repository rests on one session variable,
-`mindpalace.tenant_scope`, that the application sets per transaction. A session
+`verilore.tenant_scope`, that the application sets per transaction. A session
 setting is not a secret: **any role that can open a connection can set it**, and
 PostgreSQL provides no way to stop one.
 
@@ -10,8 +10,8 @@ work found it was load-bearing in the wrong direction. The `{*}` sentinel --
 "this principal may reach every corpus" -- was taken at face value, so the
 least-privileged runtime role could:
 
-    SET mindpalace.tenant_scope = '{*}';
-    SELECT mindpalace_erase_corpus(sha256('corpus:' || 'other-tenant'));
+    SET verilore.tenant_scope = '{*}';
+    SELECT verilore_erase_corpus(sha256('corpus:' || 'other-tenant'));
 
 and erase a corpus it held no grant on. Demonstrated, not theorised: the corpus,
 its document, claim, evidence row and version were all removed. Reads were equally
@@ -95,7 +95,7 @@ async def two_tenants():
         with principal_scope(authz.ADMIN_PRINCIPAL):
             for name in names:
                 await db.execute(
-                    text("SELECT mindpalace_erase_corpus(:c)"),
+                    text("SELECT verilore_erase_corpus(:c)"),
                     {"c": corpus_id_for_name(name)},
                 )
         await db.commit()
@@ -123,7 +123,7 @@ async def test_erasure_cannot_be_reached_by_forging_the_scope(two_tenants):
     beta = two_tenants["forge-beta"]
 
     with pytest.raises(Exception) as caught:
-        await _runtime_call("SELECT mindpalace_erase_corpus(:c)", {"c": beta}, scope=UNRESTRICTED)
+        await _runtime_call("SELECT verilore_erase_corpus(:c)", {"c": beta}, scope=UNRESTRICTED)
     assert "corpus not found" in str(caught.value)
 
     assert await _survives(beta), "the corpus was erased despite the forged scope"
@@ -168,21 +168,21 @@ async def test_public_holds_no_execute_on_the_security_definer_functions():
         "SELECT p.proname::text AS name, "
         "       has_function_privilege('public', p.oid, 'EXECUTE') AS allowed "
         "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
-        "WHERE n.nspname = 'public' AND p.proname LIKE 'mindpalace%'"
+        "WHERE n.nspname = 'public' AND p.proname LIKE 'verilore%'"
     )
     rows = {row[0]: row[1] for row in rows}
 
     sensitive = {
-        "mindpalace_erase_corpus",
-        "mindpalace_resolve_credential",
-        "mindpalace_locate_credential",
+        "verilore_erase_corpus",
+        "verilore_resolve_credential",
+        "verilore_locate_credential",
     }
     for name in sensitive:
         assert rows.get(name) is False, f"PUBLIC still holds EXECUTE on {name}"
     # The predicate is the exception, and deliberately so: a row-level policy is
     # evaluated as the querying user, so revoking it would break isolation for
     # every role not granted it by name.
-    assert rows.get("mindpalace_allowed_corpus") is True
+    assert rows.get("verilore_allowed_corpus") is True
 
 
 async def test_the_runtime_role_keeps_execute_on_what_it_needs():
@@ -191,15 +191,15 @@ async def test_the_runtime_role_keeps_execute_on_what_it_needs():
         "SELECT p.proname::text AS name, "
         "       has_function_privilege(current_user, p.oid, 'EXECUTE') AS allowed "
         "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
-        "WHERE n.nspname = 'public' AND p.proname LIKE 'mindpalace%'"
+        "WHERE n.nspname = 'public' AND p.proname LIKE 'verilore%'"
     )
     rows = {row[0]: row[1] for row in rows}
 
     for name in (
-        "mindpalace_allowed_corpus",
-        "mindpalace_resolve_credential",
-        "mindpalace_locate_credential",
-        "mindpalace_erase_corpus",
+        "verilore_allowed_corpus",
+        "verilore_resolve_credential",
+        "verilore_locate_credential",
+        "verilore_erase_corpus",
     ):
         assert rows.get(name) is True, f"the runtime role lost EXECUTE on {name}"
 
@@ -231,7 +231,7 @@ async def test_forged_scope_token_fails_closed(two_tenants):
     """A non-empty but forged scope token returns zero rows.
 
     The token does not verify against the server secret held in
-    `memory_server_secrets`, so `mp_verify_scope_token` returns FALSE and every
+    `memory_server_secrets`, so `vl_verify_scope_token` returns FALSE and every
     row-level predicate rejects the row -- a forged non-empty token fails closed.
     """
     beta = two_tenants["forge-beta"]
@@ -310,12 +310,12 @@ async def _scalar(
 ):
     async with _session(role) as conn:
         await conn.execute(  # noqa: E501
-            sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+            sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
             {"s": scope},
         )
         if scope_token is not None:
             await conn.execute(
-                sa.text("SELECT set_config('mindpalace.scope_token', :t, true)"),
+                sa.text("SELECT set_config('verilore.scope_token', :t, true)"),
                 {"t": scope_token},
             )
         result = await conn.execute(sa.text(statement), params or {})
@@ -325,7 +325,7 @@ async def _scalar(
 async def _call(statement: str, params: dict | None, *, scope: str, role: str):
     async with _session(role) as conn:
         await conn.execute(
-            sa.text("SELECT set_config('mindpalace.tenant_scope', :s, false)"),
+            sa.text("SELECT set_config('verilore.tenant_scope', :s, false)"),
             {"s": scope},
         )
         return await conn.execute(sa.text(statement), params or {})
@@ -334,7 +334,7 @@ async def _call(statement: str, params: dict | None, *, scope: str, role: str):
 async def _scalar_rows(statement: str, params: dict | None, *, scope: str, role: str):
     async with _session(role) as conn:
         await conn.execute(
-            sa.text("SELECT set_config('mindpalace.tenant_scope', :s, true)"),
+            sa.text("SELECT set_config('verilore.tenant_scope', :s, true)"),
             {"s": scope},
         )
         result = await conn.execute(sa.text(statement), params or {})
@@ -364,32 +364,32 @@ async def _session(role: str):
         await engine.dispose()
 
 
-async def test_only_one_mindpalace_allowed_corpus_overload_and_policies_updated():
+async def test_only_one_verilore_allowed_corpus_overload_and_policies_updated():
     """Migration 016 inlines the scope check into each policy.
 
-    Migration 015's `mindpalace_allowed_corpus()` wrapper could not be inlined by
+    Migration 015's `verilore_allowed_corpus()` wrapper could not be inlined by
     PostgreSQL, so it ran once per row. Migration 016 puts
-    `(SELECT mp_verified_scope_corpora())` directly in each `mindpalace_tenant`
+    `(SELECT vl_verified_scope_corpora())` directly in each `verilore_tenant`
     policy USING / WITH CHECK expression, so policies no longer reference
-    `mindpalace_allowed_corpus` -- they reference `mp_verified_scope_corpora`
+    `verilore_allowed_corpus` -- they reference `vl_verified_scope_corpora`
     instead. The function itself still exists (single CHAR(64) overload) and is
     still granted, only its role in the policies changed.
     """
     rows = await _maintenance_rows(
         "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace "
-        "WHERE n.nspname='public' AND p.proname='mindpalace_allowed_corpus'"
+        "WHERE n.nspname='public' AND p.proname='verilore_allowed_corpus'"
     )
     assert rows[0][0] == 1
     defs = await _maintenance_rows(
         "SELECT pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace n "
         "ON n.oid=p.pronamespace WHERE n.nspname='public' "
-        "AND p.proname='mindpalace_allowed_corpus'"
+        "AND p.proname='verilore_allowed_corpus'"
     )
-    assert "mp_verified_scope_corpora" in defs[0][0]
+    assert "vl_verified_scope_corpora" in defs[0][0]
     policies = await _maintenance_rows(
         "SELECT count(*) FROM pg_policies "
         "WHERE (coalesce(qual,'') || ' ' || coalesce(with_check,'')) "
-        "LIKE '%mp_verified_scope_corpora%'"
+        "LIKE '%vl_verified_scope_corpora%'"
     )
     assert policies[0][0] >= 9
 
@@ -400,7 +400,7 @@ async def test_enforcement_on_empty_token_returns_zero_rows(two_tenants):
     # enable enforcement as maintenance
     async with _session("maintenance") as db:
         await db.execute(
-            __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(true)")
+            __import__("sqlalchemy").text("SELECT vl_set_scope_token_enforcement(true)")
         )
         await db.commit()
     try:
@@ -414,7 +414,7 @@ async def test_enforcement_on_empty_token_returns_zero_rows(two_tenants):
     finally:
         async with _session("maintenance") as db:
             await db.execute(
-                __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(false)")
+                __import__("sqlalchemy").text("SELECT vl_set_scope_token_enforcement(false)")
             )
             await db.commit()
 
@@ -425,7 +425,7 @@ async def test_enforcement_on_valid_token_reads_own_corpus(two_tenants):
     token = scope_token_for(alpha)
     async with _session("maintenance") as db:
         await db.execute(
-            __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(true)")
+            __import__("sqlalchemy").text("SELECT vl_set_scope_token_enforcement(true)")
         )
         await db.commit()
     try:
@@ -439,7 +439,7 @@ async def test_enforcement_on_valid_token_reads_own_corpus(two_tenants):
     finally:
         async with _session("maintenance") as db:
             await db.execute(
-                __import__("sqlalchemy").text("SELECT mp_set_scope_token_enforcement(false)")
+                __import__("sqlalchemy").text("SELECT vl_set_scope_token_enforcement(false)")
             )
             await db.commit()
 
@@ -450,11 +450,11 @@ async def test_runtime_cannot_change_enforcement():
 
     with pytest.raises(Exception):
         async with _session("runtime") as conn:
-            await conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
+            await conn.execute(sa.text("SELECT vl_set_scope_token_enforcement(true)"))
 
 
 async def test_verified_scope_corpora_call_count(two_tenants):
-    """mp_verified_scope_corpora is called at most twice for a 1000-row scan."""
+    """vl_verified_scope_corpora is called at most twice for a 1000-row scan."""
     alpha = two_tenants["forge-alpha"]
     token = scope_token_for(alpha)
     from sqlalchemy import text as _t
@@ -464,17 +464,17 @@ async def test_verified_scope_corpora_call_count(two_tenants):
         await db.execute(_t("SELECT pg_stat_reset()"))
     async with _session("runtime") as conn:
         await conn.execute(
-            _t("SELECT set_config('mindpalace.tenant_scope', :s, true)"), {"s": alpha}
+            _t("SELECT set_config('verilore.tenant_scope', :s, true)"), {"s": alpha}
         )
         await conn.execute(
-            _t("SELECT set_config('mindpalace.scope_token', :t, true)"), {"t": token}
+            _t("SELECT set_config('verilore.scope_token', :t, true)"), {"t": token}
         )
         await conn.execute(_t("SELECT count(*) FROM memory_claims"))
     async with _session("maintenance") as db:
         r = await db.execute(
             _t(
                 "SELECT calls FROM pg_stat_user_functions "
-                "WHERE funcname='mp_verified_scope_corpora'"
+                "WHERE funcname='vl_verified_scope_corpora'"
             )
         )
         calls = r.scalar() or 0

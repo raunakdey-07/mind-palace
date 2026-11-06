@@ -1,6 +1,6 @@
-# Gap analysis: Mind Palace vs. Team 052 requirements
+# Gap analysis: Verilore vs. Team 052 requirements
 
-> See the [integration guide](guide.md) for wiring Mind Palace into a content-generation app.
+> See the [integration guide](guide.md) for wiring Verilore into a content-generation app.
 
 ## Status banner
 
@@ -16,7 +16,7 @@ Probes d (path scoping) and e (HTTP-level isolation): probe d raw output posted
 tests remain the evidence for HTTP-level isolation semantics.
 
 Read-only analysis against the Team 052 requirements report (attachment D,
-34 requirements MP-SE-01..34) and the Mind Palace repository at
+34 requirements MP-SE-01..34) and the Verilore repository at
 `origin/main` (commit `023bead`, post-#100). Status column of attachment D was
 written without running this repo and is partly out of date; the rows below
 carry our own evidence.
@@ -35,7 +35,7 @@ cut line is "owner decides" for every item.
 | MP-SE-05 | Conflict representation | P0 | **exists** | `MemoryResponse.conflicts`; `api/services/memory.py` conflict scan; `tests/test_memory_adjudication.py` | core | owner decides |
 | MP-SE-06 | Semantic retrieval | P1 | **exists** (quality limits) | `api/routers/query.py`, `api/routers/search.py`, `memory_query.py`; `tests/test_search_semantics.py` (18 backend skips); frozen M006.75 45/60 exact | core | owner decides |
 | MP-SE-07 | Bounded context packing | P1 | **exists** (chars, not tokens) | `api/routers/memory.py:244` (`POST /pack`), `memory_pack.py`, `ContextPack`; budget in Unicode characters (see §2.3) | core | owner decides |
-| MP-SE-08 | Python SDK | P0 | **exists** | `mindpalace_sdk.py` (53 KB); `tests/test_sdk.py`, `test_memory_client.py`; typed errors documented | core | owner decides |
+| MP-SE-08 | Python SDK | P0 | **exists** | `verilore_sdk.py` (53 KB); `tests/test_sdk.py`, `test_memory_client.py`; typed errors documented | core | owner decides |
 | MP-SE-09 | REST API | P0 | **exists** | `api/routers/*.py` (memory, corpora, ingest, context, query, search); `examples/MEMORY_API.md` | core | owner decides |
 | MP-SE-10 | Immutable snapshots | P2 | **exists** | `api/routers/memory.py:232` (`POST /snapshot`), `:238` (`POST /replay`); `memory_snapshot_seals`; `tests/test_memory_snapshot_seal.py` | core | owner decides |
 | MP-SE-11 | Change feed | P2 | **exists** | `api/routers/memory.py:156` (`GET /feed`); `FeedResponse`; pagination documented (no exactly-once guarantee) | core | owner decides |
@@ -53,13 +53,13 @@ cut line is "owner decides" for every item.
 | MP-SE-23 | Generation-service integration | P1 | **partial** | `POST /api/memory/pack`, `POST /api/context`, SDK; no generation orchestration in core (correct — belongs in adapter). | consumer adapter | owner decides |
 | MP-SE-24 | Generation provenance | P2 | **partial** | `memory_proof` / `memory_receipt` / `memory_pack` digests; `source_hash`, `version_id`, `observed_at` in responses. | core (primitives) + adapter (logging) | owner decides |
 | MP-SE-25 | Durable sync/retries | P1 | **absent** (core) | No outbox in core; report §7.4 recommends app-level outbox. Belongs in consumer adapter. | consumer adapter | owner decides |
-| MP-SE-26 | Graceful memory-service failure | P1 | **partial** | SDK raises `MemoryClientError` with code/message/status; default timeout 30s (`mindpalace_sdk.py:918`); `httpx.TimeoutException` → 504 (`mindpalace_sdk.py:334`); no automatic retry. **Probe g confirmed:** connection refused → `MemoryClientError` (transport_error, 503); no retry loop observed. | core (SDK) + adapter | owner decides |
-| MP-SE-27 | Marketing evaluation benchmark | P1 | **absent** | No marketing benchmark in core; agency_readiness benchmark is domain-neutral marketing-shaped fixtures (not a consumer benchmark). | Mind Palace example | owner decides |
+| MP-SE-26 | Graceful memory-service failure | P1 | **partial** | SDK raises `MemoryClientError` with code/message/status; default timeout 30s (`verilore_sdk.py:918`); `httpx.TimeoutException` → 504 (`verilore_sdk.py:334`); no automatic retry. **Probe g confirmed:** connection refused → `MemoryClientError` (transport_error, 503); no retry loop observed. | core (SDK) + adapter | owner decides |
+| MP-SE-27 | Marketing evaluation benchmark | P1 | **absent** | No marketing benchmark in core; agency_readiness benchmark is domain-neutral marketing-shaped fixtures (not a consumer benchmark). | Verilore example | owner decides |
 | MP-SE-28 | Multi-user isolation tests | P0 | **exists** (core) | `tests/test_tenant_isolation.py`, `test_tenant_connection_isolation.py`, `test_tenant_control_effectiveness.py`, `test_scope_forgery.py`, `test_credential_management.py`, `test_error_and_log_hygiene.py`. V1 comparison: 202 tests combined across all nine tenant-isolation files (not test_tenant_isolation.py alone), zero outcome differences between main run and rerun; issue #84. | core | owner decides |
-| MP-SE-29 | Retention and permanent erasure | P0 (real deploy) | **partial** | `DELETE /api/corpora/{name}` → `mindpalace_erase_corpus` (migration 009); append-only triggers remain; receipts/packs/backups survive (docs/security.md §data lifecycle). No TTL/purge. | core (primitives) + adapter (policy) | owner decides |
+| MP-SE-29 | Retention and permanent erasure | P0 (real deploy) | **partial** | `DELETE /api/corpora/{name}` → `verilore_erase_corpus` (migration 009); append-only triggers remain; receipts/packs/backups survive (docs/security.md §data lifecycle). No TTL/purge. | core (primitives) + adapter (policy) | owner decides |
 | MP-SE-30 | Archive pagination/scaling | P2 | **partial** | `GET /feed` paginated; full-corpus load documented cliff up to ~1,200 versions (docs/STATUS.md §2). | core | owner decides |
 | MP-SE-31 | Persistent claim-vector index | P2 | **absent** | `memory_claim_embeddings` table exists (migration 007) but `recall` recomputes vectors (docs/STATUS.md §7). | core candidate | owner decides |
-| MP-SE-32 | Production monitoring | P2 | **partial** | `/health/ready`, `mindpalace posture`, `mp_scope_enforcement_status`, structured logs. No metrics endpoint. | core | owner decides |
+| MP-SE-32 | Production monitoring | P2 | **partial** | `/health/ready`, `verilore posture`, `vl_scope_enforcement_status`, structured logs. No metrics endpoint. | core | owner decides |
 | MP-SE-33 | General application integration guide | P2 | **partial** | `examples/MEMORY_API.md`, `examples/marketing-campaign-memory/`; `docs/integration/` does not exist yet (being built in v0.10.0 I-series). | core (docs) | owner decides |
 | MP-SE-34 | Secure production deployment validation | P0 (real deploy) | **partial** | Server profile refuses unsafe role, scope-secret mismatch, enforcement off (`api/main.py` lifespan, docs/security.md). Validated by CI ("A server deployment refuses/starts"). | core | owner decides |
 
@@ -103,9 +103,9 @@ approved current claim. Draft/rejected claims are withheld from `current` and
 
 SDK example:
 
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    mp = MindPalace("acme")
+    mp = Verilore("acme")
     mp.memory.remember("Never use the word curated in copy.", key="brand.rule.curated")
     mp.memory.remember("Never use the word curated in copy.", key="brand.rule.curated", state="rejected")
     pack = mp.memory.pack(query="")            # withheld_counts["rejected"] == 1; "curated" absent
@@ -134,16 +134,16 @@ topic_key is scoped the same way.
 
 Open issue: frontmatter `status` is ignored on documents with an authored
 `claims:` block, so a `status: draft` authored document's claims stay
-approved -- https://github.com/raunakdey-07/mind-palace/issues/140. Not fixed
+approved -- https://github.com/raunakdey-07/verilore/issues/140. Not fixed
 in v0.10.0.
 
 ### 2.2 Scope separation (Test D and F of attachment D)
 
 **Partially verified.** Probe d (run 41296378275, raw output issue #105 comment 6556588065): exact-path `query`/`pack`/`current` return only the matching document; directory prefix (`campaign-a/`) returns 404 `document_not_found` (confirming path is exact, not prefix). Campaign-b text does not appear in campaign-a exact-path results. **Unverified:** live HTTP-level isolation (in-process SDK only). Code-level tests remain evidence.
 
-Mind Palace primitives:
+Verilore primitives:
 
-- **Corpus boundary** (RLS per corpus, migration 008/015): strongest isolation. Campaign A and Campaign B of the same brand are different corpora → no cross-read (enforced by `mindpalace_allowed_corpus` policy, `migrations/008_tenant_scoped_access.py:120-128`).
+- **Corpus boundary** (RLS per corpus, migration 008/015): strongest isolation. Campaign A and Campaign B of the same brand are different corpora → no cross-read (enforced by `verilore_allowed_corpus` policy, `migrations/008_tenant_scoped_access.py:120-128`).
 - **Path filter**: `MemoryRequest.path` filters by exact document path match in `memory.py` (line 1250: `d.path = :path`); `memory_public.py:445` raises `document_not_found` unless a version path equals request.path. Not a prefix/directory match.
 - **Doc state** (`info_state`): written at `api/services/memory.py:1168-1171` but NOT used as a filter in `current`/`pack`/`query` (those filter only `v.event <> 'DELETED'` at `api/services/memory.py:476,617,1372`). **Probe c (issue #105 comment 6555683810) confirmed:** rejected content appears in pack by default (see #114 for the fix).
 
@@ -177,7 +177,7 @@ a conflict group keeps only its in-scope sides, and one side left becomes curren
 **Partially verified.** Probe e (run 41299138837, raw output issue #105 comment 6556969596): over HTTP against real server, restricted credential (corpus A only) calling history/as-of/evidence/snapshot/replay_snapshot/changes/pack/query/current/feed on corpus B returns 403/404 (denied). Conflicts exposed as a field in query/pack responses, not a separate route. **Unverified:** HTTP-level replay_snapshot (requires snapshot_id from prior call). Code-level tests remain evidence.
 
 From code: every archive row carries `corpus_id`; RLS policies keyed on `corpus_id` (migration 008) or via document (`chunks` through `documents`, migration 008). Runtime role has no BYPASSRLS (`scripts/db/runtime_roles.sql`).
-From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files, zero outcome differences between main run and rerun; both connect as `mpadmin`. `tests/test_scope_forgery.py`: forged scope, wrong-secret token, empty token → zero rows. `tests/test_corpus_isolation.py`: cross-corpus reads return zero.
+From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant-isolation files, zero outcome differences between main run and rerun; both connect as `vladmin`. `tests/test_scope_forgery.py`: forged scope, wrong-secret token, empty token → zero rows. `tests/test_corpus_isolation.py`: cross-corpus reads return zero.
 
 **Specific unverified item:** HTTP-level replay_snapshot (requires snapshot_id from prior call).
 
@@ -185,14 +185,14 @@ From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant
 
 **Verified by probe g (run 41287500689).**
 
-Verified from code (`mindpalace_sdk.py`):
-- SDK raises `MemoryClientError` with `code`, `message`, `status_code` on HTTP errors (`mindpalace_sdk.py:139`).
-- Default timeout is 30s (`mindpalace_sdk.py:918`: `timeout: float = 30`), passed as `timeout=self._client.timeout` to httpx calls (`mindpalace_sdk.py:331,447,604,819`).
-- `httpx.TimeoutException` → `MemoryClientError("timeout", ..., 504)` (`mindpalace_sdk.py:334,450,607,822`).
-- `httpx.RequestError` → `MemoryClientError("transport_error", ..., 503)` (`mindpalace_sdk.py:336,451,606,821`).
+Verified from code (`verilore_sdk.py`):
+- SDK raises `MemoryClientError` with `code`, `message`, `status_code` on HTTP errors (`verilore_sdk.py:139`).
+- Default timeout is 30s (`verilore_sdk.py:918`: `timeout: float = 30`), passed as `timeout=self._client.timeout` to httpx calls (`verilore_sdk.py:331,447,604,819`).
+- `httpx.TimeoutException` → `MemoryClientError("timeout", ..., 504)` (`verilore_sdk.py:334,450,607,822`).
+- `httpx.RequestError` → `MemoryClientError("transport_error", ..., 503)` (`verilore_sdk.py:336,451,606,821`).
 
 **Verified by probe g (run 41287500689, raw output issue #105 comment 6555683810):**
-- Connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang. SDK default timeout 30s confirmed from source (`mindpalace_sdk.py:918`).
+- Connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang. SDK default timeout 30s confirmed from source (`verilore_sdk.py:918`).
 
 The SDK now defaults to `retries=2` and `backoff=0.2` alongside the 30 s timeout, so a brief blip is retried at most `retries + 1` times with exponential backoff (0.2 s, 0.4 s) before `MemoryClientError("timeout", ..., 504)` or `MemoryClientError("transport_error", ..., 503)`. `retries=0` turns retrying off. A retried `remember` is safe because identical arguments on the same day return `UNCHANGED`, so a retry never writes a second version.
 
@@ -217,14 +217,14 @@ Issues #107-#113 were filed for rows 2-8. Issue #105 was filed for live probes (
 ## 4. Belongs-in summary
 
 - **core**: memory primitives, RLS, scope tokens, snapshots, evidence, pack, history, as-of, revalidate, SDK, REST, CLI, MCP.
-- **Mind Palace example**: `examples/marketing-campaign-memory` (adapter pattern, clearly labelled consumer).
+- **Verilore example**: `examples/marketing-campaign-memory` (adapter pattern, clearly labelled consumer).
 - **consumer adapter (Team 052)**: brand/campaign entities, correction classification, authority evaluation, context assembly, outbox/retry, marketing retrieval ranking, metadata mapping, generation provenance logging.
 
-No marketing concepts should enter Mind Palace core.
+No marketing concepts should enter Verilore core.
 
 ## 5. Notes
 
 - Attachment D's status column is partly out of date (it claims auth/tenant/erasure/structured ingestion are missing; all four have shipped in some form). This gap analysis supersedes it for the items verified above.
-- Several "absent" items (structured ingestion, correction classification, outbox) are correctly absent from *core* — they belong in the consumer adapter, not Mind Palace. The report's "not established" verdicts for those are accurate for core but misleading if read as "Mind Palace should build them."
+- Several "absent" items (structured ingestion, correction classification, outbox) are correctly absent from *core* — they belong in the consumer adapter, not Verilore. The report's "not established" verdicts for those are accurate for core but misleading if read as "Verilore should build them."
 - Live probes (#105, run 41287500689, raw output issue #105 comment 6555683810) completed 2026-11-01. Probe a confirmed idempotency/supersession; probe c confirmed draft/rejected/superseded appear in current/pack by default; probe f confirmed budget in Unicode characters; probe g confirmed SDK failure behaviour. Probe d (run 41296378275, raw output issue #105 comment 6556588065) confirmed exact-path scoping works; probe e (run 41299138837, raw output issue #105 comment 6556969596) confirmed cross-corpus denial over HTTP.
 - Issue #105 is the live probe issue (not a throwaway PR); its results are evidence for this gap analysis.

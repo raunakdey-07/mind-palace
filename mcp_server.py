@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""MCP (Model Context Protocol) server for Mind Palace.
+"""MCP (Model Context Protocol) server for Verilore.
 
-A thin adapter exposing the Mind Palace core over MCP so any MCP-compatible
+A thin adapter exposing the Verilore core over MCP so any MCP-compatible
 AI client can use corpus memory as tools. Deliberately minimal:
 context, search, sync, list_corpora, and the public memory operations.
 The memory tools do not expose arbitrary writes; snapshot creates immutable state.
@@ -11,11 +11,11 @@ The memory tools do not expose arbitrary writes; snapshot creates immutable stat
 Authentication is inherited from the HTTP surface, not reimplemented: the same
 credential, the same corpus scope and the same read-write rule apply, because
 the same choke point decides them. An MCP server is a stdio process launched by
-one configured agent, so `MIND_PALACE_MCP_CREDENTIAL` carries that agent's
+one configured agent, so `VERILORE_MCP_CREDENTIAL` carries that agent's
 credential. It is an environment variable rather than a tool argument on purpose:
 a tool argument is chosen by whoever calls the tool, and a caller who can choose
 their own credential needs no authorization at all. With
-`MIND_PALACE_AUTH_MODE=required` and no credential configured, every tool
+`VERILORE_AUTH_MODE=required` and no credential configured, every tool
 refuses -- MCP is not a way around the HTTP boundary.
 
 Run with:
@@ -24,13 +24,13 @@ Run with:
 Configure in an MCP client (example):
     {
       "mcpServers": {
-        "mind-palace": {
+        "verilore": {
           "command": "python",
           "args": ["-m", "mcp_server"],
           "env": {
             "DATABASE_URL": "postgresql://...",
-            "MIND_PALACE_AUTH_MODE": "required",
-            "MIND_PALACE_MCP_CREDENTIAL": "mpk_..."
+            "VERILORE_AUTH_MODE": "required",
+            "VERILORE_MCP_CREDENTIAL": "mpk_..."
           }
         }
       }
@@ -48,24 +48,24 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from api.models.memory import MemoryRequest, MemoryWire
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mcp = MCPServer("mind-palace")
+mcp = MCPServer("verilore")
 
-# One client per corpus name, cached; MindPalace handles corpus creation.
-_clients: dict[str, MindPalace] = {}
+# One client per corpus name, cached; Verilore handles corpus creation.
+_clients: dict[str, Verilore] = {}
 
 
-def _client(corpus: str) -> MindPalace:
+def _client(corpus: str) -> Verilore:
     """A local client for this process's configured credential.
 
     The credential is the same one the tool scope resolves from. Without it,
-    `MindPalace(corpus)` built an unnamed, unauthenticated client whose own
+    `Verilore(corpus)` built an unnamed, unauthenticated client whose own
     authorization check ran as the default local principal -- so `context`,
     `search` and `sync` bypassed the very scope the tool had just established.
     """
     if corpus not in _clients:
-        _clients[corpus] = MindPalace(corpus, api_key=os.getenv("MIND_PALACE_MCP_CREDENTIAL"))
+        _clients[corpus] = Verilore(corpus, api_key=os.getenv("VERILORE_MCP_CREDENTIAL"))
     return _clients[corpus]
 
 
@@ -79,7 +79,7 @@ async def _resolved_principal():
         # `Authorization` header carries, and passing the secret alone failed the
         # scheme check -- so every MCP tool answered 401 even with a correctly
         # configured credential.
-        credential = os.getenv("MIND_PALACE_MCP_CREDENTIAL") or None
+        credential = os.getenv("VERILORE_MCP_CREDENTIAL") or None
         principal = await resolve_principal(db, f"Bearer {credential}" if credential else None)
     if auth_required() and principal.unrestricted:
         # `resolve_principal` returns the unrestricted principal only when the
@@ -87,7 +87,7 @@ async def _resolved_principal():
         # running process. Refusing is the safe reading of that.
         raise AuthorizationError(
             "unauthenticated",
-            "MCP has no credential configured; set MIND_PALACE_MCP_CREDENTIAL",
+            "MCP has no credential configured; set VERILORE_MCP_CREDENTIAL",
             401,
         )
     return principal
@@ -178,7 +178,7 @@ def memory_remember(
     Without `file`, the evidence for the claim is the statement itself: it proves
     what you were told, not that it is true. With `file`, the statement must
     appear verbatim in that file, and the file must be inside
-    MIND_PALACE_INGEST_ROOTS.
+    VERILORE_INGEST_ROOTS.
 
     Idempotent: submitting an identical statement again returns the same
     version_id with event UNCHANGED. Submitting the same `key` with new text
@@ -210,13 +210,13 @@ def memory_remember(
     duplicate or should be replaced: pass `supersedes_claim_id` to settle it.
 
     Takes no credential. The caller's identity is the one
-    MIND_PALACE_MCP_CREDENTIAL resolves to, and that identity needs write access
+    VERILORE_MCP_CREDENTIAL resolves to, and that identity needs write access
     to the corpus.
     """
     from api.services.authz import AuthorizationError
     from api.services.ingest_paths import IngestPathRefused, require_permitted
     from api.services.remember import DecisionError, RememberError
-    from mindpalace_sdk import MemoryClientError
+    from verilore_sdk import MemoryClientError
 
     try:
         resolved = _checked_file(statement, file, require_permitted)
@@ -623,39 +623,39 @@ async def memory_revalidate(
 
 
 MCP_USAGE = """\
-mindpalace-mcp -- Mind Palace over the Model Context Protocol
+verilore-mcp -- Verilore over the Model Context Protocol
 
 Speaks JSON-RPC 2.0 on stdin/stdout. Start it from an MCP client config, not by
 typing at it: it reads requests from stdin and writes replies to stdout, so a
 terminal invocation reads EOF and exits immediately without printing anything.
 
 Usage:
-  mindpalace-mcp                 serve on stdin/stdout (the normal case)
-  mindpalace-mcp --help          this text
-  mindpalace-mcp --version       print the server version
+  verilore-mcp                 serve on stdin/stdout (the normal case)
+  verilore-mcp --help          this text
+  verilore-mcp --version       print the server version
 
 Environment:
-  MIND_PALACE_MCP_CREDENTIAL  required in `required` auth mode. The raw secret
-      from `mindpalace credential issue <name> -c <corpus> -r read_write`. It
+  VERILORE_MCP_CREDENTIAL  required in `required` auth mode. The raw secret
+      from `verilore credential issue <name> -c <corpus> -r read_write`. It
       must be a credential that can write to the corpus, or `memory_remember`
       and `sync` are refused. A read-only credential can still use the read
       tools. This is an environment variable rather than a tool argument on
       purpose: a caller that could pass its own credential would need no
       authorization at all.
   DATABASE_URL                 PostgreSQL with pgvector. Required.
-  MIND_PALACE_INGEST_ROOTS     directories `sync` and `memory_remember(file=)`
+  VERILORE_INGEST_ROOTS     directories `sync` and `memory_remember(file=)`
       may read. `none` disables both.
 
 Client configuration (stdio):
-  { "command": "mindpalace-mcp",
-    "env": { "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
-             "MIND_PALACE_MCP_CREDENTIAL": "mpk_...",
-             "MIND_PALACE_INGEST_ROOTS": "/srv/content" } }
+  { "command": "verilore-mcp",
+    "env": { "DATABASE_URL": "postgresql://vladmin:secret@localhost:5432/verilore",
+             "VERILORE_MCP_CREDENTIAL": "mpk_...",
+             "VERILORE_INGEST_ROOTS": "/srv/content" } }
 
 To check it is alive without a client:
   printf '%s\\n' '{"jsonrpc":"2.0","id":1,"method":"initialize",
     "params":{"protocolVersion":"2024-11-05","capabilities":{},
-              "clientInfo":{"name":"probe","version":"0"}}}' | mindpalace-mcp
+              "clientInfo":{"name":"probe","version":"0"}}}' | verilore-mcp
 """
 
 
@@ -673,10 +673,10 @@ def main() -> None:
         from importlib.metadata import PackageNotFoundError, version
 
         try:
-            found = version("mindpalace-os")
+            found = version("verilore-os")
         except PackageNotFoundError:
             found = "unknown (running from a source tree, not an install)"
-        sys.stdout.write(f"mindpalace-mcp {found}\n")
+        sys.stdout.write(f"verilore-mcp {found}\n")
         return
 
     asyncio.run(mcp.run_stdio_async())

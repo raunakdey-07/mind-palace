@@ -61,8 +61,8 @@ def corpus(request) -> str:
 
 
 @pytest.fixture
-def repo(tmp_path):
-    d = tmp_path / "docs"
+def repo(tvl_path):
+    d = tvl_path / "docs"
     d.mkdir()
     (d / "checkout.md").write_text(DOC)
     return d
@@ -74,9 +74,9 @@ def _invoke(args, roots: str | None = None):
 
     env = dict(os.environ)
     if roots is None:
-        env.pop("MIND_PALACE_INGEST_ROOTS", None)
+        env.pop("VERILORE_INGEST_ROOTS", None)
     else:
-        env["MIND_PALACE_INGEST_ROOTS"] = roots
+        env["VERILORE_INGEST_ROOTS"] = roots
     return CliRunner().invoke(app, args, env=env)
 
 
@@ -139,14 +139,14 @@ def test_ingest_repo_without_the_flag_keeps_them(repo, corpus):
     assert "The checkout service uses PostgreSQL." in _claims(corpus)
 
 
-def test_a_reset_wipes_one_corpus_and_leaves_the_others_alone(repo, corpus, tmp_path):
+def test_a_reset_wipes_one_corpus_and_leaves_the_others_alone(repo, corpus, tvl_path):
     """The scratch corpus starts again, and the rest of the database does not.
 
     The way out of a polluted corpus used to be dropping the whole database
     through `podman exec`, which took every other corpus with it.
     """
     other = corpus + "-other"
-    other_dir = tmp_path / "other"
+    other_dir = tvl_path / "other"
     other_dir.mkdir()
     (other_dir / "billing.md").write_text(OTHER_DOC)
 
@@ -203,10 +203,10 @@ def test_ingest_repo_still_needs_no_server(repo, corpus):
     assert result.exit_code == 0, result.output
 
 
-def test_a_delete_removes_the_corpus_and_leaves_siblings_alone(repo, corpus, tmp_path):
+def test_a_delete_removes_the_corpus_and_leaves_siblings_alone(repo, corpus, tvl_path):
     """`corpus delete --yes` erases one corpus and leaves the others alone."""
     other = corpus + "-other"
-    other_dir = tmp_path / "other"
+    other_dir = tvl_path / "other"
     other_dir.mkdir()
     (other_dir / "billing.md").write_text(OTHER_DOC)
 

@@ -177,7 +177,7 @@
       "commit": "549d2cf443cd5af85caafc3af3ea9fe1337e543f",
       "failed": "0",
       "label": "full suite, Phase 0, disposable PG 15.4 at 15434",
-      "note": "pytest -q run directly in a shell with PYTHONPATH unset; 3 of 4 full-suite runs this session returned exactly 1619 passed / 2 skipped / 0 failed. One run via scripts/record_test_run.py --command returned 6 failures because a stale mindpalace_test_<pid>_0 database from an earlier killed run was still present; the session database is disposable and was dropped before this run.",
+      "note": "pytest -q run directly in a shell with PYTHONPATH unset; 3 of 4 full-suite runs this session returned exactly 1619 passed / 2 skipped / 0 failed. One run via scripts/record_test_run.py --command returned 6 failures because a stale verilore_test_<pid>_0 database from an earlier killed run was still present; the session database is disposable and was dropped before this run.",
       "passed": "1619",
       "skipped": "2"
     },

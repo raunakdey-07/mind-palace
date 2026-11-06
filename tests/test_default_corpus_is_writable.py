@@ -2,7 +2,7 @@
 
 ## The bug
 
-`mindpalace remember` -- step 3 of the README's five-minute path, the first thing
+`verilore remember` -- step 3 of the README's five-minute path, the first thing
 a new user runs after `init` -- failed on a clean install with:
 
 ```
@@ -163,9 +163,9 @@ async def _erase(corpus_id: str) -> None:
     async with admin_session_scope() as db:
         with db_module.principal_scope(authz.ADMIN_PRINCIPAL):
             await db.execute(
-                text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"),
+                text("SELECT set_config('verilore.tenant_scope', '{*}', true)"),
             )
-            await db.execute(text("SELECT mindpalace_erase_corpus(:c)"), {"c": corpus_id})
+            await db.execute(text("SELECT verilore_erase_corpus(:c)"), {"c": corpus_id})
         await db.commit()
 
 

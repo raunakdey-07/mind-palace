@@ -50,7 +50,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts" / "benchmark"))
 
-URL = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+URL = "postgresql://vladmin:secret@localhost:5432/verilore"
 VALID_AT = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
 PROBE = (
     "What is the current database?",
@@ -154,7 +154,7 @@ async def measure(claims: int, repeats: int) -> dict:
     engine = create_async_engine(
         URL.replace("postgresql://", "postgresql+asyncpg://"), poolclass=NullPool
     )
-    schema = "mp_" + uuid4().hex[:10]
+    schema = "vl_" + uuid4().hex[:10]
     corpus_id = hashlib.sha256(uuid4().bytes).hexdigest()
     rows: list[dict] = []
 

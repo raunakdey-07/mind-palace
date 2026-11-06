@@ -1,4 +1,4 @@
-"""Migration 017: database objects renamed in place from Mind Palace to Verilore.
+"""Migration 017: database objects renamed in place from Verilore to Verilore.
 
 From an empty database, upgrade to head, then downgrade to 016 restores the
 old names. The migration must rename in place (ALTER FUNCTION / ALTER POLICY)
@@ -49,8 +49,7 @@ def _alembic_scripts():
 
 
 def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
-    """After upgrading to head, verilore_* objects exist and mindpalace_* do not."""
-    from alembic import command
+    """After upgrading to head, verilore_* objects exist and verilore_* do not."""
 
     scripts, cfg = _alembic_scripts
     head = scripts.get_current_head()
@@ -80,17 +79,17 @@ def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
             # Old names are gone
             old_func = conn.execute(
                 sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'mp_verified_scope_corpora'"
+                    "SELECT proname FROM pg_proc WHERE proname = 'vl_verified_scope_corpora'"
                 )
             ).scalar()
-            assert old_func is None, "mp_verified_scope_corpora still exists after upgrade"
+            assert old_func is None, "vl_verified_scope_corpora still exists after upgrade"
 
             old_policy = conn.execute(
                 sa.text(
-                    "SELECT policyname FROM pg_policies WHERE policyname = 'mindpalace_tenant'"
+                    "SELECT policyname FROM pg_policies WHERE policyname = 'verilore_tenant'"
                 )
             ).scalar()
-            assert old_policy is None, "mindpalace_tenant still exists after upgrade"
+            assert old_policy is None, "verilore_tenant still exists after upgrade"
 
             # GUC setting name is verilore.*
             setting = conn.execute(
@@ -104,8 +103,6 @@ def test_migration_017_upgrade_installs_verilore_names(_alembic_scripts):
 
 def test_migration_017_rls_still_filters_tenant_rows(_alembic_scripts):
     """After upgrade to 017, RLS still filters a second tenant's rows."""
-    from alembic import command
-
     scripts, cfg = _alembic_scripts
     engine = sa.create_engine(_sync_url())
     try:
@@ -145,8 +142,8 @@ def test_migration_017_rls_still_filters_tenant_rows(_alembic_scripts):
         engine.dispose()
 
 
-def test_migration_017_downgrade_restores_mindpalace_names(_alembic_scripts):
-    """Downgrading from 017 to 016 restores the old Mind Palace names."""
+def test_migration_017_downgrade_restores_verilore_names(_alembic_scripts):
+    """Downgrading from 017 to 016 restores the old Verilore names."""
     from alembic import command
 
     scripts, cfg = _alembic_scripts
@@ -161,17 +158,17 @@ def test_migration_017_downgrade_restores_mindpalace_names(_alembic_scripts):
             # Old names restored
             func = conn.execute(
                 sa.text(
-                    "SELECT proname FROM pg_proc WHERE proname = 'mp_verified_scope_corpora'"
+                    "SELECT proname FROM pg_proc WHERE proname = 'vl_verified_scope_corpora'"
                 )
             ).scalar()
-            assert func == "mp_verified_scope_corpora", "mp_verified_scope_corpora not restored"
+            assert func == "vl_verified_scope_corpora", "vl_verified_scope_corpora not restored"
 
             policy = conn.execute(
                 sa.text(
-                    "SELECT policyname FROM pg_policies WHERE policyname = 'mindpalace_tenant'"
+                    "SELECT policyname FROM pg_policies WHERE policyname = 'verilore_tenant'"
                 )
             ).scalar()
-            assert policy == "mindpalace_tenant", "mindpalace_tenant not restored"
+            assert policy == "verilore_tenant", "verilore_tenant not restored"
 
             # New names gone
             new_func = conn.execute(

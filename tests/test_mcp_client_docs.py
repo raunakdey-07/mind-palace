@@ -56,7 +56,7 @@ def test_the_document_has_the_three_client_shapes():
 def test_every_snippet_names_the_server_and_its_environment():
     """Each of the three clients is configured, and each bounds the agent's writes.
 
-    `MIND_PALACE_INGEST_ROOTS` is what stops `sync` and `memory_remember --file`
+    `VERILORE_INGEST_ROOTS` is what stops `sync` and `memory_remember --file`
     reaching outside the repository, so a snippet without it documents a server with
     wider access than the reader probably intended.
     """
@@ -67,7 +67,7 @@ def test_every_snippet_names_the_server_and_its_environment():
             assert command, raw
             env = server.get("environment") or server.get("env") or {}
             assert "DATABASE_URL" in env, raw
-            assert "MIND_PALACE_INGEST_ROOTS" in env, raw
+            assert "VERILORE_INGEST_ROOTS" in env, raw
             seen += 1
     assert seen == 3, f"expected one snippet per client, found {seen}"
 

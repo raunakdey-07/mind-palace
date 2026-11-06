@@ -55,7 +55,7 @@ from m0115_dataset import build_corpus, build_questions  # noqa: E402
 
 VALID_AT = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
 CORPUS_NAME = "mp-baseline"
-URL = os.environ.get("DATABASE_URL") or ("postgresql://mpadmin:secret@localhost:5432/mindpalace")
+URL = os.environ.get("DATABASE_URL") or ("postgresql://vladmin:secret@localhost:5432/verilore")
 
 
 def _migrations(conn):
@@ -255,10 +255,10 @@ def main() -> int:
     sub = parser.add_subparsers(dest="action", required=True)
     cap = sub.add_parser("capture")
     cap.add_argument("--out", required=True)
-    cmp_ = sub.add_parser("compare")
-    cmp_.add_argument("--baseline", required=True)
-    cmp_.add_argument("--current", required=True)
-    cmp_.add_argument("--show", help="print the field-level diff for one question id")
+    cvl_ = sub.add_parser("compare")
+    cvl_.add_argument("--baseline", required=True)
+    cvl_.add_argument("--current", required=True)
+    cvl_.add_argument("--show", help="print the field-level diff for one question id")
     args = parser.parse_args()
 
     if args.action == "compare":

@@ -24,10 +24,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 PY_APP = """\
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 from memory_pack import MemoryPack
 
-memory = MindPalace("integration-demo", base_url=os.environ["MP_BASE_URL"])
+memory = Verilore("integration-demo", base_url=os.environ["MP_BASE_URL"])
 raw = memory.memory.query(corpus="integration-demo", query=QUESTION)
 pack = MemoryPack.from_json(raw.canonical_json())
 print(pack.status)
@@ -36,11 +36,11 @@ print(len(pack.current), "current", len(pack.conflicts), "conflict")
 
 FASTAPI_APP = """\
 from fastapi import FastAPI
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 from memory_pack import MemoryPack
 
 app = FastAPI()
-memory = MindPalace("integration-demo", base_url=os.environ["MP_BASE_URL"])
+memory = Verilore("integration-demo", base_url=os.environ["MP_BASE_URL"])
 
 
 @app.get("/brief")
@@ -96,7 +96,7 @@ def main() -> int:
 
     # Does the SDK import without pulling the semantic stack?
     probe = (
-        "import sys, mindpalace_sdk;"
+        "import sys, verilore_sdk;"
         "banned=[m for m in ('torch','sentence_transformers','transformers') if m in sys.modules];"
         "print(','.join(banned) or 'none')"
     )

@@ -120,10 +120,10 @@ def collected_test_count() -> int | None:
     """How many tests the tree collects right now, or None if pytest cannot say.
 
     Deliberately the cheapest possible invocation. This runs in CI on every
-    build and a full collection is not free; `MIND_PALACE_SKIP_COLLECT=1` turns
+    build and a full collection is not free; `VERILORE_SKIP_COLLECT=1` turns
     it off for a developer who does not want to wait.
     """
-    if os.getenv("MIND_PALACE_SKIP_COLLECT") == "1":
+    if os.getenv("VERILORE_SKIP_COLLECT") == "1":
         return None
     try:
         result = subprocess.run(

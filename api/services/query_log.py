@@ -7,7 +7,7 @@ corpus changes underneath them. This records the real traffic instead: every
 `recall` and `remember`, with the ranking it produced and how long it took, so the
 verdicts come from the caller instead of from a grader with opinions.
 
-`mindpalace feedback <query_id> --verdict right|wrong|abstained_wrongly --note ...`
+`verilore feedback <query_id> --verdict right|wrong|abstained_wrongly --note ...`
 appends a second line pointing at the first. Two weeks of that is a graded
 sample of actual usage, which no offline suite can substitute for.
 
@@ -24,7 +24,7 @@ content, and `--verify` a receipt with one in hand.
 
 ## When it runs
 
-Only when `MIND_PALACE_QUERY_LOG=1`. Not by default, anywhere. A row stores the
+Only when `VERILORE_QUERY_LOG=1`. Not by default, anywhere. A row stores the
 caller's query text verbatim to `QUERY_LIMIT`, which is what makes the file worth
 having and also what makes it something to ask for deliberately.
 
@@ -72,19 +72,19 @@ DIRECTORY_MODE = 0o700
 
 
 def default_path() -> Path:
-    """Where the log lives. Overridable with `MIND_PALACE_QUERY_LOG`."""
-    override = os.getenv("MIND_PALACE_QUERY_LOG")
+    """Where the log lives. Overridable with `VERILORE_QUERY_LOG`."""
+    override = os.getenv("VERILORE_QUERY_LOG")
     if override and override != "1" and override.lower() != "true":
         return Path(override).expanduser()
     return (
-        Path(os.getenv("MIND_PALACE_DATA_DIR", "~/.mind-palace")).expanduser()
+        Path(os.getenv("VERILORE_DATA_DIR", "~/.verilore")).expanduser()
         / "logs"
         / "queries.jsonl"
     )
 
 
 def enabled(tenant_scoped: bool) -> bool:
-    """Whether this process writes rows. Off unless `MIND_PALACE_QUERY_LOG=1`.
+    """Whether this process writes rows. Off unless `VERILORE_QUERY_LOG=1`.
 
     A row stores the caller's query text, verbatim to `QUERY_LIMIT`. That is the
     point of the file -- grading real usage needs the question, not a hash of it --
@@ -99,7 +99,7 @@ def enabled(tenant_scoped: bool) -> bool:
     The argument stays so the caller does not have to change and so the decision
     has one place.
     """
-    return os.getenv("MIND_PALACE_QUERY_LOG", "") in ("1", "true", "yes", "on")
+    return os.getenv("VERILORE_QUERY_LOG", "") in ("1", "true", "yes", "on")
 
 
 def query_id(corpus: str, operation: str, query: str, started: float) -> str:
@@ -238,7 +238,7 @@ def tenant_scoped_now() -> bool:
     which is the single-user development mode. A server sets one.
     """
     try:
-        return bool(os.getenv("MIND_PALACE_TENANT_SCOPE"))
+        return bool(os.getenv("VERILORE_TENANT_SCOPE"))
     except Exception:  # noqa: BLE001 - a probe about the environment never raises
         return False
 

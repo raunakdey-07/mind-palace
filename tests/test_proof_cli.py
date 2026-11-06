@@ -135,14 +135,14 @@ TAMPERED_PACK_JSON = PACK_JSON.replace("The primary datastore is PostgreSQL.", "
 
 
 @pytest.fixture
-def workspace(tmp_path) -> Path:
+def workspace(tvl_path) -> Path:
     pack = MemoryPack.from_dict(PACK_FIXTURE)
-    (tmp_path / "pack.json").write_text(pack.canonical_json(), encoding="utf-8")
+    (tvl_path / "pack.json").write_text(pack.canonical_json(), encoding="utf-8")
     proof = build_proof(pack, "architecture.postgres")
-    (tmp_path / "proof.json").write_text(
+    (tvl_path / "proof.json").write_text(
         json.dumps(proof, indent=2, sort_keys=True), encoding="utf-8"
     )
-    return tmp_path
+    return tvl_path
 
 
 def _run(argv, cwd):
@@ -463,7 +463,7 @@ def test_standalone_modules_are_declared_for_shipping():
     for module in STANDALONE_MODULES:
         stem = module.removesuffix(".py")
         assert f'"{stem}"' in text, f"{module} is not declared in py-modules"
-    assert 'mindpalace-proof = "memory_proof_cli:main"' in text
+    assert 'verilore-proof = "memory_proof_cli:main"' in text
 
 
 def test_cli_and_proof_import_nothing_heavy():
@@ -487,7 +487,7 @@ def test_cli_and_proof_import_nothing_heavy():
 
 
 @pytest.fixture(scope="session")
-def wheel(tmp_path_factory) -> Path:
+def wheel(tvl_path_factory) -> Path:
     """A real wheel, built on demand.
 
     This used to be `skipif(not dist/*.whl)`, which meant the one test that proves
@@ -500,7 +500,7 @@ def wheel(tmp_path_factory) -> Path:
     gitignored, so nothing keeps it in step with the tree, and testing a stale
     artifact is the very mistake this test exists to catch.
     """
-    out = tmp_path_factory.mktemp("wheel")
+    out = tvl_path_factory.mktemp("wheel")
     result = subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", str(out)],
         cwd=str(ROOT),
@@ -523,10 +523,10 @@ def test_built_wheel_contains_the_standalone_modules(wheel):
         .read([n for n in names if n.endswith("entry_points.txt")][0])
         .decode()
     )
-    assert "mindpalace-proof = memory_proof_cli:main" in entry
+    assert "verilore-proof = memory_proof_cli:main" in entry
 
 
-def test_the_installed_wheel_verifies_without_the_runtime(wheel, tmp_path):
+def test_the_installed_wheel_verifies_without_the_runtime(wheel, tvl_path):
     """Install the artifact into an empty environment and verify a receipt in it.
 
     `--no-deps` is the point, not a shortcut: it installs the package exactly as
@@ -540,14 +540,14 @@ def test_the_installed_wheel_verifies_without_the_runtime(wheel, tmp_path):
 
     # The artifacts travel to a directory the source tree knows nothing about,
     # which is where the installed command is run from.
-    outside = tmp_path / "elsewhere"
+    outside = tvl_path / "elsewhere"
     outside.mkdir()
     (outside / "pack.json").write_text(PACK_JSON, encoding="utf-8")
     (outside / "receipt.json").write_text(RECEIPT_JSON, encoding="utf-8")
-    env_dir = tmp_path / "env"
+    env_dir = tvl_path / "env"
     venv.EnvBuilder(with_pip=True).create(str(env_dir))
     python = env_dir / "bin" / "python"
-    cli = env_dir / "bin" / "mindpalace-proof"
+    cli = env_dir / "bin" / "verilore-proof"
 
     install = subprocess.run(
         [str(python), "-m", "pip", "install", "--quiet", "--no-deps", str(wheel)],

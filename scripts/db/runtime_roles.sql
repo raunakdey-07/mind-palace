@@ -81,14 +81,14 @@ $$;
 -- A plain SQL driver has no `\g`, so `tests/tenant_harness.load_provision_sql`
 -- strips it for the same reason it strips `\if` and `\set`. Dropping it is also
 -- harmless there: a driver was never going to print a result set.
-SELECT set_config('mindpalace.runtime_password', :'runtime_password', false) \g /dev/null
-SELECT set_config('mindpalace.skip_password', :'runtime_password_skip', false) \g /dev/null
+SELECT set_config('verilore.runtime_password', :'runtime_password', false) \g /dev/null
+SELECT set_config('verilore.skip_password', :'runtime_password_skip', false) \g /dev/null
 
 DO $$
 DECLARE
-    supplied text := current_setting('mindpalace.runtime_password', true);
+    supplied text := current_setting('verilore.runtime_password', true);
     skipped   boolean := coalesce(
-        current_setting('mindpalace.skip_password', true), 'off') = 'on';
+        current_setting('verilore.skip_password', true), 'off') = 'on';
 BEGIN
     IF skipped THEN
         RETURN;
@@ -155,35 +155,35 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO verilore_runtime;
 -- `FROM PUBLIC` matters as much as `FROM verilore_runtime`. PostgreSQL grants
 -- EXECUTE to PUBLIC on every new function, so revoking only from this role
 -- removed nothing: any *other* role that could connect could still call them,
--- and did -- including `mindpalace_erase_corpus`. Migration 010 revokes from
+-- and did -- including `verilore_erase_corpus`. Migration 010 revokes from
 -- PUBLIC too; this keeps a role provisioned before that migration in the same
 -- shape as one provisioned after it.
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM verilore_runtime;
-REVOKE EXECUTE ON FUNCTION mindpalace_erase_corpus(CHAR(64)) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION mp_set_scope_token_enforcement(BOOLEAN) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION mindpalace_locate_credential(TEXT) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION mindpalace_resolve_credential(CHAR(64)) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION verilore_erase_corpus(CHAR(64)) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION vl_set_scope_token_enforcement(BOOLEAN) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION verilore_locate_credential(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION verilore_resolve_credential(CHAR(64)) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION mindpalace_allowed_corpus(CHAR(64)) TO verilore_runtime;
-GRANT EXECUTE ON FUNCTION mp_verified_scope_corpora() TO verilore_runtime;
-GRANT EXECUTE ON FUNCTION mp_scope_enforcement_status(TEXT, TEXT) TO verilore_runtime;
-GRANT EXECUTE ON FUNCTION mindpalace_resolve_credential(CHAR(64)) TO verilore_runtime;
-GRANT EXECUTE ON FUNCTION mindpalace_locate_credential(TEXT) TO verilore_runtime;
+GRANT EXECUTE ON FUNCTION verilore_allowed_corpus(CHAR(64)) TO verilore_runtime;
+GRANT EXECUTE ON FUNCTION vl_verified_scope_corpora() TO verilore_runtime;
+GRANT EXECUTE ON FUNCTION vl_scope_enforcement_status(TEXT, TEXT) TO verilore_runtime;
+GRANT EXECUTE ON FUNCTION verilore_resolve_credential(CHAR(64)) TO verilore_runtime;
+GRANT EXECUTE ON FUNCTION verilore_locate_credential(TEXT) TO verilore_runtime;
 -- Erasure runs as the table owner and re-checks the *connecting* role's own
 -- tenant scope, so the runtime role is allowed to ask for it without being able
 -- to bypass it.
-GRANT EXECUTE ON FUNCTION mindpalace_erase_corpus(CHAR(64)) TO verilore_runtime;
+GRANT EXECUTE ON FUNCTION verilore_erase_corpus(CHAR(64)) TO verilore_runtime;
 
 -- Credential state is not readable with ordinary queries. The application needs
 -- exactly one thing from it -- given a presented hash, the identity it belongs
--- to -- and that is `mindpalace_resolve_credential`, granted above. Without this
+-- to -- and that is `verilore_resolve_credential`, granted above. Without this
 -- revocation a single query returns every tenant's credential hash, role and
 -- corpus grant, which is not something a memory service has any reason to be
 -- able to do and which the runtime role does not need.
 REVOKE SELECT, INSERT, UPDATE, DELETE ON memory_principals FROM verilore_runtime;
 REVOKE SELECT, INSERT, UPDATE, DELETE ON memory_principal_corpora FROM verilore_runtime;
 
--- No DELETE on the archive. Erasure goes through `mindpalace_erase_corpus`,
+-- No DELETE on the archive. Erasure goes through `verilore_erase_corpus`,
 -- which is SECURITY DEFINER, re-checks the caller's tenant scope, and is the
 -- only thing the append-only triggers permit to delete. This is what makes the
 -- archive append-only against the *application role* rather than only against
@@ -193,8 +193,8 @@ REVOKE DELETE ON memory_documents, memory_versions, memory_chunks, memory_claims
     memory_snapshot_seals, memory_claim_embeddings FROM verilore_runtime;
 
 -- Operator step: enable scope-token enforcement. Off by default; an operator
--- with verilore_owner runs this once a real MIND_PALACE_SCOPE_SECRET is set:
---   SELECT mp_set_scope_token_enforcement(true);
+-- with verilore_owner runs this once a real VERILORE_SCOPE_SECRET is set:
+--   SELECT vl_set_scope_token_enforcement(true);
 -- (callable by verilore_owner only).
 
 -- Default privileges, so a table added by a later migration is reachable by the
@@ -202,7 +202,7 @@ REVOKE DELETE ON memory_documents, memory_versions, memory_chunks, memory_claims
 --
 -- Note what is deliberately *not* here: `ALTER DEFAULT PRIVILEGES` cannot name an
 -- individual table, so the exclusions above have to be restated by hand if a new
--- archive or credential table is ever added. `mindpalace posture` checks the
+-- archive or credential table is ever added. `verilore posture` checks the
 -- result rather than trusting this file to stay in step -- see
 -- `api/services/posture.py`, which verifies that the role can neither read the
 -- credential table nor delete from any archive table.

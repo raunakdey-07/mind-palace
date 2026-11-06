@@ -40,7 +40,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "benchmark"))
 from m0115_dataset import build_corpus, build_questions  # noqa: E402
 
 VALID_AT = datetime(2026, 1, 15, 12, tzinfo=timezone.utc)
-DATABASE = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+DATABASE = "postgresql://vladmin:secret@localhost:5432/verilore"
 
 
 def _migrations(conn):

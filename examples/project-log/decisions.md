@@ -4,7 +4,7 @@ date: 2026-10-08
 description: >-
   Decisions this project actually made, in the words they were made. Read by
   examples/project-log/project_log.py, which is also the format
-  `mindpalace remember --file` accepts, so a project can keep its decisions here
+  `verilore remember --file` accepts, so a project can keep its decisions here
   next to its code.
 claims:
   - group: retrieval

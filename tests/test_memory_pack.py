@@ -148,7 +148,7 @@ def test_reader_imports_nothing_from_the_server():
         "import memory_pack;"
         "p = memory_pack.MemoryPack.from_dict(json.loads(sys.stdin.read()));"
         "banned = [m for m in ('api', 'sqlalchemy', 'torch', 'asyncpg', 'fastapi',"
-        " 'mindpalace_sdk', 'sentence_transformers') if m in sys.modules];"
+        " 'verilore_sdk', 'sentence_transformers') if m in sys.modules];"
         "print(json.dumps({'banned': banned, 'digest': p.digest()}))" % str(ROOT)
     )
     result = subprocess.run(
@@ -165,13 +165,13 @@ def test_reader_imports_nothing_from_the_server():
     assert out["digest"] == sample().digest()
 
 
-def test_consumer_runs_with_only_the_reader_file_present(tmp_path):
+def test_consumer_runs_with_only_the_reader_file_present(tvl_path):
     """Copy the reader and one pack into a bare directory and answer from them.
 
     This is the portability claim: no checkout, no database, no model.
     """
-    shutil.copy(ROOT / "memory_pack.py", tmp_path / "memory_pack.py")
-    (tmp_path / "pack.json").write_text(json.dumps(SAMPLE))
+    shutil.copy(ROOT / "memory_pack.py", tvl_path / "memory_pack.py")
+    (tvl_path / "pack.json").write_text(json.dumps(SAMPLE))
     script = (
         "import json, sys;"
         "sys.path.insert(0, '.');"
@@ -188,7 +188,7 @@ def test_consumer_runs_with_only_the_reader_file_present(tmp_path):
         capture_output=True,
         text=True,
         timeout=60,
-        cwd=str(tmp_path),
+        cwd=str(tvl_path),
         env=env,
     )
     assert result.returncode == 0, result.stderr

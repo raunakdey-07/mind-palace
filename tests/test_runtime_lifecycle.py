@@ -31,16 +31,16 @@ pytestmark = pytest.mark.skipif(
 
 
 @contextlib.contextmanager
-def isolated_state(tmp_path):
+def isolated_state(tvl_path):
     """Point the runtime at a private state directory, in this process and the child.
 
     Both, or the token is written in one place and read in another -- which is how a
     runtime appears to start and then vanish.
     """
-    state = tmp_path / "state"
+    state = tvl_path / "state"
     state.mkdir(parents=True, exist_ok=True)
-    previous = os.environ.get("MIND_PALACE_STATE_DIR")
-    os.environ["MIND_PALACE_STATE_DIR"] = str(state)
+    previous = os.environ.get("VERILORE_STATE_DIR")
+    os.environ["VERILORE_STATE_DIR"] = str(state)
     try:
         from api import runtime as runtime_module
 
@@ -48,22 +48,22 @@ def isolated_state(tmp_path):
         yield runtime_module, state
     finally:
         if previous is None:
-            os.environ.pop("MIND_PALACE_STATE_DIR", None)
+            os.environ.pop("VERILORE_STATE_DIR", None)
         else:
-            os.environ["MIND_PALACE_STATE_DIR"] = previous
+            os.environ["VERILORE_STATE_DIR"] = previous
 
 
 def child_env(state: Path, **extra: str) -> dict:
-    env = dict(os.environ, PYTHONPATH=str(ROOT), MIND_PALACE_STATE_DIR=str(state))
-    env.pop("MIND_PALACE_LEXICAL", None)
-    env.pop("MIND_PALACE_RUNTIME", None)
+    env = dict(os.environ, PYTHONPATH=str(ROOT), VERILORE_STATE_DIR=str(state))
+    env.pop("VERILORE_LEXICAL", None)
+    env.pop("VERILORE_RUNTIME", None)
     env.update(extra)
     return env
 
 
 def launch(state: Path, **extra: str) -> subprocess.Popen:
     return subprocess.Popen(
-        [sys.executable, "-m", "mindpalace" "_runtime"],
+        [sys.executable, "-m", "verilore" "_runtime"],
         cwd=str(ROOT),
         env=child_env(state, **extra),
         stdin=subprocess.DEVNULL,
@@ -101,9 +101,9 @@ def stop(runtime_module, process: subprocess.Popen) -> int:
 
 
 @pytest.fixture
-def runtime(tmp_path):
+def runtime(tvl_path):
     """A runtime in its own state directory, stopped and cleaned up afterwards."""
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state)
         wait_until(runtime_module)
         try:
@@ -125,7 +125,7 @@ def test_normal_startup_reaches_ready(runtime):
     assert status.detail is None
 
 
-def test_start_is_idempotent_and_reports_already_running(runtime, tmp_path):
+def test_start_is_idempotent_and_reports_already_running(runtime, tvl_path):
     """Running it twice must not start a second runtime or fail."""
     runtime_module, process, state = runtime
     before = runtime_module.status().pid
@@ -144,9 +144,9 @@ def test_start_is_idempotent_and_reports_already_running(runtime, tmp_path):
     assert process.poll() is None
 
 
-def test_status_is_a_no_op_when_nothing_is_running(tmp_path):
+def test_status_is_a_no_op_when_nothing_is_running(tvl_path):
     """The diagnostic most likely to be run at the wrong moment must never fail."""
-    with isolated_state(tmp_path) as (runtime_module, _state):
+    with isolated_state(tvl_path) as (runtime_module, _state):
         status = runtime_module.status()
         assert status.state == "unreachable", status
         assert runtime_module.reachable() is False
@@ -180,13 +180,13 @@ def test_status_is_a_no_op_when_nothing_is_running(tmp_path):
         assert payload["protocol"] >= 1
 
 
-def test_a_stale_socket_is_replaced_not_surfaced_as_an_error(tmp_path):
+def test_a_stale_socket_is_replaced_not_surfaced_as_an_error(tvl_path):
     """A killed runtime leaves its socket file. That must not become the user's problem.
 
     Simulated exactly rather than approximated: a real socket file is created and
     then closed, which is byte-for-byte what SIGKILL leaves behind.
     """
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         import socket as socket_module
 
         path = runtime_module.socket_path()
@@ -225,9 +225,9 @@ def test_a_stale_socket_is_replaced_not_surfaced_as_an_error(tmp_path):
             time.sleep(0.5)
 
 
-def test_sigkill_is_recoverable(tmp_path):
+def test_sigkill_is_recoverable(tvl_path):
     """The least polite way a process can die must still leave the CLI working."""
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state)
         wait_until(runtime_module)
         os.kill(process.pid, signal.SIGKILL)
@@ -244,13 +244,13 @@ def test_sigkill_is_recoverable(tmp_path):
             stop(runtime_module, replacement)
 
 
-def test_sigterm_during_a_request_finishes_it_and_exits_zero(tmp_path):
+def test_sigterm_during_a_request_finishes_it_and_exits_zero(tvl_path):
     """A shutdown must not truncate a read that is already running.
 
     The failure this prevents is silent data loss: a request that was mid-query when
     the socket closed would look to the caller like a successful, empty answer.
     """
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state)
         wait_until(runtime_module)
 
@@ -312,9 +312,9 @@ def test_concurrent_requests_are_all_answered(runtime):
     assert runtime_module.status().state == "ready"
 
 
-def test_a_protocol_mismatch_is_refused_with_the_fix(tmp_path):
+def test_a_protocol_mismatch_is_refused_with_the_fix(tvl_path):
     """An old runtime must not answer a newer request with the old semantics."""
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state)
         wait_until(runtime_module)
         try:
@@ -332,7 +332,7 @@ def test_a_protocol_mismatch_is_refused_with_the_fix(tmp_path):
             reply = asyncio.run(ask(runtime_module.PROTOCOL + 1))
             assert not reply["ok"], reply
             assert reply["error"]["code"] == "protocol_mismatch", reply
-            assert "mindpalace runtime stop" in reply["error"]["message"], reply
+            assert "verilore runtime stop" in reply["error"]["message"], reply
 
             # And the correct protocol still works on the same runtime.
             good = runtime_module.call({"op": "status"}, timeout=10.0)
@@ -341,7 +341,7 @@ def test_a_protocol_mismatch_is_refused_with_the_fix(tmp_path):
             stop(runtime_module, process)
 
 
-def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
+def test_a_runtime_from_a_different_build_refuses_with_the_fix(tvl_path):
     """The protocol check catches interface drift; this catches code drift.
 
     `PROTOCOL` is a hand-maintained integer, so it does not move when the code
@@ -350,7 +350,7 @@ def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
     where the CLI kept failing with a fixed bug while the Python API passed,
     because the CLI routes through this process.
     """
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state)
         wait_until(runtime_module)
         try:
@@ -369,8 +369,8 @@ def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
             assert not reply["ok"], reply
             assert reply["error"]["code"] == "build_mismatch", reply
             # The instruction has to be copy-pasteable, not merely present.
-            assert "mindpalace runtime stop" in reply["error"]["message"], reply
-            assert "MIND_PALACE_RUNTIME=0" in reply["error"]["message"], reply
+            assert "verilore runtime stop" in reply["error"]["message"], reply
+            assert "VERILORE_RUNTIME=0" in reply["error"]["message"], reply
 
             # The real build is still served by the same process.
             good = runtime_module.call({"op": "status"}, timeout=10.0)
@@ -380,7 +380,7 @@ def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
             stop(runtime_module, process)
 
 
-def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
+def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tvl_path):
     """A warm runtime must not answer for a database the command did not name.
 
     The build check above catches code drift. This catches database drift, and it
@@ -391,9 +391,9 @@ def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
     `build` and `token` and none of them says which database this is.
 
     Reproduced by hand before this test existed: a runtime started against an
-    empty database answered `mindpalace recall` with `NO_RELEVANT_MEMORY` for a
+    empty database answered `verilore recall` with `NO_RELEVANT_MEMORY` for a
     claim that was in fact in the database the command named, and the same
-    question answered in-process (`MIND_PALACE_RUNTIME=0`) returned the claim.
+    question answered in-process (`VERILORE_RUNTIME=0`) returned the claim.
 
     The child is pointed at the maintenance database, which this suite already
     requires to exist and which is never this one. It needs no schema: a runtime
@@ -425,7 +425,7 @@ def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
 
         return asyncio.run(_ask())
 
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state, DATABASE_URL=other_url)
         # Not `wait_until`: that helper reads the status through `runtime_module.call`,
         # which now sends *this* process's database and is refused by design. Wait as
@@ -449,11 +449,11 @@ def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
             assert not reply["ok"], reply
             assert reply["error"]["code"] == "database_mismatch", reply
             # The instruction has to be copy-pasteable, not merely present.
-            assert "mindpalace runtime stop" in reply["error"]["message"], reply
-            assert "MIND_PALACE_RUNTIME=0" in reply["error"]["message"], reply
+            assert "verilore runtime stop" in reply["error"]["message"], reply
+            assert "VERILORE_RUNTIME=0" in reply["error"]["message"], reply
 
             # A caller that agrees with the runtime is still served, and the answer
-            # names the database, so `mindpalace runtime status` can tell a person
+            # names the database, so `verilore runtime status` can tell a person
             # which one is warm.
             reply = ask(other_id)
             assert reply["ok"], reply
@@ -476,7 +476,7 @@ def _database_id_for(url: str) -> str:
     return runtime_module.database_id_for(url)
 
 
-def test_the_build_hash_moves_when_the_code_moves(tmp_path, monkeypatch):
+def test_the_build_hash_moves_when_the_code_moves(tvl_path, monkeypatch):
     """The property the handshake depends on, asserted directly.
 
     Without this, `build_id` could be a constant wearing a hash costume and every
@@ -498,16 +498,16 @@ def test_the_build_hash_moves_when_the_code_moves(tmp_path, monkeypatch):
     assert runtime_module.build_id() != before, "a different tree must hash differently"
 
 
-def test_a_stale_runtime_is_discarded_and_the_command_still_succeeds(tmp_path):
+def test_a_stale_runtime_is_discarded_and_the_command_still_succeeds(tvl_path):
     """The user-visible contract: the command works, and the runtime goes away.
 
-    `mindpalace remember` routes through the runtime. With a stale one it must
+    `verilore remember` routes through the runtime. With a stale one it must
     fall back to in-process rather than failing -- and must stop the stale process
     so the *next* command is fast as well as correct.
     """
-    from mindpalace_sdk import _discard_stale_runtime
+    from verilore_sdk import _discard_stale_runtime
 
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         process = launch(state)
         wait_until(runtime_module)
         try:
@@ -525,13 +525,13 @@ def test_a_stale_runtime_is_discarded_and_the_command_still_succeeds(tmp_path):
             stop(runtime_module, process)
 
 
-def test_the_socket_is_private_and_never_a_port(tmp_path):
+def test_the_socket_is_private_and_never_a_port(tvl_path):
     """The authorisation boundary is the filesystem, and it must be a socket.
 
     Asserted rather than assumed: a regression to a TCP bind would make every
-    `mindpalace recall` on a laptop a service on the network.
+    `verilore recall` on a laptop a service on the network.
     """
-    with isolated_state(tmp_path) as (runtime_module, state):
+    with isolated_state(tvl_path) as (runtime_module, state):
         import stat as stat_module
 
         process = launch(state)
@@ -565,7 +565,7 @@ def _runtime_pids() -> list[int]:
             cmdline = (entry / "cmdline").read_bytes().decode("utf-8", "replace")
         except OSError:
             continue
-        if "mindpalace_runtime" in cmdline or "mindpalace" + "_runtime" in cmdline:
+        if "verilore_runtime" in cmdline or "verilore" + "_runtime" in cmdline:
             found.append(int(entry.name))
     return found
 

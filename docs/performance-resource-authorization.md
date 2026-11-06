@@ -23,9 +23,9 @@ role, 256 claims:
 ## Why
 
 Row-level security evaluates its predicate **once per row**. The pre-`011`
-predicate was `mindpalace_allowed_corpus(corpus_id)`, which reads one session
+predicate was `verilore_allowed_corpus(corpus_id)`, which reads one session
 setting and compares a string. The new predicate is
-`mindpalace_allowed_document(corpus_id, memory_document_id)`, which is
+`verilore_allowed_document(corpus_id, memory_document_id)`, which is
 `SECURITY DEFINER` — and has to be, because a plain function would re-enter
 `memory_documents`' own policy and PostgreSQL raises *infinite recursion detected
 in policy* instead of answering.

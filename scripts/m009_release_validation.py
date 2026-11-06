@@ -39,7 +39,7 @@ from sqlalchemy.pool import NullPool
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "docs" / "m009"
-DEFAULT_DATABASE_URL = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+DEFAULT_DATABASE_URL = "postgresql://vladmin:secret@localhost:5432/verilore"
 LIVE_CORPUS = "m009-live"
 LIVE_OTHER_CORPUS = "m009-live-other"
 CONCURRENCY_CORPUS = "m009-concurrency"
@@ -209,7 +209,7 @@ def ensure_project_runtime(argv: Sequence[str] | None = None) -> None:
 def child_environment(database_url: str, cursor_secret: str) -> dict[str, str]:
     env = os.environ.copy()
     env["DATABASE_URL"] = database_url
-    env["MIND_PALACE_CURSOR_SECRET"] = cursor_secret
+    env["VERILORE_CURSOR_SECRET"] = cursor_secret
     env["PYTHONUNBUFFERED"] = "1"
     pythonpath = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = str(ROOT) + (os.pathsep + pythonpath if pythonpath else "")
@@ -812,9 +812,9 @@ def rest_traversal(base_url: str, corpus: str) -> tuple[list[dict[str, Any]], li
 
 
 def sdk_error(base_url: str, corpus: str, cursor: str) -> str:
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
-    client = MindPalace(base_url=base_url, timeout=15.0)
+    client = Verilore(base_url=base_url, timeout=15.0)
     try:
         client.memory.feed(corpus=corpus, page_size=PAGE_SIZE_LIVE, cursor=cursor)
     except MemoryClientError as exc:
@@ -823,9 +823,9 @@ def sdk_error(base_url: str, corpus: str, cursor: str) -> str:
 
 
 def sdk_traversal(base_url: str, corpus: str) -> tuple[list[dict[str, Any]], list[int], list[str]]:
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    client = MindPalace(base_url=base_url, timeout=15.0)
+    client = Verilore(base_url=base_url, timeout=15.0)
     items: list[dict[str, Any]] = []
     page_sizes: list[int] = []
     cursors: list[str] = []
@@ -871,7 +871,7 @@ def cli_page(
         timeout=45,
         sensitive=[
             env["DATABASE_URL"],
-            env["MIND_PALACE_CURSOR_SECRET"],
+            env["VERILORE_CURSOR_SECRET"],
             cursor or "",
         ],
     )
@@ -915,8 +915,8 @@ def run_live(database_url: str, cursor_secret: str, migration_head: str) -> None
         live_fixture, other_fixture = seed_live_fixture(sync_engine)
         fingerprint = archive_fingerprint(sync_engine, [LIVE_CORPUS])
         env = child_environment(database_url, cursor_secret)
-        cli_executable = ROOT / "venvmp" / "bin" / "mindpalace"
-        require(cli_executable.is_file(), "venvmp/bin/mindpalace is not installed")
+        cli_executable = ROOT / "venvmp" / "bin" / "verilore"
+        require(cli_executable.is_file(), "venvmp/bin/verilore is not installed")
         with UvicornServer(database_url, cursor_secret) as server:
             base_url = server.base_url
             rest_items, rest_pages, rest_cursors = rest_traversal(base_url, LIVE_CORPUS)
@@ -1260,7 +1260,7 @@ def run_concurrency(database_url: str, cursor_secret: str, migration_head: str) 
             "ordered": True,
             "isolation": True,
             "expected_live_continuation": True,
-            "equal_timestamp_tie_break": True,
+            "equal_timestavl_tie_break": True,
             "late_before_cursor_excluded": True,
             "checks": {
                 "continuation_sequence_sha256": sequence_digest(continuation),
@@ -1269,7 +1269,7 @@ def run_concurrency(database_url: str, cursor_secret: str, migration_head: str) 
                     f"{boundary_time.isoformat()}|{boundary_id}".encode()
                 ).hexdigest(),
                 "late_version_count": len(late_ids),
-                "equal_timestamp_group_count": sum(count >= 2 for count in equal_groups.values()),
+                "equal_timestavl_group_count": sum(count >= 2 for count in equal_groups.values()),
                 "first_page_sql_ms": round(result["timings"]["first"]["sql_ms"], 6),
                 "continuation_sql_ms": round(result["timings"]["continuation"]["sql_ms"], 6),
                 "fresh_sql_ms": round(result["timings"]["fresh"]["sql_ms"], 6),
@@ -1707,7 +1707,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         database.create()
         os.environ["DATABASE_URL"] = database.url
-        os.environ["MIND_PALACE_CURSOR_SECRET"] = cursor_secret
+        os.environ["VERILORE_CURSOR_SECRET"] = cursor_secret
         migration_head = run_migrations(database.url, cursor_secret)
         run_selected(args.mode, database, cursor_secret, migration_head)
     except Exception as exc:

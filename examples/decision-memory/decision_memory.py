@@ -4,12 +4,12 @@
 
     python examples/decision-memory/decision_memory.py
 
-Nothing here is Mind Palace specific plumbing: every step is one call a real
+Nothing here is Verilore specific plumbing: every step is one call a real
 application would make. The output is the point -- an answer, the basis for it,
 the history behind it, and a receipt that can be checked later by someone with no
 access to this machine.
 
-Requires a Mind Palace database (`mindpalace init` prints the commands) and no
+Requires a Verilore database (`verilore init` prints the commands) and no
 embedding model, no API key and no LLM.
 """
 
@@ -24,7 +24,7 @@ from uuid import uuid4
 # Keep the example runnable from a checkout without installing the package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from mindpalace_sdk import MindPalace  # noqa: E402
+from verilore_sdk import Verilore  # noqa: E402
 
 CORPUS_PREFIX = "decision-memory"
 
@@ -34,7 +34,7 @@ def heading(text: str) -> None:
 
 
 def main() -> int:
-    client = MindPalace()
+    client = Verilore()
     # A fresh corpus per run, so the chain below is always this run's. Run it twice
     # and you will see the earlier run's decisions superseded by this run's, which
     # is memory behaving correctly.
@@ -42,7 +42,7 @@ def main() -> int:
     print(f"corpus: {corpus}")
 
     heading("1. REMEMBER — a decision becomes memory, with evidence")
-    # `--key` in the CLI, `key=` here: it is how you tell Mind Palace that two
+    # `--key` in the CLI, `key=` here: it is how you tell Verilore that two
     # statements are about the same fact. Remembering the same key again is how a
     # decision changes.
     first = client.remember(
@@ -71,7 +71,7 @@ def main() -> int:
         print(f"    source: {memory.path} @ {memory.version_id[:12]}")
         print(f"    status: {memory.status}")
     if answer.constraints:
-        # Absence is an answer. Mind Palace records what it was told, so an
+        # Absence is an answer. Verilore records what it was told, so an
         # unfamiliar question abstains rather than inventing one.
         print(f"\n  no answer: {', '.join(answer.constraints)}")
 
@@ -115,7 +115,7 @@ def main() -> int:
 
     heading("6. RECEIPT — hand someone else something checkable")
     final = client.explain("Which datastore did we choose?", corpus=corpus)
-    receipt_path = Path(tempfile.gettempdir()) / "mindpalace-receipt.json"
+    receipt_path = Path(tempfile.gettempdir()) / "verilore-receipt.json"
     receipt_path.write_text(
         json.dumps(
             {"response": final.model_dump(mode="json"), "receipt": final.receipt},
@@ -126,7 +126,7 @@ def main() -> int:
     )
     print(f"  wrote {receipt_path}")
     print(
-        "  anyone can check it with: mindpalace verify "
+        "  anyone can check it with: verilore verify "
         f"{receipt_path.name}   # no database, no model, no network"
     )
 

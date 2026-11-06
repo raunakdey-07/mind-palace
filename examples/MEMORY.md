@@ -1,6 +1,6 @@
 # Persistent memory: demos and evaluation
 
-Mind Palace provides persistent, portable **corpus memory for AI applications**,
+Verilore provides persistent, portable **corpus memory for AI applications**,
 not human or conversational memory. Start with [why memory beyond RAG](WHY_MEMORY.md)
 and the [public API contract](MEMORY_API.md).
 
@@ -9,7 +9,7 @@ and the [public API contract](MEMORY_API.md).
 From the repository root, after installing requirements and `pip install -e .`:
 
 ```bash
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+export DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore
 HF_HUB_OFFLINE=1 python examples/memory_evaluation_demo.py
 ```
 
@@ -64,7 +64,7 @@ be omitted when it does not fit; that is not a resolved disagreement.
 The following command completed successfully in this workspace:
 
 ```bash
-DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace \
+DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore \
   HF_HUB_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 \
   venvmp/bin/python examples/memory_evaluation_demo.py
 ```
@@ -81,7 +81,7 @@ This local CLI runs directly against PostgreSQL, unlike `memory current` and
 other remote-only memory CLI commands. From the repository root:
 
 ```bash
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+export DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore
 mkdir -p eval/results
 HF_HUB_OFFLINE=1 python -m cli.main eval memory --repetitions 1 \
   --save eval/results/memory-fixture-smoke.json
@@ -185,7 +185,7 @@ With dependencies installed and `all-MiniLM-L6-v2` already cached, use the exist
 local PostgreSQL instance on port 5433 (or your configured disposable database):
 
 ```bash
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+export DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore
 mkdir -p eval/results
 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 \
   venvmp/bin/python -m api.services.memory_query_benchmark --end-to-end \
@@ -212,7 +212,7 @@ The older SDK example below is still useful when you deliberately want a
 committed corpus and response artifacts. Its persistence and embedding behavior
 are different from the rolled-back A–G demo above.
 
-Mind Palace retains evidence-backed source assertions as a project changes. It
+Verilore retains evidence-backed source assertions as a project changes. It
 records what a document asserted and when it was observed; it does not establish
 perfect truth. Public SDK, REST, CLI, and MCP memory operations now consume the
 M004 versioned foundation. See [MEMORY_API.md](MEMORY_API.md) for the implemented
@@ -224,7 +224,7 @@ live index; explicit memory operations read the archive.
 From the repository root, with requirements and the editable package installed:
 
 ```bash
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace
+export DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore
 python -m alembic -c migrations/alembic.ini upgrade head
 python examples/memory_demo.py
 ```
@@ -309,14 +309,14 @@ access). Black, Flake8, demo/CLI help, and `git diff --check` passed. No reposit
 test, service, or interface files were changed for this demo.
 
 An end-to-end attempt using a unique `m005-pytest-<uuid>` corpus and
-`DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace` with
+`DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore` with
 `HF_HUB_OFFLINE=1` failed before corpus creation: connection refused on both
 localhost IPv4 and IPv6. **No successful persistent demo run or stage measurements
 are recorded here.** With that database running and migrated, the exact direct
 command for a fresh UUID-named run in this workspace is:
 
 ```bash
-DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace \
+DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore \
   HF_HUB_OFFLINE=1 venvmp/bin/python examples/memory_demo.py
 ```
 
@@ -423,7 +423,7 @@ it without inventing supersession.
 
 ## Temporal semantics
 
-- `observed_at` (DB `clock_timestamp()` under the corpus lock): when Mind Palace
+- `observed_at` (DB `clock_timestamp()` under the corpus lock): when Verilore
   observed the version. `as_of` filters on this, inclusively.
 - `valid_from`/`valid_until`: authored valid time. NULL means unknown — never
   fabricated from ingestion time.
@@ -522,7 +522,7 @@ The following is the pre-existing M004 test record, not an M005 demo run or a
 fresh validation claim for the current working tree.
 
 ```bash
-MEMORY_TEST_DATABASE_URL=postgresql://mpadmin:secret@localhost:5433/mindpalace \
+MEMORY_TEST_DATABASE_URL=postgresql://vladmin:secret@localhost:5433/verilore \
   venvmp/bin/python -m pytest tests/test_memory_ingestion.py tests/test_memory_core.py -v
 ```
 

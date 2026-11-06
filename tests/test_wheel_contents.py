@@ -2,24 +2,24 @@
 
 ## The bug this exists for
 
-`mindpalace_errors.py` was added to the repository and imported by
-`mindpalace_sdk.py`, `api/main.py` and the CLI. It was never added to
+`verilore_errors.py` was added to the repository and imported by
+`verilore_sdk.py`, `api/main.py` and the CLI. It was never added to
 `pyproject.toml`'s `py-modules` list.
 
 Nothing failed. The test suite runs from the repository root, where the current
-working directory is on `sys.path`, so `mindpalace_errors` resolves to the file in
+working directory is on `sys.path`, so `verilore_errors` resolves to the file in
 the working tree whether or not it ships. `check_versioning.py` and
 `check_evidence.py` do not import it. Every check passed.
 
 A developer who followed the README got this instead:
 
 ```
-$ mindpalace init
+$ verilore init
 Traceback (most recent call last):
-  File "/work/.venv/bin/mindpalace", line 3, in <module>
+  File "/work/.venv/bin/verilore", line 3, in <module>
     from cli.main import app
   ...
-ModuleNotFoundError: No module named 'mindpalace_errors'
+ModuleNotFoundError: No module named 'verilore_errors'
 ```
 
 A built wheel contained seven top-level modules and not this one, so the failure
@@ -34,7 +34,7 @@ ship" are different facts and only the first one was being checked.
    `py-modules` or inside a discovered package.
 2. Building a wheel puts each of those modules in the archive.
 
-The second is slower and is skipped unless `MIND_PALACE_TEST_BUILD_WHEEL=1`, so
+The second is slower and is skipped unless `VERILORE_TEST_BUILD_WHEEL=1`, so
 the fast check runs on every suite run and the slow one is opt-in.
 """
 
@@ -108,19 +108,19 @@ def test_the_declared_modules_all_exist():
 
 
 @pytest.mark.skipif(
-    os.getenv("MIND_PALACE_TEST_BUILD_WHEEL") != "1",
-    reason="set MIND_PALACE_TEST_BUILD_WHEEL=1 to build and inspect a wheel",
+    os.getenv("VERILORE_TEST_BUILD_WHEEL") != "1",
+    reason="set VERILORE_TEST_BUILD_WHEEL=1 to build and inspect a wheel",
 )
-def test_a_built_wheel_contains_every_declared_module(tmp_path):
+def test_a_built_wheel_contains_every_declared_module(tvl_path):
     result = subprocess.run(
-        [sys.executable, "-m", "build", "--wheel", "-o", str(tmp_path)],
+        [sys.executable, "-m", "build", "--wheel", "-o", str(tvl_path)],
         cwd=ROOT,
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, f"wheel build failed:\n{result.stderr[-3000:]}"
 
-    wheels = list(tmp_path.glob("*.whl"))
+    wheels = list(tvl_path.glob("*.whl"))
     assert len(wheels) == 1, f"expected one wheel, got {wheels}"
 
     declared, _ = _declared()

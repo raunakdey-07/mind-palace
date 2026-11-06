@@ -16,13 +16,13 @@ def upgrade() -> None:
     )
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mp_verified_scope_corpora()
+        CREATE OR REPLACE FUNCTION vl_verified_scope_corpora()
         RETURNS text[]
         LANGUAGE plpgsql STABLE SECURITY DEFINER
         SET search_path = public, pg_temp AS $fn$
         DECLARE
-            scope text := coalesce(current_setting('mindpalace.tenant_scope', true), '');
-            token text := coalesce(current_setting('mindpalace.scope_token', true), '');
+            scope text := coalesce(current_setting('verilore.tenant_scope', true), '');
+            token text := coalesce(current_setting('verilore.scope_token', true), '');
             enforce text;
             secret text;
             expected text;
@@ -86,16 +86,16 @@ def upgrade() -> None:
     """)
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_allowed_corpus(candidate CHAR(64))
         RETURNS BOOLEAN
         LANGUAGE sql STABLE AS $fn$
-            SELECT btrim(candidate) = ANY (((SELECT mp_verified_scope_corpora()))::text[])
-                OR '*' = ANY (((SELECT mp_verified_scope_corpora()))::text[])
+            SELECT btrim(candidate) = ANY (((SELECT vl_verified_scope_corpora()))::text[])
+                OR '*' = ANY (((SELECT vl_verified_scope_corpora()))::text[])
         $fn$
     """)
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mp_set_scope_token_enforcement(enabled BOOLEAN)
+        CREATE OR REPLACE FUNCTION vl_set_scope_token_enforcement(enabled BOOLEAN)
         RETURNS VOID
         LANGUAGE plpgsql SECURITY DEFINER
         SET search_path = public, pg_temp AS $fn$
@@ -109,7 +109,7 @@ def upgrade() -> None:
     """)
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mp_scope_enforcement_status(
+        CREATE OR REPLACE FUNCTION vl_scope_enforcement_status(
             probe_token TEXT, probe_scope TEXT
         )
         RETURNS TABLE(enforced BOOLEAN, using_default_secret BOOLEAN, secret_matches BOOLEAN)
@@ -139,43 +139,43 @@ def upgrade() -> None:
     op.execute("""
         DO $$
         BEGIN
-            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_owner') THEN
-                EXECUTE 'ALTER TABLE memory_server_secrets OWNER TO mindpalace_owner';
-                EXECUTE 'ALTER FUNCTION mp_set_scope_token_enforcement(BOOLEAN) OWNER TO mindpalace_owner';
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_owner') THEN
+                EXECUTE 'ALTER TABLE memory_server_secrets OWNER TO verilore_owner';
+                EXECUTE 'ALTER FUNCTION vl_set_scope_token_enforcement(BOOLEAN) OWNER TO verilore_owner';
             END IF;
-            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_runtime') THEN
-                EXECUTE 'REVOKE ALL ON memory_server_secrets FROM mindpalace_runtime';
-                EXECUTE 'GRANT EXECUTE ON FUNCTION mp_verified_scope_corpora() TO mindpalace_runtime';
-                EXECUTE 'GRANT EXECUTE ON FUNCTION mindpalace_allowed_corpus(CHAR(64)) TO mindpalace_runtime';
-                EXECUTE 'GRANT EXECUTE ON FUNCTION mp_scope_enforcement_status(TEXT, TEXT) TO mindpalace_runtime';
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_runtime') THEN
+                EXECUTE 'REVOKE ALL ON memory_server_secrets FROM verilore_runtime';
+                EXECUTE 'GRANT EXECUTE ON FUNCTION vl_verified_scope_corpora() TO verilore_runtime';
+                EXECUTE 'GRANT EXECUTE ON FUNCTION verilore_allowed_corpus(CHAR(64)) TO verilore_runtime';
+                EXECUTE 'GRANT EXECUTE ON FUNCTION vl_scope_enforcement_status(TEXT, TEXT) TO verilore_runtime';
             END IF;
         END $$;
     """)
-    op.execute("REVOKE ALL ON FUNCTION mp_set_scope_token_enforcement(BOOLEAN) FROM PUBLIC")
+    op.execute("REVOKE ALL ON FUNCTION vl_set_scope_token_enforcement(BOOLEAN) FROM PUBLIC")
     op.execute("REVOKE ALL ON memory_server_secrets FROM PUBLIC")
-    op.execute("GRANT EXECUTE ON FUNCTION mp_verified_scope_corpora() TO PUBLIC")
-    op.execute("GRANT EXECUTE ON FUNCTION mindpalace_allowed_corpus(CHAR(64)) TO PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION vl_verified_scope_corpora() TO PUBLIC")
+    op.execute("GRANT EXECUTE ON FUNCTION verilore_allowed_corpus(CHAR(64)) TO PUBLIC")
     op.execute("""
         DO $$
         BEGIN
-            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_owner') THEN
-                EXECUTE 'GRANT EXECUTE ON FUNCTION mp_set_scope_token_enforcement(BOOLEAN) TO mindpalace_owner';
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_owner') THEN
+                EXECUTE 'GRANT EXECUTE ON FUNCTION vl_set_scope_token_enforcement(BOOLEAN) TO verilore_owner';
             END IF;
         END $$;
     """)
 
 
 def downgrade() -> None:
-    op.execute("DROP FUNCTION IF EXISTS mp_scope_enforcement_status(TEXT, TEXT)")
-    op.execute("DROP FUNCTION IF EXISTS mp_set_scope_token_enforcement(BOOLEAN)")
-    op.execute("DROP FUNCTION IF EXISTS mp_verified_scope_corpora()")
+    op.execute("DROP FUNCTION IF EXISTS vl_scope_enforcement_status(TEXT, TEXT)")
+    op.execute("DROP FUNCTION IF EXISTS vl_set_scope_token_enforcement(BOOLEAN)")
+    op.execute("DROP FUNCTION IF EXISTS vl_verified_scope_corpora()")
     op.execute("""
-        CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_allowed_corpus(candidate CHAR(64))
         RETURNS BOOLEAN
         LANGUAGE sql STABLE AS $fn$
             SELECT CASE
                 WHEN (
-                        (current_setting('mindpalace.tenant_scope', true) = '{*}'
+                        (current_setting('verilore.tenant_scope', true) = '{*}'
                          AND (
                     current_setting('is_superuser', true) = 'on'
                     OR pg_has_role(session_user,
@@ -186,13 +186,13 @@ def downgrade() -> None:
                                    'USAGE')
                          ))
                     ) THEN TRUE
-                WHEN coalesce(current_setting('mindpalace.tenant_scope', true), '') = '' THEN FALSE
-                WHEN coalesce(current_setting('mindpalace.scope_token', true), '') = '' THEN
+                WHEN coalesce(current_setting('verilore.tenant_scope', true), '') = '' THEN FALSE
+                WHEN coalesce(current_setting('verilore.scope_token', true), '') = '' THEN
                     btrim(candidate::text) = ANY (string_to_array(
-                        current_setting('mindpalace.tenant_scope', true), ','
+                        current_setting('verilore.tenant_scope', true), ','
                     ))
-                ELSE mp_verify_scope_token(
-                    candidate, current_setting('mindpalace.scope_token', true)
+                ELSE vl_verify_scope_token(
+                    candidate, current_setting('verilore.scope_token', true)
                 )
             END
         $fn$

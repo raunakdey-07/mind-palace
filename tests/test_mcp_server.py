@@ -15,7 +15,7 @@ def test_mcp_server_preserves_legacy_tools():
     assert {"context", "search", "sync", "list_corpora"} <= names
 
 
-def test_mcp_context_tool_returns_attributed_pack(tmp_path, monkeypatch):
+def test_mcp_context_tool_returns_attributed_pack(tvl_path, monkeypatch):
     """The MCP context tool returns the same contract as the SDK."""
     if not __import__("os").getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
@@ -56,9 +56,9 @@ def test_mcp_context_tool_returns_attributed_pack(tmp_path, monkeypatch):
                 )
                 conn.execute(
                     sa.text(
-                        "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
-                        "SELECT set_config('mindpalace.erasure', 'on', true); "
-                        "SELECT mindpalace_erase_corpus(id) FROM corpora "
+                        "SELECT set_config('verilore.tenant_scope', '{*}', true); "
+                        "SELECT set_config('verilore.erasure', 'on', true); "
+                        "SELECT verilore_erase_corpus(id) FROM corpora "
                         "WHERE name = 'mcp-test-corpus'"
                     )
                 )
@@ -68,7 +68,7 @@ def test_mcp_context_tool_returns_attributed_pack(tmp_path, monkeypatch):
 
     purge()
     try:
-        docs = tmp_path / "docs"
+        docs = tvl_path / "docs"
         docs.mkdir()
         (docs / "guide.md").write_text("""---
 title: "MCP Guide"
@@ -81,9 +81,9 @@ document_type: "note"
 Zephyr quantum calibration requires hourly wobble checks.
 """)
 
-        from mindpalace_sdk import MindPalace
+        from verilore_sdk import Verilore
 
-        mp = MindPalace("mcp-test-corpus")
+        mp = Verilore("mcp-test-corpus")
         mp.sync(str(docs))
 
         from mcp_server import mcp
@@ -110,7 +110,7 @@ Zephyr quantum calibration requires hourly wobble checks.
         purge()
 
 
-def test_mcp_search_tool_shape(tmp_path):
+def test_mcp_search_tool_shape(tvl_path):
     if not __import__("os").getenv("DATABASE_URL"):
         pytest.skip("needs DATABASE_URL")
 

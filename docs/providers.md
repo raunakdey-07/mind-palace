@@ -1,14 +1,14 @@
 # Provider integration
 
-Mind Palace has three distinct relationships with models, and conflating them is
+Verilore has three distinct relationships with models, and conflating them is
 how a memory subsystem ends up coupled to somebody else's vendor. They are
 separate here, deliberately.
 
 | Concern | Who provides it | Coupling |
 |---|---|---|
-| **A. The memory contract** | Mind Palace | none — you call it over HTTP or the SDK |
-| **B. Internal retrieval** (embeddings, reranking) | Mind Palace, via a narrow protocol | swappable behind a protocol |
-| **C. Generation** (writing prose from memory) | **your application** | none — Mind Palace does not generate |
+| **A. The memory contract** | Verilore | none — you call it over HTTP or the SDK |
+| **B. Internal retrieval** (embeddings, reranking) | Verilore, via a narrow protocol | swappable behind a protocol |
+| **C. Generation** (writing prose from memory) | **your application** | none — Verilore does not generate |
 
 ## A. The memory contract is model-free
 
@@ -61,7 +61,7 @@ results. That is the worst failure mode this system has, so it is made loud:
 `ProviderIncompatibleModelError`, which is not retryable.
 
 Changing `EMBEDDING_MODEL` on a populated corpus therefore requires an explicit
-re-embedding migration. Mind Palace does not perform that migration for you,
+re-embedding migration. Verilore does not perform that migration for you,
 because there is no safe automatic version of it: the old vectors are
 meaningless under the new model and must be recomputed from the archived content,
 not approximated.
@@ -92,7 +92,7 @@ part of the memory contract**, and no vendor SDK is a dependency of this package
 For anything beyond the optional `ask` mode, write your own adapter. A generation
 provider belongs in your application because:
 
-* you already have one, and adopting Mind Palace must not mean replacing it;
+* you already have one, and adopting Verilore must not mean replacing it;
 * your prompts, your provider's data handling terms, and your retry policy are
   yours;
 * a "universal" orchestration layer inside a memory subsystem would be a
@@ -104,7 +104,7 @@ of that boundary.
 
 ## Provider failures are not no-results
 
-When a provider fails, Mind Palace raises a typed error and says which category of
+When a provider fails, Verilore raises a typed error and says which category of
 failure it was. It never returns an empty result set, because an empty result is a
 claim about what the store contains and a provider outage is not.
 
@@ -132,4 +132,4 @@ The core package has no vendor SDK dependency. `sentence_transformers` is requir
 for the built-in embedder and is an ordinary install dependency; the MCP server
 and generation adapters are extras, and CI verifies a bare install stays bare.
 A provider adapter that needs a vendor SDK belongs behind an extra, so that
-installing Mind Palace never pulls in somebody else's client library.
+installing Verilore never pulls in somebody else's client library.

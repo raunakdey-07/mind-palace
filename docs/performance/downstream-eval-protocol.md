@@ -20,10 +20,10 @@ this document after a scored run is therefore visible.
 
 ## 1. The question
 
-Does a model given Mind Palace context answer **better** than the same model
+Does a model given Verilore context answer **better** than the same model
 given the alternatives — across weak and strong models?
 
-This is not the same question as "does Mind Palace retrieve accurately". A
+This is not the same question as "does Verilore retrieve accurately". A
 retrieval metric answers whether the right chunk was found. The integrator's
 question is whether the model's answer got better. Those can disagree, and when
 they do the retrieval metric is the one that lied.
@@ -37,8 +37,8 @@ nondeterministic; the repeat variance is reported, not averaged away.
 |---|---|---|
 | **A** | no memory at all | measures baseline hallucination on private facts |
 | **B** | the full corpus, verbatim, truncated to the context window | the honest upper bound. Wins here mean retrieval is not earning its complexity |
-| **C** | naive RAG: same embedder as Mind Palace, top-k chunks, plain concatenation | the thing Mind Palace is usually compared against |
-| **D** | Mind Palace's answer, rendered by one documented prompt template | the product |
+| **C** | naive RAG: same embedder as Verilore, top-k chunks, plain concatenation | the thing Verilore is usually compared against |
+| **D** | Verilore's answer, rendered by one documented prompt template | the product |
 
 **k for arm C is tuned on dev corpora only** and frozen before scoring. `k` is
 selected by sweeping {3, 5, 10, 20} on a dev corpus and taking the best

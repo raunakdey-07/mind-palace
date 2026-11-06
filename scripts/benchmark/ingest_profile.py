@@ -1,7 +1,7 @@
 """Profile one `ingest-repo` run, phase by phase.
 
     python3 scripts/benchmark/ingest_profile.py \
-        --corpus mind-palace=docs \
+        --corpus verilore=docs \
         --corpus cv-embed=/mnt/Warehouse/projects/cv-embed/docs
 
 Every phase is timed where the work happens, so the numbers add up to the wall
@@ -17,12 +17,12 @@ clock instead of describing it. The phases are:
 The corpora are disposable. The run writes into a corpus whose name begins
 with `_profile_`, never into the name on the command line, and deletes it when
 the run ends. `--reset` used to erase the corpus the command line named, so a
-benchmark run erased the live `mind-palace` and `cv-embed` corpora outright.
+benchmark run erased the live `verilore` and `cv-embed` corpora outright.
 The name on the command line is a report label; the corpus it writes into is
 derived from it, and a label that already carries the prefix is used as it
 stands:
 
-    --corpus mind-palace=docs     writes into `_profile_mind_palace`
+    --corpus verilore=docs     writes into `_profile_mind_palace`
     --corpus _profile_mp=docs     writes into `_profile_mp`
 
 `--keep` leaves the disposable corpora behind, for a run whose output is

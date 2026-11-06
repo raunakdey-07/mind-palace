@@ -2,7 +2,7 @@
 
 Read with [`capability-matrix.md`](capability-matrix.md), which carries the
 pinned revisions and the per-axis findings. This document says what each system
-is actually for, where the overlap with Mind Palace is real, and where it is
+is actually for, where the overlap with Verilore is real, and where it is
 not. The revisions it rests on were read on 2026-09-26.
 
 ## The honest starting point
@@ -12,13 +12,13 @@ differentiators. MemPalace stores verbatim text, runs on the user's machine
 unless they opt in to the shared-brain hub, and publishes a benchmark program
 with per-question result files and a held-out split. Letta's MemFS keeps memory
 in a git repository, so every edit is a commit with a recorded author and a
-recorded point in the history. Saying Mind Palace is unusual for verbatim
+recorded point in the history. Saying Verilore is unusual for verbatim
 storage or for being self-hosted would be false, and this repository should not
 imply it.
 
 The difference that survives the review is narrower and more specific: who
 decides what a stored statement means, and whether a reader can inspect the
-evidence for it. Mind Palace's claims are authored by the source document, each
+evidence for it. Verilore's claims are authored by the source document, each
 one must appear literally in an archived chunk, and each carries a quote with
 character offsets that a database trigger checks at insert time. Every one of
 the other four systems either extracts its statements with a model or lets an
@@ -38,12 +38,12 @@ ledger, and the README does not claim one.
 The cost side is what separates it from this repository. Graphiti needs a graph
 database, one of Neo4j, FalkorDB or Neptune with OpenSearch, and an LLM to do
 extraction at ingestion time, with OpenAI as the default. That makes it a
-server-shaped system with a per-token bill, where Mind Palace is a
+server-shaped system with a per-token bill, where Verilore is a
 PostgreSQL-and-pgvector service that performs no inference and treats its
 embedding model as an optional extension loaded on first use.
 
 The transferable idea is the explicit validity window on a derived statement.
-Mind Palace already has that on authored claims. What Graphiti does that this
+Verilore already has that on authored claims. What Graphiti does that this
 repository does not is attach the window to a statement a model derived, which
 is worth reading before anyone proposes a derived-memory layer.
 
@@ -144,7 +144,7 @@ primitives but not a complete contradiction-checking tool exposed through the
 CLI or MCP server. The examples show intended behaviour rather than a shipped
 command path.
 
-Where MemPalace and Mind Palace actually part company: MemPalace files
+Where MemPalace and Verilore actually part company: MemPalace files
 statements by time, and the retrieval surface is a search over drawers. Mind
 Palace holds claims, evidence spans, conflict groups, status resolution from
 two clocks, snapshot and replay, a bounded output contract and a corpus-scoped
@@ -181,7 +181,7 @@ distinguishes, and they are answerable without an LLM in the loop.
 Finally, an admission of what each system is for. Graphiti is for temporal
 graphs. Mem0 is for agent conversation memory. Letta is for stateful agents
 whose memory the agent itself maintains. MemPalace is for local verbatim recall
-over projects and conversations. Mind Palace is for a corpus whose assertions
+over projects and conversations. Verilore is for a corpus whose assertions
 are written by a person and must be inspectable afterwards. A comparison that
 pretends those are the same job produces numbers nobody can act on.
 

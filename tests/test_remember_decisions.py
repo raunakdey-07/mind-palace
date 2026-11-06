@@ -300,9 +300,9 @@ async def test_scope_isolates_the_same_key():
 
 def test_file_with_state_raises_value_error():
     corpus = corpus_name()
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    mp = MindPalace(corpus, base_url="http://127.0.0.1:9")
+    mp = Verilore(corpus, base_url="http://127.0.0.1:9")
     with pytest.raises(ValueError):
         mp.memory.remember(
             statement="Headline: Summer of Speed",
@@ -348,9 +348,9 @@ async def test_runtime_dispatch_forwards_state_and_scope():
 
 def test_cli_remember_records_state_and_scope():
     corpus = corpus_name()
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    MindPalace(corpus)
+    Verilore(corpus)
     result = _invoke(
         [
             "remember",
@@ -589,10 +589,10 @@ def _invoke(args, base_url_env: str | None = None):
     from cli.main import app
 
     env = dict(os.environ)
-    env["MIND_PALACE_RUNTIME"] = "0"
-    env.pop("MIND_PALACE_BASE_URL", None)
+    env["VERILORE_RUNTIME"] = "0"
+    env.pop("VERILORE_BASE_URL", None)
     if base_url_env is not None:
-        env["MIND_PALACE_BASE_URL"] = base_url_env
+        env["VERILORE_BASE_URL"] = base_url_env
     from typer.testing import CliRunner
 
     return CliRunner().invoke(app, args, env=env)

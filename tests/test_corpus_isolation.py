@@ -88,9 +88,9 @@ def _clean_corpora():
                     )
                 conn.execute(
                     sa.text(
-                        "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
-                        "SELECT set_config('mindpalace.erasure', 'on', true); "
-                        "SELECT mindpalace_erase_corpus(id) FROM corpora "
+                        "SELECT set_config('verilore.tenant_scope', '{*}', true); "
+                        "SELECT set_config('verilore.erasure', 'on', true); "
+                        "SELECT verilore_erase_corpus(id) FROM corpora "
                         "WHERE name IN (:a, :b)"
                     ),
                     {"a": CORPUS_A_NAME, "b": CORPUS_B_NAME},
@@ -242,9 +242,9 @@ async def test_search_never_leaks_across_corpora():
 
 
 @requires_db
-async def test_sync_deletes_removed_source_files(tmp_path):
+async def test_sync_deletes_removed_source_files(tvl_path):
     """A file deleted from the source directory disappears from the index."""
-    d = tmp_path / "test"
+    d = tvl_path / "test"
     d.mkdir()
     f1 = d / "keep.md"
     f2 = d / "gone.md"
@@ -285,8 +285,8 @@ async def test_sync_deletes_removed_source_files(tmp_path):
 
 
 @requires_db
-async def test_sync_summary_is_machine_readable(tmp_path):
-    d = tmp_path / "test"
+async def test_sync_summary_is_machine_readable(tvl_path):
+    d = tvl_path / "test"
     d.mkdir()
     (d / "one.md").write_text(DOC_A.replace("Corpus A Doc", "Summary One"))
 
@@ -302,9 +302,9 @@ async def test_sync_summary_is_machine_readable(tmp_path):
 
 
 @requires_db
-async def test_failed_ingestion_leaves_no_success_state(tmp_path):
+async def test_failed_ingestion_leaves_no_success_state(tvl_path):
     """If embedding fails mid-sync, the file must not be marked ingested."""
-    d = tmp_path / "test"
+    d = tvl_path / "test"
     d.mkdir()
     (d / "doomed.md").write_text(DOC_A.replace("Corpus A Doc", "Doomed Doc"))
 

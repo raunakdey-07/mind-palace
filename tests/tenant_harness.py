@@ -3,7 +3,7 @@
 Three things are set up here that the tests then attack:
 
 1. A **least-privileged runtime role**. The application under test connects as
-   `mindpalace_runtime`, which is not a superuser, does not have `BYPASSRLS`, and
+   `verilore_runtime`, which is not a superuser, does not have `BYPASSRLS`, and
    owns no tables. A row-level policy proved against a superuser proves nothing,
    because PostgreSQL exempts superusers from row-level security entirely, so the
    isolation tests would pass for the wrong reason.
@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 #: Names are corpus names, not tenant identifiers: the application resolves them
-#: from its own records and Mind Palace treats them as opaque.
+#: from its own records and Verilore treats them as opaque.
 ALPHA = "alpha"
 BETA = "beta"
 ALPHA_CORPORA = {
@@ -64,11 +64,11 @@ ALL_CANARIES = (
     BETA_PRIVATE_CAMPAIGN_FACT_9M4,
 )
 
-#: A per-session role name, NOT the shipped `mindpalace_runtime`.
+#: A per-session role name, NOT the shipped `verilore_runtime`.
 #:
 #: This harness used to provision the real role on whatever `$DATABASE_URL`
 #: pointed at, which rotated its password on the SHARED database. On CI that
-#: broke every later step that authenticated as `mindpalace_runtime`; the
+#: broke every later step that authenticated as `verilore_runtime`; the
 #: posture check degraded to "unknown means not proven" and reported all 13
 #: protected tables as unprotected. Three CI runs failed on that before the
 #: cause was found, and the first fix -- moving the posture steps earlier -- was
@@ -77,16 +77,16 @@ ALL_CANARIES = (
 #: Roles are cluster-wide even when databases are not, so the only way a test
 #: can leave a cluster alone is to use a name nobody else is using. One is
 #: minted per session and dropped at teardown.
-# The name deliberately does NOT contain "mindpalace_runtime" as a substring.
+# The name deliberately does NOT contain "verilore_runtime" as a substring.
 # If it did, every substitution below would be ambiguous -- you could not tell a
 # replaced occurrence from one inside the new name -- and a grep of the resolved
 # script could not tell whether the real role had been touched.
-RUNTIME_ROLE = "mp_tenant_test_" + uuid.uuid4().hex[:12]
+RUNTIME_ROLE = "vl_tenant_test_" + uuid.uuid4().hex[:12]
 RUNTIME_PASSWORD = "tenant-isolation-test-password"
 
 #: The role name in the shipped script. Substituted for `RUNTIME_ROLE` so the
 #: harness provisions the SAME script an operator runs, with a different name.
-SHIPPED_RUNTIME_ROLE = "mindpalace_runtime"
+SHIPPED_RUNTIME_ROLE = "verilore_runtime"
 
 #: The provisioning script an operator actually runs, relative to the repository
 #: root. Read from disk rather than duplicated -- see `load_provision_sql`.
@@ -183,7 +183,7 @@ def _rotate_and_enable(url: str) -> tuple[str, str]:
                 ),
                 {"v": secret},
             )
-            conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(true)"))
+            conn.execute(sa.text("SELECT vl_set_scope_token_enforcement(true)"))
     finally:
         engine.dispose()
     return secret, original_secret
@@ -202,7 +202,7 @@ def _restore_secret_and_disable(url: str, original_secret: str) -> None:
                 ),
                 {"v": original_secret},
             )
-            conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(false)"))
+            conn.execute(sa.text("SELECT vl_set_scope_token_enforcement(false)"))
     finally:
         engine.dispose()
 
@@ -287,7 +287,7 @@ def require_auth_mode(monkeypatch) -> None:
     other test in the suite. A permissive default would make every refusal
     assertion in this file vacuously true.
     """
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
 
 def provision_session_runtime():
@@ -348,7 +348,7 @@ def _drop_session_role() -> None:
     holds in the database it is run against, so a role provisioned against two
     databases still has grants in the second one, and then:
 
-        ERROR:  role "mp_tenant_test_fc56609b446e" cannot be dropped because
+        ERROR:  role "vl_tenant_test_fc56609b446e" cannot be dropped because
                 some objects depend on it
 
     This function used to run `DROP OWNED BY` against `sync_url()` only, and to
@@ -382,7 +382,7 @@ def _drop_session_role() -> None:
                 #   * `DROP ROLE ... CASCADE` does not exist. CASCADE belongs to
                 #     `DROP OWNED BY`, not to `DROP ROLE`.
                 #
-                # The name is ours -- `mp_tenant_test_` plus hex -- so it cannot
+                # The name is ours -- `vl_tenant_test_` plus hex -- so it cannot
                 # contain a quote and inlining it is not a quoting problem.
                 conn.execute(sa.text(f"DROP OWNED BY {quoted} CASCADE"))
                 conn.commit()
@@ -417,7 +417,7 @@ def _drop_session_role() -> None:
 
 #: The maintenance database used to list the cluster's databases. It must already
 #: exist; nothing here ever creates a cluster.
-MAINTENANCE_DB = os.getenv("MIND_PALACE_TEST_MAINTENANCE_DB", "postgres")
+MAINTENANCE_DB = os.getenv("VERILORE_TEST_MAINTENANCE_DB", "postgres")
 
 
 def _all_database_names() -> list[str]:

@@ -10,8 +10,8 @@ security claim rather than a demonstration of convenience:
 * one organisation's creator cannot read another organisation's memory.
 
 The workflow's own role matrix is asserted in both authorization modes, so it
-does not depend on Mind Palace's row-level policy being armed. The
-cross-organisation read is also asserted through Mind Palace's real HTTP
+does not depend on Verilore's row-level policy being armed. The
+cross-organisation read is also asserted through Verilore's real HTTP
 surface, which is where the deployment boundary actually is.
 """
 
@@ -43,14 +43,14 @@ PLATFORMS = ("blog", "linkedin", "facebook", "instagram")
 
 @pytest.fixture(scope="session")
 def memory_service_url():
-    """A real Mind Palace, on a real socket, in a subprocess.
+    """A real Verilore, on a real socket, in a subprocess.
 
     Deliberately not `ASGITransport(app=app)`. That transport exercises the whole
     application and skips only the socket, which made it tempting -- and it is why
-    the example used to import `api.main.app`. A consumer of Mind Palace connects
+    the example used to import `api.main.app`. A consumer of Verilore connects
     to a URL, so the example connects to a URL too, and this suite proves it.
 
-    The subprocess inherits `DATABASE_URL` and `MIND_PALACE_AUTH_MODE`, so the
+    The subprocess inherits `DATABASE_URL` and `VERILORE_AUTH_MODE`, so the
     server under test is configured exactly as a deployment would be.
     """
     import contextlib
@@ -76,8 +76,8 @@ def memory_service_url():
     # process environment is global. Keep them apart.
     environment = {
         **os.environ,
-        "MIND_PALACE_AUTH_MODE": "required",
-        "MIND_PALACE_DEPLOYMENT": "local",  # a test server is not a deployment
+        "VERILORE_AUTH_MODE": "required",
+        "VERILORE_DEPLOYMENT": "local",  # a test server is not a deployment
     }
     process = subprocess.Popen(
         [
@@ -246,9 +246,9 @@ def _purge_example_corpora() -> None:
             conn.execute(sa.text("DELETE FROM memory_principals WHERE name LIKE 'service-ws-%'"))
             conn.execute(
                 sa.text(
-                    "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
-                    "SELECT set_config('mindpalace.erasure', 'on', true); "
-                    "SELECT mindpalace_erase_corpus(id) FROM corpora WHERE id = ANY(:ids)"
+                    "SELECT set_config('verilore.tenant_scope', '{*}', true); "
+                    "SELECT set_config('verilore.erasure', 'on', true); "
+                    "SELECT verilore_erase_corpus(id) FROM corpora WHERE id = ANY(:ids)"
                 ),
                 {"ids": ids or [""]},
             )
@@ -434,7 +434,7 @@ async def test_one_organisations_creator_cannot_read_another_organisations_memor
     """The claim the whole example is built around.
 
     Two layers, both real. The workflow refuses because Beta is not a member of
-    Alpha; and through Mind Palace's own surface -- over a socket, as a separate
+    Alpha; and through Verilore's own surface -- over a socket, as a separate
     deployment would be -- Beta's credential is not scoped to Alpha's corpora, so
     naming one is refused there too.
     """
@@ -512,7 +512,7 @@ async def test_the_example_imports_no_mind_palace_internals_at_all():
     willing to miss. There is no exception list here any more: **no file in the
     example may import `api`, `cli`, `migrations`, or the SDK.** Corpus creation
     and credential issuance, which genuinely have no HTTP route, go through the
-    documented `mindpalace` operator commands as subprocesses; the demo connects
+    documented `verilore` operator commands as subprocesses; the demo connects
     to a URL; and the suite starts a real server for it to talk to.
     """
     root = Path(__file__).resolve().parents[1] / "examples" / "marketing-campaign-memory"
@@ -521,12 +521,12 @@ async def test_the_example_imports_no_mind_palace_internals_at_all():
         hits = [
             line.strip()
             for line in path.read_text(encoding="utf-8").splitlines()
-            if re.search(r"^\s*(from|import)\s+(api|cli|migrations|mindpalace_sdk)\b", line)
+            if re.search(r"^\s*(from|import)\s+(api|cli|migrations|verilore_sdk)\b", line)
         ]
         if hits:
             offenders[path.name] = hits
     assert not offenders, (
-        "the example must reach Mind Palace over its documented interface only: " f"{offenders}"
+        "the example must reach Verilore over its documented interface only: " f"{offenders}"
     )
 
 

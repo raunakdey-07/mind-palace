@@ -2,10 +2,10 @@
 
 Researched 2026-10-13 from public web pages. **Nothing here was reproduced by us.**
 Every figure carries who reported it and what kind of metric it is. Re-check before
-quoting externally. Mind Palace numbers come from this repository's own evidence
+quoting externally. Verilore numbers come from this repository's own evidence
 artifacts and are labelled development / held-out (burned) / frozen.
 
-**Hard rule for this file:** no sentence claims Mind Palace outperforms a named
+**Hard rule for this file:** no sentence claims Verilore outperforms a named
 system. We have run no cross-vendor harness, so no such comparison exists.
 
 ## 1. How to read the numbers
@@ -19,7 +19,7 @@ column.
 | End-to-end QA accuracy | Retrieve, then a reader model answers, then a judge grades | Depends on reader model, judge and prompt. Different vendors use different ones. |
 | Multiple-choice utilisation | Pick the best response among distractors | PersonaMem v1 chance level is 25%. |
 
-Mind Palace's own figures are end-to-end exact-grader results on question sets we
+Verilore's own figures are end-to-end exact-grader results on question sets we
 authored. They are not comparable to any figure in section 3.
 
 ## 2. Profiles
@@ -87,7 +87,7 @@ GitHub API. (Earlier drafts of this file relied on forks and mirrors; that is co
 - **45 MCP tools** (README), not 19.
 - README documents a temporal entity-relationship graph with validity windows
   (add, query, invalidate, timeline) backed by local SQLite. This is the closest
-  documented overlap with Mind Palace's supersession model.
+  documented overlap with Verilore's supersession model.
 - LongMemEval (500 questions), R@5, all reproducible from the repository per
   `benchmarks/BENCHMARKS.md`:
 
@@ -141,7 +141,7 @@ and a metric, and we have not done that.
 
 ## 3. Figures and what they measure
 
-| Figure | Reporter | Metric kind | Comparable to Mind Palace? |
+| Figure | Reporter | Metric kind | Comparable to Verilore? |
 |---|---|---|---|
 | MemPalace 96.6% R@5, LongMemEval (500q) | project, committed results | retrieval recall | No |
 | MemPalace 98.4% R@5, held-out 450q | project | retrieval recall | No |
@@ -149,9 +149,9 @@ and a metric, and we have not done that.
 | MemPalace LoCoMo R@10 60.3% raw / 88.9% hybrid | project's own README | retrieval recall | No |
 | Tencent PersonaMem 48% to 76% | vendor README, no setup stated | multiple choice (if v1) | No |
 | PersonaMem-v2 frontier 37-48%, agentic memory 55% | PersonaMem-v2 paper | accuracy, 16x fewer tokens | No |
-| Mind Palace 194/202 | us, development set | end-to-end exact grader | Not external |
-| Mind Palace 131/157 | us, held-out v1, burned | end-to-end exact grader | Not external |
-| Mind Palace 45/60 | us, frozen M006.75 | end-to-end exact grader | Not external |
+| Verilore 194/202 | us, development set | end-to-end exact grader | Not external |
+| Verilore 131/157 | us, held-out v1, burned | end-to-end exact grader | Not external |
+| Verilore 45/60 | us, frozen M006.75 | end-to-end exact grader | Not external |
 
 No cross-vendor ranking can be built from this table. Conflicting figures for the same
 system (Mem0, Hindsight, Supermemory) show that self-reported numbers shift with model,
@@ -161,7 +161,7 @@ date and metric.
 
 "Not documented" means not found in the sources read, not that it is absent.
 
-| Capability | Mind Palace | Tencent | MemPalace |
+| Capability | Verilore | Tencent | MemPalace |
 |---|---|---|---|
 | Verbatim source retained | yes (L0, immutable) | yes (L0) | yes |
 | Fact-level validity and supersession | yes (authored claims) | not documented | yes (SQLite graph, per README) |
@@ -178,7 +178,7 @@ date and metric.
 | Install weight | 1.5 GB (CPU torch) to 5.9 GB (default) plus PostgreSQL with pgvector | Docker, three services, LLM keys | pip, ChromaDB default, ~80 MB model (default minilm) |
 | Public benchmark number | none | PersonaMem (setup unstated) | LongMemEval R@5 |
 
-## 5. What this means for Mind Palace
+## 5. What this means for Verilore
 
 Established by sources read directly:
 
@@ -189,7 +189,7 @@ Established by sources read directly:
    same paper reports end-to-end accuracy much lower, and the project's own README
    refuses to compare itself to end-to-end numbers.
 3. Knowledge update and temporal reasoning are the slices where published systems differ
-   most and where one vendor reported a regression. They are also where Mind Palace's
+   most and where one vendor reported a regression. They are also where Verilore's
    design (validity, supersession) is aimed.
 4. **The vendor roadmap agrees with our read of the gap.** TencentDB-Agent-Memory's own
    `ROADMAP.md` puts "editable memories" in the next release because "facts expire,
@@ -203,7 +203,7 @@ Established by our own repository:
    claims, and our own dogfood produced 11 documents and 0 claims before the warning fix.
 6. Distribution and integration are far behind (proxy and plugin ecosystems elsewhere).
 
-Claims we must not make: that Mind Palace outperforms any named system; that any figure
+Claims we must not make: that Verilore outperforms any named system; that any figure
 above is comparable to ours; that "palace" or "hub" structure improves retrieval.
 
 ## 6. Candidate wedge (a judgment, not a finding)

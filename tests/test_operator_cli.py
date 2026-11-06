@@ -6,9 +6,9 @@ its own wiring — a different session, a different database role, and a context
 manager that chooses between them — and an earlier version of this work left all
 of it broken while every service-level test passed.
 
-The failure mode was silent and total: `mindpalace credential issue` raised
+The failure mode was silent and total: `verilore credential issue` raised
 `AsyncContextDecorator.__call__() missing 1 required positional argument`, which
-the CLI's own error handler rendered as "Mind Palace could not complete that",
+the CLI's own error handler rendered as "Verilore could not complete that",
 and no test that called the service functions directly noticed.
 """
 
@@ -52,8 +52,8 @@ def scratch():
                 sa.text("SELECT id FROM corpora WHERE name = :n"), {"n": name}
             ).fetchone()
             if row:
-                conn.execute(sa.text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"))
-                conn.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": row[0]})
+                conn.execute(sa.text("SELECT set_config('verilore.tenant_scope', '{*}', true)"))
+                conn.execute(sa.text("SELECT verilore_erase_corpus(:c)"), {"c": row[0]})
     finally:
         engine.dispose()
 
@@ -67,8 +67,8 @@ def scratch():
                 sa.text("SELECT id FROM corpora WHERE name = :n"), {"n": name}
             ).fetchone()
             if row:
-                conn.execute(sa.text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"))
-                conn.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": row[0]})
+                conn.execute(sa.text("SELECT set_config('verilore.tenant_scope', '{*}', true)"))
+                conn.execute(sa.text("SELECT verilore_erase_corpus(:c)"), {"c": row[0]})
     finally:
         engine.dispose()
 
@@ -188,8 +188,8 @@ def _erase(name: str) -> None:
                 sa.text("SELECT id FROM corpora WHERE name = :n"), {"n": name}
             ).fetchone()
             if row:
-                conn.execute(sa.text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"))
-                conn.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": row[0]})
+                conn.execute(sa.text("SELECT set_config('verilore.tenant_scope', '{*}', true)"))
+                conn.execute(sa.text("SELECT verilore_erase_corpus(:c)"), {"c": row[0]})
     finally:
         engine.dispose()
 

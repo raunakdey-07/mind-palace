@@ -15,7 +15,7 @@ Three properties matter more than the shape of the API:
 * **The corpus set is the decision.** A credential is issued for an explicit list
   of corpora, resolved from server-side rows. A corpus name arriving in a request
   is looked up in that set; it is never taken as proof of anything.
-* **Deny by default.** `MIND_PALACE_AUTH_MODE=required` refuses a request with no
+* **Deny by default.** `VERILORE_AUTH_MODE=required` refuses a request with no
   credential, an unknown credential, a disabled or revoked credential, a corpus
   outside the credential's scope, and a write from a read-only credential. The
   only mode that does not is `off`, which is the documented single-user local
@@ -124,7 +124,7 @@ class Principal:
     scoped to a corpus id that a differently-spelled name would select.
 
     The vocabulary is deliberately not interchangeable. An ``Identity`` is a
-    human or service in the *hosting application*; Mind Palace never sees one. A
+    human or service in the *hosting application*; Verilore never sees one. A
     ``Principal`` is this credential. A ``Tenant`` is the host application's word
     for a customer, realised here as a set of granted corpora. A ``Corpus`` is
     one memory collection. A ``Resource`` is a document or claim inside one, and
@@ -231,7 +231,7 @@ def require_role(role: str, allowed: Iterable[str], what: str) -> None:
 
 def auth_mode() -> str:
     """The configured mode. Defaults to the documented single-user workflow."""
-    mode = os.getenv("MIND_PALACE_AUTH_MODE", MODE_OFF).strip().lower()
+    mode = os.getenv("VERILORE_AUTH_MODE", MODE_OFF).strip().lower()
     return mode if mode in MODES else MODE_REQUIRED
 
 
@@ -259,11 +259,11 @@ def deployment_mode() -> str:
     the ingest-root and database-posture checks unenforced while the service ran
     normally. A value nobody recognises is a mistake, and mistakes are refused.
     """
-    raw = os.getenv("MIND_PALACE_DEPLOYMENT", DEPLOYMENT_LOCAL).strip().lower()
+    raw = os.getenv("VERILORE_DEPLOYMENT", DEPLOYMENT_LOCAL).strip().lower()
     if raw in DEPLOYMENTS:
         return raw
     raise ValueError(
-        f"MIND_PALACE_DEPLOYMENT={raw!r} is not a known deployment profile; "
+        f"VERILORE_DEPLOYMENT={raw!r} is not a known deployment profile; "
         f"expected one of {', '.join(DEPLOYMENTS)}"
     )
 
@@ -278,8 +278,8 @@ def deployment_mode() -> str:
 #: a deployment that changed the value passes, and one that took the default
 #: does not.
 LOCAL_ONLY_SECRETS = {
-    "MIND_PALACE_RUNTIME_PASSWORD": "mindpalace-local-runtime-password",
-    "MIND_PALACE_CURSOR_SECRET": "mindpalace-local-dev-cursor-secret-00000000000000000000",
+    "VERILORE_RUNTIME_PASSWORD": "verilore-local-runtime-password",
+    "VERILORE_CURSOR_SECRET": "verilore-local-dev-cursor-secret-00000000000000000000",
 }
 
 
@@ -303,13 +303,13 @@ def server_mode_errors() -> list[str]:
         return problems
     if not auth_required():
         problems.append(
-            "MIND_PALACE_DEPLOYMENT=server requires MIND_PALACE_AUTH_MODE=required; "
+            "VERILORE_DEPLOYMENT=server requires VERILORE_AUTH_MODE=required; "
             "an unauthenticated service on a network is not tenant-scoped"
         )
     for name, placeholder in LOCAL_ONLY_SECRETS.items():
         if os.getenv(name, "").strip() == placeholder:
             problems.append(
-                f"MIND_PALACE_DEPLOYMENT=server requires a real {name}; the value is "
+                f"VERILORE_DEPLOYMENT=server requires a real {name}; the value is "
                 "the local-development default from docker-compose.yml, and a "
                 "service on a network must not ship it"
             )
@@ -377,7 +377,7 @@ async def resolve_principal(db: AsyncSession, authorization: str | None = None) 
         return LOCAL_PRINCIPAL
 
     presented = _parse_bearer(authorization)
-    # Through `mindpalace_resolve_credential`, not a direct `SELECT`. The function
+    # Through `verilore_resolve_credential`, not a direct `SELECT`. The function
     # is `SECURITY DEFINER`, so the runtime role can call it without holding
     # `SELECT` on `memory_principals` or `memory_principal_corpora` -- which is
     # what stops a query bug, a compromised endpoint or a curious operator with
@@ -390,7 +390,7 @@ async def resolve_principal(db: AsyncSession, authorization: str | None = None) 
         await db.execute(
             text(
                 "SELECT id, name, role, corpus_name, corpus_id "
-                "FROM mindpalace_resolve_credential(:digest)"
+                "FROM verilore_resolve_credential(:digest)"
             ),
             {"digest": _hash(presented)},
         )
@@ -515,7 +515,7 @@ async def _resolve_credential_id(db: AsyncSession, needle: str) -> str | None:
     credential is worse than an error, and silently picking the newest of two is
     exactly how a revoke ends up revoking the credential someone just deployed.
 
-    Routed through `mindpalace_locate_credential` rather than a `SELECT`, because
+    Routed through `verilore_locate_credential` rather than a `SELECT`, because
     the runtime role deliberately cannot read `memory_principals` at all. Same
     reason `resolve_principal` uses a function: the credential table is not
     something an ordinary query should be able to enumerate.
@@ -524,7 +524,7 @@ async def _resolve_credential_id(db: AsyncSession, needle: str) -> str | None:
     if not trimmed:
         return None
     found = (
-        await db.execute(text("SELECT mindpalace_locate_credential(:n)"), {"n": trimmed})
+        await db.execute(text("SELECT verilore_locate_credential(:n)"), {"n": trimmed})
     ).scalar_one_or_none()
     return found.rstrip() if found else None
 
@@ -670,7 +670,7 @@ async def list_credentials(db: AsyncSession) -> list[dict]:
     except Exception:  # noqa: BLE001 - translated into an actionable message
         raise ValueError(
             "listing credentials needs the maintenance database role: "
-            "`mindpalace credential list` reads every credential, and the runtime "
+            "`verilore credential list` reads every credential, and the runtime "
             "role is deliberately not permitted to do that. Connect with "
             "MIGRATION_DATABASE_URL or the owner role."
         ) from None

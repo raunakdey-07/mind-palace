@@ -1,6 +1,6 @@
 """Head-to-head stale-fact and ADR evolution benchmark.
 
-Mind Palace vs. Plain Top-k Chunk RAG, using the exact same ONNX embedding model.
+Verilore vs. Plain Top-k Chunk RAG, using the exact same ONNX embedding model.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from api.services.embedder import Embedder  # noqa: E402
-from mindpalace_sdk import MindPalace  # noqa: E402
+from verilore_sdk import Verilore  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Dataset
@@ -384,7 +384,7 @@ def run_benchmark():
     for name, content in DOCS.items():
         (docdir / name).write_text(content, encoding="utf-8")
 
-    mp = MindPalace(corpus_name)
+    mp = Verilore(corpus_name)
     try:
         mp.sync(str(docdir))
 
@@ -429,15 +429,15 @@ def run_benchmark():
             scored = sorted(allowed, key=lambda i: _cosine(qv, embeddings[i]), reverse=True)
             return [chunk_list[i] for i in scored[:k]]
 
-        # Mind Palace + baseline over questions
-        mp_correct = 0
+        # Verilore + baseline over questions
+        vl_correct = 0
         base_correct = 0
         base_contam = 0
         recency_correct = 0
         meta_correct = 0
 
-        mp_abstain_correct = 0
-        mp_abstain_total = 0
+        vl_abstain_correct = 0
+        vl_abstain_total = 0
         base_abstain_correct = 0
         base_abstain_total = 0
         recency_abstain_correct = 0
@@ -445,8 +445,8 @@ def run_benchmark():
         meta_abstain_correct = 0
         meta_abstain_total = 0
 
-        mp_compound_hits = 0
-        mp_compound_total = 0
+        vl_compound_hits = 0
+        vl_compound_total = 0
         base_compound_hits = 0
         base_compound_total = 0
         recency_compound_hits = 0
@@ -454,7 +454,7 @@ def run_benchmark():
         meta_compound_hits = 0
         meta_compound_total = 0
 
-        mp_stale_contam = 0
+        vl_stale_contam = 0
         base_stale_contam = 0
         recency_stale_contam = 0
         meta_stale_contam = 0
@@ -486,7 +486,7 @@ def run_benchmark():
             return max(sims) < ABSTAIN_THRESHOLD
 
         for q, gold, abstain, cat in QUESTIONS:
-            # Mind Palace
+            # Verilore
             try:
                 resp = mp.recall(q)
             except Exception:
@@ -494,29 +494,29 @@ def run_benchmark():
             claims = getattr(resp, "current_memories", []) or []
             constraints = getattr(resp, "constraints", []) or []
             if abstain:
-                mp_abstain_total += 1
-                mp_abs = (len(claims) == 0) or any("NO_RELEVANT" in str(c) for c in constraints)
-                if mp_abs:
-                    mp_abstain_correct += 1
+                vl_abstain_total += 1
+                vl_abs = (len(claims) == 0) or any("NO_RELEVANT" in str(c) for c in constraints)
+                if vl_abs:
+                    vl_abstain_correct += 1
             else:
-                mp_ok = any(gold and gold in (getattr(c, "claim", "") or "") for c in claims)
-                if mp_ok:
-                    mp_correct += 1
+                vl_ok = any(gold and gold in (getattr(c, "claim", "") or "") for c in claims)
+                if vl_ok:
+                    vl_correct += 1
                 # compound completeness (category C non-abstain)
                 if cat == "C":
-                    mp_compound_total += 1
+                    vl_compound_total += 1
                     # required current sub-facts present without stale
-                    mp_claim_texts = [getattr(c, "claim", "") or "" for c in claims]
-                    has_gold = any(gold and gold in t for t in mp_claim_texts)
-                    has_stale = any(any(m in t for m in STALE_MARKERS) for t in mp_claim_texts)
+                    vl_claim_texts = [getattr(c, "claim", "") or "" for c in claims]
+                    has_gold = any(gold and gold in t for t in vl_claim_texts)
+                    has_stale = any(any(m in t for m in STALE_MARKERS) for t in vl_claim_texts)
                     if has_gold and not has_stale:
-                        mp_compound_hits += 1
+                        vl_compound_hits += 1
             # MP stale contamination (non-abstain): stale marker in any current claim not gold
-            mp_texts = [getattr(c, "claim", "") or "" for c in claims]
+            vl_texts = [getattr(c, "claim", "") or "" for c in claims]
             if any(
-                any(m in t and (not gold or gold not in t) for m in STALE_MARKERS) for t in mp_texts
+                any(m in t and (not gold or gold not in t) for m in STALE_MARKERS) for t in vl_texts
             ):
-                mp_stale_contam += 1
+                vl_stale_contam += 1
 
             # Baselines
             for (
@@ -525,8 +525,8 @@ def run_benchmark():
                 contam_attr,
                 abst_corr,
                 abst_tot,
-                comp_hits,
-                comp_tot,
+                covl_hits,
+                covl_tot,
                 stale_cont,
             ) in [
                 (plain_search, "base", "base", "base", "base", "base", "base", "base"),
@@ -595,7 +595,7 @@ def run_benchmark():
 
         # Cached revalidation accuracy using claim ids
         reval_total = 0
-        reval_mp_correct = 0
+        reval_vl_correct = 0
         try:
             import asyncio
             from api.services.db import session_scope
@@ -616,15 +616,15 @@ def run_benchmark():
                 out = mp.revalidate(claim_ids=[cid])
                 verdict = out.get("verdict") or out.get("status")
                 if verdict == "CURRENT":
-                    reval_mp_correct += 1
+                    reval_vl_correct += 1
             for cid in superseded_ids:
                 out = mp.revalidate(claim_ids=[cid])
                 verdict = out.get("verdict") or out.get("status")
                 if verdict == "STALE":
-                    reval_mp_correct += 1
+                    reval_vl_correct += 1
         except Exception:
             reval_total = max(1, reval_total)
-            reval_mp_correct = reval_total
+            reval_vl_correct = reval_total
 
         if reval_total == 0:
             reval_total = 1
@@ -638,15 +638,15 @@ def run_benchmark():
                 "questions": total,
             },
             "mind_palace": {
-                "authoritative_top1_accuracy": mp_correct / total,
-                "authoritative_accuracy": mp_correct / total,
-                "top1_accuracy": mp_correct / total,
-                "stale_contamination_rate": _safe(mp_stale_contam, total),
-                "stale_fact_contamination_rate": _safe(mp_stale_contam, total),
-                "compound_completeness": _safe(mp_compound_hits, mp_compound_total),
-                "compound_completeness_accuracy": _safe(mp_compound_hits, mp_compound_total),
-                "abstention_accuracy": _safe(mp_abstain_correct, mp_abstain_total),
-                "cached_revalidation_accuracy": reval_mp_correct / reval_total,
+                "authoritative_top1_accuracy": vl_correct / total,
+                "authoritative_accuracy": vl_correct / total,
+                "top1_accuracy": vl_correct / total,
+                "stale_contamination_rate": _safe(vl_stale_contam, total),
+                "stale_fact_contamination_rate": _safe(vl_stale_contam, total),
+                "compound_completeness": _safe(vl_compound_hits, vl_compound_total),
+                "compound_completeness_accuracy": _safe(vl_compound_hits, vl_compound_total),
+                "abstention_accuracy": _safe(vl_abstain_correct, vl_abstain_total),
+                "cached_revalidation_accuracy": reval_vl_correct / reval_total,
                 "cached_revalidation_f1": 1.0,
                 "stale_cache_miss_rate": 0.0,
             },
@@ -694,7 +694,7 @@ def run_benchmark():
             # aliases
             "baseline": None,
             "chunk_rag": None,
-            "mind_palace_accuracy": mp_correct / total,
+            "mind_palace_accuracy": vl_correct / total,
             "baseline_accuracy": base_correct / total,
         }
         metrics["baseline"] = metrics["plain_rag"]

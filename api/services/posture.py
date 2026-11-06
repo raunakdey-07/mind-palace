@@ -3,14 +3,14 @@
 
 """Is row-level security actually in force for *this* connection?
 
-`MIND_PALACE_AUTH_MODE=required` is an application-layer switch. It says nothing
+`VERILORE_AUTH_MODE=required` is an application-layer switch. It says nothing
 about whether the database is enforcing anything underneath, and the answer is
 role-dependent in a way nothing in the request path can observe: PostgreSQL
 exempts a superuser, a `BYPASSRLS` role, and (without `FORCE`) the table owner
 from every policy.
 
 So a deployment can report `{"status": "ready", "auth": {"required": true}}`
-while running as `mpadmin` with migration `008` completely inert. The tests prove
+while running as `vladmin` with migration `008` completely inert. The tests prove
 the policy works; this module is what tells an *operator*, at startup and on
 readiness, whether their own connection is one of the exempted shapes.
 
@@ -147,7 +147,7 @@ class DatabasePosture:
             found.append(
                 f"database role '{self.role}' can enumerate credential hashes; run "
                 "scripts/db/runtime_roles.sql so authentication uses "
-                "mindpalace_resolve_credential instead"
+                "verilore_resolve_credential instead"
             )
         if self.archive_delete_granted:
             found.append(
@@ -336,7 +336,7 @@ async def _can_enumerate_credentials(db: AsyncSession) -> bool:
     """Whether credential hashes can be read with an ordinary query.
 
     The application needs exactly one thing from `memory_principals`: given a
-    presented hash, the identity it belongs to. That is `mindpalace_resolve_credential`.
+    presented hash, the identity it belongs to. That is `verilore_resolve_credential`.
     If the role can also `SELECT` the table, one query returns every tenant's
     hash, role and grant, which the application has no reason to be able to do.
 

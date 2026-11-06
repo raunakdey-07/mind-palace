@@ -138,7 +138,7 @@ absence.
 
 Ordinary memory operations share one typed boundary
 (`api/services/memory_public.py`) reached by REST (`api/routers/memory.py`), the
-Python SDK (`mindpalace_sdk.py`), MCP (`mcp_server.py`), and the remote CLI
+Python SDK (`verilore_sdk.py`), MCP (`mcp_server.py`), and the remote CLI
 (`cli/memory.py`). Adapters translate transport and errors; they do not
 implement archive policy. Operations are `query`, `current`, `history`,
 `changes`, `evidence`, `as-of`, `snapshot`, `replay`, and `pack`.
@@ -194,7 +194,7 @@ retrieval             ≠   historical truth
 ```
 
 **Similarity is not authority.** A search index answers "what text looks like your
-question". Mind Palace answers "what is true, what replaced it, and on what
+question". Verilore answers "what is true, what replaced it, and on what
 evidence" — and it will decline rather than guess when nothing it knows is relevant.
 A claim is authoritative because a human wrote it and the archive recorded its
 provenance, not because it scored well.
@@ -260,7 +260,7 @@ L2  derived retrieval                 embeddings, chunks, caches, indexes
 ```
 
 L2 may be deleted and rebuilt without changing a single byte of authoritative
-memory. `mindpalace reindex` rebuilds it from the archive. That separation is why
+memory. `verilore reindex` rebuilds it from the archive. That separation is why
 a first memory works with no model and why a receipt verifies with no model.
 
 A remembered statement becomes one document under `memory/` carrying one authored
@@ -291,7 +291,7 @@ write idempotent.
 
 Retrieval returns the passage that best matches a query. It does not know that the
 passage was wrong last month, that a newer document supersedes it, or that two
-sources disagree. Mind Palace answers a different question: *what was recorded,
+sources disagree. Verilore answers a different question: *what was recorded,
 when, and on what basis?*
 
 The corpus owns the memory. An application asks a question and receives claims
@@ -307,7 +307,7 @@ version, verified by the database. When a claim is replaced, the archive records
 addressable and the transition is dated.
 
 Two claims that are current at the same time, on the same key, with different
-values, form a **conflict**. Mind Palace reports both with their sources instead of
+values, form a **conflict**. Verilore reports both with their sources instead of
 picking one.
 
 ```text
@@ -322,7 +322,7 @@ picking one.
 
 ## Verifiable Memory
 
-A **Memory Receipt** records what Mind Palace actually returned to one application,
+A **Memory Receipt** records what Verilore actually returned to one application,
 for one query, at one historical state: the claim identity and version, the
 document version and path that carried it, its evidence with offsets, its validity
 window, its supersession lineage, the authoritative digest, and an embedded proof.
@@ -342,8 +342,8 @@ digest imply more than it shows.
 
 ```bash
 # The dependency-free verifier, for environments without the CLI extras.
-mindpalace-proof verify receipt.json --pack memory-pack.json
-mindpalace-proof explain receipt.json --pack memory-pack.json
+verilore-proof verify receipt.json --pack memory-pack.json
+verilore-proof explain receipt.json --pack memory-pack.json
 ```
 
 Existing v0.8.0 receipts remain verifiable. The receipt schema is version 1 and
@@ -357,13 +357,13 @@ first migration, so the first command never has to mention one. Pass `--corpus`
 
 A corpus name is a namespace, not a credential. Naming one is how you choose
 what to read; it is not evidence that you may. For a shared deployment, set
-`MIND_PALACE_AUTH_MODE=required` and run the service as a least-privileged
+`VERILORE_AUTH_MODE=required` and run the service as a least-privileged
 database role, and the corpus you are allowed to reach is decided by your
 credential rather than by your request. See
 [Security and multi-tenant integration](../../docs/security.md).
 
 ```console
-$ mindpalace corpora
+$ verilore corpora
 default
 decision-memory-1f4a9c02
 ```

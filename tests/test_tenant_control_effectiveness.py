@@ -64,7 +64,7 @@ def _forget_row_level_policy(monkeypatch) -> None:
 
     The application half only: the scope value is `{*}` and the row-level
     predicate still binds that sentinel to a role that already reads every row,
-    which `mindpalace_runtime` does not. That binding is a control of its own
+    which `verilore_runtime` does not. That binding is a control of its own
     after migration `010`, and this helper deliberately leaves it in place --
     `test_without_the_application_check_the_database_still_holds_the_line` is
     stronger for it, not weaker, and `_remove_every_database_control` is where
@@ -75,9 +75,9 @@ def _forget_row_level_policy(monkeypatch) -> None:
     monkeypatch.setattr(db_module, "_scope_value", lambda: "{*}", raising=True)
 
 
-#: Tables protected by the `mindpalace_tenant` row-level policy. Migration `016`
-#: inlines `(SELECT mp_verified_scope_corpora())` directly in each policy, so
-#: `mindpalace_allowed_corpus` is no longer the policy control point -- disabling
+#: Tables protected by the `verilore_tenant` row-level policy. Migration `016`
+#: inlines `(SELECT vl_verified_scope_corpora())` directly in each policy, so
+#: `verilore_allowed_corpus` is no longer the policy control point -- disabling
 #: row-level security on these tables is what "removing the control" means now.
 _PROTECTED_TABLES = (
     "corpora",
@@ -96,24 +96,24 @@ _PROTECTED_TABLES = (
 )
 
 
-#: A trusting replacement for `mp_verified_scope_corpora()`: it parses the session
+#: A trusting replacement for `vl_verified_scope_corpora()`: it parses the session
 #: scope setting into corpus IDs without checking the token or enforcement flag,
 #: so any scope a session names is honoured. This is the new control point after
-#: migration 016 (the policy inlines `(SELECT mp_verified_scope_corpora())`).
+#: migration 016 (the policy inlines `(SELECT vl_verified_scope_corpora())`).
 _TRUSTING_SCOPE_FUNCTION = """
-CREATE OR REPLACE FUNCTION mp_verified_scope_corpora()
+CREATE OR REPLACE FUNCTION vl_verified_scope_corpora()
 RETURNS text[]
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp AS $fn$
     SELECT CASE
-        WHEN coalesce(current_setting('mindpalace.tenant_scope', true), '') = ''
+        WHEN coalesce(current_setting('verilore.tenant_scope', true), '') = ''
             THEN ARRAY[]::text[]
-        WHEN current_setting('mindpalace.tenant_scope', true) = '{*}'
+        WHEN current_setting('verilore.tenant_scope', true) = '{*}'
             THEN ARRAY['*']::text[]
         ELSE coalesce(
             (SELECT array_agg(btrim(x))
              FROM unnest(string_to_array(
-                 current_setting('mindpalace.tenant_scope', true), ','
+                 current_setting('verilore.tenant_scope', true), ','
              )) AS x),
             ARRAY[]::text[]
         )
@@ -128,7 +128,7 @@ _installed_scope_function: str | None = None
 
 
 async def _replace_scope_function_with_trusting_body() -> None:
-    """Replace `mp_verified_scope_corpora()` with a trusting body.
+    """Replace `vl_verified_scope_corpora()` with a trusting body.
 
     Uses CREATE OR REPLACE so the function owner and existing grants are
     preserved; the only thing that changes is the body. The original definition
@@ -147,7 +147,7 @@ async def _replace_scope_function_with_trusting_body() -> None:
                     await db.execute(
                         text(
                             "SELECT pg_get_functiondef("
-                            "'mp_verified_scope_corpora()'::regprocedure)"
+                            "'vl_verified_scope_corpora()'::regprocedure)"
                         )
                     )
                 ).scalar()
@@ -157,7 +157,7 @@ async def _replace_scope_function_with_trusting_body() -> None:
 
 @pytest.fixture(autouse=True)
 async def _restore_scope_function():
-    """Restore `mp_verified_scope_corpora()` after each test, unconditionally.
+    """Restore `vl_verified_scope_corpora()` after each test, unconditionally.
 
     Autouse so that a test that fails partway through after replacing the
     function does not leave every later test running against a trusting scope
@@ -178,21 +178,21 @@ async def _restore_scope_function():
             restored = (
                 await db.execute(
                     text(
-                        "SELECT pg_get_functiondef(" "'mp_verified_scope_corpora()'::regprocedure)"
+                        "SELECT pg_get_functiondef(" "'vl_verified_scope_corpora()'::regprocedure)"
                     )
                 )
             ).scalar()
         await db.commit()
     assert (
         restored == _installed_scope_function
-    ), "mp_verified_scope_corpora() was not restored to its original definition"
+    ), "vl_verified_scope_corpora() was not restored to its original definition"
 
 
 async def _remove_every_database_control(monkeypatch) -> None:
     """Take the row-level control off entirely.
 
-    Migration `016` inlines `(SELECT mp_verified_scope_corpora())` directly in
-    each `mindpalace_tenant` policy, so `mindpalace_allowed_corpus` is no longer
+    Migration `016` inlines `(SELECT vl_verified_scope_corpora())` directly in
+    each `verilore_tenant` policy, so `verilore_allowed_corpus` is no longer
     referenced by any policy. Disabling row-level security on every protected
     table is what "removing the control" means now; the function itself is left
     untouched (it still exists and is still granted).
@@ -323,8 +323,8 @@ async def test_without_scope_function_the_forgery_holds(world, monkeypatch):
     """The scope function is the new control point: replace it with a trusting
     body and the forgery passes through.
 
-    Migration `016` inlines `(SELECT mp_verified_scope_corpora())` directly in
-    each `mindpalace_tenant` policy, so `mp_verified_scope_corpora()` is the
+    Migration `016` inlines `(SELECT vl_verified_scope_corpora())` directly in
+    each `verilore_tenant` policy, so `vl_verified_scope_corpora()` is the
     control. This is a mutation test: first the forged request is refused with
     the real function (404, zero rows), then the function is replaced with a
     trusting body and the same request succeeds (200, canary leaks), proving

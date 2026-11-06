@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""`MIND_PALACE_LEXICAL=1` must be a real mode, not a label.
+"""`VERILORE_LEXICAL=1` must be a real mode, not a label.
 
 Two properties, and both are asserted rather than described:
 
@@ -90,10 +90,10 @@ def corpus():
 
 def read(corpus: str, question: str, *, lexical: bool) -> dict:
     """One recall, in a fresh process, in the requested mode."""
-    env = dict(os.environ, PYTHONPATH=str(ROOT), MIND_PALACE_RUNTIME="0")
-    env.pop("MIND_PALACE_LEXICAL", None)
+    env = dict(os.environ, PYTHONPATH=str(ROOT), VERILORE_RUNTIME="0")
+    env.pop("VERILORE_LEXICAL", None)
     if lexical:
-        env["MIND_PALACE_LEXICAL"] = "1"
+        env["VERILORE_LEXICAL"] = "1"
     done = subprocess.run(
         [sys.executable, "-m", "cli.main", "recall", question, "--corpus", corpus, "--json"],
         cwd=str(ROOT),
@@ -114,10 +114,10 @@ def _child(argv: list[str], lexical: bool) -> tuple[float, dict]:
     A child, not this process, because the model stack is imported exactly once per
     interpreter and this one has already paid it for the other tests.
     """
-    env = dict(os.environ, PYTHONPATH=str(ROOT), MIND_PALACE_RUNTIME="0")
-    env.pop("MIND_PALACE_LEXICAL", None)
+    env = dict(os.environ, PYTHONPATH=str(ROOT), VERILORE_RUNTIME="0")
+    env.pop("VERILORE_LEXICAL", None)
     if lexical:
-        env["MIND_PALACE_LEXICAL"] = "1"
+        env["VERILORE_LEXICAL"] = "1"
     program = (
         "import json, sys, time\n"
         "t = time.perf_counter()\n"
@@ -264,29 +264,29 @@ def test_the_two_modes_select_differently_and_that_is_documented(corpus):
     )
 
 
-def test_lexical_mode_bypasses_a_running_runtime(corpus, tmp_path):
+def test_lexical_mode_bypasses_a_running_runtime(corpus, tvl_path):
     """A runtime exists to hold the model; a model-free read must not involve it.
 
     The simplest architecture that satisfies every constraint: do not use it. The
     same `execute` runs in this process, so there is still one authoritative
     implementation and no protocol field to negotiate.
     """
-    state = tmp_path / "state"
+    state = tvl_path / "state"
     state.mkdir()
-    env = dict(os.environ, PYTHONPATH=str(ROOT), MIND_PALACE_STATE_DIR=str(state))
-    env.pop("MIND_PALACE_LEXICAL", None)
-    env.pop("MIND_PALACE_RUNTIME", None)
+    env = dict(os.environ, PYTHONPATH=str(ROOT), VERILORE_STATE_DIR=str(state))
+    env.pop("VERILORE_LEXICAL", None)
+    env.pop("VERILORE_RUNTIME", None)
 
     from api import runtime as runtime_module
 
     # The runtime resolves its socket and token from the environment at call time, so
     # this process has to point at the same state directory the child will. Setting it
     # only in the child's env writes the token in one place and reads it in another.
-    previous = os.environ.get("MIND_PALACE_STATE_DIR")
-    os.environ["MIND_PALACE_STATE_DIR"] = str(state)
+    previous = os.environ.get("VERILORE_STATE_DIR")
+    os.environ["VERILORE_STATE_DIR"] = str(state)
     runtime_module._ensure_token()
     process = subprocess.Popen(
-        [sys.executable, "-m", "mindpalace" "_runtime"],
+        [sys.executable, "-m", "verilore" "_runtime"],
         cwd=str(ROOT),
         env=env,
         stdin=subprocess.DEVNULL,
@@ -307,7 +307,7 @@ def test_lexical_mode_bypasses_a_running_runtime(corpus, tmp_path):
         )
         assert semantic_reply["ok"]
 
-        lexical_env = dict(env, MIND_PALACE_LEXICAL="1")
+        lexical_env = dict(env, VERILORE_LEXICAL="1")
         done = subprocess.run(
             [
                 sys.executable,
@@ -343,9 +343,9 @@ def test_lexical_mode_bypasses_a_running_runtime(corpus, tmp_path):
         except subprocess.TimeoutExpired:  # pragma: no cover
             process.kill()
         if previous is None:
-            os.environ.pop("MIND_PALACE_STATE_DIR", None)
+            os.environ.pop("VERILORE_STATE_DIR", None)
         else:
-            os.environ["MIND_PALACE_STATE_DIR"] = previous
+            os.environ["VERILORE_STATE_DIR"] = previous
 
 
 def test_only_an_explicit_value_enables_the_mode():
@@ -358,29 +358,29 @@ def test_only_an_explicit_value_enables_the_mode():
 
     for unset in (
         {},
-        {"MIND_PALACE_LEXICAL": ""},
-        {"MIND_PALACE_LEXICAL": "0"},
-        {"MIND_PALACE_LEXICAL": "false"},
-        {"MIND_PALACE_LEXICAL": "maybe"},
+        {"VERILORE_LEXICAL": ""},
+        {"VERILORE_LEXICAL": "0"},
+        {"VERILORE_LEXICAL": "false"},
+        {"VERILORE_LEXICAL": "maybe"},
     ):
         assert lexical_requested(unset) is False, unset
     for on in ("1", "true", "TRUE", "yes", "on", " 1 "):
-        assert lexical_requested({"MIND_PALACE_LEXICAL": on}) is True, on
+        assert lexical_requested({"VERILORE_LEXICAL": on}) is True, on
 
 
-def test_a_receipt_from_lexical_mode_verifies_offline(corpus, tmp_path):
+def test_a_receipt_from_lexical_mode_verifies_offline(corpus, tvl_path):
     """The trust boundary is unchanged by the mode.
 
-    A receipt proves what Mind Palace returned and how that response was represented.
+    A receipt proves what Verilore returned and how that response was represented.
     It does not prove the world is true, and choosing a different scorer does not
     weaken either half of that.
     """
-    path = tmp_path / "lexical-receipt.json"
+    path = tvl_path / "lexical-receipt.json"
     env = dict(
         os.environ,
         PYTHONPATH=str(ROOT),
-        MIND_PALACE_RUNTIME="0",
-        MIND_PALACE_LEXICAL="1",
+        VERILORE_RUNTIME="0",
+        VERILORE_LEXICAL="1",
     )
     done = subprocess.run(
         [

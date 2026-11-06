@@ -1,5 +1,5 @@
 {
-  "note": "Warm CLI latency for in-process commands, measured at the head of dx/in-process-memory-pack-and-uv-lock on 2026-10-24. Five runs per command after the database and model cache were warm. MIND_PALACE_RUNTIME=0 so the measurement is the in-process path and not a background runtime. No HTTP server listened on :8000. `uv run --no-sync` was measured separately to show that a present uv.lock adds no re-resolution cost.",
+  "note": "Warm CLI latency for in-process commands, measured at the head of dx/in-process-memory-pack-and-uv-lock on 2026-10-24. Five runs per command after the database and model cache were warm. VERILORE_RUNTIME=0 so the measurement is the in-process path and not a background runtime. No HTTP server listened on :8000. `uv run --no-sync` was measured separately to show that a present uv.lock adds no re-resolution cost.",
   "query": "What is the default embedding backend?",
   "runs": 5,
   "host": "hp-245-g8",

@@ -4,7 +4,7 @@
 """Verifiable Memory: a proof that a memory was true, and an offline verifier.
 
 This module is deliberately dependency-free. It imports only the standard library
-and `memory_pack`, so a third party can verify a proof with no Mind Palace server,
+and `memory_pack`, so a third party can verify a proof with no Verilore server,
 no database, no embedding model, no network and no API credentials. That is the
 whole point: verification must not depend on the same system it is verifying.
 

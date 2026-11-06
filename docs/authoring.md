@@ -1,6 +1,6 @@
 # Authoring memory
 
-What you write determines what Mind Palace can answer. This document says
+What you write determines what Verilore can answer. This document says
 which shapes work, what each one stores today, and what the rejection messages
 mean.
 
@@ -20,7 +20,7 @@ that corpus.
 | Plain Markdown, no frontmatter | **0** | **0** | **abstains** |
 | A conversation transcript, five sessions | **0** | **0** | **abstains** |
 
-**Unstructured prose is now extracted, not just stored.** Mind Palace reads
+**Unstructured prose is now extracted, not just stored.** Verilore reads
 ordinary paragraphs for normative and declarative sentences (modal signals such
 as must/avoid/never/should, plus declarative entity-attribute statements) and
 records them as claims with exact verbatim evidence spans. Each extracted
@@ -258,7 +258,7 @@ reserved at the start of a YAML plain scalar.
 ```console
 $ mkdir -p ./quotecheck && printf '%s\n' '---' 'title: Bad quoting' 'claims:' '  - key: a.b' '    value: v' '    claim: c' '    evidence: `get-shit-done-cc` is the sole npm package.' '---' '' '# Bad quoting' '' 'The sole npm package is get-shit-done-cc.' > ./quotecheck/bad.md
 
-$ mindpalace ingest-repo ./quotecheck --corpus quoting
+$ verilore ingest-repo ./quotecheck --corpus quoting
 [FAIL] sync: +1 ~0 =0 -0 !0, 2 chunks
   - bad.md: frontmatter_unparseable
 ```
@@ -286,7 +286,7 @@ A key identifies **one fact**. There are three ways a fact changes.
 text. The archive keeps both, and `history` shows the chain:
 
 ```console
-$ mindpalace history gsd.package_boundary
+$ verilore history gsd.package_boundary
 2026-10-15 03:53 UTC  recorded  Every Shared Module has exactly one hand-authored source of truth.
 2026-10-15 03:56 UTC  Every Shared Module has exactly one hand-authored source of truth.
             superseded by  The sole npm package is get-shit-done-cc.
@@ -294,14 +294,14 @@ $ mindpalace history gsd.package_boundary
 current now: The sole npm package is get-shit-done-cc.
 ```
 
-**2. `mindpalace remember` with the same `--key`.** Same chain, same
+**2. `verilore remember` with the same `--key`.** Same chain, same
 `superseded by` line, produced without a document.
 
 **3. `--supersedes <claim-id>` or `--topic-key <key>`, across files.** These retire
 a claim in a *different* document, which is the case a new ADR needs:
 
 ```console
-$ mindpalace remember "The primary datastore is PostgreSQL 16." \
+$ verilore remember "The primary datastore is PostgreSQL 16." \
     --corpus project --key architecture.datastore --topic-key architecture.datastore
 Remembered.
   version: fbf3ef524536 (new)
@@ -321,7 +321,7 @@ retire. Naming one is the other form, and it is the form to reach for when the c
 you want retired was written without a key:
 
 ```
-mindpalace remember "The primary datastore is PostgreSQL 16." \
+verilore remember "The primary datastore is PostgreSQL 16." \
     --corpus project --supersedes 10864d5681f2
 ```
 
@@ -346,7 +346,7 @@ resolved to the first.
 the sentence in front of you and the id on another screen:
 
 ```
-mindpalace remember "The primary datastore is PostgreSQL 16." \
+verilore remember "The primary datastore is PostgreSQL 16." \
     --corpus project --supersedes "primary datastore is PostgreSQL 15"
 ```
 
@@ -434,7 +434,7 @@ named a claim is not overruled by a line in the file.
 disagreement rather than picking one:
 
 ```console
-$ mindpalace recall "What is the sole npm package?"
+$ verilore recall "What is the sole npm package?"
 1 key(s) have sources that disagree:
   gsd.package_boundary:
     - The sole npm package is get-shit-done-cc.  (adr-0174.md)
@@ -495,28 +495,28 @@ lexical rather than semantic because `remember` deliberately runs without the
 embedding model; a hint that needed a five-second model load would not appear on
 the first write, which is where it is most useful.
 
-`query_id` is the handle for `mindpalace feedback <query_id> --verdict right|wrong`.
+`query_id` is the handle for `verilore feedback <query_id> --verdict right|wrong`.
 See [runtime.md](runtime.md#the-query-log).
 
 It takes no credential. The caller's identity is whatever
-`MIND_PALACE_MCP_CREDENTIAL` resolves to, and that identity needs write access to
+`VERILORE_MCP_CREDENTIAL` resolves to, and that identity needs write access to
 the corpus — a read-only credential is refused.
 
-**Running the server.** There is no `mindpalace mcp` command. The server is an
-executable on the path, `mindpalace-mcp`, installed by the `[mcp]` extra
-(`pip install 'mindpalace-os[mcp]'`). It speaks JSON-RPC over stdin/stdout and
+**Running the server.** There is no `verilore mcp` command. The server is an
+executable on the path, `verilore-mcp`, installed by the `[mcp]` extra
+(`pip install 'verilore-os[mcp]'`). It speaks JSON-RPC over stdin/stdout and
 ignores `--help`, so probe it with an `initialize` request rather than a flag.
 
 **Getting a credential.** Mint one with the CLI; the raw `mpk_...` secret is what
 goes in the variable:
 
 ```console
-$ mindpalace-mcp --help
-mindpalace-mcp -- Mind Palace over the Model Context Protocol
+$ verilore-mcp --help
+verilore-mcp -- Verilore over the Model Context Protocol
 ...
 
-$ mindpalace credential issue my-agent -c default -r read_write
-$ export MIND_PALACE_MCP_CREDENTIAL=mpk_...
+$ verilore credential issue my-agent -c default -r read_write
+$ export VERILORE_MCP_CREDENTIAL=mpk_...
 ```
 
 **Without `file`, the evidence for the claim is the statement itself.** That is a
@@ -526,7 +526,7 @@ hunter2"` into memory has recorded a perfectly verified claim that is entirely
 false. Provenance is what this system offers, not truth.
 
 With `file=`, the statement must appear **verbatim** in that file, and the file
-must be inside `MIND_PALACE_INGEST_ROOTS` — the same bound that governs
+must be inside `VERILORE_INGEST_ROOTS` — the same bound that governs
 `ingest-repo`. That is the stronger form: the claim is then anchored to a document
 someone else wrote.
 
@@ -535,7 +535,7 @@ attacker-controllable wherever a model has ingested a document and been asked to
 remember something from it. Nothing in this tool prevents a model from writing
 something a user merely read. If the content is not yours — a fetched page, a
 support ticket, a scraped repo — then `remember` is the wrong call, and
-`MIND_PALACE_INGEST_ROOTS` plus human or policy review is the right one. An agent
+`VERILORE_INGEST_ROOTS` plus human or policy review is the right one. An agent
 given this tool should be given the review step too, not just the tool.
 
 ## How an agent writes claims
@@ -543,8 +543,8 @@ given this tool should be given the review step too, not just the tool.
 An agent has two ways to write memory. The older is to write a document with a
 `claims:` block and call `sync(corpus, path)`. The newer is `memory_remember`,
 described below. The one-statement write also exists on the CLI
-(`mindpalace remember "..." --key k`), the SDK
-(`MindPalace(name).remember(statement, *, corpus, key, file)`) and REST
+(`verilore remember "..." --key k`), the SDK
+(`Verilore(name).remember(statement, *, corpus, key, file)`) and REST
 (`POST /remember`).
 
 `remember` asserts a statement is a fact, and handing that assertion to a model is
@@ -558,10 +558,10 @@ first, then copy the sentence out of the file into both `claim` and `evidence`.
 ```console
 $ mkdir -p ./docs && printf '%s\n' '---' 'title: Deployment architecture' 'claims:' '  - key: architecture.datastore' '    value: PostgreSQL' '    claim: The primary datastore is PostgreSQL.' '    evidence: The primary datastore is PostgreSQL.' '---' '' '# Deployment architecture' '' 'The primary datastore is PostgreSQL. It runs in three availability zones.' > ./docs/deployment.md
 
-$ mindpalace ingest-repo ./docs --corpus agentdemo
+$ verilore ingest-repo ./docs --corpus agentdemo
 [OK] sync: +1 ~0 =0 -0 !0, 1 chunks
 
-$ mindpalace recall "What is the primary datastore?" --corpus agentdemo
+$ verilore recall "What is the primary datastore?" --corpus agentdemo
 The primary datastore is PostgreSQL.
    source: deployment.md @ 178141e34f2d
    time:   true as of 2026-10-14 06:54 UTC
@@ -576,7 +576,7 @@ The abstention, which is what a document whose prose has no list items, numbered
 entries or `Key: Value` lines gives:
 
 ```console
-$ mindpalace recall "What is our incident response SLA?" --corpus agentdemo
+$ verilore recall "What is our incident response SLA?" --corpus agentdemo
 No memory matched that question.
   NO_RELEVANT_MEMORY
 

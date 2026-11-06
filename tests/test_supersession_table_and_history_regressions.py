@@ -138,7 +138,7 @@ async def test_an_explicit_supersedes_that_names_two_claims_is_refused():
     assert memory_service._claims_by_id_prefix(candidates, "ab") == []
 
 
-async def test_remember_with_a_file_still_supersedes(store, tmp_path):
+async def test_remember_with_a_file_still_supersedes(store, tvl_path):
     """`remember --file` used to drop the flag on the floor.
 
     The file branch of `remember` called the writer without the supersession
@@ -155,7 +155,7 @@ async def test_remember_with_a_file_still_supersedes(store, tmp_path):
     )
     target = next(c for c in await _live(store) if "PostgreSQL 15" in c["claim"])
 
-    path = tmp_path / "0002.md"
+    path = tvl_path / "0002.md"
     path.write_text("# ADR 0002\n\n- The primary datastore is PostgreSQL 16.\n", encoding="utf-8")
     await remember(
         corpus=store.name,
@@ -262,7 +262,7 @@ def _records(body: str) -> list[dict]:
 
 def test_the_sync_summary_counts_the_claims():
     """A sync report that counts only chunks cannot say the corpus learned nothing."""
-    from mindpalace_sdk import SyncSummary
+    from verilore_sdk import SyncSummary
 
     summary = SyncSummary(success=True, chunk_count=12, claim_count=34)
     assert summary.claim_count == 34

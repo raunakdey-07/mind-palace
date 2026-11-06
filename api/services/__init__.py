@@ -1,4 +1,4 @@
-"""Services package for Mind Palace."""
+"""Services package for Verilore."""
 
 from api.services.db import get_async_db, init_db
 from api.services.embedder import Embedder

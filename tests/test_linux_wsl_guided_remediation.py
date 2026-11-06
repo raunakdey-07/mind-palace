@@ -7,23 +7,23 @@ from cli import errors as cli_errors
 from cli import postgres as cli_postgres
 
 
-def test_wsl2_detected_from_proc_version(monkeypatch, tmp_path):
-    proc = tmp_path / "proc_version"
+def test_wsl2_detected_from_proc_version(monkeypatch, tvl_path):
+    proc = tvl_path / "proc_version"
     proc.write_text("Linux version 5.15.0-microsoft-standard-WSL2", encoding="utf-8")
     monkeypatch.setattr(cli_postgres, "PROC_VERSION_PATH", proc)
     assert cli_postgres.is_wsl2() is True
     assert cli_postgres.detect_wsl2() is True
 
 
-def test_native_linux_not_wsl2(monkeypatch, tmp_path):
-    proc = tmp_path / "proc_version"
+def test_native_linux_not_wsl2(monkeypatch, tvl_path):
+    proc = tvl_path / "proc_version"
     proc.write_text("Linux version 6.8.0 (fedora)", encoding="utf-8")
     monkeypatch.setattr(cli_postgres, "PROC_VERSION_PATH", proc)
     assert cli_postgres.is_wsl2() is False
 
 
-def test_distro_id_from_os_release(monkeypatch, tmp_path):
-    release = tmp_path / "os_release"
+def test_distro_id_from_os_release(monkeypatch, tvl_path):
+    release = tvl_path / "os_release"
     release.write_text(
         'ID=fedora\nID_LIKE="rhel fedora"\nPRETTY_NAME="Fedora Linux 44"\n',
         encoding="utf-8",
@@ -75,7 +75,7 @@ def test_host_postgres_port_conflict_remediation():
     assert "sudo systemctl stop postgresql" in msg
     assert "sudo service postgresql stop" in msg
     assert "DATABASE_URL" in msg
-    assert "mindpalace init" in msg
+    assert "verilore init" in msg
 
 
 def test_errors_socket_permission():
@@ -99,13 +99,13 @@ def test_errors_stopped_daemon_native(monkeypatch):
 
 
 def test_errors_host_postgres_default_creds(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://vladmin:secret@localhost:5432/verilore")
 
     # auth error
     class E(Exception):
         pass
 
-    exc = E("password authentication failed for user mpadmin")
+    exc = E("password authentication failed for user vladmin")
     # set sqlstate? not needed
     advice = cli_errors.explain(exc)
     assert "systemctl stop postgresql" in advice.do or "service postgresql stop" in advice.do
@@ -113,8 +113,8 @@ def test_errors_host_postgres_default_creds(monkeypatch):
 
 
 def test_errors_wrong_password_still_password(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:wrong@localhost:5432/mindpalace")
-    exc = RuntimeError("password authentication failed for user mpadmin")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://vladmin:wrong@localhost:5432/verilore")
+    exc = RuntimeError("password authentication failed for user vladmin")
     advice = cli_errors.explain(exc)
     assert "password" in advice.do.lower()
 

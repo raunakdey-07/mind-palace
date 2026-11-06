@@ -4,7 +4,7 @@
 
 Is the Memory Pack a better integration boundary than exposing chunks, claims, or
 database-specific retrieval results? Concretely: can a consumer that has never heard of
-Mind Palace understand a pack, and can the authoritative answer survive losing every
+Verilore understand a pack, and can the authoritative answer survive losing every
 derived system?
 
 ## Method
@@ -51,7 +51,7 @@ destroy L2 exits non-zero rather than reporting success.
 
 `memory_pack.py` at the repository root imports only the standard library. A subprocess
 test imports it and asserts that `api`, `sqlalchemy`, `torch`, `asyncpg`, `fastapi`,
-`mindpalace_sdk` and `sentence_transformers` are all absent from `sys.modules`. A second
+`verilore_sdk` and `sentence_transformers` are all absent from `sys.modules`. A second
 test copies that single file plus one pack into an empty directory, runs with a clean
 environment, and answers from the pack.
 

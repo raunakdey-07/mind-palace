@@ -53,7 +53,7 @@ versions is unmeasured.
 
 ## Query plans
 
-[`docs/m009/query-plans.md`](../m009/query-plans.md) holds real
+[`docs/archive/m009/query-plans.md`](../archive/m009/query-plans.md) holds real
 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` output for first, middle, and tail
 queries on the 10,000-row fixture. The plans show no `OFFSET` in the SQL or the
 plan, the tuple keyset predicate on middle and tail queries,

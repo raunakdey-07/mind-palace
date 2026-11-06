@@ -44,7 +44,7 @@ That is a good fit when:
   this is the wrong tool — the abstention is the feature, and hiding it makes the
   wrong answers worse.
 * **Two users must not see each other's memory inside one corpus.**
-  [Per-resource authorization is withdrawn](withdrawn/README.md). A corpus is a
+  [Per-resource authorization is withdrawn](archive/withdrawn/README.md). A corpus is a
   *namespace*; every credential that can reach a corpus can reach every document
   in it. The supported answer is **one corpus per confidentiality boundary**, and
   for mutually distrusting tenants, one database per tenant.
@@ -105,6 +105,6 @@ Follow the README literally, in this order:
    The defaults are single-user and are documented as such.
 4. If you are storing anything regulated: [deletion and erasure](deletion-and-erasure.md).
 
-Then run [`integration_conformance.py`](../integration_conformance.py) against your own
+Then run [`integration_conformance.py`](../scripts/integration_conformance.py) against your own
 installation. It is a checklist, not a test suite, and it includes the negative
 checks.

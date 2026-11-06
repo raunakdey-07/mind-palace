@@ -14,24 +14,24 @@ used a disposable PostgreSQL database created by
 | keyset feed | `api/services/memory_feed.py`; `tests/test_feed_integration.py` | PASS |
 | signed cursor | `tests/test_feed_cursor.py`; `tests/test_feed_adapters.py` | PASS |
 | corpus binding | integration tests; live wrong-corpus check | PASS |
-| REST | `docs/m009/live-interface-validation.json` | PASS |
-| SDK | `docs/m009/live-interface-validation.json` | PASS |
-| CLI | `docs/m009/live-interface-validation.json`; `docs/m009/cli-validation.txt` | PASS |
+| REST | `docs/archive/m009/live-interface-validation.json` | PASS |
+| SDK | `docs/archive/m009/live-interface-validation.json` | PASS |
+| CLI | `docs/archive/m009/live-interface-validation.json`; `docs/archive/m009/cli-validation.txt` | PASS |
 | REST/SDK/CLI equivalence | live artifact: identical sequence digest across all three interfaces | PASS |
-| concurrency | `docs/m009/concurrency-validation.json`; `tests/test_feed_integration.py` | PASS |
+| concurrency | `docs/archive/m009/concurrency-validation.json`; `tests/test_feed_integration.py` | PASS |
 | health live | `tests/test_health_endpoints.py` | PASS |
 | health ready | `tests/test_health_endpoints.py`; schema/timeout/failure cases | PASS |
-| scale 100 | `docs/m009/scale-benchmark.json` | PASS |
-| scale 1k | `docs/m009/scale-benchmark.json` | PASS |
-| scale 10k | `docs/m009/scale-benchmark.json` | PASS |
+| scale 100 | `docs/archive/m009/scale-benchmark.json` | PASS |
+| scale 1k | `docs/archive/m009/scale-benchmark.json` | PASS |
+| scale 10k | `docs/archive/m009/scale-benchmark.json` | PASS |
 | p50/p95 | 20 measured iterations after two warm-ups; artifact includes samples | PASS |
-| query plans | `docs/m009/query-plans.md`; real 10k `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` | PASS |
+| query plans | `docs/archive/m009/query-plans.md`; real 10k `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` | PASS |
 | security | cursor/config/error tests; redacted artifacts; no cursor/secret logging | PASS |
 | MCP decision | `deployment.md`; `README.md`; `examples/MEMORY_API.md` | PASS |
 | documentation | operations/API/README/changelog/release-map audit | PASS |
-| full regression | `docs/m009/full-regression.txt` | PASS |
-| static validation | `docs/m009/static-validation.txt` | PASS |
-| diagnostics classification | `docs/m009/diagnostics-inventory.md` | PASS |
+| full regression | `docs/archive/m009/full-regression.txt` | PASS |
+| static validation | `docs/archive/m009/static-validation.txt` | PASS |
+| diagnostics classification | `docs/archive/m009/diagnostics-inventory.md` | PASS |
 
 Every PASS above points to a repository artifact or an executed command; no
 PASS is based only on implementation presence.
@@ -95,7 +95,7 @@ Wall-clock p50/p95 in milliseconds:
 SQL execution p50/p95 for the full traversal was 6.938/7.834 ms (100),
 133.588/138.689 ms (1,000), and 502.867/516.644 ms (10,000). Individual samples,
 row counts, and all first/middle/tail SQL timings are in
-`docs/m009/scale-benchmark.json`.
+`docs/archive/m009/scale-benchmark.json`.
 
 The cold sample is deliberately recorded separately and is sensitive to
 PostgreSQL/OS cache and fixture setup; these numbers are evidence for this run,
@@ -114,7 +114,7 @@ plans were captured for first, middle, and tail queries. The plans show:
 
 The observed execution times in the captured plans were approximately 0.519 ms
 (first), 0.554 ms (middle), and 0.633 ms (tail) after fixture analysis. Full
-JSON plans and buffer data are in `docs/m009/query-plans.md`.
+JSON plans and buffer data are in `docs/archive/m009/query-plans.md`.
 
 ## Performance-improvement decision
 
@@ -143,7 +143,7 @@ baseline, change, and post-change benchmark.
 
 ## Full validation record
 
-`docs/m009/full-regression.txt` records:
+`docs/archive/m009/full-regression.txt` records:
 
 ```text
 965 passed, 147 skipped, 10 warnings
@@ -158,7 +158,7 @@ recorded above. The exact CI lint scope (`api cli tests`) passes Black, Flake8, 
 `git diff --check`; the separate repository-wide command that included the
 pre-existing `scripts/benchmark/m00675.py` was not allowed to modify that
 research-boundary file. CLI help and public SDK import are recorded in
-`docs/m009/cli-validation.txt`.
+`docs/archive/m009/cli-validation.txt`.
 
 ## Known limitations
 

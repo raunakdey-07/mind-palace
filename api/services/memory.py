@@ -1055,7 +1055,7 @@ async def record_version(
     withdrawn. It is kept on the signature so the callers, the CLI, and
     `api/services/resources.py` still describe the intended shape, and so
     reinstating it is a migration rather than an edit at twenty call sites. Do not
-    rely on it setting anything today -- see `docs/withdrawn/`.
+    rely on it setting anything today -- see `docs/archive/withdrawn/`.
     """
     if not isinstance(path, str) or not path or not isinstance(content, str):
         raise ValueError("path must be nonempty and content must be raw text")

@@ -251,13 +251,13 @@ underneath it, and two new files fell off the end of it:
 
 | file | written | committed |
 |---|---|---|
-| `docs/wedge-decision-note.md` | Session 8 | **NO — never committed** |
+| `docs/archive/wedge-decision-note.md` | Session 8 | **NO — never committed** |
 | `docs/release/tag-checklist.md` | Session 8 | **NO — never committed** |
 | `docs/release/v1.0.0-readiness.md` | Session 6 | **NO — never committed** |
 | `docs/evaluation/m007-jev-decision-layer-spike.md` | earlier | **NO — never committed** |
 | `tests/README.md` | Session 8 | yes |
 
-**`docs/release/v1.0.0-readiness.md` is the serious one**: `docs/PROGRESS.md`
+**`docs/release/v1.0.0-readiness.md` is the serious one**: `docs/archive/PROGRESS.md`
 has reported its contents — "8 rows, **0 MET**, 2 PARTIAL, 5 NOT MET, 1 NOT
 ESTABLISHED" — since Session 6, and the file was never in the repository. Four
 documents, including one this file has quoted a figure from for three sessions.
@@ -311,7 +311,7 @@ Phase 0 and the correction is the record.
 | 1 the six CI-only skips | **DONE** | **1a, 1b, 1c, 1d DONE**: cause **established and reproduced** (SQLAlchemy 2.1 resolves bare `postgresql://` to an uninstalled driver), fixed via `sync_url()`, **6 skipped -> 6 passed** under 2.1.4, and **the six now run on CI** (run `38446879617`: 1637 passed, 2 skipped). Skip gate **mutation-tested against the real regression** (exit 1, all six named). **1d DONE**: the 15-package table is measured on both sides; **14 of 15 match**, the two that differ are SQLAlchemy (the bug) and numpy (an untested drift). Constraints file **proposed, not applied** |
 | 2 evidence from the runner | **DONE** | **2a DONE with runner evidence**: run `38446879617` @ `d1a4612` ran the 6 fixed tests for the first time (**1637 passed, 2 skipped, 1639 collected**) and the new gate **rejected four figures in STATUS.md** — `24`, `1613`, `1619`, `1625` — exit 1. The gate then found a bug **in itself** on that same run (labelled figures were being checked against the junit), fixed, 18 tests green. **2b DONE**: the slip was introduced at `c3c8252`, recorded at `68ff8e3`, and the gate could not catch it because `--require-head` ties a figure to a commit and the record was hand-written at the right commit |
 | 3 FK violations and test-env causes | **PARTIAL** | **3a DONE**: all 15 violations named to a test and a line; 3 reproduced deliberately, **9 of 12** `memory_claim_embeddings` reproduced to `tests/test_context_product.py` as a **fixture defect**, **3 NOT ESTABLISHED**; product exposure answered with four reasons. **3b cause NOT ESTABLISHED -- the failure did not reproduce** (`5 passed`); `tests/README.md` written and the resolved database name printed once per session |
-| 4 wedge feasibility | **PARTIAL** | **4a DONE**: 2 claims / 2 passages / answered; **0/0/abstained**; **0/0/abstained** -- and the transcript's answer was in the text verbatim. **4d DONE**: `docs/wedge-decision-note.md` recommends the question set before the extractor. **4b, 4c NOT DONE** |
+| 4 wedge feasibility | **PARTIAL** | **4a DONE**: 2 claims / 2 passages / answered; **0/0/abstained**; **0/0/abstained** -- and the transcript's answer was in the text verbatim. **4d DONE**: `docs/archive/wedge-decision-note.md` recommends the question set before the extractor. **4b, 4c NOT DONE** |
 | 5 the lab measures the product | **NOT DONE** | Nothing started. 5a arm on the product path reproducing 194/202 and the 77-question gap per question; 5b the harm matrix recomputed; 5c recall per arm per slice; 5d the threshold cross-validated |
 | 6 release prep (docs only, no tag) | **DONE** | **6a DONE**: `mindpalace-os` is **404 on PyPI**; README's bare install changed to install from the repository, reason and the `mind-palace` collision warning beside it. **6b DONE**: CHANGELOG leads with upgrade notes (008-010, the grant step, what a downgrade destroys, no tenants, sealed scoring never happened); `docs/release/tag-checklist.md` written; `security.md` names the 0.9.x train, not a branch. **No tag cut** |
 
@@ -346,17 +346,17 @@ The 8 skips are named verbatim in §1a below.
 (151 answered, 33 of them wrong, 1 of those on an absent question) at 85%
 coverage, and **127 correct** at the shipped 0.30 threshold. The product's own
 benchmark reports **194/202**. The gap is **77**, stated without explanation in
-`docs/gate/trust-value-lean.md`, `docs/performance/retrieval-lab-report.md` (removed 2026-10-17) and
+`docs/archive/gate/trust-value-lean.md`, `docs/performance/retrieval-lab-report.md` (removed 2026-10-17) and
 this file.
 
 **The wrong figures, file by file:**
 
 | file | string before | string after |
 |---|---|---|
-| `docs/gate/trust-value-lean.md:9` | `**151/202**.` | `**117/202 correct** (151 answered, 33 of them wrong, 1 of them on an absent question).` |
+| `docs/archive/gate/trust-value-lean.md:9` | `**151/202**.` | `**117/202 correct** (151 answered, 33 of them wrong, 1 of them on an absent question).` |
 | `docs/performance/retrieval-lab-report.md` (removed 2026-10-17) banner | already corrected in Session 7 | unchanged |
 | `docs/performance/retrieval-lab-report.md` (removed 2026-10-17) addendum correction note | claimed the matrix *"was unaffected and was always right … its own row for arm B reads 112 + 47 + 4 + 39 = 202, which puts arm A at `112 + 4 = 116` correct — consistent with the artifact's 117"* | replaced: `112 + 4` is arm **B**'s count, arm A's is `112 + 39 = 151`, and 116 is not "consistent with" 117. **Session 7's correction was itself wrong**, and it used this project's own internal-consistency check on the wrong sum |
-| `docs/PROGRESS.md` standing fact | already said 117 | unchanged, plus the INVALID marking |
+| `docs/archive/PROGRESS.md` standing fact | already said 117 | unchanged, plus the INVALID marking |
 
 **The harm matrix's baseline, measured.** `retrieval-lab-harm-dev.json` (removed 2026-10-17) carries
 `"baseline_correct": 151`, and the retrieval lab's `harm.py` (removed 2026-10-17) defines
@@ -937,9 +937,9 @@ two *definitions*, not two documents. Changes actually made:
 | file | change |
 |---|---|
 | `docs/performance/retrieval-lab-report.md` (removed 2026-10-17) | new **The confusion table** section; the banner rewritten to give **both** 117 (85%) and **127** (0.30), to say 194 and 127 are different operating points and the only honest 77 is against 117, and to point at the table before any other number |
-| `docs/gate/trust-value-lean.md` | banner now names the 85% operating point explicitly, so its "151 answered" cannot be read as "151 correct" |
-| `docs/wedge-decision-note.md` | corrected: it said `dataset_hash` does not cover `expect_state`. **That is wrong** — see 0b. |
-| `docs/PROGRESS.md` | this section, and the Phase-8 entry corrected in 0b below |
+| `docs/archive/gate/trust-value-lean.md` | banner now names the 85% operating point explicitly, so its "151 answered" cannot be read as "151 correct" |
+| `docs/archive/wedge-decision-note.md` | corrected: it said `dataset_hash` does not cover `expect_state`. **That is wrong** — see 0b. |
+| `docs/archive/PROGRESS.md` | this section, and the Phase-8 entry corrected in 0b below |
 
 ### 0b — held-out v1: the frozen artifact is **NOT affected**
 
@@ -1163,7 +1163,7 @@ work. They are recorded as blocked rather than guessed.
 | 1 land the competitive doc (docs only) | **DONE** | `docs/competitive-landscape.md` added; **6 figures corrected against primary sources**; 5 Mind Palace figures verified against evidence artifacts and `STATUS.md`; 8 sources fetched and read directly, 5 marked unverified this session; linked from the docs index only; `check_evidence --strict` passing |
 | 2 finish the claims-true work | **PARTIAL** | 2a, 2b, 2d, 2e, 2f **DONE**. All 8 skips named. Evidence gate tied to HEAD, rejecting a stale figure, with 6 tests over it. The `MEMORY_TEST_DATABASE_URL` cause found and proven. Warnings 39 -> 8. `corpus` vs `corpora` documented, nothing added. **2c NOT DONE**: the 9 `memory_claim_embeddings` violations are isolated to `tests/test_context_product.py` and are a fixture defect, but the 2 `memory_evidence` and 1 `memory_snapshot_versions` are **not established** |
 | 3 the lab measures the product | **PARTIAL** | **3a premise DONE:** the product path re-run this session reproduces **194/202 exactly** (`scripts/benchmark/m0115_experiments.py`, strategy `C_fallback`, dataset `9cdecda73cbdc8ae`, A 178 and B 164 also identical to the recorded artifact). The lab's own arm A is still the old arm A at **117/202 correct**, not 151 as the docs claimed -- that error is corrected. **3a arm rewrite, 3b, 3c, 3d, 3e NOT DONE**, so every harm-matrix and recall figure remains a property of the lab arm, not of the product |
-| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | Nothing started. 4a the three input shapes, 4b the three ADR repositories with "superseded by" status, 4c LongMemEval reachability and per-category counts plus the MiniLM baseline **blocked: Hub access not answered**, 4d `docs/wedge-decision-note.md` |
+| 4 wedge feasibility (measurement and design notes only) | **NOT DONE** | Nothing started. 4a the three input shapes, 4b the three ADR repositories with "superseded by" status, 4c LongMemEval reachability and per-category counts plus the MiniLM baseline **blocked: Hub access not answered**, 4d `docs/archive/wedge-decision-note.md` |
 | 5 downstream pilot | **NOT DONE** | **blocked, D1 not answered.** Four arms, one small and one stronger model with exact IDs, per slice, harm first, Wilson intervals |
 
 **Owner decides when 1.0.0 is ready.** Nothing in this file implies otherwise.

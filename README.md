@@ -286,9 +286,9 @@ Three documents, and then stop.
 | [Changelog](CHANGELOG.md) | every release, and every fix |
 | [Release map](docs/release-map.md) | milestone to version |
 | [Evaluation](docs/evaluation/) | the frozen benchmarks, and their results |
-| [Progress](docs/PROGRESS.md) | one line per phase; [full history](docs/internal/progress-history.md) |
+| [Progress](docs/archive/PROGRESS.md) | one line per phase; [full history](docs/archive/internal/progress-history.md) |
 | [Examples](examples/) | the product in one file: [decision memory](examples/decision-memory/), [project log](examples/project-log/) |
-| [Withdrawn](docs/withdrawn/README.md) | material deliberately removed, and why |
+| [Withdrawn](docs/archive/withdrawn/README.md) | material deliberately removed, and why |
 
 ## Contributing
 

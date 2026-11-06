@@ -11,9 +11,7 @@ misconfigured deployment.
 Run it directly:
 
     DATABASE_URL=... MIND_PALACE_URL=http://localhost:8000 \\
-        venvmp/bin/python -m integration_conformance
-
-or under pytest, which is how CI runs it.
+        venvmp/bin/python -m scripts.integration_conformance
 """
 
 from __future__ import annotations

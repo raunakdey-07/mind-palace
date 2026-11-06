@@ -44,7 +44,7 @@ Two behaviours worth knowing before writing code against the SDK:
   defect is still raised as itself, so it is not disguised as an API failure.
 - **`MIND_PALACE_LEXICAL=1` is opt-in and explicit.** It bypasses the runtime on
   purpose, prints one line on stderr, and does not always select the same keys as
-  semantic ranking — see [operations](../runtime.md#model-free-lexical-mode).
+  semantic ranking — see [operations](../../runtime.md#model-free-lexical-mode).
 
 A document without authored `claims:` is indexed for live retrieval but does not
 create authoritative memory. That is still a product decision rather than a
@@ -147,11 +147,11 @@ than hidden by regenerating the artifact.
 ## Remaining developer gaps
 
 - Authentication and per-corpus authorization are a documented contract, not
-  implemented code. See [operations](../deployment.md#authentication).
+  implemented code. See [operations](../../deployment.md#authentication).
 - Archive export and import do not exist; a Memory Pack is the export.
 - Recall loads the authoritative projection for the whole corpus, so latency grows
   linearly past a few hundred statements. Measured and stated in
-  [performance](../performance/five-minute-path.md).
+  [performance](../../performance/five-minute-path.md).
 - Signed receipts do not exist. `--trusted-digest` covers authenticity against a
   value you pinned yourself; asymmetric signing is deliberately not built until a
   deployment asks for it.

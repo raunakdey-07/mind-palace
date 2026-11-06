@@ -44,7 +44,7 @@ Two phases are **not established**, and no substitute was used for either:
 
 ## What *was* done instead, and what it does not replace
 
-`docs/first-hour-audit.md` carries a **cold install** experiment: a container
+`docs/archive/first-hour-audit.md` carries a **cold install** experiment: a container
 with nothing preinstalled, following the README literally, measuring each step
 and each stumble. That found two release blockers. It is a weaker instrument
 than a context-free agent -- the auditor had read the repository before -- and it

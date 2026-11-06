@@ -5,7 +5,7 @@ export/import, Memory Pack as a portable artifact, the documented meaning of
 "portable", and the dependencies that decide whether a second installation
 behaves like the first.
 
-Companion document: [developer-experience.md](../product/developer-experience.md).
+Companion document: [developer-experience.md](../archive/product/developer-experience.md).
 
 ## Summary of the position
 

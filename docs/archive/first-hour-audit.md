@@ -1,7 +1,7 @@
 # The first-hour audit
 
 What a developer who has never seen this repository meets, in the order they meet
-it, measured by following [the README](../README.md) literally in a container with
+it, measured by following [the README](../../README.md) literally in a container with
 nothing preinstalled: `python:3.12-slim`, `git`, and a PostgreSQL server with
 pgvector obtained the way the README says to obtain one. No knowledge from earlier
 sessions was used; every step below is one the README states.

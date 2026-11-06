@@ -11,7 +11,7 @@ The guard this replaces was:
 git diff v0.9.0..HEAD -- eval/ docs/performance/baseline-packs.json
 ```
 
-which has been quoted in `docs/internal/progress-history.md` since Session 1 as
+which has been quoted in `docs/archive/internal/progress-history.md` since Session 1 as
 the proof that frozen evidence did not move.
 
 **It proves something much weaker than it looks.** `git diff` only sees files
@@ -106,7 +106,7 @@ def write_manifest() -> int:
             "SHA-256 of every frozen evidence file, committed alongside them. "
             "Regenerate with scripts/check_frozen.py --write, and only when a "
             "change to frozen evidence is intended and recorded in "
-            "docs/PROGRESS.md first."
+            "docs/archive/PROGRESS.md first."
         ),
         "algorithm": "sha256",
         "count": len(paths),

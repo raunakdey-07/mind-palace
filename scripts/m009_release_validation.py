@@ -1639,7 +1639,7 @@ def run_benchmark(database_url: str, cursor_secret: str, migration_head: str) ->
             "results": results,
             "archive_fingerprint": combined_fingerprint,
             "query_plans": {
-                "path": "docs/m009/query-plans.md",
+                "path": "docs/archive/m009/query-plans.md",
                 "cases": [case["label"] for case in plan_cases],
                 "keyset_asserted": True,
                 "offset_free": True,

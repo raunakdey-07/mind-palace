@@ -1465,7 +1465,7 @@ continuation cursor; polling clients must restart and deduplicate or maintain a
 separate boundary policy. M009 does not change any M006.75/M007/M008 research
 inputs, results, or claims.
 
-Validation evidence is recorded in [`docs/m009/RELEASE_READINESS.md`](docs/m009/RELEASE_READINESS.md).
+Validation evidence is recorded in [`docs/archive/m009/RELEASE_READINESS.md`](docs/archive/m009/RELEASE_READINESS.md).
 
 ## [v0.5.1] - 2026-09-24
 
@@ -1614,5 +1614,5 @@ decision-provider and Jev research is intentionally unreleased.
   diagnosed to a conclusion. Shipping a migration that breaks the primary write
   path is not acceptable at any confidence level. The design, the three real
   findings it produced, the adversarial suite, and the reinstating steps are in
-  [`docs/withdrawn/`](docs/withdrawn/README.md). Corpus-level isolation is
+  [`docs/withdrawn/`](docs/archive/withdrawn/README.md). Corpus-level isolation is
   unchanged and remains the shipped guarantee.

@@ -93,29 +93,19 @@ data/
 # Ignore placeholder infra/docs folders
 helm/
 /docs/*
-!/docs/milestones/
-!/docs/milestones/*.md
 !/docs/architecture/
 !/docs/architecture/**
 !/docs/competitive/
 !/docs/competitive/**
-!/docs/product/
-!/docs/product/**
 !/docs/research/
 !/docs/research/**
 !/docs/operations/
 !/docs/operations/**
-# docs/PROGRESS.md was 1397 lines and is now an index. The full text of all
-# prior sessions moved here, unedited, rather than being cut. Tracked so the
-# citations from docs/performance/ resolve on a clone.
-!/docs/internal/
-!/docs/internal/**
-# The first of the three first-hour documents: README -> quickstart -> authoring.
-# Commands only, no prose, and it runs.
+# Agent artifacts and historical records moved out of the product docs tree;
+# everything under docs/archive/ is kept as project history.
+!/docs/archive/
+!/docs/archive/**
 !/docs/quickstart.md
-# CI timing audit (Stage 3): measured per-job and per-step timing, cache hit
-# rates, and recomputed CI options. Tracked so the numbers are reproducible.
-!/docs/ci-audit.md
 # The worked example the README Quickstart ingests. It is a plain ADR with no
 # frontmatter and no `claims:` block, which is the thing being demonstrated, so
 # it has to be a real file on a clean clone.
@@ -128,17 +118,9 @@ helm/
 # checkout. tests/test_mcp_client_docs.py parses the JSON in it and checks every
 # tool name against what the server actually advertises.
 !/docs/mcp.md
-# Material that was built, proved, and then deliberately withdrawn. It is part of
-# the project's record: without it the next person re-derives the same findings
-# and the same 42501. Not runnable from here -- it lives outside tests/ on purpose.
-!/docs/withdrawn/
-!/docs/withdrawn/**
 !/docs/evaluation/
 /docs/evaluation/*
 !/docs/evaluation/m006.md
-!/docs/operations.md
-!/docs/m009/
-!/docs/m009/**
 !/docs/performance/
 !/docs/performance/**
 monitoring/
@@ -147,10 +129,10 @@ monitoring/
 # Markdown. Session 10.
 #
 # This used to be `*.md` plus a hand-maintained list of exceptions, and the list
-# was the failure. Four documents -- docs/wedge-decision-note.md,
+# was the failure. Four documents -- docs/archive/wedge-decision-note.md,
 # docs/release/tag-checklist.md, docs/release/v1.0.0-readiness.md and
 # docs/evaluation/m007-jev-decision-layer-spike.md -- were written, reported as
-# deliverables, and never committed. docs/PROGRESS.md quoted one of them for
+# deliverables, and never committed. docs/archive/PROGRESS.md quoted one of them for
 # three sessions. A new document was silently dropped nine times before anyone
 # noticed, because nothing failed.
 #
@@ -185,7 +167,7 @@ monitoring/
 # beside it instead of the raw file, and `check_doc_paths` still has a tracked
 # path to check.
 #
-# See docs/internal/progress-history.md Session 10 section 1d for the original
+# See docs/archive/internal/progress-history.md Session 10 section 1d for the original
 # reasoning, and PR #9 for what superseded it.
 
 # eval/m007/adjudication/*.md -- the M007.1 blind-review protocol.

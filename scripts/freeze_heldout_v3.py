@@ -17,7 +17,7 @@ has been looked at. This set is therefore **v3**.
 ## What these questions are
 
 Authored from the ten questions a maintainer of this repository actually asked
-during the first-hour audit -- see `docs/first-hour-audit.md` -- and from the
+during the first-hour audit -- see `docs/archive/first-hour-audit.md` -- and from the
 kinds of question the product's own limitations predict it will be asked. They
 are written to be *paraphrased*, not quoted, because quoting is a different and
 much easier task: the dogfood corpus was one or two verbatim sentences per

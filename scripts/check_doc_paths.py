@@ -6,12 +6,12 @@
 ## Why this exists
 
 Four documents were written, reported as deliverables, and **never committed**:
-`docs/wedge-decision-note.md`, `docs/release/tag-checklist.md`,
+`docs/archive/wedge-decision-note.md`, `docs/release/tag-checklist.md`,
 `docs/release/v1.0.0-readiness.md` and
 `docs/evaluation/m007-jev-decision-layer-spike.md`. All four were silently
 dropped by a blanket `*.md` in `.gitignore` under a hand-maintained list of
 exceptions. A clone of the repository did not have them, and
-`docs/PROGRESS.md` quoted figures from one of them for three sessions.
+`docs/archive/PROGRESS.md` quoted figures from one of them for three sessions.
 
 `scripts/check_evidence.py::check_markdown_links` did not catch it, and would
 not have:
@@ -29,9 +29,9 @@ author's.
 ## Scope, and what is deliberately outside it
 
 **Blocking:** the documents that carry the project's claims -- `README.md`,
-`CHANGELOG.md`, `docs/STATUS.md`, `docs/PROGRESS.md`, `docs/release-map.md`.
+`CHANGELOG.md`, `docs/STATUS.md`, `docs/archive/PROGRESS.md`, `docs/release-map.md`.
 
-**Advisory, not blocking:** `docs/research/`, `docs/withdrawn/` and
+**Advisory, not blocking:** `docs/research/` and
 `examples/`. Those carry rot that predates this gate -- stale paths to files
 deleted months ago. Listing them is useful; failing the build on them would make
 this gate cry wolf, and a gate that cries wolf gets deleted rather than fixed.
@@ -52,18 +52,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 #: The documents whose claims this gate protects. Exactly the set the brief
-#: names: PROGRESS.md, STATUS.md, the release map and the changelog, plus the
+#: names: docs/archive/PROGRESS.md, STATUS.md, the release map and the changelog, plus the
 #: README because it is the first thing anybody reads.
 DOCS = (
     "README.md",
     "CHANGELOG.md",
     "docs/STATUS.md",
-    "docs/PROGRESS.md",
+    "docs/archive/PROGRESS.md",
     "docs/release-map.md",
 )
 
 #: Advisory only. Reported, never fatal.
-ADVISORY = ("docs/research", "docs/withdrawn", "examples")
+ADVISORY = ("docs/research", "examples")
 
 #: A repo-rooted path-shaped token. Narrow on purpose: a loose pattern matches
 #: prose, and a gate that matches prose is noise.

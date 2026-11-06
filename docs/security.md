@@ -1022,7 +1022,7 @@ made `POST /api/memory/remember` return `503` for a write that has always
 succeeded, and the cause was not diagnosed to a conclusion.
 
 The design, the three real findings it produced, the tests, and the steps to
-reinstate it are in [`docs/withdrawn/`](withdrawn/README.md).
+reinstate it are in [`docs/archive/withdrawn/`](archive/withdrawn/README.md).
 
 **What this means for you:** do not assume any same-corpus per-user isolation.
 Two principals holding the same corpus hold the same facts. Use a separate corpus

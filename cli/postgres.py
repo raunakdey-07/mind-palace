@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 READY_TIMEOUT_SECONDS = 5.0
 
 #: The container name the compose file / init creates.
-DEFAULT_CONTAINER_NAME = "mindpalace_postgresql_1"
+DEFAULT_CONTAINER_NAME = "verilore_postgresql_1"
 
 #: The image used when provisioning a fresh local container.
 DEFAULT_IMAGE = "ankane/pgvector"
@@ -35,7 +35,7 @@ DEFAULT_POSTGRES_PORT = 5432
 
 
 def database_url() -> str:
-    return os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    return os.getenv("DATABASE_URL", "postgresql://vladmin:secret@localhost:5432/verilore")
 
 
 def db_host_port(url: str | None = None) -> tuple[str, int]:
@@ -251,7 +251,7 @@ def _is_postgres(container: dict) -> bool:
             container.get("status", ""),
         )
     ).lower()
-    return ("postgres" in blob) or ("pgvector" in blob) or ("mindpalace" in blob)
+    return ("postgres" in blob) or ("pgvector" in blob) or ("verilore" in blob)
 
 
 def _is_stopped(container: dict) -> bool:
@@ -340,9 +340,9 @@ def find_stopped_postgres_container(port: int = 5432) -> dict | None:
         candidates.append(c)
     if not candidates:
         return None
-    # Prefer mindpalace-named containers.
+    # Prefer verilore-named containers.
     for c in candidates:
-        if "mindpalace" in (c.get("name") or "").lower():
+        if "verilore" in (c.get("name") or "").lower():
             return c
     return candidates[0]
 
@@ -390,9 +390,9 @@ def provision_local_postgres(timeout: float = READY_TIMEOUT_SECONDS) -> bool:
         "--name",
         name,
         "-e",
-        "POSTGRES_DB=mindpalace",
+        "POSTGRES_DB=verilore",
         "-e",
-        "POSTGRES_USER=mpadmin",
+        "POSTGRES_USER=vladmin",
         "-e",
         "POSTGRES_PASSWORD=secret",
         "-p",
@@ -569,7 +569,7 @@ def missing_container_runtime_remediation(
     cmd = runtime_install_command(distro_id, family)
     return (
         "No container runtime (podman or docker) was found on PATH.\n"
-        "Install one for your distribution, then re-run mindpalace init:\n"
+        "Install one for your distribution, then re-run verilore init:\n"
         f"  {cmd}\n"
         "On Debian/Ubuntu, `docker.io` is an alternative to podman: "
         "sudo apt update && sudo apt install -y docker.io"
@@ -604,7 +604,7 @@ def stopped_docker_daemon_remediation(wsl2: bool | None = None) -> str:
         cmd = "sudo systemctl start docker"
     return (
         "The container runtime daemon is stopped.\n"
-        "Start it, then re-run mindpalace init:\n"
+        "Start it, then re-run verilore init:\n"
         f"  {cmd}"
     )
 
@@ -617,13 +617,13 @@ daemon_stopped_remediation = stopped_docker_daemon_remediation
 def host_postgres_port_conflict_remediation() -> str:
     return (
         "A host or foreign PostgreSQL instance is bound to localhost:5432, so the "
-        "default mpadmin credentials were rejected.\n"
-        "Either point Mind Palace at a different database:\n"
-        "  export DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/mindpalace\n"
+        "default vladmin credentials were rejected.\n"
+        "Either point Verilore at a different database:\n"
+        "  export DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/verilore\n"
         "Or stop the conflicting host service and re-run init:\n"
         "  sudo systemctl stop postgresql\n"
         "  sudo service postgresql stop\n"
-        "  mindpalace init"
+        "  verilore init"
     )
 
 

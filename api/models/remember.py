@@ -20,7 +20,7 @@ from api.services.remember import MAX_STATEMENT
 class RememberRequest(BaseModel):
     """Record a fact.
 
-    Deliberately statement-only. `mindpalace remember --file` and the SDK's
+    Deliberately statement-only. `verilore remember --file` and the SDK's
     `file=` read a local file, and that is a decision for a trusted operator at
     their own machine. This endpoint has no authentication, so accepting a path
     would let any caller read a file relative to the server's working directory
@@ -138,7 +138,7 @@ class RememberResult(BaseModel):
     # The archive cannot decide whether that is a supersession or a contradiction,
     # so it names them and lets the caller link or retire them in the same turn.
     related_active_claims: list[RelatedClaim] = Field(default_factory=list)
-    # Handle for `mindpalace feedback <query_id> --verdict ...`. Present only when
+    # Handle for `verilore feedback <query_id> --verdict ...`. Present only when
     # the query log is on, which it is by default on a local connection and off on
     # a scoped one. Grading real use needs a way to point at a call, and the
     # response is the only place both sides of the conversation already agree.

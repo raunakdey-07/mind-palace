@@ -5,40 +5,40 @@ explains why; this is for the person who already read it and wants the list.
 
 ```bash
 # 1. Install. Expect about 216 MB; onnxruntime is the default backend.
-git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
+git clone https://github.com/raunakdey-07/verilore.git && cd verilore
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 
 # 2. Start PostgreSQL. Three values compose will not invent; copy them from
 #    .env.example if you would rather set them in a file.
-export MIND_PALACE_RUNTIME_PASSWORD=choose-a-local-password
-export MIND_PALACE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
-export MIND_PALACE_INGEST_ROOTS="$PWD"
+export VERILORE_RUNTIME_PASSWORD=choose-a-local-password
+export VERILORE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
+export VERILORE_INGEST_ROOTS="$PWD"
 docker compose up -d postgresql
 
 # 3. Point at it and apply the schema.
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export DATABASE_URL=postgresql://vladmin:secret@localhost:5432/verilore
 python -m alembic -c migrations/alembic.ini upgrade head
 
 # 4. Write one fact and ask about it.
-mindpalace init
-mindpalace remember "Production uses PostgreSQL." --key datastore
-mindpalace recall "What database does production use?"
+verilore init
+verilore remember "Production uses PostgreSQL." --key datastore
+verilore recall "What database does production use?"
 ```
 
 The first `recall` downloads the embedding model, about 90 MB, once. After that
-it works offline. To never download it, set `MIND_PALACE_LEXICAL=1` before step 4
+it works offline. To never download it, set `VERILORE_LEXICAL=1` before step 4
 — see [runtime.md](runtime.md#model-free-lexical-mode).
 
-On Linux and WSL2, `mindpalace init` starts a stopped local PostgreSQL container
+On Linux and WSL2, `verilore init` starts a stopped local PostgreSQL container
 publishing the configured port and provisions a `pgvector` container when nothing
 is running; `pytest` auto-detects a local development Postgres. Connection and
 authentication failures print a remediation hint instead of a traceback.
 
-Corpus management: `mindpalace ingest-repo <path> --delete-removed`,
-`mindpalace corpus reset <name> --yes`, `mindpalace corpus delete <name> --yes`,
-and `mindpalace posture`.
+Corpus management: `verilore ingest-repo <path> --delete-removed`,
+`verilore corpus reset <name> --yes`, `verilore corpus delete <name> --yes`,
+and `verilore posture`.
 
 ## Getting a document in
 
@@ -63,8 +63,8 @@ claims:
 The primary datastore is PostgreSQL. It runs in three availability zones.
 EOF
 
-mindpalace ingest-repo ./docs
-mindpalace recall "What is the primary datastore?"
+verilore ingest-repo ./docs
+verilore recall "What is the primary datastore?"
 ```
 
 Both commands run in-process. Nothing needs a server started.
@@ -93,31 +93,31 @@ scripts/cleanroom_quickstart.py, in the "Clean install from the built wheel" CI 
 the `[torch]` extra makes it roughly 1.35 GB instead, to load the same weights
 through sentence-transformers; see [the runtime](../docs/runtime.md#the-onnx-backend)
 for why the default is the smaller one. To download no model weights at all, set
-`MIND_PALACE_LEXICAL=1` from the start: the product then never imports a model, at
+`VERILORE_LEXICAL=1` from the start: the product then never imports a model, at
 the cost of needing shared vocabulary between question and record, which is
 [model-free mode](../docs/runtime.md#model-free-lexical-mode).
 
 One thing does arrive on its own: the first `recall` downloads the embedding model
 (about 90 MB, once, to the Hugging Face cache) the way a browser fetches a font.
 That needs network on that first call and roughly 30 seconds. After that it works
-offline. If you would rather it never arrives, set `MIND_PALACE_LEXICAL=1` and Mind
+offline. If you would rather it never arrives, set `VERILORE_LEXICAL=1` and Mind
 Palace reads with no model at all — see
 [model-free mode](../docs/runtime.md#model-free-lexical-mode).
 
 ### 2. Check it
 
 ```console
-$ mindpalace init
-Mind Palace is ready.
+$ verilore init
+Verilore is ready.
   corpus: default
 
 Record your first memory:
 
-  mindpalace remember "Production uses PostgreSQL."
+  verilore remember "Production uses PostgreSQL."
 
 Then ask about it:
 
-  mindpalace recall "What database does production use?"
+  verilore recall "What database does production use?"
 ```
 
 ### 3. Remember
@@ -126,21 +126,21 @@ A statement becomes authoritative memory with exact-substring evidence, through
 the same archive a synced document uses.
 
 ```console
-$ mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+$ verilore remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
 Remembered.
   version: 5aae989d3134 (new)
   corpus:  default
   path:    memory/datastore-aa7e5b234e1d.md
 ```
 
-`--key` is how you tell Mind Palace that two statements are about the same fact.
+`--key` is how you tell Verilore that two statements are about the same fact.
 Remembering the same key with new text supersedes the old value — that is what
 `history` shows you.
 
 Remembering the same statement twice changes nothing:
 
 ```console
-$ mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+$ verilore remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
 Already remembered. Nothing changed, so no new version was recorded.
   version: 5aae989d3134
   corpus:  default
@@ -154,32 +154,32 @@ other.
 ### 4. Recall
 
 ```console
-$ mindpalace recall "What datastore does production use?"
+$ verilore recall "What datastore does production use?"
 The production datastore changed from SQLite to PostgreSQL.
    source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
    time:   true as of 2026-10-08 03:40 UTC
 
-Ask for the basis with: mindpalace explain "<question>"
+Ask for the basis with: verilore explain "<question>"
 ```
 
 Answer, source, and when it was true — that is the default. `--json` gives the
 canonical response if a program wants it instead of a person.
 
-Mind Palace never invents an answer. A question the archive does not cover
+Verilore never invents an answer. A question the archive does not cover
 abstains rather than guessing:
 
 ```console
-$ mindpalace recall "What is our incident response SLA?"
+$ verilore recall "What is our incident response SLA?"
 No memory matched that question.
   NO_RELEVANT_MEMORY
 
-Nothing was invented: Mind Palace records only what was remembered.
+Nothing was invented: Verilore records only what was remembered.
 ```
 
 ### 5. Explain
 
 ```console
-$ mindpalace explain "What datastore does production use?"
+$ verilore explain "What datastore does production use?"
 ANSWER
   The production datastore changed from SQLite to PostgreSQL.
 
@@ -198,8 +198,8 @@ VERIFICATION
   receipt available: yes (1 receipt(s))
   authoritative digest: 2c3077bd8d76627348c569dc5bd2227a08696b0aa54bf3f733f71f5abd3b1aa8
   export and verify offline with:
-    mindpalace receipt "What datastore does production use?" -o receipt.json
-    mindpalace verify receipt.json
+    verilore receipt "What datastore does production use?" -o receipt.json
+    verilore verify receipt.json
   Authenticity is not established without a trust anchor you pinned yourself.
 
 This explains the recorded provenance and temporal basis for the memory. It does not establish that the original source was factually correct.
@@ -213,13 +213,13 @@ text — not a paraphrase, and not a summary of one.
 Memory is not only what is true now. It is what was true when.
 
 ```console
-$ mindpalace remember "The production datastore is now distributed CockroachDB." --key datastore
+$ verilore remember "The production datastore is now distributed CockroachDB." --key datastore
 Remembered.
   version: 062167c43040 (modified)
   corpus:  default
   path:    memory/datastore-aa7e5b234e1d.md
 
-$ mindpalace history datastore
+$ verilore history datastore
 2026-10-08 03:40 UTC  recorded  The production datastore changed from SQLite to PostgreSQL.
 2026-10-08 03:41 UTC  The production datastore changed from SQLite to PostgreSQL.
             superseded by  The production datastore is now distributed CockroachDB.
@@ -230,7 +230,7 @@ current now: The production datastore is now distributed CockroachDB.
 And the answer before the change is still reachable:
 
 ```console
-$ mindpalace recall "What datastore does production use?" \
+$ verilore recall "What datastore does production use?" \
     --as-of 2026-10-08T03:40:59Z
 The production datastore changed from SQLite to PostgreSQL.
    source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
@@ -240,11 +240,11 @@ The production datastore changed from SQLite to PostgreSQL.
 ### 7. Receipt and verify
 
 ```console
-$ mindpalace receipt "What datastore does production use?" -o receipt.json
+$ verilore receipt "What datastore does production use?" -o receipt.json
 Receipt written to receipt.json
-Verify it anywhere with: mindpalace verify receipt.json
+Verify it anywhere with: verilore verify receipt.json
 
-$ mindpalace verify receipt.json
+$ verilore verify receipt.json
 VERIFIED
 
 Integrity:      verified
@@ -257,20 +257,20 @@ This means the receipt still matches the memory it describes. It does not mean t
 ```
 
 Verification needs no server, no database, no embedding model and no network.
-Hand the file to someone who has never heard of Mind Palace:
+Hand the file to someone who has never heard of Verilore:
 
-<!-- `mindpalace-os` is NOT on PyPI. Checked 2026-10-13: pypi.org/pypi/
-     mindpalace-os/json returns 404 and the simple index returns 404, so the
-     bare `pip install mindpalace-os` fails today. It is the distribution's
+<!-- `verilore-os` is NOT on PyPI. Checked 2026-10-13: pypi.org/pypi/
+     verilore-os/json returns 404 and the simple index returns 404, so the
+     bare `pip install verilore-os` fails today. It is the distribution's
      declared name (pyproject.toml), not a published one. The command above
      installs the same wheel from the repository instead, which is what actually
-     works. Note also that `mind-palace` on PyPI is a different project -- a
+     works. Note also that `verilore` on PyPI is a different project -- a
      note-taking app at 0.1.0 -- so the hyphenated name is not a fallback.
      Publishing the distribution is the owner's call, not a documentation fix. -->
 
 ```console
-$ pip install "mindpalace-os @ git+https://github.com/raunakdey-07/mind-palace.git"
-$ mindpalace-proof verify receipt.json
+$ pip install "verilore-os @ git+https://github.com/raunakdey-07/verilore.git"
+$ verilore-proof verify receipt.json
 VERIFIED
 
 Integrity:
@@ -298,37 +298,37 @@ It does not establish that the original source was factually correct.
 ```
 
 The receipt file carries the response it describes, so no `--pack` and no second
-artifact are needed. `mindpalace-proof` is `argparse` over the standard library,
+artifact are needed. `verilore-proof` is `argparse` over the standard library,
 which is why it works on a bare install.
 
 Tampering is caught and named:
 
 ```console
-$ mindpalace verify tampered-receipt.json
+$ verilore verify tampered-receipt.json
 REJECTED
 
 Reason:
   the artifact no longer matches the digest the receipt recorded
 
 The receipt describes memory that has since changed, or the artifact has been altered.
-Re-issue it with: mindpalace receipt "<question>" -o receipt.json
+Re-issue it with: verilore receipt "<question>" -o receipt.json
 ```
 
 ### 8. Connect an agent
 
-MCP is nearly invisible. Point an agent at `mindpalace-mcp` and it can recall and
+MCP is nearly invisible. Point an agent at `verilore-mcp` and it can recall and
 explain the same memory:
 
 ```console
-$ mindpalace-mcp
+$ verilore-mcp
 ```
 
 ```json
 {
   "mcpServers": {
-    "mind-palace": {
-      "command": "mindpalace-mcp",
-      "env": { "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace" }
+    "verilore": {
+      "command": "verilore-mcp",
+      "env": { "DATABASE_URL": "postgresql://vladmin:secret@localhost:5432/verilore" }
     }
   }
 }
@@ -362,7 +362,7 @@ without `corpus`. The full argument schema — including `as_of`, `intent` and
 `budget` — is available from the server itself:
 
 ```bash
-mindpalace-mcp   # then ask the client for tools/list, or read inputSchema
+verilore-mcp   # then ask the client for tools/list, or read inputSchema
 ```
 
 Fifteen tools are advertised. `memory_recall`, `memory_explain`, `memory_current`,
@@ -375,9 +375,9 @@ Fifteen tools are advertised. `memory_recall`, `memory_explain`, `memory_current
 ## From Python
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-client = MindPalace()                              # no configuration required
+client = Verilore()                              # no configuration required
 
 client.remember("We will use PostgreSQL as the primary datastore.", key="decision.datastore")
 result = client.recall("Which datastore did we choose?")
@@ -400,7 +400,7 @@ Two complete runnable versions:
 ### Against a service someone else runs
 
 ```python
-client = MindPalace(base_url="http://127.0.0.1:8000")
+client = Verilore(base_url="http://127.0.0.1:8000")
 ```
 
 Everything above works unchanged over HTTP.
@@ -408,7 +408,7 @@ Everything above works unchanged over HTTP.
 ### Sharing the warm runtime with a script
 
 ```python
-client = MindPalace(runtime=True)     # opt in; off by default
+client = Verilore(runtime=True)     # opt in; off by default
 ```
 
 Optional, and rarely needed: a long-running application has the model resident
@@ -425,8 +425,8 @@ proves it.
 
 | Surface | Entry point |
 |---|---|
-| CLI | `mindpalace remember \| recall \| explain \| history \| receipt \| verify` |
-| Python SDK | `MindPalace().remember() / .recall() / .explain() / .history()` |
+| CLI | `verilore remember \| recall \| explain \| history \| receipt \| verify` |
+| Python SDK | `Verilore().remember() / .recall() / .explain() / .history()` |
 | REST | `POST /api/memory/remember`, `POST /api/memory/query`, … |
 | MCP | `memory_recall`, `memory_explain`, and the archive operations |
 
@@ -434,7 +434,7 @@ Every one returns the same authoritative memory, the same evidence, the same
 temporal state and the same receipt.
 
 `POST /api/memory/remember` takes a statement and nothing else. Reading a file is
-a decision for a trusted operator at their own machine — `mindpalace remember
+a decision for a trusted operator at their own machine — `verilore remember
 --file` and the SDK's `file=` do it, and the HTTP endpoint deliberately does not,
 because a path would let any caller with a credential read a file relative to the
 server and recall its contents. A credential says which corpora you may reach; it
@@ -445,22 +445,22 @@ does not say you may read the server's filesystem.
 The five commands above are the product. The rest exists when you need it:
 
 ```bash
-mindpalace memory current     --corpus C --query "..."   # what is true now
-mindpalace memory changes     --corpus C                 # what changed
-mindpalace memory evidence    --corpus C --claim-id ID   # why one claim holds
-mindpalace memory as-of       --corpus C --as-of T       # what was true at T
-mindpalace memory snapshot    --corpus C                 # freeze a state
-mindpalace memory replay      --corpus C --snapshot-id ID # read a frozen state
-mindpalace memory pack        --corpus C                 # bounded context for a model
-mindpalace memory feed        --corpus C                 # durable change feed
+verilore memory current     --corpus C --query "..."   # what is true now
+verilore memory changes     --corpus C                 # what changed
+verilore memory evidence    --corpus C --claim-id ID   # why one claim holds
+verilore memory as-of       --corpus C --as-of T       # what was true at T
+verilore memory snapshot    --corpus C                 # freeze a state
+verilore memory replay      --corpus C --snapshot-id ID # read a frozen state
+verilore memory pack        --corpus C                 # bounded context for a model
+verilore memory feed        --corpus C                 # durable change feed
 ```
 
 These commands read the local database in-process, like the five commands above.
-Pass `--base-url http://host:8000` (or set `MIND_PALACE_BASE_URL`) only when a
-separate Mind Palace service holds the memory. `mindpalace serve --run` starts
+Pass `--base-url http://host:8000` (or set `VERILORE_BASE_URL`) only when a
+separate Verilore service holds the memory. `verilore serve --run` starts
 that service.
 
-`mindpalace memory query` exposes the full operation: intent selection, an
+`verilore memory query` exposes the full operation: intent selection, an
 explicit budget, and selectors such as `--claim-id` and `--snapshot-id`.
 
 ---
@@ -470,10 +470,10 @@ explicit budget, and selectors such as `--claim-id` and `--snapshot-id`.
 Failures answer what happened, why, and what to run.
 
 ```console
-$ mindpalace recall "..."   # with the database stopped
+$ verilore recall "..."   # with the database stopped
 The memory database is unavailable.
 
-Why: Mind Palace could not connect to PostgreSQL at localhost:5432.
+Why: Verilore could not connect to PostgreSQL at localhost:5432.
 
 What to do:
   Start it with: docker compose up -d postgresql
@@ -483,15 +483,15 @@ What to do:
 
 `--verbose` appends the underlying exception's type and message. It is never
 the only thing you see, and never the first thing. `--debug` (or
-`MIND_PALACE_DEBUG=1`) adds the full traceback, for the case where one line of
+`VERILORE_DEBUG=1`) adds the full traceback, for the case where one line of
 detail is not enough.
 
 A refused connection is never a stack trace. The database not answering is an
 ordinary situation, and the answer to it is a sentence and a command.
 
-When the database is local and stopped, Mind Palace starts it for you: it
+When the database is local and stopped, Verilore starts it for you: it
 looks for a container publishing the configured port and starts the stopped
-one it finds. `mindpalace init` also creates a `pgvector` container when
+one it finds. `verilore init` also creates a `pgvector` container when
 there is none, so it is one command on a machine that has never run Mind
 Palace. A database on another host is never touched.
 
@@ -510,7 +510,7 @@ memory_pack.py  dependency-free portable memory reader
 memory_receipt.py  the receipt contract, standard library only
 memory_proof.py    proof construction and verification
 memory_proof_cli.py standalone verifier, no optional dependencies
-mindpalace_sdk.py  the SDK
+verilore_sdk.py  the SDK
 mcp_server.py   MCP server
 tests/          the suite, against real PostgreSQL
 examples/       runnable examples
@@ -519,22 +519,22 @@ scripts/        benchmarks, probes, release checks
 ```
 ## Connecting an agent over MCP
 
-There is no `mindpalace mcp` command. The server is an executable named
-`mindpalace-mcp`, installed by the `[mcp]` extra, and it speaks JSON-RPC over
+There is no `verilore mcp` command. The server is an executable named
+`verilore-mcp`, installed by the `[mcp]` extra, and it speaks JSON-RPC over
 stdin/stdout — a client starts it, you do not type at it. It used to print
 nothing at all for `--help`; it prints usage now.
 
 ```console
-$ pip install 'mindpalace-os[mcp]'
+$ pip install 'verilore-os[mcp]'
 
-$ mindpalace credential issue my-agent -c default -r read_write
-$ export MIND_PALACE_MCP_CREDENTIAL=mpk_...
+$ verilore credential issue my-agent -c default -r read_write
+$ export VERILORE_MCP_CREDENTIAL=mpk_...
 
-$ mindpalace-mcp --help
+$ verilore-mcp --help
 ```
 
-`MIND_PALACE_MCP_CREDENTIAL` takes the raw `mpk_...` secret. Mint one with
-`mindpalace credential issue <name> -c <corpus> -r read_write`; the corpus and
+`VERILORE_MCP_CREDENTIAL` takes the raw `mpk_...` secret. Mint one with
+`verilore credential issue <name> -c <corpus> -r read_write`; the corpus and
 role must match what the agent will touch. It is an environment variable rather
 than a tool argument on purpose — a caller that could pass its own credential
 would need no authorization at all.

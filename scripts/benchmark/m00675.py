@@ -158,7 +158,7 @@ def build_artifact(result):
     if model_name != "all-MiniLM-L6-v2":
         raise ValueError("Unexpected embedding model")
     artifact = {
-        "benchmark_id": "mind-palace-m006.75",
+        "benchmark_id": "verilore-m006.75",
         "benchmark_version": "1.0",
         "source_revision": git_revision(),
         "source_fingerprint": source_fingerprint(),

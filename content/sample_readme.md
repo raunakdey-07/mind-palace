@@ -1,16 +1,16 @@
 ---
-title: "Mind Palace — Project README"
+title: "Verilore — Project README"
 date: 2024-01-10
 tags: ["ai", "rag", "research", "portfolio"]
 document_type: "note"
 status: In Progress
-git_repo: "https://github.com/raunakdey-07/mind-palace"
+git_repo: "https://github.com/raunakdey-07/verilore"
 summary: "AI-native research operating system that turns portfolio content into a searchable, interactive knowledge base"
 ---
 
-# Mind Palace
+# Verilore
 
-Mind Palace is an AI-native research operating system that augments your portfolio into a searchable, live "second brain."
+Verilore is an AI-native research operating system that augments your portfolio into a searchable, live "second brain."
 
 ## What It Does
 
@@ -22,11 +22,11 @@ Mind Palace is an AI-native research operating system that augments your portfol
 ## Quick Start
 
 ```bash
-git clone https://github.com/raunakdey-07/mind-palace.git
-cd mind-palace
+git clone https://github.com/raunakdey-07/verilore.git
+cd verilore
 docker-compose up -d
 ollama pull llama3.3:3b-instruct
-mindpalace ingest ./content/
+verilore ingest ./content/
 ```
 
 ## Tech Stack

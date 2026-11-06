@@ -99,7 +99,7 @@ def upgrade() -> None:
     # grant table no longer readable by the runtime role, two queries would mean
     # one that works and one that cannot.
     op.execute("""
-        CREATE OR REPLACE FUNCTION mindpalace_resolve_credential(presented_hash CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_resolve_credential(presented_hash CHAR(64))
         RETURNS TABLE (
             id CHAR(64), name TEXT, role TEXT, corpus_name TEXT, corpus_id CHAR(64)
         )
@@ -117,7 +117,7 @@ def upgrade() -> None:
     """)
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mindpalace_locate_credential(needle TEXT)
+        CREATE OR REPLACE FUNCTION verilore_locate_credential(needle TEXT)
         RETURNS CHAR(64)
         LANGUAGE sql STABLE SECURITY DEFINER
         SET search_path = public, pg_temp AS $$
@@ -153,7 +153,7 @@ def upgrade() -> None:
             -- TRUNCATE are refused unconditionally: there is no reason to rewrite
             -- an archived fact, and erasure removes rows rather than editing them.
             IF TG_OP = 'DELETE'
-               AND current_setting('mindpalace.erasure', true) = 'on' THEN
+               AND current_setting('verilore.erasure', true) = 'on' THEN
                 RETURN NULL;
             END IF;
             RAISE EXCEPTION 'memory archive is append-only' USING ERRCODE = '23514';
@@ -161,7 +161,7 @@ def upgrade() -> None:
     """)
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mindpalace_erase_corpus(target CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_erase_corpus(target CHAR(64))
         RETURNS JSONB
         LANGUAGE plpgsql SECURITY DEFINER
         SET search_path = public, pg_temp AS $$
@@ -181,7 +181,7 @@ def upgrade() -> None:
             -- Re-read the caller's scope rather than trusting the caller. This is
             -- the same transaction-local setting the row-level policies read, so
             -- erasure and retrieval cannot disagree about who is asking.
-            scope := coalesce(current_setting('mindpalace.tenant_scope', true), '');
+            scope := coalesce(current_setting('verilore.tenant_scope', true), '');
             IF scope IS DISTINCT FROM '{*}' THEN
                 IF scope = '' THEN
                     RAISE EXCEPTION 'no tenant scope' USING ERRCODE = '42501';
@@ -208,7 +208,7 @@ def upgrade() -> None:
                                1, 16))::bit(64)::bigint
             );
 
-            PERFORM set_config('mindpalace.erasure', 'on', true);
+            PERFORM set_config('verilore.erasure', 'on', true);
 
             FOREACH one IN ARRAY ARRAY[
                 'memory_snapshot_seals', 'memory_snapshot_versions',
@@ -248,7 +248,7 @@ def upgrade() -> None:
             GET DIAGNOSTICS removed = ROW_COUNT;
             report := report || jsonb_build_object('corpora', removed);
 
-            PERFORM set_config('mindpalace.erasure', 'off', true);
+            PERFORM set_config('verilore.erasure', 'off', true);
 
             RETURN jsonb_build_object(
                 'corpus_id', target,
@@ -262,9 +262,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP FUNCTION IF EXISTS mindpalace_erase_corpus(CHAR(64))")
-    op.execute("DROP FUNCTION IF EXISTS mindpalace_locate_credential(TEXT)")
-    op.execute("DROP FUNCTION IF EXISTS mindpalace_resolve_credential(CHAR(64))")
+    op.execute("DROP FUNCTION IF EXISTS verilore_erase_corpus(CHAR(64))")
+    op.execute("DROP FUNCTION IF EXISTS verilore_locate_credential(TEXT)")
+    op.execute("DROP FUNCTION IF EXISTS verilore_resolve_credential(CHAR(64))")
 
     # Restore the append-only trigger exactly as `004` installed it.
     op.execute("""

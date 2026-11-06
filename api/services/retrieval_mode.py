@@ -11,7 +11,7 @@ Two modes, one implementation.
   Normalized token overlap, scored through the *same* acceptance gates.
 
 Lexical mode is not a second retriever. `memory_query` already falls back to it
-whenever the model cannot be loaded, and `MIND_PALACE_LEXICAL=1` simply takes that
+whenever the model cannot be loaded, and `VERILORE_LEXICAL=1` simply takes that
 branch on purpose instead of by accident. One code path, one set of gates, one set
 of authoritative semantics.
 
@@ -31,7 +31,7 @@ from __future__ import annotations
 import os
 
 #: Set to `1` to deliberately read without the embedding model.
-ENV_VAR = "MIND_PALACE_LEXICAL"
+ENV_VAR = "VERILORE_LEXICAL"
 
 #: What a user is told when they have asked for it. Short, factual, and on stderr so
 #: it never contaminates an answer, a JSON document, or a pipe.

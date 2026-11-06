@@ -5,11 +5,11 @@ but a scoped session value naming another corpus was deliberately left forgeable
 -- a role may set its own session settings, and PostgreSQL offers no way to
 stop it. That residual forge is documented, not hidden.
 
-This migration closes the *token* half: `mindpalace.scope_token` is no longer a
+This migration closes the *token* half: `verilore.scope_token` is no longer a
 mere presence check. Any non-empty token is validated as an HMAC-SHA-256 over
 the tenant scope, computed with a server secret held in `memory_server_secrets`
 -- a table the runtime role cannot read. The validation runs inside
-`mp_verify_scope_token`, a `SECURITY DEFINER` function owned by the maintenance
+`vl_verify_scope_token`, a `SECURITY DEFINER` function owned by the maintenance
 role, so the runtime role cannot recompute or bypass it.
 
 A forged non-empty token (`scope_token = 'forged-...'`) therefore fails closed:
@@ -45,26 +45,26 @@ _RESTRICTED_SCOPE_CHECK = """
 
 def _predicate() -> str:
     return f"""
-        CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_allowed_corpus(candidate CHAR(64))
         RETURNS BOOLEAN
         LANGUAGE sql STABLE AS $$
             SELECT CASE
                 WHEN (
-                        (current_setting('mindpalace.tenant_scope', true) = '{{*}}'
+                        (current_setting('verilore.tenant_scope', true) = '{{*}}'
                          AND ({_RESTRICTED_SCOPE_CHECK}))
                     ) THEN TRUE
-                WHEN coalesce(current_setting('mindpalace.tenant_scope', true), '') = '' THEN FALSE
-                WHEN coalesce(current_setting('mindpalace.scope_token', true), '') = '' THEN
+                WHEN coalesce(current_setting('verilore.tenant_scope', true), '') = '' THEN FALSE
+                WHEN coalesce(current_setting('verilore.scope_token', true), '') = '' THEN
                     -- No token presented: fall back to plain scope membership.
                     -- This keeps callers that never set a token on the
                     -- migration 008/010 behaviour; the residual scope forge
                     -- there is documented in docs/security.md and measured by
                     -- tests/test_scope_forgery.py.
                     btrim(candidate::text) = ANY (string_to_array(
-                        current_setting('mindpalace.tenant_scope', true), ','
+                        current_setting('verilore.tenant_scope', true), ','
                     ))
-                ELSE mp_verify_scope_token(
-                    candidate, current_setting('mindpalace.scope_token', true)
+                ELSE vl_verify_scope_token(
+                    candidate, current_setting('verilore.scope_token', true)
                 )
             END
         $$
@@ -86,12 +86,12 @@ def upgrade() -> None:
     )
 
     op.execute("""
-        CREATE OR REPLACE FUNCTION mp_verify_scope_token(corpus_id CHAR(64), scope_token TEXT)
+        CREATE OR REPLACE FUNCTION vl_verify_scope_token(corpus_id CHAR(64), scope_token TEXT)
         RETURNS BOOLEAN
         LANGUAGE plpgsql SECURITY DEFINER
         SET search_path = public, pg_temp AS $$
         DECLARE
-            scope text := coalesce(current_setting('mindpalace.tenant_scope', true), '');
+            scope text := coalesce(current_setting('verilore.tenant_scope', true), '');
             secret text;
             expected text;
         BEGIN
@@ -117,19 +117,19 @@ def upgrade() -> None:
         $$
     """)
 
-    # `mindpalace_owner` and `mindpalace_runtime` are provisioned by
+    # `verilore_owner` and `verilore_runtime` are provisioned by
     # scripts/db/runtime_roles.sql, which runs after migrations in CI, so
     # guard both on existence here. The function exists by now.
     op.execute(
         "DO $$\n"
         "BEGIN\n"
-        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_owner') THEN\n"
-        "        EXECUTE 'ALTER TABLE memory_server_secrets OWNER TO mindpalace_owner';\n"
+        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_owner') THEN\n"
+        "        EXECUTE 'ALTER TABLE memory_server_secrets OWNER TO verilore_owner';\n"
         "    END IF;\n"
-        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mindpalace_runtime') THEN\n"
-        "        REVOKE ALL ON memory_server_secrets FROM mindpalace_runtime;\n"
-        "        GRANT EXECUTE ON FUNCTION mp_verify_scope_token(CHAR(64), TEXT)\n"
-        "            TO mindpalace_runtime;\n"
+        "    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verilore_runtime') THEN\n"
+        "        REVOKE ALL ON memory_server_secrets FROM verilore_runtime;\n"
+        "        GRANT EXECUTE ON FUNCTION vl_verify_scope_token(CHAR(64), TEXT)\n"
+        "            TO verilore_runtime;\n"
         "    END IF;\n"
         "END $$;\n"
     )
@@ -140,21 +140,21 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     predicate = """
-        CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_allowed_corpus(candidate CHAR(64))
         RETURNS BOOLEAN
         LANGUAGE sql STABLE AS $$
             SELECT CASE
                 WHEN (
-                        (current_setting('mindpalace.tenant_scope', true) = '{*}'
+                        (current_setting('verilore.tenant_scope', true) = '{*}'
                          AND ({RESTRICTED_SCOPE_CHECK}))
                     ) THEN TRUE
-                WHEN coalesce(current_setting('mindpalace.tenant_scope', true), '') = '' THEN FALSE
+                WHEN coalesce(current_setting('verilore.tenant_scope', true), '') = '' THEN FALSE
                 ELSE btrim(candidate::text) = ANY (string_to_array(
-                    current_setting('mindpalace.tenant_scope', true), ','
+                    current_setting('verilore.tenant_scope', true), ','
                 ))
             END
         $$
     """.replace("{RESTRICTED_SCOPE_CHECK}", _RESTRICTED_SCOPE_CHECK)
     op.execute(predicate)
-    op.execute("DROP FUNCTION IF EXISTS mp_verify_scope_token(CHAR(64), TEXT)")
+    op.execute("DROP FUNCTION IF EXISTS vl_verify_scope_token(CHAR(64), TEXT)")
     op.execute("DROP TABLE IF EXISTS memory_server_secrets")

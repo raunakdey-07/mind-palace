@@ -73,7 +73,7 @@ def _insert_corpora(names: dict[str, str]) -> None:
 
 
 @pytest.fixture(scope="module")
-def live_server(tmp_path_factory):
+def live_server(tvl_path_factory):
     """Module-scoped live HTTP server with enforcement ON.
 
     Yields an object with `.url`, `.keys = {"acme": "...", "globex": "..."}` and
@@ -97,22 +97,22 @@ def live_server(tmp_path_factory):
 
         # 4. Start the server as a subprocess.
         port = _find_free_port()
-        tmp_dir = tmp_path_factory.mktemp("live_server")
-        ingest_root = str(tmp_dir / "ingest")
+        tvl_dir = tvl_path_factory.mktemp("live_server")
+        ingest_root = str(tvl_dir / "ingest")
         os.makedirs(ingest_root, exist_ok=True)
 
-        stderr_path = str(tmp_dir / "server_stderr.txt")
-        stdout_path = str(tmp_dir / "server_stdout.txt")
+        stderr_path = str(tvl_dir / "server_stderr.txt")
+        stdout_path = str(tvl_dir / "server_stdout.txt")
 
         env = dict(os.environ)
         env["DATABASE_URL"] = runtime_url()
         env["ADMIN_DATABASE_URL"] = os.environ["DATABASE_URL"]
-        env["MIND_PALACE_SCOPE_SECRET"] = secret
-        env["MIND_PALACE_ENFORCE_SCOPE_TOKEN"] = "on"
-        env["MIND_PALACE_AUTH_MODE"] = "required"
-        env["MIND_PALACE_DEPLOYMENT"] = "server"
-        env["MIND_PALACE_RUNTIME"] = "0"
-        env["MIND_PALACE_INGEST_ROOTS"] = ingest_root
+        env["VERILORE_SCOPE_SECRET"] = secret
+        env["VERILORE_ENFORCE_SCOPE_TOKEN"] = "on"
+        env["VERILORE_AUTH_MODE"] = "required"
+        env["VERILORE_DEPLOYMENT"] = "server"
+        env["VERILORE_RUNTIME"] = "0"
+        env["VERILORE_INGEST_ROOTS"] = ingest_root
 
         stderr_file = open(stderr_path, "w")
         stdout_file = open(stdout_path, "w")

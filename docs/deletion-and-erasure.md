@@ -1,22 +1,22 @@
 # Deletion, retention, and why cryptographic erasure is not implemented
 
 This document separates two things that are constantly conflated, states exactly
-what Mind Palace can delete today, and explains why "cryptographic erasure" is
+what Verilore can delete today, and explains why "cryptographic erasure" is
 reported as **unresolved** rather than shipped.
 
 ## The two claims
 
 **Deletion** — remove active data and make it unavailable through every supported
-interface. Mind Palace implements this.
+interface. Verilore implements this.
 
 **Cryptographic erasure** — make *retained* copies, including backups, permanently
-unrecoverable, by destroying keys. Mind Palace does **not** implement this, and
+unrecoverable, by destroying keys. Verilore does **not** implement this, and
 deleting rows is not a weaker version of it. They differ in kind.
 
 ## What deletion does today
 
-`mindpalace corpus delete <name>` and `DELETE /api/corpora/{name}` call
-`mindpalace_erase_corpus`, one `SECURITY DEFINER` function that, in a single
+`verilore corpus delete <name>` and `DELETE /api/corpora/{name}` call
+`verilore_erase_corpus`, one `SECURITY DEFINER` function that, in a single
 transaction:
 
 * takes the same advisory lock every writer takes, so erasure serialises with
@@ -56,19 +56,19 @@ report.
 
 Everywhere a corpus's data can persist, and who can actually remove it.
 
-| Location | Kind | Erasable by Mind Palace? |
+| Location | Kind | Erasable by Verilore? |
 |---|---|---|
-| `memory_*` archive tables | active data | **yes** — `mindpalace_erase_corpus` |
+| `memory_*` archive tables | active data | **yes** — `verilore_erase_corpus` |
 | `documents`, `chunks`, `ingestion_manifest` | active data (live projection) | **yes** — same function |
 | `memory_resource_grants` | active data | **yes** — cascade with the corpus's documents |
 | PostgreSQL WAL | operational | only by operator retention |
-| PostgreSQL backups, snapshots, replicas | **operator-controlled** | **no** — outside Mind Palace |
-| Filesystem: sources, temp files | customer-controlled | **no** — Mind Palace never deletes a source file |
+| PostgreSQL backups, snapshots, replicas | **operator-controlled** | **no** — outside Verilore |
+| Filesystem: sources, temp files | customer-controlled | **no** — Verilore never deletes a source file |
 | Exported Receipt v1, Memory Pack v1 | **customer-exported** | **no** — a file on the customer's machine |
 | Logs and traces | operational | **no** — and deliberately contains no memory content, so there is nothing to erase |
 | The database itself | operator-controlled | **no** |
 
-Mind Palace never keys a corpus to a filesystem path, so there is no on-disk
+Verilore never keys a corpus to a filesystem path, so there is no on-disk
 per-corpus state to clean up. That is a design choice that removes a whole class
 of erasure problem, and it does not remove the backup one.
 
@@ -80,7 +80,7 @@ can honestly deliver alone.
 1. **A key provider independent of the backup.** The only copy of a
    corpus's data-encryption key must not live in the same backup that is
    supposed to become unrecoverable. That means a KMS, a Vault, or an operator-held
-   secret. Mind Palace has no such integration, and inventing a "default key
+   secret. Verilore has no such integration, and inventing a "default key
    provider" that stores keys in the database would produce a system that
    *appears* to offer cryptographic erasure while offering none.
 2. **Complete coverage, including derived data.** Encrypting claim text is not
@@ -130,7 +130,7 @@ so the decision is auditable rather than merely deferred.
 
 ### The honest interim statement
 
-> Mind Palace deletes a corpus's rows from the live database, and can delete the
+> Verilore deletes a corpus's rows from the live database, and can delete the
 > key material that would be needed to read any *future* encrypted copy. It cannot
 > make a backup taken before that point unrecoverable, and it does not currently
 > encrypt anything.

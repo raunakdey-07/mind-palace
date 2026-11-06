@@ -1,4 +1,4 @@
-"""`mindpalace memory ...` runs in-process unless a remote URL is given.
+"""`verilore memory ...` runs in-process unless a remote URL is given.
 
 `memory pack` used to default to ``http://127.0.0.1:8000`` while `recall`,
 `explain`, `history`, `receipt` and `ingest-repo` ran in-process. A user who
@@ -8,7 +8,7 @@ there was none.
 
 These tests pin both halves of the boundary: no server and no HTTP call when
 `--base-url` is absent, and the same HTTP client when it is present (or when
-`MIND_PALACE_BASE_URL` names a remote service).
+`VERILORE_BASE_URL` names a remote service).
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
 CORPUS = "cli-memory-in-process"
 STATEMENT = "The default embedding backend is ONNX Runtime."
@@ -30,17 +30,17 @@ STATEMENT = "The default embedding backend is ONNX Runtime."
 @pytest.fixture(scope="module")
 def seeded() -> None:
     """A corpus with one fact, written through the same local SDK path."""
-    MindPalace(CORPUS).remember(STATEMENT, key="default-embedding-backend")
+    Verilore(CORPUS).remember(STATEMENT, key="default-embedding-backend")
 
 
 def _invoke(args, base_url_env: str | None = None):
     from cli.main import app
 
     env = dict(os.environ)
-    env["MIND_PALACE_RUNTIME"] = "0"
-    env.pop("MIND_PALACE_BASE_URL", None)
+    env["VERILORE_RUNTIME"] = "0"
+    env.pop("VERILORE_BASE_URL", None)
     if base_url_env is not None:
-        env["MIND_PALACE_BASE_URL"] = base_url_env
+        env["VERILORE_BASE_URL"] = base_url_env
     return CliRunner().invoke(app, args, env=env)
 
 
@@ -138,7 +138,7 @@ def test_serve_states_the_in_process_boundary():
     result = _invoke(["serve"])
 
     assert result.exit_code == 0, result.output
-    assert "mindpalace serve --run" in result.output
+    assert "verilore serve --run" in result.output
     assert "in-process" in result.output
 
 

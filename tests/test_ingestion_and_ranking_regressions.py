@@ -84,7 +84,7 @@ WRAPPED_NUMBERED = """# Security
 
 WRAPPED_FIELD = """# Database roles
 
-`mindpalace_owner` holding `BYPASSRLS` is deliberate and is the honest limit of
+`verilore_owner` holding `BYPASSRLS` is deliberate and is the honest limit of
 this design: whoever holds it can read every tenant's rows. It is a maintenance
 credential, not an application credential.
 """
@@ -422,7 +422,7 @@ def test_a_subject_the_corpus_barely_mentions_does_not_answer():
     Kafka, and the corpus's best answer to it is not, so the honest answer is
     that the corpus does not have one.
     """
-    claims = _many_claims("own", 120, "Mind Palace is the memory system this corpus describes")
+    claims = _many_claims("own", 120, "Verilore is the memory system this corpus describes")
     claims = claims + [
         _corpus_claim(
             "kafka",
@@ -436,7 +436,7 @@ def test_a_subject_the_corpus_barely_mentions_does_not_answer():
         scores={"Kafka, CDC, or message-broker semantics; feed.kafka docs/feed.md": 0.39},
         default=0.52,
     )
-    request = MemoryRequest(corpus="test", query="How is Kafka configured in Mind Palace?")
+    request = MemoryRequest(corpus="test", query="How is Kafka configured in Verilore?")
     scores, _, _ = memory_relevance.relevance(
         response,
         request,
@@ -449,7 +449,7 @@ def test_a_subject_the_corpus_barely_mentions_does_not_answer():
 
 def test_a_question_about_a_subject_the_corpus_has_still_answers():
     """The gate is about an absent subject, not about being harder to reach."""
-    claims = _many_claims("own", 120, "Mind Palace is the memory system this corpus describes")
+    claims = _many_claims("own", 120, "Verilore is the memory system this corpus describes")
     claims = claims + [
         _corpus_claim(
             "kafka",
@@ -460,7 +460,7 @@ def test_a_question_about_a_subject_the_corpus_has_still_answers():
     ]
     response = _corpus_response(claims)
     embedder = FakeEmbedder(default=0.52)
-    request = MemoryRequest(corpus="test", query="How is Kafka configured in Mind Palace?")
+    request = MemoryRequest(corpus="test", query="How is Kafka configured in Verilore?")
     scores, _, _ = memory_relevance.relevance(
         response,
         request,

@@ -25,7 +25,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from api.models.memory import FeedResponse, MemoryRequest, MemoryResponse, MemoryWire
 from api.models.remember import RevalidateRequest, RememberRequest, RememberResult
 
-logger = logging.getLogger("mindpalace.ops")
+logger = logging.getLogger("verilore.ops")
 
 router = APIRouter()
 

@@ -115,7 +115,7 @@ async def _restore_secrets(database_url: str, original_rows, original_enforcemen
                     )
             if original_enforcement is not None:
                 await conn.execute(
-                    sa.text("SELECT mp_set_scope_token_enforcement(:e)"),
+                    sa.text("SELECT vl_set_scope_token_enforcement(:e)"),
                     {"e": original_enforcement == "on"},
                 )
     finally:
@@ -144,32 +144,32 @@ async def _set_enforcement(database_url: str, enabled: bool) -> None:
     engine = create_async_engine(database_url.replace("postgresql://", "postgresql+asyncpg://"))
     try:
         async with engine.begin() as conn:
-            await conn.execute(sa.text("SELECT mp_set_scope_token_enforcement(:e)"), {"e": enabled})
+            await conn.execute(sa.text("SELECT vl_set_scope_token_enforcement(:e)"), {"e": enabled})
     finally:
         await engine.dispose()
 
 
 def _server_env(monkeypatch, scope_secret: str) -> None:
     """Configure the process as a server with enforcement on and a given secret."""
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "on")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", scope_secret)
-    monkeypatch.delenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "on")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", scope_secret)
+    monkeypatch.delenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
 
 
 def _local_env(monkeypatch) -> None:
     """Configure the process as local (the five-minute path)."""
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.delenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", raising=False)
-    monkeypatch.delenv("MIND_PALACE_SCOPE_SECRET", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.delenv("VERILORE_ENFORCE_SCOPE_TOKEN", raising=False)
+    monkeypatch.delenv("VERILORE_SCOPE_SECRET", raising=False)
 
 
 async def test_scope_token_secret_matches_startup_ok(monkeypatch):
-    """When MIND_PALACE_SCOPE_SECRET matches the database secret and
+    """When VERILORE_SCOPE_SECRET matches the database secret and
     enforcement is on, server startup succeeds."""
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
@@ -184,7 +184,7 @@ async def test_scope_token_secret_matches_startup_ok(monkeypatch):
 
 
 async def test_scope_token_secret_mismatch_refuses_startup(monkeypatch):
-    """When MIND_PALACE_SCOPE_SECRET disagrees with the database row,
+    """When VERILORE_SCOPE_SECRET disagrees with the database row,
     enforce_startup_posture raises RuntimeError naming the cause."""
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
@@ -224,19 +224,19 @@ async def test_scope_token_mismatch_env_off_db_off(monkeypatch):
     """Mismatched secret, env enforcement off, DB enforcement off.
 
     The process always sends a token (_apply_tenant_scope computes HMAC on
-    every transaction). mp_verified_scope_corpora() compares the supplied
+    every transaction). vl_verified_scope_corpora() compares the supplied
     token to the stored secret regardless of the enforcement flag, so a
     non-empty token that does not verify returns zero rows even with
     enforcement off. In server mode this is a not-ready condition.
     """
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", _RANDOM_SECRET)
-    monkeypatch.setenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "1")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", _RANDOM_SECRET)
+    monkeypatch.setenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", "1")
     await _set_db_secret(database_url, _OTHER_SECRET)
     await _set_enforcement(database_url, False)
     try:
@@ -285,12 +285,12 @@ async def test_scope_token_mismatch_env_off_db_on(monkeypatch):
     """
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", _RANDOM_SECRET)
-    monkeypatch.setenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "1")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", _RANDOM_SECRET)
+    monkeypatch.setenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", "1")
     await _set_db_secret(database_url, _OTHER_SECRET)
     await _set_enforcement(database_url, True)
     try:
@@ -347,7 +347,7 @@ async def test_scope_token_local_mode_unaffected(monkeypatch):
 
 
 async def test_scope_token_probe_returns_none_when_function_dropped(monkeypatch):
-    """_probe_scope_token returns None when mp_scope_enforcement_status is
+    """_probe_scope_token returns None when vl_scope_enforcement_status is
     missing. The function is dropped inside a transaction that is rolled back,
     so no persistent DDL changes the session database (DDL is transactional
     in PostgreSQL)."""
@@ -357,7 +357,7 @@ async def test_scope_token_probe_returns_none_when_function_dropped(monkeypatch)
     from api.main import _probe_scope_token
 
     async with session_scope() as db:
-        await db.execute(sa.text("DROP FUNCTION IF EXISTS mp_scope_enforcement_status(TEXT, TEXT)"))
+        await db.execute(sa.text("DROP FUNCTION IF EXISTS vl_scope_enforcement_status(TEXT, TEXT)"))
         try:
             probed = await _probe_scope_token(db)
             assert probed is None, f"expected None, got {probed}"

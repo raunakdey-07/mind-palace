@@ -21,10 +21,10 @@ from __future__ import annotations
 
 import json
 
-import mindpalace_errors as taxonomy
-from mindpalace_errors import (
+import verilore_errors as taxonomy
+from verilore_errors import (
     COMPONENTS,
-    MindPalaceError,
+    VeriloreError,
     ValidationError,
     envelope,
 )
@@ -33,13 +33,13 @@ ALL_ERRORS = [
     getattr(taxonomy, name)
     for name in taxonomy.__all__
     if isinstance(getattr(taxonomy, name), type)
-    and issubclass(getattr(taxonomy, name), MindPalaceError)
+    and issubclass(getattr(taxonomy, name), VeriloreError)
 ]
 
 
 def test_the_component_list_is_closed_and_small():
     """A component list that grows with every dependency is a list nobody reads."""
-    assert COMPONENTS == ("memory", "auth", "database", "transport", "provider", "mindpalace")
+    assert COMPONENTS == ("memory", "auth", "database", "transport", "provider", "verilore")
     for error in ALL_ERRORS:
         assert error.default_component in COMPONENTS, (
             f"{error.__name__} declares component {error.default_component!r}, "
@@ -68,10 +68,10 @@ def test_components_do_not_bleed_into_each_other():
     for error in ALL_ERRORS:
         by_component.setdefault(error.default_component, []).append(error)
 
-    # `MindPalaceError` is the shared base every category inherits from, not a
+    # `VeriloreError` is the shared base every category inherits from, not a
     # category competing with the others. Comparing against it would make every
-    # error a "bleed" into `mindpalace`, which is the opposite of the intent.
-    comparable = [e for e in ALL_ERRORS if e is not MindPalaceError]
+    # error a "bleed" into `verilore`, which is the opposite of the intent.
+    comparable = [e for e in ALL_ERRORS if e is not VeriloreError]
     for component, errors in by_component.items():
         for error in errors:
             others = [e for e in comparable if e is not error and e.default_component != component]
@@ -116,8 +116,8 @@ def test_an_unknown_exception_is_an_internal_error_with_no_message():
     hostile = ValueError("connection to postgres://user:pw@host/db failed: row = SECRET_ROW")
     body = envelope(hostile)
 
-    assert body["code"] == "mp_internal_error"
-    assert body["component"] == "mindpalace"
+    assert body["code"] == "vl_internal_error"
+    assert body["component"] == "verilore"
     assert body["retryable"] is False
     assert "SECRET_ROW" not in json.dumps(body)
     assert "postgres://" not in json.dumps(body)
@@ -155,17 +155,17 @@ def test_the_request_id_survives_every_error():
 def test_the_existing_sdk_error_still_catches_everything():
     """Compatibility. Integrators wrote `except MemoryClientError` against the
     documented contract, and that must keep working for every new failure."""
-    import mindpalace_sdk
+    import verilore_sdk
 
-    assert issubclass(MindPalaceError, Exception)
-    assert hasattr(mindpalace_sdk, "MemoryClientError")
+    assert issubclass(VeriloreError, Exception)
+    assert hasattr(verilore_sdk, "MemoryClientError")
     # The old base is unrelated to the taxonomy, and the SDK adapter must raise
     # it for remote failures. What must not happen is the taxonomy shadowing it.
-    assert mindpalace_sdk.MemoryClientError is not MindPalaceError
+    assert verilore_sdk.MemoryClientError is not VeriloreError
 
 
 def test_status_codes_agree_with_the_classes():
-    """A proxy or load balancer makes the same decision Mind Palace does, so the
+    """A proxy or load balancer makes the same decision Verilore does, so the
     mapping has to be coherent rather than arbitrary."""
     assert ValidationError.default_status == 422
     assert taxonomy.AuthenticationError.default_status == 401

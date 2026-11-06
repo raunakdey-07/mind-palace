@@ -104,7 +104,7 @@ exception, because the budget bounds it.
 Raw artifacts: `docs/performance/operations-baseline-1000.json` and
 `docs/performance/operations-after-1000.json`. The reusable harness is
 `venvmp/bin/python scripts/performance_probe.py operations`, which requires
-`DATABASE_URL` and `MIND_PALACE_CURSOR_SECRET`.
+`DATABASE_URL` and `VERILORE_CURSOR_SECRET`.
 
 ## Where the earlier scaling sweep stopped
 
@@ -129,7 +129,7 @@ a different fixture and supersede nothing in that record.
 | `api.main` process wall time | 6,783.009 ms | 798.901 ms |
 | Imported modules | 4,221 | 682 |
 | Peak RSS | 861,428 KB | 80,696 KB |
-| `mindpalace_sdk` import | 63.876 ms | 63.876 ms |
+| `verilore_sdk` import | 63.876 ms | 63.876 ms |
 
 After the change, `api.main` imports without Torch, `sentence_transformers`, or
 `transformers`. The public SDK import was already model-free. The CLI root help
@@ -138,7 +138,7 @@ variation rather than a regression.
 
 A claim representation cache followed in migration `007_claim_embedding_cache`.
 It is L2: every row is derived from immutable claim text, it is filled by
-ingestion and by `mindpalace reindex`, and the read path only reads. Measured on
+ingestion and by `verilore reindex`, and the read path only reads. Measured on
 the 202-question corpus, warm p50 falls from 502.94 ms to 43.24 ms at 88 claims
 and every authoritative pack digest is unchanged. See
 [`docs/research/retrieval-routing.md`](../research/retrieval-routing.md).

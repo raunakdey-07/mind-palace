@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Read a Mind Palace Memory Pack with nothing but the standard library.
+"""Read a Verilore Memory Pack with nothing but the standard library.
 
 A Memory Pack is the interchange boundary. A receiving system should be able to
 understand what the corpus knows without a database, a model, a network, or any

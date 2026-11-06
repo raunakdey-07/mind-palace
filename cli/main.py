@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""mindpalace CLI — Typer-based command-line interface."""
+"""verilore CLI — Typer-based command-line interface."""
 
 from __future__ import annotations
 
@@ -18,20 +18,20 @@ import yaml
 from cli.memory import app as memory_app
 
 #: The five product commands, in the order a newcomer meets them.
-help = "Mind Palace: memory that remembers what changed, what was true when, and why to believe it."
+help = "Verilore: memory that remembers what changed, what was true when, and why to believe it."
 
-app = typer.Typer(name="mindpalace", help=help)
+app = typer.Typer(name="verilore", help=help)
 app.add_typer(memory_app)
 
-# The local runtime. `mindpalace runtime status` for when a command feels slow, and
-# `mindpalace runtime stop` to be sure nothing is running. Neither is needed to use
-# Mind Palace: every command works with no runtime at all.
+# The local runtime. `verilore runtime status` for when a command feels slow, and
+# `verilore runtime stop` to be sure nothing is running. Neither is needed to use
+# Verilore: every command works with no runtime at all.
 from cli.runtime import app as runtime_app  # noqa: E402
 
 app.add_typer(runtime_app)
 
 
-#: What a bare `mindpalace` prints.
+#: What a bare `verilore` prints.
 #:
 #: It used to print "Missing command." and a usage line, which tells a newcomer
 #: that they typed something wrong rather than what to do next. The first run of
@@ -40,20 +40,20 @@ app.add_typer(runtime_app)
 #: up, and no idea which of the twenty commands is the first one. So the empty
 #: invocation is where the first three commands go.
 WELCOME = """\
-Mind Palace: memory that remembers what changed, what was true when, and why to believe it.
+Verilore: memory that remembers what changed, what was true when, and why to believe it.
 
 Start here:
 
-  1. mindpalace init
+  1. verilore init
      Check that storage is ready -- it starts a local PostgreSQL if one is
      installed and stopped -- and create your first corpus.
-  2. mindpalace remember "The production datastore is PostgreSQL."
+  2. verilore remember "The production datastore is PostgreSQL."
      Record a fact. It becomes memory with evidence, not a search index entry.
-  3. mindpalace recall "What is the production datastore?"
+  3. verilore recall "What is the production datastore?"
      Ask a question. You get the answer, its source, and the time it was true.
 
-Already have Markdown?  mindpalace ingest-repo ./docs
-Every command:          mindpalace --help
+Already have Markdown?  verilore ingest-repo ./docs
+Every command:          verilore --help
 """
 
 
@@ -71,7 +71,7 @@ def _global_options(
     if debug:
         import os
 
-        os.environ["MIND_PALACE_DEBUG"] = "1"
+        os.environ["VERILORE_DEBUG"] = "1"
     # No subcommand means the person is looking for the first one, not making a
     # mistake. `ctx.invoked_subcommand` is set before this callback runs, so it
     # is None exactly when nothing was named.
@@ -104,7 +104,7 @@ BaseURL = Annotated[
     typer.Option(
         "--base-url",
         help=(
-            "Use a running Mind Palace service instead of the local database, "
+            "Use a running Verilore service instead of the local database, "
             "for example http://127.0.0.1:8000"
         ),
     ),
@@ -115,7 +115,7 @@ def _debug_requested(debug: bool) -> bool:
     """Is the full traceback wanted?
 
     Two spellings of one setting: the per-command `--debug` flag, and
-    `MIND_PALACE_DEBUG=1` for the process. The flag is passed down rather
+    `VERILORE_DEBUG=1` for the process. The flag is passed down rather
     than written to the environment, because a command that mutates the
     environment of the process it was invoked from leaks into every later
     command in that process -- which matters for an embedding application,
@@ -123,7 +123,7 @@ def _debug_requested(debug: bool) -> bool:
     """
     if debug:
         return True
-    return os.getenv("MIND_PALACE_DEBUG") == "1"
+    return os.getenv("VERILORE_DEBUG") == "1"
 
 
 def _fail(exc: Exception, verbose: bool, debug: bool = False) -> None:
@@ -299,7 +299,7 @@ def init(
 
     It used to print the `python -m alembic` line and exit 1. That is honest and
     useless for the install path the README also documents: after
-    `pip install mindpalace-os` there is no `migrations/` directory in the
+    `pip install verilore-os` there is no `migrations/` directory in the
     working directory and, before this change, no alembic in the environment at
     all. The instruction was correct and unfollowable.
 
@@ -351,7 +351,7 @@ def init(
         applied = _apply_migrations()
         if not applied.ok:
             typer.echo(
-                "Mind Palace is installed, but the memory schema is not applied yet.\n"
+                "Verilore is installed, but the memory schema is not applied yet.\n"
                 f"\n{applied.detail}\n"
                 "\nWhat to do:\n"
                 "  python -m alembic -c migrations/alembic.ini upgrade head",
@@ -370,16 +370,15 @@ def init(
 
     _run(lambda: asyncio.run(ensure()))
 
-    typer.echo("Mind Palace is ready.")
+    typer.echo("Verilore is ready.")
     typer.echo(f"  corpus: {DEFAULT_CORPUS}")
     _warm_runtime()
     typer.echo("\nRecord your first memory:\n")
-    typer.echo('  mindpalace remember "Production uses PostgreSQL."')
+    typer.echo('  verilore remember "Production uses PostgreSQL."')
     typer.echo("\nThen ask about it:\n")
-    typer.echo('  mindpalace recall "What database does production use?"')
+    typer.echo('  verilore recall "What database does production use?"')
     typer.echo(
-        "\nAlready have Markdown? Point it at the directory:\n"
-        "  mindpalace ingest-repo ./docs/adr"
+        "\nAlready have Markdown? Point it at the directory:\n" "  verilore ingest-repo ./docs/adr"
     )
 
 
@@ -532,7 +531,7 @@ def feedback(
     supply: a grader knows what the system said, not what you needed.
 
     Over a couple of weeks of real use those verdicts are a graded sample of how
-    the thing actually performs. Two weeks from now, `mindpalace feedback-summary`
+    the thing actually performs. Two weeks from now, `verilore feedback-summary`
     reads them back.
     """
     from api.services.query_log import feedback as grade
@@ -545,7 +544,7 @@ def feedback(
     if row is None:
         typer.echo(
             f"No logged call has query_id {query_id!r}.\n"
-            "Check the id a recall or remember reported, and that MIND_PALACE_QUERY_LOG "
+            "Check the id a recall or remember reported, and that VERILORE_QUERY_LOG "
             "was on when it ran.",
             err=True,
         )
@@ -601,7 +600,7 @@ def feedback_summary(
     typer.echo(f"calls: {len(calls)}    graded: {len(graded)}")
     if not graded:
         typer.echo(
-            "\nNo verdicts yet. Grade one with: mindpalace feedback <query_id> --verdict right"
+            "\nNo verdicts yet. Grade one with: verilore feedback <query_id> --verdict right"
         )
         return
 
@@ -689,14 +688,14 @@ def explain(
             "--json",
             help=(
                 "Print the canonical response and its receipt as one JSON object, "
-                "the same shape `mindpalace receipt` writes."
+                "the same shape `verilore receipt` writes."
             ),
         ),
     ] = False,
     verbose: State = False,
     debug: Debug = False,
 ) -> None:
-    """Show why Mind Palace returned that answer.
+    """Show why Verilore returned that answer.
 
     Reads the recorded provenance: the source document and version, the time the
     answer was true, the exact evidence characters, the supersession history, and
@@ -741,7 +740,7 @@ def _explain_json(response) -> str:
     `explain --json` for the basis of an answer wants the digest, and dropping it
     would make the machine-readable form strictly less useful than the human one.
 
-    The shape is the one `mindpalace receipt` already writes, so there is one bundle
+    The shape is the one `verilore receipt` already writes, so there is one bundle
     format rather than two.
     """
     import json as json_module
@@ -787,26 +786,26 @@ def history(
 
 
 def _client(base_url: str | None, *, runtime: bool = True):
-    """A client for local memory, or for a Mind Palace service someone else runs.
+    """A client for local memory, or for a Verilore service someone else runs.
 
     Both go through the same SDK, so the CLI cannot drift from the SDK, the REST
     API or MCP: there is one client and one service underneath all four.
 
     ``runtime`` lets a local command use the warm background runtime when one is
     running, and fall back to this process when one is not. The user is never asked
-    which they are getting: a one-shot `mindpalace recall` costs 6.5 s because it has
+    which they are getting: a one-shot `verilore recall` costs 6.5 s because it has
     to import the embedding stack, and that is 89% startup and 61 ms of memory work.
     Only `recall`-shaped commands ask for it, because a command that does not read
     memory has nothing to gain and a writer is better off owning its own connection.
 
-    Under `MIND_PALACE_LEXICAL=1` the runtime is bypassed -- it exists to hold the
+    Under `VERILORE_LEXICAL=1` the runtime is bypassed -- it exists to hold the
     model, and a model-free read does not want it -- and the mode is stated once on
     stderr, so it never contaminates an answer or a JSON document.
     """
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     if base_url:
-        return MindPalace(base_url=base_url)
+        return Verilore(base_url=base_url)
     # Best-effort local recovery: if Postgres is down, try to start a stopped
     # local container before we attempt to connect.
     try:
@@ -822,8 +821,8 @@ def _client(base_url: str | None, *, runtime: bool = True):
         import sys
 
         print(NOTE, file=sys.stderr)
-        return MindPalace(runtime=False)
-    return MindPalace(runtime=runtime and runtime_module.enabled())
+        return Verilore(runtime=False)
+    return Verilore(runtime=runtime and runtime_module.enabled())
 
 
 def _warm_runtime() -> None:
@@ -962,7 +961,7 @@ def receipt(
             typer.echo(f"Could not write {out}: {exc.strerror or exc}", err=True)
             raise typer.Exit(code=2) from exc
         typer.echo(f"Receipt written to {out}")
-        typer.echo(f"Verify it anywhere with: mindpalace verify {out}")
+        typer.echo(f"Verify it anywhere with: verilore verify {out}")
         return
     typer.echo(payload)
 
@@ -970,7 +969,7 @@ def receipt(
 @app.command()
 def verify(
     receipt_file: Annotated[
-        str, typer.Argument(help="A receipt, a proof, or a file written by `mindpalace receipt`.")
+        str, typer.Argument(help="A receipt, a proof, or a file written by `verilore receipt`.")
     ],
     pack: Annotated[
         str | None,
@@ -994,9 +993,9 @@ def verify(
 ) -> None:
     """Verify a Memory Receipt offline: no server, database, model or network.
 
-    Accepts every artifact `mindpalace-proof verify` accepts, and checks them with
+    Accepts every artifact `verilore-proof verify` accepts, and checks them with
     the same code, so there is one verification contract rather than two. A file
-    written by `mindpalace receipt` needs no `--pack`.
+    written by `verilore receipt` needs no `--pack`.
 
     VERIFIED means the artifact still represents the state the receipt describes.
     It does not mean the original claim was factually true, and without a trust
@@ -1026,7 +1025,7 @@ def _verify_with_pack(
 
 
 def _verify_response_bundle(receipt_file: str, trusted_digest: str | None, json_out: bool) -> None:
-    """Verify a file written by `mindpalace receipt`: the response it describes is in it."""
+    """Verify a file written by `verilore receipt`: the response it describes is in it."""
     import json as json_module
     from pathlib import Path
 
@@ -1052,7 +1051,7 @@ def _verify_response_bundle(receipt_file: str, trusted_digest: str | None, json_
         typer.echo(f"{receipt_file} is not valid JSON: {exc}", err=True)
         typer.echo(
             "\nWhat to do:\n  A receipt is written by: "
-            'mindpalace receipt "<question>" -o receipt.json'
+            'verilore receipt "<question>" -o receipt.json'
         )
         raise typer.Exit(code=2) from exc
 
@@ -1062,7 +1061,7 @@ def _verify_response_bundle(receipt_file: str, trusted_digest: str | None, json_
         typer.echo(
             f"{receipt_file} needs the artifact it describes.\n"
             "\nWhat to do:\n"
-            f'  For a file from `mindpalace receipt`: mindpalace receipt "<question>"'
+            f'  For a file from `verilore receipt`: verilore receipt "<question>"'
             f" -o {receipt_file}\n"
             f"  For a bare receipt or a proof: add --pack <memory-pack.json>",
             err=True,
@@ -1131,7 +1130,7 @@ def _verify_response_bundle(receipt_file: str, trusted_digest: str | None, json_
             typer.echo(
                 "\nThe receipt describes memory that has since changed, or the artifact "
                 "has been altered.\nRe-issue it with: "
-                'mindpalace receipt "<question>" -o receipt.json'
+                'verilore receipt "<question>" -o receipt.json'
             )
         elif not result["query_binding"]:
             typer.echo("  the receipt answers a different question than the artifact")
@@ -1340,7 +1339,7 @@ def corpora() -> None:
         return
     if not rows:
         typer.echo("No corpora yet. Record a memory to create one:\n")
-        typer.echo('  mindpalace remember "Production uses PostgreSQL."')
+        typer.echo('  verilore remember "Production uses PostgreSQL."')
         return
     for row in rows:
         typer.echo(row["name"])
@@ -1419,7 +1418,7 @@ def ingest_repo(
     did not.
 
     The ingest-root check the route performs is applied here too, so a path
-    outside MIND_PALACE_INGEST_ROOTS is refused identically rather than being
+    outside VERILORE_INGEST_ROOTS is refused identically rather than being
     quietly allowed by dropping the HTTP hop. `--corpus` is the same option every
     other write command already carries; the route read it off the request body.
 
@@ -1429,7 +1428,7 @@ def ingest_repo(
     source is gone.
     """
     from api.services.ingest_paths import IngestPathRefused, require_permitted
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     try:
         resolved = require_permitted(path)
@@ -1453,7 +1452,7 @@ def ingest_repo(
         pass
 
     try:
-        client = MindPalace(_corpus_or_fail(corpus))
+        client = Verilore(_corpus_or_fail(corpus))
     except Exception as exc:  # noqa: BLE001 - every failure becomes guidance
         _fail(exc, verbose, debug)
         return
@@ -2074,7 +2073,7 @@ def eval_retrieval(
 
 credentials_app = typer.Typer(
     name="credential",
-    help="Issue, list and revoke the credentials callers present to Mind Palace.",
+    help="Issue, list and revoke the credentials callers present to Verilore.",
     no_args_is_help=True,
 )
 app.add_typer(credentials_app)
@@ -2089,7 +2088,7 @@ def _authz_session():
     happens to be current -- including the default local one, which is
     unrestricted but is *not* an identity.
 
-    It also connects as `MIND_PALACE_ADMIN_DATABASE_URL` when that is set,
+    It also connects as `VERILORE_ADMIN_DATABASE_URL` when that is set,
     because these commands read and write `memory_principals` directly and the
     least-privileged runtime role is deliberately denied exactly that. Listing
     every credential in one query is the enumeration that migration `009` removes
@@ -2102,7 +2101,7 @@ def _authz_session():
     from api.services.authz import ADMIN_PRINCIPAL
     from api.services.db import admin_session_scope, principal_scope, session_scope
 
-    admin_url = os.getenv("MIND_PALACE_ADMIN_DATABASE_URL") or os.getenv("MIGRATION_DATABASE_URL")
+    admin_url = os.getenv("VERILORE_ADMIN_DATABASE_URL") or os.getenv("MIGRATION_DATABASE_URL")
     # Both are `@asynccontextmanager` helpers, so calling either one *produces* the
     # context manager. `scope` is already one; entering it again would call it as a
     # decorator and fail with a message about a missing argument.
@@ -2143,7 +2142,7 @@ def credential_issue(
 ) -> None:
     """Issue a credential and print its secret exactly once.
 
-    The corpus names must already exist: `mindpalace corpus` lists them, and the
+    The corpus names must already exist: `verilore corpus` lists them, and the
     first one is created by recording into it. Names come from server-side rows,
     so a credential can never be pointed at a corpus that is not already there.
 
@@ -2203,7 +2202,7 @@ def credential_list() -> None:
         return
     if not rows:
         typer.echo("No credentials yet. Issue one:")
-        typer.echo("  mindpalace credential issue my-app --corpus default")
+        typer.echo("  verilore credential issue my-app --corpus default")
         return
     for row in rows:
         state = "revoked" if row["disabled"] else "active"
@@ -2258,7 +2257,7 @@ def secret_rotate(
     """Rotate the scope HMAC secret in memory_server_secrets.
 
     Connects with admin/maintenance credentials. Prints the rotated value and
-    the steps to update MIND_PALACE_SCOPE_SECRET in the service environment.
+    the steps to update VERILORE_SCOPE_SECRET in the service environment.
     """
     import secrets as _secrets
     import sqlalchemy as sa
@@ -2303,8 +2302,8 @@ def secret_rotate(
         os.chmod(out, 0o600)
     typer.echo("")
     typer.echo("Update the service environment:")
-    typer.echo(f"  export MIND_PALACE_SCOPE_SECRET={secret}")
-    typer.echo("Then restart the service. Re-run mp_set_scope_token_enforcement(true)")
+    typer.echo(f"  export VERILORE_SCOPE_SECRET={secret}")
+    typer.echo("Then restart the service. Re-run vl_set_scope_token_enforcement(true)")
     typer.echo("if enforcement should remain enabled.")
 
 
@@ -2344,7 +2343,7 @@ def corpus_create(
     typer.echo(f"created corpus '{corpus['name']}' ({corpus['id'][:12]})")
     typer.echo("")
     typer.echo("Now grant a credential to it:")
-    typer.echo(f"  mindpalace credential issue my-app --corpus {name}")
+    typer.echo(f"  verilore credential issue my-app --corpus {name}")
 
 
 @corpora_app.command("reset")
@@ -2420,7 +2419,7 @@ def corpus_delete(
     if name == "default":
         typer.echo(
             "cannot delete the 'default' corpus; wipe it with "
-            "`mindpalace corpus reset default --yes` instead.",
+            "`verilore corpus reset default --yes` instead.",
             err=True,
         )
         raise typer.Exit(code=1)
@@ -2521,7 +2520,7 @@ def credential_ungrant(
 def posture() -> None:
     """Report whether this database connection actually enforces row-level security.
 
-    `MIND_PALACE_AUTH_MODE=required` is an application switch. Whether the
+    `VERILORE_AUTH_MODE=required` is an application switch. Whether the
     database honours the policies underneath depends on the role, and a
     superuser or a `BYPASSRLS` role ignores them entirely. This prints the
     answer for the role this process would connect as.
@@ -2553,7 +2552,7 @@ def posture() -> None:
             typer.echo(f"  [PROBLEM] {problem}")
         typer.echo("")
         typer.echo("This deployment gets no tenant isolation from the database.")
-        typer.echo("Use scripts/db/runtime_roles.sql and connect as mindpalace_runtime.")
+        typer.echo("Use scripts/db/runtime_roles.sql and connect as verilore_runtime.")
         raise typer.Exit(code=1)
 
 
@@ -2597,7 +2596,7 @@ def serve(
         typer.echo(f"Docs: http://{host}:{port}/docs")
         uvicorn.run("api.main:app", host=host, port=port, reload=reload)
         return
-    typer.echo("Start the HTTP API with: mindpalace serve --run")
+    typer.echo("Start the HTTP API with: verilore serve --run")
     typer.echo("Equivalent: uvicorn api.main:app --reload")
     typer.echo("Then visit http://localhost:8000/docs")
     typer.echo("")
@@ -2605,8 +2604,8 @@ def serve(
     typer.echo("REST, the HTTP SDK, MCP over a network, or another process.")
     typer.echo("")
     typer.echo("That is a local server. Before exposing one to a network:")
-    typer.echo("  MIND_PALACE_DEPLOYMENT=server MIND_PALACE_AUTH_MODE=required \\")
-    typer.echo("      mindpalace serve --run --host 0.0.0.0")
+    typer.echo("  VERILORE_DEPLOYMENT=server VERILORE_AUTH_MODE=required \\")
+    typer.echo("      verilore serve --run --host 0.0.0.0")
     typer.echo("In that mode the app refuses to start if authentication is off.")
 
 

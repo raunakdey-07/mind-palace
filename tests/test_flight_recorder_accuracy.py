@@ -1,6 +1,6 @@
 """The flight recorder describes the call that happened, and pytest does not use it.
 
-The log exists to grade two weeks of actual usage: `mindpalace feedback <query_id>`
+The log exists to grade two weeks of actual usage: `verilore feedback <query_id>`
 appends a verdict, and over a fortnight that is a graded sample of what a real
 agent asked. Two things made that file unusable, and both were invisible until the
 product was run on its own documentation.
@@ -15,7 +15,7 @@ question was filed against a row that reads as a failed recall.
 
 **The test suite wrote into the real log.** The recorder is on by default for a
 loopback connection, which is what the test database is, so every product call the
-suite made appended a row to `~/.mind-palace/logs/queries.jsonl`. Thirty-two
+suite made appended a row to `~/.verilore/logs/queries.jsonl`. Thirty-two
 thousand rows of invented product facts -- battery runtimes, mesh bands, campaign
 targets -- in the one file meant to hold real traffic. The isolation is an
 autouse session fixture in `conftest.py`; `test_the_suite_does_not_write_to_the_user_log`
@@ -32,9 +32,9 @@ from api.services import query_log
 
 
 @pytest.fixture
-def log(tmp_path, monkeypatch):
-    path = tmp_path / "logs" / "queries.jsonl"
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", str(path))
+def log(tvl_path, monkeypatch):
+    path = tvl_path / "logs" / "queries.jsonl"
+    monkeypatch.setenv("VERILORE_QUERY_LOG", str(path))
     return path
 
 
@@ -76,7 +76,7 @@ def _response(**overrides):
 
     base = {
         "query": "How large is the default install?",
-        "corpus": "mind-palace-docs",
+        "corpus": "verilore-docs",
         "current_memories": [],
         "historical_memories": [],
         "uncertain_memories": [],
@@ -208,7 +208,7 @@ def test_the_operation_name_is_the_one_the_caller_passed():
 def test_feedback_round_trips_on_a_history_row(log):
     """Item 3 of the brief, end to end and offline.
 
-    `mindpalace feedback` reads the row by `query_id` and appends a second line
+    `verilore feedback` reads the row by `query_id` and appends a second line
     pointing at it. A history row used to carry no claim ids and a status of
     `abstained`, so this is the exact case that could not be graded.
     """
@@ -261,8 +261,8 @@ def test_recall_and_history_get_distinct_rows_for_one_question(log):
 def test_the_suite_does_not_write_to_the_user_log():
     """The autouse session fixture in `conftest.py`, asserted rather than hoped for.
 
-    The recorder's default path is `$MIND_PALACE_DATA_DIR/logs/queries.jsonl`,
-    which in this session points into pytest's `tmp_path`. If the fixture ever
+    The recorder's default path is `$VERILORE_DATA_DIR/logs/queries.jsonl`,
+    which in this session points into pytest's `tvl_path`. If the fixture ever
     stops being autouse, or stops being session-scoped, this fails with the real
     home directory in the message rather than with 32,738 invented rows in a file
     somebody meant to grade from.
@@ -270,7 +270,7 @@ def test_the_suite_does_not_write_to_the_user_log():
     from api.services.query_log import default_path
 
     configured = default_path()
-    home_default = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    home_default = Path(os.path.expanduser("~/.verilore")) / "logs" / "queries.jsonl"
     assert configured != home_default, (
         "the flight recorder is pointed at the real user log during pytest; "
         "tests/conftest.py:session_recorder_isolation is not in effect"
@@ -285,7 +285,7 @@ def test_a_product_call_from_an_ordinary_test_lands_in_the_scratch_file():
 
     `execute()` is the single point every surface records through, so a call
     through it exercises the same code the real product uses. The row must appear
-    under pytest's `tmp_path` and the user's real log must not have grown.
+    under pytest's `tvl_path` and the user's real log must not have grown.
     """
     from api.services.memory_public import _logged_outcome
     from api.services.query_log import default_path
@@ -307,7 +307,7 @@ def test_a_product_call_from_an_ordinary_test_lands_in_the_scratch_file():
 
 def _user_log_size() -> int:
     """Rows in the developer's own log, or 0 when there is none."""
-    home = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    home = Path(os.path.expanduser("~/.verilore")) / "logs" / "queries.jsonl"
     if not home.exists():
         return 0
     return len(home.read_text().splitlines())

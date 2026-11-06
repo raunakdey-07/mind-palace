@@ -15,7 +15,7 @@ from api.main import app
 from api.models.memory import Evidence, MemoryRequest, MemoryResponse, MemoryWire
 from api.routers import query as ask_router
 from cli.memory import app as memory_app
-from mindpalace_sdk import MemoryClientError, MindPalace
+from verilore_sdk import MemoryClientError, Verilore
 
 QUESTION = "What changed about the deployment?"
 SELECTORS = {
@@ -32,7 +32,7 @@ INTENTS = ("auto", "current", "historical", "temporal", "change", "conflict", "p
 def service(monkeypatch):
     # Every test using this fixture means the in-process mocked service, never a
     # local runtime; disable the runtime probe so a leaked one cannot answer.
-    monkeypatch.setenv("MIND_PALACE_RUNTIME", "0")
+    monkeypatch.setenv("VERILORE_RUNTIME", "0")
     module = ModuleType("api.services.memory_public")
 
     class MemoryError(Exception):
@@ -162,7 +162,7 @@ async def test_query_errors_preserved(client, service):
 
 @pytest.mark.parametrize("intent", INTENTS)
 def test_sdk_local_query(service, intent_contract, intent):
-    response = MindPalace().memory.query(query=QUESTION, corpus="docs", intent=intent, **SELECTORS)
+    response = Verilore().memory.query(query=QUESTION, corpus="docs", intent=intent, **SELECTORS)
     assert response is service.execute.return_value
     service.execute.assert_awaited_once_with(
         "query", MemoryRequest(query=QUESTION, corpus="docs", intent=intent, **SELECTORS)
@@ -171,7 +171,7 @@ def test_sdk_local_query(service, intent_contract, intent):
 
 @pytest.mark.parametrize("override", [None, "other-docs"])
 def test_sdk_remote_query(service, intent_contract, remote, override):
-    mp = MindPalace("docs", base_url="http://test/", headers={"X-Test": "adapter"}, timeout=7)
+    mp = Verilore("docs", base_url="http://test/", headers={"X-Test": "adapter"}, timeout=7)
     response = mp.memory.query(query=QUESTION, corpus=override, snapshot_id="b" * 64)
     service.execute.assert_awaited_once_with(
         "query", MemoryRequest(query=QUESTION, corpus=override or "docs", snapshot_id="b" * 64)
@@ -201,7 +201,7 @@ def test_cli_query(service, intent_contract, remote, intent):
 def test_sdk_and_cli_query_errors(service, intent_contract, remote):
     service.execute.side_effect = service.MemoryError("corpus_not_found", "Missing corpus", 404)
     with pytest.raises(MemoryClientError) as error:
-        MindPalace(base_url="http://test").memory.query(query=QUESTION, corpus="docs")
+        Verilore(base_url="http://test").memory.query(query=QUESTION, corpus="docs")
     assert error.value.code == "corpus_not_found"
     assert error.value.status_code == 404
     result = CliRunner().invoke(memory_app, ["query", "--corpus", "docs", "--query", QUESTION])

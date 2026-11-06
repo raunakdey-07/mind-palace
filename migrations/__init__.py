@@ -9,7 +9,7 @@ reason: `setuptools` only includes files that live inside an importable package,
 and before this file existed the wheel shipped neither `migrations/` nor
 `alembic.ini`.
 
-That is not cosmetic. `pip install mindpalace-os` produced a 13 MB install from
+That is not cosmetic. `pip install verilore-os` produced a 13 MB install from
 which the documented third step --
 
     python -m alembic -c migrations/alembic.ini upgrade head
@@ -17,9 +17,9 @@ which the documented third step --
 -- could not run at all, because there was no `migrations/` directory to point
 at and no `alembic` to run it with. A newcomer following the README in a clean
 container hit `No module named alembic`, and a newcomer following the
-`pip install mindpalace-os` line hit `No such file or directory`.
+`pip install verilore-os` line hit `No such file or directory`.
 
-`mindpalace init` now applies the schema itself when it can find this package,
+`verilore init` now applies the schema itself when it can find this package,
 so the bare wheel reaches a working first command. The README step still works
 for a source checkout, and both are covered by the clean-room job.
 """

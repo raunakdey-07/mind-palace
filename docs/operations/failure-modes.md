@@ -9,12 +9,12 @@ repository already does about it. Sources: `api/services/memory_feed.py`,
 ## Cursor and feed
 
 **Cursor signing is not configured.** A missing or blank
-`MIND_PALACE_CURSOR_SECRET` raises `503 cursor_unavailable`; a secret shorter
+`VERILORE_CURSOR_SECRET` raises `503 cursor_unavailable`; a secret shorter
 than 32 bytes raises the same code with a configuration message. There is no
 predictable fallback. Compose requires the variable explicitly
-(`docker-compose.yml` uses `${MIND_PALACE_CURSOR_SECRET:?...}`) rather than
+(`docker-compose.yml` uses `${VERILORE_CURSOR_SECRET:?...}`) rather than
 picking a development value. Detection: the `503` code and the
-`mindpalace.ops` error field.
+`verilore.ops` error field.
 
 **The signing secret changed.** Outstanding cursors fail signature validation
 and come back as `422 invalid_cursor`. Clients must restart a traversal. Detect
@@ -53,13 +53,13 @@ database, so the process starts and answers `GET /health/live` with
 `{"status":"alive"}`. A container or orchestrator that probes liveness keeps a
 running process; one that probes readiness removes it from service. The legacy
 `/health` route always answers `200` and is not the dependency-aware signal, so
-`docker-compose.yml` and `mindpalace doctor` use `/health/ready`.
+`docker-compose.yml` and `verilore doctor` use `/health/ready`.
 
 **Readiness is checked against a missing schema.** `GET /health/ready` requires
 connectivity plus `corpora`, `memory_documents`, and `memory_versions`. Missing
 relations, connection refusal, timeout, and other failures return a sanitized
 `503` with no exception detail. The timeout is
-`MIND_PALACE_READINESS_TIMEOUT_SECONDS`, default 2 seconds.
+`VERILORE_READINESS_TIMEOUT_SECONDS`, default 2 seconds.
 
 **A backend outage looks like an empty index.** The search router converts
 `OperationalError` and semantic model failures to a sanitized `503` rather than
@@ -140,7 +140,7 @@ requiring the seal before a snapshot commits. It is not part of the immutable
 15.4 service. Without that migration, membership rows remain append-only but a
 direct writer can add another membership row for an existing snapshot.
 
-**A live index is missing.** The `mindpalace reindex --corpus NAME` command
+**A live index is missing.** The `verilore reindex --corpus NAME` command
 rebuilds `documents`, `chunks`, and `ingestion_manifest` from archived source
 versions. It never calls `record_version`, so it creates no archive version or
 feed event. Paths that were never archived remain untouched.
@@ -173,14 +173,14 @@ mistake. A caller may only address corpora its credential covers, and that is
 decided at one choke point and again by row-level security; see
 [`docs/security.md`](../security.md). What a corpus name can never do is
 establish the caller's authority to reach it. Local use has no authentication at
-all (`MIND_PALACE_AUTH_MODE` defaults to `off`), so a single-user deployment
+all (`VERILORE_AUTH_MODE` defaults to `off`), so a single-user deployment
 relies on the network layer exactly as before — which is why
-`MIND_PALACE_DEPLOYMENT=server` refuses to start in that combination.
+`VERILORE_DEPLOYMENT=server` refuses to start in that combination.
 
 **Archive rows are treated as erasable.** They are not, through ordinary DML.
 Statement-level triggers reject `UPDATE`, `DELETE`, and `TRUNCATE` on the archive
 tables, so a corpus cannot be removed by a query. Erasure goes through
-`mindpalace_erase_corpus`, a `SECURITY DEFINER` function that takes an advisory
+`verilore_erase_corpus`, a `SECURITY DEFINER` function that takes an advisory
 lock, deletes in dependency order, and reports per-table counts. It is
 transactional and idempotent. It does *not* remove exported receipts, Memory
 Packs, database backups, or any copy already outside the database; see
@@ -203,7 +203,7 @@ identity, and no MOVED state is inferred.
 
 | Condition | Result |
 |---|---|
-| `MIND_PALACE_CURSOR_SECRET` unset or under 32 bytes | `503 cursor_unavailable`; feed unavailable |
+| `VERILORE_CURSOR_SECRET` unset or under 32 bytes | `503 cursor_unavailable`; feed unavailable |
 | Cursor from another corpus | `422 cursor_corpus_mismatch` |
 | Altered cursor, wrong shape, non-canonical base64, wrong version or feed | `422 invalid_cursor` |
 | `page_size` outside 1 to 500 | `422 invalid_page_size` |
@@ -217,8 +217,8 @@ identity, and no MOVED state is inferred.
 | In-range budget too small for the empty envelope | `422 invalid_budget` |
 | Empty `query` for the `query` operation | `422 invalid_query` |
 | Temporal intent without a cutoff, or an unresolvable stage name | `422 invalid_timestamp` |
-| `MIND_PALACE_INGEST_ROOTS=none` and a filesystem ingestion route | `403`, naming the setting |
-| Path outside `MIND_PALACE_INGEST_ROOTS` | `403`, without naming the roots |
+| `VERILORE_INGEST_ROOTS=none` and a filesystem ingestion route | `403`, naming the setting |
+| Path outside `VERILORE_INGEST_ROOTS` | `403`, without naming the roots |
 | Unhandled error in a handler | `500 internal_error` — no detail, no traceback |
 
 The SDK preserves the server's code, message, and status for remote failures and
@@ -227,7 +227,7 @@ its own conditions. The CLI prints `code: message` on stderr and exits non-zero.
 
 ## Observability limits
 
-One structured `mindpalace.ops` record is emitted per feed request with bounded,
+One structured `verilore.ops` record is emitted per feed request with bounded,
 non-content fields: operation, corpus name, requested page size, returned count,
 `has_more`, whether a cursor was supplied, latency, and error category. Context
 and search operations emit stage timings, candidate and returned counts, token
@@ -274,8 +274,8 @@ options below need an owner decision.
 
 | Command | Kind | Does |
 |---|---|---|
-| `mindpalace corpora` | top-level command | **Lists** the corpora you can read and write. One name per line. Read-only. |
-| `mindpalace corpus` | Typer sub-group (`corpora_app = typer.Typer(name="corpus")`) | **Administrative.** Sub-commands `create` and `delete`. |
+| `verilore corpora` | top-level command | **Lists** the corpora you can read and write. One name per line. Read-only. |
+| `verilore corpus` | Typer sub-group (`corpora_app = typer.Typer(name="corpus")`) | **Administrative.** Sub-commands `create` and `delete`. |
 
 Source: `cli/main.py:806` defines `def corpora()` as an `@app.command()`;
 `cli/main.py:1624` defines `corpora_app` with `name="corpus"` and
@@ -293,8 +293,8 @@ anything failing.
 offers both, and picking the wrong one gives either a list of sub-commands or a
 list of corpora. Neither error message says "did you mean the other one".
 
-`mindpalace corpora` is also what the CLI itself recommends on error — the
-`corpus_not_found` handler prints "List the corpora you have with: mindpalace
+`verilore corpora` is also what the CLI itself recommends on error — the
+`corpus_not_found` handler prints "List the corpora you have with: verilore
 corpora" — so a user who mistypes `corpus` is pointed at `corpora` and may
 reasonably conclude `corpus` does not exist at all.
 
@@ -307,7 +307,7 @@ reasonably conclude `corpus` does not exist at all.
 2. **Rename.** `corpus` group keeps its name; the listing becomes `corpora list`,
    and bare `corpora` stays as the shorthand. Cleanest end state, clearest that
    administration and reading are different activities. Cost: one breaking change
-   for anyone scripting `mindpalace corpora`. Needs a CHANGELOG entry and a
+   for anyone scripting `verilore corpora`. Needs a CHANGELOG entry and a
    deprecation window.
 3. **Leave it.** Document it and change nothing. Zero risk. Cost: the ambiguity
    persists for every new user, and the error message keeps sending people to a

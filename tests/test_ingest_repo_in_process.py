@@ -1,4 +1,4 @@
-"""`mindpalace ingest-repo` must work in-process.
+"""`verilore ingest-repo` must work in-process.
 
 It was an HTTP client to a hard-coded ``http://localhost:8000``, so the one
 command the README documents for getting a document in was also the only one
@@ -42,8 +42,8 @@ The checkout service uses PostgreSQL. We moved it in March.
 
 
 @pytest.fixture
-def repo(tmp_path):
-    d = tmp_path / "docs"
+def repo(tvl_path):
+    d = tvl_path / "docs"
     d.mkdir()
     (d / "checkout.md").write_text(DOC)
     return d
@@ -58,9 +58,9 @@ def _invoke(args, roots: str | None):
     env = dict(os.environ)
     env.pop("DATABASE_URL", None)
     if roots is None:
-        env.pop("MIND_PALACE_INGEST_ROOTS", None)
+        env.pop("VERILORE_INGEST_ROOTS", None)
     else:
-        env["MIND_PALACE_INGEST_ROOTS"] = roots
+        env["VERILORE_INGEST_ROOTS"] = roots
     return CliRunner().invoke(app, args, env=env)
 
 
@@ -79,14 +79,14 @@ def test_ingest_repo_needs_no_server(repo):
     assert "chunks" in result.output
 
 
-def test_ingest_repo_refuses_a_path_outside_the_ingest_roots(repo, tmp_path):
+def test_ingest_repo_refuses_a_path_outside_the_ingest_roots(repo, tvl_path):
     """The control the HTTP route applies must still apply without the HTTP hop.
 
     Before this change the 403 came from the route. Dropping the hop would have
     removed it; it is applied in-process instead, and the message does not name
     the allowed roots.
     """
-    allowed = tmp_path / "allowed"
+    allowed = tvl_path / "allowed"
     allowed.mkdir()
 
     result = _invoke(["ingest-repo", str(repo), "--corpus", CORPUS], roots=str(allowed))
@@ -96,7 +96,7 @@ def test_ingest_repo_refuses_a_path_outside_the_ingest_roots(repo, tmp_path):
     assert str(repo) not in result.output
 
 
-def test_ingest_repo_reports_a_missing_path_instead_of_a_keyerror(tmp_path):
+def test_ingest_repo_reports_a_missing_path_instead_of_a_keyerror(tvl_path):
     """A regression this change could have introduced.
 
     The HTTP route answered `400 Path not found`. In-process, `sync_repo`
@@ -105,7 +105,7 @@ def test_ingest_repo_reports_a_missing_path_instead_of_a_keyerror(tmp_path):
     would get `Why: 'added'`, which says nothing.
     """
     result = _invoke(
-        ["ingest-repo", str(tmp_path / "nope"), "--corpus", CORPUS], roots=str(tmp_path)
+        ["ingest-repo", str(tvl_path / "nope"), "--corpus", CORPUS], roots=str(tvl_path)
     )
 
     assert result.exit_code == 1

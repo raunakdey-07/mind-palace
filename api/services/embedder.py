@@ -9,7 +9,7 @@ corruption bug, so the model identity must always travel with the vectors.
 
 `sentence-transformers` costs about 10.8 s to import and warm on this machine,
 measured: `import torch` 1.65 s, `import sentence_transformers` 4.50 s, first
-encode 4.69 s. A cold `mindpalace recall` paid all of it, on a machine where
+encode 4.69 s. A cold `verilore recall` paid all of it, on a machine where
 `torch.cuda.is_available()` is False and every byte of the CUDA wheels it drags
 in is dead weight. The install is 5.1 GB.
 
@@ -214,10 +214,10 @@ def _intra_op_threads() -> int:
     the reductions happen in, and not their result, so this is a cost change and
     not a behaviour change.
 
-    `MIND_PALACE_ONNX_THREADS` overrides the choice, for a machine whose shape
+    `VERILORE_ONNX_THREADS` overrides the choice, for a machine whose shape
     this cannot see.
     """
-    override = (os.getenv("MIND_PALACE_ONNX_THREADS") or "").strip()
+    override = (os.getenv("VERILORE_ONNX_THREADS") or "").strip()
     if override:
         try:
             return max(1, int(override))

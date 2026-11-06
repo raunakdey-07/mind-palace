@@ -52,7 +52,7 @@ def _source_line(response: MemoryResponse, claim) -> str:
     """Where the answer came from, and the id that names it.
 
     The claim id is on every answer, not only on ambiguous ones. It is what
-    `mindpalace remember --supersedes` takes, and `--json` prints the canonical
+    `verilore remember --supersedes` takes, and `--json` prints the canonical
     form, which deliberately excludes the retrieval diagnostics -- so without it
     here there is no way for a CLI user to get a claim id at all.
     """
@@ -84,7 +84,7 @@ def _confidence_line(response: MemoryResponse) -> list[str]:
             lines.append(f"      {candidate.path} ({candidate.status.lower()}) claim {ids}")
         lines.append(
             "\nRead the source for the one you meant, or retire the wrong one with\n"
-            'mindpalace remember "<new fact>" --supersedes <claim-id>'
+            'verilore remember "<new fact>" --supersedes <claim-id>'
         )
     elif getattr(response, "unmatched_subparts", None):
         lines.append("")
@@ -128,7 +128,7 @@ def render_recall(
             lines.append(
                 "\nNo answer is given while sources disagree. Resolve it by "
                 "re-ingesting the newer document as a new version of the same "
-                "path, or by using `mindpalace remember` with the same --key. "
+                "path, or by using `verilore remember` with the same --key. "
                 "See docs/authoring.md."
             )
             return "\n".join(lines)
@@ -145,7 +145,7 @@ def render_recall(
             "with prose and no such lines contributes nothing here. See\n"
             "docs/authoring.md for both forms."
         )
-        lines.append("\nNothing was invented: Mind Palace records only what was remembered.")
+        lines.append("\nNothing was invented: Verilore records only what was remembered.")
         return "\n".join(lines)
 
     for index, claim in enumerate(current, 1):
@@ -178,7 +178,7 @@ def render_recall(
         lines.append(render_explain(response))
     else:
         lines.append("")
-        lines.append('Ask for the basis with: mindpalace explain "<question>"')
+        lines.append('Ask for the basis with: verilore explain "<question>"')
     return "\n".join(lines)
 
 
@@ -299,7 +299,7 @@ def _explain_verification(response: MemoryResponse) -> str:
     if not response.receipt:
         lines.append("  no receipt on this response")
         lines.append(
-            '  Get one with: mindpalace receipt "' + (response.query or "your question") + '"'
+            '  Get one with: verilore receipt "' + (response.query or "your question") + '"'
         )
         return "\n".join(lines)
     digest = response.receipt.get("memory_pack_digest")
@@ -307,8 +307,8 @@ def _explain_verification(response: MemoryResponse) -> str:
     lines.append(f"  receipt available: yes ({count} receipt(s))")
     lines.append(f"  authoritative digest: {digest}")
     lines.append("  export and verify offline with:")
-    lines.append(f'    mindpalace receipt "{response.query}" -o receipt.json')
-    lines.append("    mindpalace verify receipt.json")
+    lines.append(f'    verilore receipt "{response.query}" -o receipt.json')
+    lines.append("    verilore verify receipt.json")
     lines.append("  Authenticity is not established without a trust anchor you pinned yourself.")
     return "\n".join(lines)
 

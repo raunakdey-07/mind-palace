@@ -4,20 +4,20 @@
 """Standalone proof CLI: mint and verify Verifiable Memory proofs.
 
 Deliberately built on `argparse` from the standard library, not on the project's
-Typer CLI. Typer is an OPTIONAL extra (``pip install mindpalace-os[cli]``), and a
+Typer CLI. Typer is an OPTIONAL extra (``pip install verilore-os[cli]``), and a
 verification command that fails without an optional dependency would defeat the
 purpose: anyone who can install the package must be able to check a proof without a
 server, a database, a model or a network. Nothing here imports typer, or anything
 from `api` or `cli`.
 
-    mindpalace-proof verify receipt.json          # written by `mindpalace receipt`
-    mindpalace-proof verify proof.json --pack memory-pack.json
-    mindpalace-proof prove  --pack memory-pack.json --claim-key architecture.postgres -o proof.json
-    mindpalace-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
+    verilore-proof verify receipt.json          # written by `verilore receipt`
+    verilore-proof verify proof.json --pack memory-pack.json
+    verilore-proof prove  --pack memory-pack.json --claim-key architecture.postgres -o proof.json
+    verilore-proof receipt --pack memory-pack.json --claim-key architecture.postgres \
 -o receipt.json
-    mindpalace-proof explain receipt.json --pack memory-pack.json
+    verilore-proof explain receipt.json --pack memory-pack.json
 
-A file written by `mindpalace receipt` is self-contained: it carries the response
+A file written by `verilore receipt` is self-contained: it carries the response
 it describes, so verifying it needs no --pack and nothing but this package.
 
 Exit codes are stable and are part of the contract:
@@ -93,9 +93,9 @@ def _summarise(proof: dict) -> list[str]:
 def _load_target(path: str) -> tuple[dict, str]:
     """Accept a response bundle, a receipt, or a bare proof.
 
-    The response bundle is what `mindpalace receipt` writes: the authoritative
+    The response bundle is what `verilore receipt` writes: the authoritative
     response next to the receipt describing it. Reading it here means someone who
-    has only `pip install mindpalace-os` -- no CLI extra, no server, no database --
+    has only `pip install verilore-os` -- no CLI extra, no server, no database --
     can still check a receipt they were handed.
     """
     data = _read_json(path, "artifact")
@@ -106,13 +106,13 @@ def _load_target(path: str) -> tuple[dict, str]:
     if isinstance(data, dict) and "proof_version" in data:
         return data, "proof"
     raise ProofError(
-        f"{path!r} is not a Mind Palace receipt. It is neither a response bundle "
-        "(written by `mindpalace receipt`), a receipt, nor a proof."
+        f"{path!r} is not a Verilore receipt. It is neither a response bundle "
+        "(written by `verilore receipt`), a receipt, nor a proof."
     )
 
 
 def _verify_response_bundle(target: dict, trusted_digest: str | None) -> dict:
-    """Check a `mindpalace receipt` file: the receipt against the response it covers."""
+    """Check a `verilore receipt` file: the receipt against the response it covers."""
     bundle = target.get("receipt")
     artifact = target.get("response")
     if not isinstance(bundle, dict) or not isinstance(artifact, dict):
@@ -220,7 +220,7 @@ def cmd_verify(args) -> int:
 
     if not args.pack:
         raise ProofError(
-            f"--pack is required for a {kind}. A file written by `mindpalace receipt` "
+            f"--pack is required for a {kind}. A file written by `verilore receipt` "
             "carries its own artifact and needs no --pack."
         )
     pack = _load_pack(args.pack)
@@ -466,7 +466,7 @@ def cmd_explain(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="mindpalace-proof",
+        prog="verilore-proof",
         description=(
             "Mint and verify Memory Receipts and proofs of recorded memory state. "
             "Verification needs no server, database, model or network."
@@ -480,7 +480,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument(
         "target",
         help=(
-            "a receipt written by `mindpalace receipt`, a receipt.json, or a "
+            "a receipt written by `verilore receipt`, a receipt.json, or a "
             "proof.json; any of the three is accepted"
         ),
     )
@@ -488,7 +488,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--pack",
         help=(
             "the authoritative Memory Pack. Not needed for a file written by "
-            "`mindpalace receipt`, which carries its own artifact."
+            "`verilore receipt`, which carries its own artifact."
         ),
     )
     verify_parser.add_argument(

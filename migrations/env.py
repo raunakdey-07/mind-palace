@@ -25,7 +25,7 @@ def get_url():
     The runtime app uses asyncpg; migrations run synchronously, so any
     async driver prefix is rewritten to psycopg2 (a repo dependency).
     """
-    url = os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    url = os.getenv("DATABASE_URL", "postgresql://vladmin:secret@localhost:5432/verilore")
     return (
         url.replace("postgresql+psycopg://", "postgresql+psycopg2://")
         .replace("postgresql+asyncpg://", "postgresql+psycopg2://")

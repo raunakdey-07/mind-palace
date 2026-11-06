@@ -164,9 +164,9 @@ def _reset(conn) -> None:
     )
     conn.execute(
         sa.text(
-            "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
-            "SELECT set_config('mindpalace.erasure', 'on', true); "
-            "SELECT mindpalace_erase_corpus(id) FROM corpora WHERE id = ANY(:ids)"
+            "SELECT set_config('verilore.tenant_scope', '{*}', true); "
+            "SELECT set_config('verilore.erasure', 'on', true); "
+            "SELECT verilore_erase_corpus(id) FROM corpora WHERE id = ANY(:ids)"
         ),
         {"ids": ids or [""]},
     )
@@ -190,7 +190,7 @@ def _provision() -> None:
                 ),
                 # `RUNTIME_ROLE`, not the literal shipped name. The harness now
                 # provisions a per-session role so it cannot rotate the cluster's
-                # `mindpalace_runtime` password; a hardcoded name here would check
+                # `verilore_runtime` password; a hardcoded name here would check
                 # a role nobody provisioned and fail for the wrong reason.
                 {"role": RUNTIME_ROLE},
             ).one()
@@ -583,11 +583,11 @@ async def test_a_tenant_scoped_credential_cannot_mint_a_new_corpus(world):
     assert response.json()["detail"]["code"] == "forbidden"
 
 
-async def test_sync_cannot_write_into_another_organisations_corpus(world, tmp_path):
+async def test_sync_cannot_write_into_another_organisations_corpus(world, tvl_path):
     response = await world.post(
         f"/api/corpora/{BETA_CORPORA['brand']}/sync",
         "alpha-admin",
-        json={"path": str(tmp_path)},
+        json={"path": str(tvl_path)},
     )
     assert response.status_code == 404
 

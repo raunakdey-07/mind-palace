@@ -68,9 +68,9 @@ async def test_the_profile_matrix_is_refused_where_it_must_be(monkeypatch):
 
     def configure(deployment: str | None, mode: str | None, roots: str | None):
         for name, value in (
-            ("MIND_PALACE_DEPLOYMENT", deployment),
-            ("MIND_PALACE_AUTH_MODE", mode),
-            ("MIND_PALACE_INGEST_ROOTS", roots),
+            ("VERILORE_DEPLOYMENT", deployment),
+            ("VERILORE_AUTH_MODE", mode),
+            ("VERILORE_INGEST_ROOTS", roots),
         ):
             if value is None:
                 monkeypatch.delenv(name, raising=False)
@@ -111,7 +111,7 @@ async def test_the_profile_matrix_is_refused_where_it_must_be(monkeypatch):
     for unknown in ("prod", "production", "shared", ""):
         configure(unknown, "required", None)
         problems = authz.server_mode_errors()
-        assert problems, f"MIND_PALACE_DEPLOYMENT={unknown!r} must be refused"
+        assert problems, f"VERILORE_DEPLOYMENT={unknown!r} must be refused"
         assert any("not a known deployment profile" in p for p in problems), problems
 
     # A differently-cased value is not a different profile; it is the same one.
@@ -124,9 +124,9 @@ async def test_a_local_deployment_is_never_refused_for_anything(monkeypatch):
     from api.services import authz
     from api.services.ingest_paths import server_mode_errors as ingest_problems
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.delenv("MIND_PALACE_INGEST_ROOTS", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.delenv("VERILORE_INGEST_ROOTS", raising=False)
     assert authz.server_mode_errors() == []
     assert ingest_problems() == []
     authz.assert_server_configuration()
@@ -135,7 +135,7 @@ async def test_a_local_deployment_is_never_refused_for_anything(monkeypatch):
 async def test_an_unknown_profile_refuses_before_the_database_is_touched():
     """The refusal is a configuration error, not a connection error.
 
-    It has to be reachable without a database, or `mindpalace init` and the
+    It has to be reachable without a database, or `verilore init` and the
     offline verification tools would break in the one situation an operator most
     needs a clear message.
     """
@@ -143,19 +143,19 @@ async def test_an_unknown_profile_refuses_before_the_database_is_touched():
 
     from api.services import authz
 
-    previous = os.environ.pop("MIND_PALACE_DEPLOYMENT", None)
-    os.environ["MIND_PALACE_DEPLOYMENT"] = "nonsense"
+    previous = os.environ.pop("VERILORE_DEPLOYMENT", None)
+    os.environ["VERILORE_DEPLOYMENT"] = "nonsense"
     try:
         with pytest.raises(ValueError, match="not a known deployment profile"):
             authz.deployment_mode()
     finally:
-        os.environ.pop("MIND_PALACE_DEPLOYMENT", None)
+        os.environ.pop("VERILORE_DEPLOYMENT", None)
         if previous is not None:
-            os.environ["MIND_PALACE_DEPLOYMENT"] = previous
+            os.environ["VERILORE_DEPLOYMENT"] = previous
 
 
 async def test_auth_required_cannot_claim_what_the_middleware_does_not_do(monkeypatch):
-    """`MIND_PALACE_AUTH_MODE=required` must mean the middleware is installed.
+    """`VERILORE_AUTH_MODE=required` must mean the middleware is installed.
 
     A variable that says "authentication is on" while the middleware has been
     removed, or the prefixes list has grown to cover `/api`, would leave a
@@ -178,7 +178,7 @@ async def test_auth_required_cannot_claim_what_the_middleware_does_not_do(monkey
     for expected in ("/health", "/metrics"):
         assert expected in prefixes
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     assert auth_required() is True
 
 
@@ -228,7 +228,7 @@ async def test_the_runtime_role_owns_no_protected_table(runtime_db):
 async def test_the_runtime_role_cannot_enumerate_credential_hashes(runtime_db):
     """The privilege reduction, verified against the real role.
 
-    `mindpalace_resolve_credential` is the whole of what authentication needs.
+    `verilore_resolve_credential` is the whole of what authentication needs.
     If the role can also read the table, one query returns every tenant's hash,
     role and grant -- which is not something a memory service has any reason to
     be able to do.
@@ -246,7 +246,7 @@ async def test_the_runtime_role_can_still_authenticate(runtime_db):
     below does it with a real credential; this is the cheap half.
     """
     rows = await runtime_db.execute(
-        text("SELECT count(*) FROM mindpalace_resolve_credential(repeat('a', 64))")
+        text("SELECT count(*) FROM verilore_resolve_credential(repeat('a', 64))")
     )
     assert rows.scalar_one() == 0, "the narrow lookup must be callable and return nothing"
 
@@ -283,19 +283,19 @@ async def test_bypassrls_is_not_inherited_through_role_membership():
     engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
-            conn.execute(sa.text("DROP ROLE IF EXISTS mp_probe_child"))
-            conn.execute(sa.text("DROP ROLE IF EXISTS mp_probe_parent"))
-            conn.execute(sa.text("CREATE ROLE mp_probe_parent NOLOGIN BYPASSRLS"))
+            conn.execute(sa.text("DROP ROLE IF EXISTS vl_probe_child"))
+            conn.execute(sa.text("DROP ROLE IF EXISTS vl_probe_parent"))
+            conn.execute(sa.text("CREATE ROLE vl_probe_parent NOLOGIN BYPASSRLS"))
             conn.execute(
-                sa.text("CREATE ROLE mp_probe_child LOGIN NOSUPERUSER NOBYPASSRLS INHERIT")
+                sa.text("CREATE ROLE vl_probe_child LOGIN NOSUPERUSER NOBYPASSRLS INHERIT")
             )
-            conn.execute(sa.text("GRANT mp_probe_parent TO mp_probe_child"))
+            conn.execute(sa.text("GRANT vl_probe_parent TO vl_probe_child"))
             membership = conn.execute(
-                sa.text("SELECT pg_has_role('mp_probe_child', 'mp_probe_parent', 'MEMBER')")
+                sa.text("SELECT pg_has_role('vl_probe_child', 'vl_probe_parent', 'MEMBER')")
             ).scalar_one()
             assert membership is True, "the membership must exist for this to mean anything"
             row = conn.execute(
-                sa.text("SELECT rolbypassrls FROM pg_roles WHERE rolname = 'mp_probe_child'")
+                sa.text("SELECT rolbypassrls FROM pg_roles WHERE rolname = 'vl_probe_child'")
             )
             assert row.scalar_one() is False, (
                 "a role must not inherit BYPASSRLS through membership; if that ever "
@@ -305,8 +305,8 @@ async def test_bypassrls_is_not_inherited_through_role_membership():
         engine = sa.create_engine(sync_url())
         try:
             with engine.begin() as conn:
-                conn.execute(sa.text("DROP ROLE IF EXISTS mp_probe_child"))
-                conn.execute(sa.text("DROP ROLE IF EXISTS mp_probe_parent"))
+                conn.execute(sa.text("DROP ROLE IF EXISTS vl_probe_child"))
+                conn.execute(sa.text("DROP ROLE IF EXISTS vl_probe_parent"))
         finally:
             engine.dispose()
         engine.dispose()
@@ -388,7 +388,7 @@ async def test_a_writer_cannot_create_a_corpus(world):
             with pytest.raises(authz.AuthorizationError) as caught:
                 await create_corpus(db, "escalation-corpus")
     assert caught.value.status_code == 403
-    assert "mindpalace corpus create" in caught.value.message
+    assert "verilore corpus create" in caught.value.message
 
 
 async def test_a_credential_does_not_acquire_a_corpus_created_later():
@@ -436,15 +436,13 @@ async def test_a_credential_does_not_acquire_a_corpus_created_later():
                     {"n": "later-corpus-for-someone-else"},
                 )
             ).scalar_one()
-            await db.execute(text("SELECT mindpalace_erase_corpus(:c)"), {"c": corpus_id})
+            await db.execute(text("SELECT verilore_erase_corpus(:c)"), {"c": corpus_id})
         await db.commit()
 
 
 async def _corpus_names(db):
     rows = await db.execute(
-        text(
-            "SELECT c.name FROM corpora c " "WHERE mindpalace_allowed_corpus(c.id) ORDER BY c.name"
-        )
+        text("SELECT c.name FROM corpora c " "WHERE verilore_allowed_corpus(c.id) ORDER BY c.name")
     )
     return list(rows.scalars())
 
@@ -489,8 +487,8 @@ async def erasable():
                 sa.text("SELECT id FROM corpora WHERE name IN ('erase-target', 'erase-neighbour')")
             ).fetchall()
             for (corpus_id,) in rows:
-                conn.execute(sa.text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"))
-                conn.execute(sa.text("SELECT mindpalace_erase_corpus(:c)"), {"c": corpus_id})
+                conn.execute(sa.text("SELECT set_config('verilore.tenant_scope', '{*}', true)"))
+                conn.execute(sa.text("SELECT verilore_erase_corpus(:c)"), {"c": corpus_id})
     finally:
         admin.dispose()
 
@@ -519,9 +517,9 @@ async def erasable():
     yield ids
     async with session_scope() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
-            await db.execute(text("SELECT mindpalace_erase_corpus(:c)"), {"c": ids["erase-target"]})
+            await db.execute(text("SELECT verilore_erase_corpus(:c)"), {"c": ids["erase-target"]})
             await db.execute(
-                text("SELECT mindpalace_erase_corpus(:c)"), {"c": ids["erase-neighbour"]}
+                text("SELECT verilore_erase_corpus(:c)"), {"c": ids["erase-neighbour"]}
             )
         await db.commit()
 
@@ -758,7 +756,7 @@ async def test_erasure_by_name_is_the_only_way_in(erasable):
             with principal_scope(stranger):
                 with pytest.raises(Exception) as caught:
                     await db.execute(
-                        text("SELECT mindpalace_erase_corpus(:c)"),
+                        text("SELECT verilore_erase_corpus(:c)"),
                         {"c": erasable["erase-target"]},
                     )
             assert "corpus not found" in str(caught.value)
@@ -848,7 +846,7 @@ async def test_the_erased_corpus_stops_answering_requests(erasable, monkeypatch)
     from api.services.corpora import delete_corpus
     from api.services.db import principal_scope
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
     async with admin_session() as db:
         with principal_scope(authz.ADMIN_PRINCIPAL):
@@ -999,7 +997,7 @@ async def test_authentication_still_works_for_a_credential_the_role_cannot_admin
     """The reduction must not break authentication, which is the point of it.
 
     A principal issued by the maintenance role is resolved through
-    `mindpalace_resolve_credential`, which the runtime role may call, and its
+    `verilore_resolve_credential`, which the runtime role may call, and its
     corpus grants arrive in the same round trip. `required` mode is set explicitly
     because in `off` mode there is no credential to resolve and the test would
     pass on the local principal without exercising any of this.
@@ -1008,7 +1006,7 @@ async def test_authentication_still_works_for_a_credential_the_role_cannot_admin
     from api.services.authz import resolve_principal
     from api.services.db import principal_scope
 
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     await _seed_corpus("runtime-auth-probe-corpus")
     try:
         async with admin_session() as db:
@@ -1049,7 +1047,7 @@ async def _erase(name: str) -> None:
                 await db.execute(text("SELECT id FROM corpora WHERE name = :n"), {"n": name})
             ).scalar_one_or_none()
             if corpus_id:
-                await db.execute(text("SELECT mindpalace_erase_corpus(:c)"), {"c": corpus_id})
+                await db.execute(text("SELECT verilore_erase_corpus(:c)"), {"c": corpus_id})
         await db.commit()
 
 
@@ -1064,7 +1062,7 @@ async def test_the_erasure_function_is_the_only_archive_delete_path():
     engine = sa.create_engine(sync_url())
     try:
         with engine.begin() as conn:
-            conn.execute(sa.text("SELECT set_config('mindpalace.tenant_scope', '{*}', true)"))
+            conn.execute(sa.text("SELECT set_config('verilore.tenant_scope', '{*}', true)"))
             for statement in ("DELETE FROM memory_evidence", "DELETE FROM memory_documents"):
                 savepoint = conn.begin_nested()
                 with pytest.raises(sa.exc.DatabaseError) as caught:
@@ -1146,14 +1144,14 @@ async def test_the_startup_posture_check_agrees_with_the_profile(monkeypatch):
 
     # This suite's own database role is the migration superuser, which is
     # precisely the configuration `server` must refuse and `local` must permit.
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
     await enforce_startup_posture()
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
     with pytest.raises(RuntimeError, match="refusing to start") as caught:
         await enforce_startup_posture()
     message = str(caught.value)
@@ -1161,12 +1159,12 @@ async def test_the_startup_posture_check_agrees_with_the_profile(monkeypatch):
 
 
 async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
-    """Unset MIND_PALACE_ENFORCE_SCOPE_TOKEN must default to the off path.
+    """Unset VERILORE_ENFORCE_SCOPE_TOKEN must default to the off path.
 
     Enforcement defaults to off (see docs/security.md). On the server profile an
     unset env var must therefore take the enforcement-off path and require
-    `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1`, not fall through to the
-    scope-secret check and refuse with "MIND_PALACE_SCOPE_SECRET is unset".
+    `VERILORE_I_UNDERSTAND_SCOPE_FORGERY=1`, not fall through to the
+    scope-secret check and refuse with "VERILORE_SCOPE_SECRET is unset".
     """
     from api.main import enforce_startup_posture
     from api.services import posture
@@ -1179,11 +1177,11 @@ async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
         return _FakePosture()
 
     monkeypatch.setattr(posture, "inspect", _fake_inspect, raising=True)
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.delenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", raising=False)
-    monkeypatch.delenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.delenv("VERILORE_ENFORCE_SCOPE_TOKEN", raising=False)
+    monkeypatch.delenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
 
     with pytest.raises(RuntimeError, match="I_UNDERSTAND_SCOPE_FORGERY"):
         await enforce_startup_posture()
@@ -1192,14 +1190,14 @@ async def test_unset_env_defaults_to_the_enforcement_off_path(monkeypatch):
 async def test_the_startup_guard_prefers_the_environment_error(monkeypatch):
     """A configuration error must be reported as itself, not as a posture one.
 
-    An operator who has `MIND_PALACE_AUTH_MODE=off` needs to be told that, not
+    An operator who has `VERILORE_AUTH_MODE=off` needs to be told that, not
     shown a database complaint they did not cause and cannot fix there.
     """
     from api.main import enforce_startup_posture
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
     with pytest.raises(RuntimeError) as caught:
         await enforce_startup_posture()
     assert "AUTH_MODE" in str(caught.value)
@@ -1247,7 +1245,7 @@ async def test_every_tenant_bearing_table_is_policy_protected():
         "memory_principals",
         "memory_principal_corpora",
         # Server secret material, not tenant content: the HMAC key used to
-        # verify `mindpalace.scope_token`, held by `mp_verify_scope_token`
+        # verify `verilore.scope_token`, held by `vl_verify_scope_token`
         # (SECURITY DEFINER, maintenance-owned). The runtime role holds no
         # privileges on it at all, so it cannot read or probe the secret.
         "memory_server_secrets",
@@ -1338,14 +1336,14 @@ async def test_no_policy_predicate_can_be_removed_without_a_test_failing():
 
 #: Namespaced so it cannot collide with a database a developer cares about, and
 #: so the DROP below is visibly scoped to this one name.
-ROUNDTRIP_DB = "mindpalace_migration_roundtrip"
+ROUNDTRIP_DB = "verilore_migration_roundtrip"
 
 #: The three functions whose `PUBLIC` grant `010` removes. Checked by name only:
 #: each name has exactly one signature in this schema.
 DEFINER_FUNCTIONS = (
-    "mindpalace_erase_corpus",
-    "mindpalace_resolve_credential",
-    "mindpalace_locate_credential",
+    "verilore_erase_corpus",
+    "verilore_resolve_credential",
+    "verilore_locate_credential",
 )
 
 
@@ -1393,7 +1391,7 @@ def _alembic(command: str, database_url: str) -> None:
         env={
             **os.environ,
             "DATABASE_URL": database_url,
-            "MIND_PALACE_ADMIN_DATABASE_URL": database_url,
+            "VERILORE_ADMIN_DATABASE_URL": database_url,
             "MIGRATION_DATABASE_URL": database_url,
         },
         timeout=900,
@@ -1410,12 +1408,12 @@ async def _predicate_source(database_url: str) -> str:
     engine = create_async_engine(make_url(database_url).set(drivername="postgresql+asyncpg"))
     try:
         async with engine.connect() as conn:
-            # 015 moved the `session_user` restriction into mp_verified_scope_corpora()
-            # (InitPlan hoisting). Prefer it; fall back to mindpalace_allowed_corpus()
+            # 015 moved the `session_user` restriction into vl_verified_scope_corpora()
+            # (InitPlan hoisting). Prefer it; fall back to verilore_allowed_corpus()
             # for pre-015 (009) databases where the function does not exist.
             res = await conn.execute(
                 text(
-                    "SELECT prosrc FROM pg_proc WHERE proname = 'mp_verified_scope_corpora' "
+                    "SELECT prosrc FROM pg_proc WHERE proname = 'vl_verified_scope_corpora' "
                     "LIMIT 1"
                 )
             )
@@ -1423,7 +1421,7 @@ async def _predicate_source(database_url: str) -> str:
             if val is None:
                 res = await conn.execute(
                     text(
-                        "SELECT prosrc FROM pg_proc WHERE proname = 'mindpalace_allowed_corpus' "
+                        "SELECT prosrc FROM pg_proc WHERE proname = 'verilore_allowed_corpus' "
                         "LIMIT 1"
                     )
                 )
@@ -1449,8 +1447,8 @@ async def _public_execute_holders(database_url: str) -> list[str]:
                             "JOIN pg_namespace n ON n.oid = p.pronamespace "
                             "WHERE n.nspname = 'public' "
                             "  AND has_function_privilege('public', p.oid, 'EXECUTE') "
-                            "  AND p.proname LIKE 'mindpalace_%' "
-                            "  AND p.proname <> 'mindpalace_allowed_corpus' "
+                            "  AND p.proname LIKE 'verilore_%' "
+                            "  AND p.proname <> 'verilore_allowed_corpus' "
                             "ORDER BY 1"
                         )
                     )
@@ -1482,8 +1480,8 @@ def roundtrip_database():
 
 
 @pytest.mark.skipif(
-    not os.getenv("MIND_PALACE_MIGRATION_ROUNDTRIP"),
-    reason="set MIND_PALACE_MIGRATION_ROUNDTRIP=1 to exercise CREATE DATABASE",
+    not os.getenv("VERILORE_MIGRATION_ROUNDTRIP"),
+    reason="set VERILORE_MIGRATION_ROUNDTRIP=1 to exercise CREATE DATABASE",
 )
 async def test_migrations_apply_downgrade_and_reapply(roundtrip_database):
     """`head` -> `009` -> `head`, on a database built from nothing.

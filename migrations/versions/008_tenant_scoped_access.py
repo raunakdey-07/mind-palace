@@ -64,7 +64,7 @@ CORPUS_COLUMN_TABLES = (
 
 DOCUMENT_SCOPED_TABLES = ("chunks",)
 
-POLICY_PREFIX = "mindpalace_tenant"
+POLICY_PREFIX = "verilore_tenant"
 
 
 def upgrade() -> None:
@@ -102,16 +102,16 @@ def upgrade() -> None:
     # trust boundary, and hiding them behind row-level security would only make
     # the authentication lookup depend on the tenant context it exists to decide.
     op.execute("""
-        CREATE OR REPLACE FUNCTION mindpalace_allowed_corpus(candidate CHAR(64))
+        CREATE OR REPLACE FUNCTION verilore_allowed_corpus(candidate CHAR(64))
         RETURNS BOOLEAN
         LANGUAGE sql STABLE AS $$
             SELECT CASE
-                WHEN current_setting('mindpalace.tenant_scope', true) = '{*}' THEN TRUE
+                WHEN current_setting('verilore.tenant_scope', true) = '{*}' THEN TRUE
                 WHEN coalesce(
-                         current_setting('mindpalace.tenant_scope', true), ''
+                         current_setting('verilore.tenant_scope', true), ''
                      ) = '' THEN FALSE
                 ELSE btrim(candidate::text) = ANY (string_to_array(
-                    current_setting('mindpalace.tenant_scope', true), ','
+                    current_setting('verilore.tenant_scope', true), ','
                 ))
             END
         $$
@@ -123,8 +123,8 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
         op.execute(f"""
             CREATE POLICY {POLICY_PREFIX} ON {table}
-                USING (mindpalace_allowed_corpus({column}))
-                WITH CHECK (mindpalace_allowed_corpus({column}))
+                USING (verilore_allowed_corpus({column}))
+                WITH CHECK (verilore_allowed_corpus({column}))
         """)
 
     for table in DOCUMENT_SCOPED_TABLES:
@@ -151,6 +151,6 @@ def downgrade() -> None:
         op.execute(f"DROP POLICY IF EXISTS {POLICY_PREFIX} ON {table}")
         op.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
-    op.execute("DROP FUNCTION mindpalace_allowed_corpus(CHAR(64))")
+    op.execute("DROP FUNCTION verilore_allowed_corpus(CHAR(64))")
     op.execute("DROP TABLE memory_principal_corpora")
     op.execute("DROP TABLE memory_principals")

@@ -2,7 +2,7 @@
 """Optional OpenTelemetry spans for the five product operations.
 
 Deliberately not a dependency. `opentelemetry-api` is imported lazily and every
-call here is a no-op when it is absent, so installing Mind Palace does not install
+call here is a no-op when it is absent, so installing Verilore does not install
 tracing, and a deployment that has not configured an exporter pays one import
 attempt per operation. Nothing here is a requirement to run the product.
 
@@ -47,7 +47,7 @@ def _tracer():
     except Exception:  # noqa: BLE001 - not installed, or a broken installation
         return None
     try:
-        return trace.get_tracer("mindpalace")
+        return trace.get_tracer("verilore")
     except Exception:  # noqa: BLE001
         return None
 

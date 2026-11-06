@@ -177,7 +177,7 @@ async def test_sdk_accepts_include_receipt():
     """The SDK parameter exists and is passed through, not reimplemented."""
     import inspect
 
-    from mindpalace_sdk import MemoryClient
+    from verilore_sdk import MemoryClient
 
     signature = inspect.signature(MemoryClient.query)
     assert "include_receipt" in signature.parameters

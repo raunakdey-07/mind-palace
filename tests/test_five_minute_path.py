@@ -47,16 +47,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
-def isolated_runtime(tmp_path, monkeypatch):
+def isolated_runtime(tvl_path, monkeypatch):
     """Point the local runtime at a private state dir and stop it afterwards.
 
-    The five-minute path spawns a real `mindpalace_runtime` in the default
+    The five-minute path spawns a real `verilore_runtime` in the default
     state directory and never stops it, so anything else on the machine then
     talks to a runtime attached to this session's database instead of the
     path it means to exercise. The runtime is stopped here through the
     product's own stop command; nothing outlives the test.
     """
-    monkeypatch.setenv("MIND_PALACE_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("VERILORE_STATE_DIR", str(tvl_path))
     yield
     subprocess.run(
         [sys.executable, "-m", "cli.main", "runtime", "stop"],
@@ -64,7 +64,7 @@ def isolated_runtime(tmp_path, monkeypatch):
         env={
             "PATH": "/usr/bin:/bin",
             "PYTHONPATH": str(ROOT),
-            "MIND_PALACE_STATE_DIR": str(tmp_path),
+            "VERILORE_STATE_DIR": str(tvl_path),
         },
         capture_output=True,
         text=True,
@@ -166,7 +166,7 @@ async def surfaces(store, monkeypatch):
 
     from api.main import app
     from cli.main import app as cli_app
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     loop = asyncio.get_running_loop()
 
@@ -181,7 +181,7 @@ async def surfaces(store, monkeypatch):
             )
 
         monkeypatch.setattr(httpx, "post", post)
-        sdk = MindPalace(base_url="http://m015").memory
+        sdk = Verilore(base_url="http://m015").memory
 
         async def sdk_call(operation: str, request):
             fields = request.model_dump(mode="json", exclude_unset=True)
@@ -569,9 +569,9 @@ async def test_a_statement_that_opens_with_a_markdown_heading_is_remembered(stor
     )
 
 
-async def test_remembering_a_file_keeps_its_authored_claims(store, tmp_path):
+async def test_remembering_a_file_keeps_its_authored_claims(store, tvl_path):
     """A file with authored `claims:` keeps them, verbatim and under one identity."""
-    source = tmp_path / "decision.md"
+    source = tvl_path / "decision.md"
     source.write_text(
         "---\n"
         "title: Deployment architecture\n"
@@ -711,7 +711,7 @@ async def test_a_read_warms_its_own_cache_and_the_next_read_is_served_from_it(st
 async def test_rest_sdk_mcp_and_the_service_agree_on_one_memory(store, surfaces):
     """Every door returns the same authoritative answer.
 
-    Mind Palace is one product with four doors. If any surface can produce a
+    Verilore is one product with four doors. If any surface can produce a
     different answer to the same question, the product claim cannot be falsified,
     so this is a permanent contract rather than a convenience.
 
@@ -799,7 +799,7 @@ def test_a_dead_database_says_what_to_do(monkeypatch):
 
     from cli.errors import explain, render
 
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://vladmin:secret@localhost:5432/verilore")
     failure = OperationalError("SELECT 1", {}, Exception("Connection refused"))
     failure.code = "database_unavailable"
     failure.status_code = 503
@@ -816,7 +816,7 @@ def test_verbose_mode_keeps_the_technical_detail(monkeypatch):
     """Advanced users keep the detail; the default output does not bury them in it."""
     from cli.errors import explain, render
 
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://vladmin:secret@localhost:5432/verilore")
     failure = RuntimeError("could not translate host name")
     failure.code = "database_unavailable"
     failure.status_code = 503
@@ -984,16 +984,16 @@ def _verify_offline(receipt: Path, recorder_path: str, *extra: str) -> subproces
             "PYTHONPATH": str(ROOT),
             # Hand-built, so it inherits nothing -- including the flight
             # recorder's path. Without this the recorder falls back to
-            # ~/.mind-palace/logs/queries.jsonl and writes the suite's rows into
+            # ~/.verilore/logs/queries.jsonl and writes the suite's rows into
             # the file a two-week grading log is meant to live in.
-            "MIND_PALACE_QUERY_LOG": recorder_path,
+            "VERILORE_QUERY_LOG": recorder_path,
         },
         timeout=120,
     )
 
 
 async def test_verify_reports_each_property_and_stops_short_of_truth(
-    store, surfaces, tmp_path, recorder_path
+    store, surfaces, tvl_path, recorder_path
 ):
     """`VERIFIED` must never read as "this fact is correct"."""
     from memory_receipt import verify_response_receipt
@@ -1006,7 +1006,7 @@ async def test_verify_reports_each_property_and_stops_short_of_truth(
         "query",
         MemoryRequest(corpus=store.name, query="api version", include_receipt=True),
     )
-    path = tmp_path / "receipt.json"
+    path = tvl_path / "receipt.json"
     path.write_text(
         json.dumps(
             {"response": explained.model_dump(mode="json"), "receipt": explained.receipt},
@@ -1031,7 +1031,7 @@ async def test_verify_reports_each_property_and_stops_short_of_truth(
     assert result.corpus == store.name
 
 
-async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path, recorder_path):
+async def test_a_tampered_receipt_is_rejected(store, surfaces, tvl_path, recorder_path):
     """Tampering must be caught, named, and say how to recover."""
 
     await remember("The API version is v1.", key="api.version")
@@ -1041,7 +1041,7 @@ async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path, recorde
         MemoryRequest(corpus=store.name, query="api version", include_receipt=True),
     )
     honest = {"response": explained.model_dump(mode="json"), "receipt": explained.receipt}
-    path = tmp_path / "receipt.json"
+    path = tvl_path / "receipt.json"
     path.write_text(json.dumps(honest, sort_keys=True), encoding="utf-8")
     assert (
         _verify_offline(path, recorder_path).returncode == 0
@@ -1055,7 +1055,7 @@ async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path, recorde
     assert rejected.returncode == 1, rejected.stdout
     assert "REJECTED" in rejected.stdout
     assert "digest" in rejected.stdout
-    assert "mindpalace receipt" in rejected.stdout, "a rejection must say what to do"
+    assert "verilore receipt" in rejected.stdout, "a rejection must say what to do"
 
     # The answer itself is rewritten, with the digest left alone. The digest covers
     # the content, so this is caught too -- which is the whole point of the digest.
@@ -1074,24 +1074,24 @@ async def test_a_tampered_receipt_is_rejected(store, surfaces, tmp_path, recorde
     assert "trust anchor" in anchored.stdout
 
 
-def test_verify_refuses_a_file_that_is_not_a_receipt(tmp_path, recorder_path):
+def test_verify_refuses_a_file_that_is_not_a_receipt(tvl_path, recorder_path):
     """A wrong input says what to run instead, rather than failing obscurely."""
-    path = tmp_path / "notes.json"
+    path = tvl_path / "notes.json"
     path.write_text(json.dumps({"hello": "world"}), encoding="utf-8")
     rejected = _verify_offline(path, recorder_path)
     assert rejected.returncode == 2
-    assert "mindpalace receipt" in rejected.stdout + rejected.stderr
+    assert "verilore receipt" in rejected.stdout + rejected.stderr
 
 
 async def test_a_self_contained_receipt_verifies_with_only_the_shipped_package(
-    store, surfaces, tmp_path
+    store, surfaces, tvl_path
 ):
     """The portability claim, tested as a claim.
 
     Someone handed a receipt file must be able to check it with `pip install
-    mindpalace-os` and nothing else: no CLI extra, no server, no database, no
-    embedding model, no network. `mindpalace-proof` is the tool for that, and it
-    must read the file `mindpalace receipt` writes.
+    verilore-os` and nothing else: no CLI extra, no server, no database, no
+    embedding model, no network. `verilore-proof` is the tool for that, and it
+    must read the file `verilore receipt` writes.
     """
     from memory_proof_cli import main as proof_main
 
@@ -1101,7 +1101,7 @@ async def test_a_self_contained_receipt_verifies_with_only_the_shipped_package(
         "query",
         MemoryRequest(corpus=store.name, query="api version", include_receipt=True),
     )
-    path = tmp_path / "receipt.json"
+    path = tvl_path / "receipt.json"
     path.write_text(
         json.dumps(
             {"response": explained.model_dump(mode="json"), "receipt": explained.receipt},
@@ -1137,7 +1137,7 @@ async def test_a_self_contained_receipt_verifies_with_only_the_shipped_package(
     assert "digest" in output
 
     # A pack-based artifact still needs its pack, and the refusal says so.
-    receipt_only = tmp_path / "receipt-only.json"
+    receipt_only = tvl_path / "receipt-only.json"
     receipt_only.write_text(json.dumps(dict(explained.receipt["receipts"][0])), encoding="utf-8")
     import io
     from contextlib import redirect_stderr
@@ -1149,7 +1149,7 @@ async def test_a_self_contained_receipt_verifies_with_only_the_shipped_package(
     assert "--pack" in errors.getvalue(), "the refusal must name the option it needs"
 
 
-async def test_verify_needs_no_model_or_network(store, surfaces, tmp_path, recorder_path):
+async def test_verify_needs_no_model_or_network(store, surfaces, tvl_path, recorder_path):
     """No embedding model, no database, no server: verification is portable."""
 
     await remember("The API version is v1.", key="api.version")
@@ -1158,7 +1158,7 @@ async def test_verify_needs_no_model_or_network(store, surfaces, tmp_path, recor
         "query",
         MemoryRequest(corpus=store.name, query="api version", include_receipt=True),
     )
-    path = tmp_path / "receipt.json"
+    path = tvl_path / "receipt.json"
     path.write_text(
         json.dumps(
             {"response": explained.model_dump(mode="json"), "receipt": explained.receipt},
@@ -1178,7 +1178,7 @@ async def test_verify_needs_no_model_or_network(store, surfaces, tmp_path, recor
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
             "PYTHONPATH": str(ROOT),
-            "MIND_PALACE_QUERY_LOG": recorder_path,
+            "VERILORE_QUERY_LOG": recorder_path,
         },
         timeout=120,
     )
@@ -1214,7 +1214,7 @@ async def test_an_empty_statement_is_refused_with_guidance():
 
     with pytest.raises(RememberError) as caught:
         await remember("   ")
-    assert "mindpalace remember" in str(caught.value), "the message must show a real command"
+    assert "verilore remember" in str(caught.value), "the message must show a real command"
 
     with pytest.raises(RememberError) as too_long:
         await remember("x" * 5000)
@@ -1269,14 +1269,14 @@ async def test_the_wheel_ships_what_verification_needs():
 
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     modules = pyproject["tool"]["setuptools"]["py-modules"]
-    for required in ("memory_receipt", "memory_proof", "memory_pack", "mindpalace_sdk"):
+    for required in ("memory_receipt", "memory_proof", "memory_pack", "verilore_sdk"):
         assert required in modules, f"{required} must ship in the wheel"
 
 
 @pytest.mark.skipif(
     not os.getenv("DATABASE_URL"), reason="needs DATABASE_URL for the live CLI subprocess"
 )
-def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path, isolated_runtime):
+def test_the_cli_works_from_a_clean_environment(tvl_path, recorder_path, isolated_runtime):
     """The documented command sequence, run exactly as written.
 
     No test-only flags, no internal imports, no direct database manipulation: the
@@ -1302,8 +1302,8 @@ def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path, isolate
                 "HF_HUB_OFFLINE": "1",
                 "TRANSFORMERS_OFFLINE": "1",
                 "PYTHONPATH": str(ROOT),
-                "MIND_PALACE_QUERY_LOG": recorder_path,
-                "MIND_PALACE_STATE_DIR": str(tmp_path),
+                "VERILORE_QUERY_LOG": recorder_path,
+                "VERILORE_STATE_DIR": str(tvl_path),
             },
             timeout=180,
         )
@@ -1320,14 +1320,14 @@ def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path, isolate
             "DATABASE_URL": url,
             "HF_HUB_OFFLINE": "1",
             "PYTHONPATH": str(ROOT),
-            "MIND_PALACE_QUERY_LOG": recorder_path,
-            "MIND_PALACE_STATE_DIR": str(tmp_path),
+            "VERILORE_QUERY_LOG": recorder_path,
+            "VERILORE_STATE_DIR": str(tvl_path),
         },
         timeout=180,
     )
     assert init.returncode == 0, init.stderr
-    assert "Mind Palace is ready." in init.stdout
-    assert "mindpalace remember" in init.stdout, "init must name the next command"
+    assert "Verilore is ready." in init.stdout
+    assert "verilore remember" in init.stdout, "init must name the next command"
 
     assert "Remembered." in cli("remember", "The datastore is PostgreSQL.", "--key", "datastore")
     assert "Already remembered" in cli(
@@ -1339,7 +1339,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path, isolate
     explained = cli("explain", "What is the datastore?")
     assert "EVIDENCE" in explained and "VERIFICATION" in explained
 
-    receipt_path = tmp_path / "receipt.json"
+    receipt_path = tvl_path / "receipt.json"
     cli("receipt", "What is the datastore?", "-o", str(receipt_path))
     assert receipt_path.exists()
     verified = _verify_offline(receipt_path, recorder_path)

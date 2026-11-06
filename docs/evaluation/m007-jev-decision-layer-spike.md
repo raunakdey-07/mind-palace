@@ -5,7 +5,7 @@ Public release: Unreleased research
 ## Hypothesis
 
 An optional structured decision provider may make bounded retrieval routing and
-uncertainty explicit, but it must not become an authority over Mind Palace
+uncertainty explicit, but it must not become an authority over Verilore
 history. The experiment therefore tests a decision boundary over already
 discovered authored candidates, not Jev as a replacement for retrieval or
 memory semantics.
@@ -44,13 +44,13 @@ or make safety attribution ambiguous.
 Application
     |
     v
-Mind Palace candidate discovery
+Verilore candidate discovery
     |
     v
 DecisionProvider (deterministic offline or optional Jev adapter)
     |
     v
-Mind Palace resolver
+Verilore resolver
     |-- temporal state
     |-- CURRENT/history/supersession
     |-- conflicts
@@ -58,7 +58,7 @@ Mind Palace resolver
     `-- bounded Memory Pack
 ```
 
-**Decision models may influence retrieval selection, but only Mind Palace
+**Decision models may influence retrieval selection, but only Verilore
 determines memory state.**
 
 The implementation is `api.services.memory_decision_spike`. It is not imported
@@ -107,7 +107,7 @@ pipeline change or frozen-artifact change is warranted from this spike alone.
 
 ## Differentiation
 
-Mind Palace's differentiated substrate is the authoritative, portable archive:
+Verilore's differentiated substrate is the authoritative, portable archive:
 authored claims, immutable evidence, validity intervals, supersession,
 historical reconstruction, conflict preservation, snapshots/replay,
 deletion/restoration lifecycle, and REST/SDK/MCP/CLI access. A decision model

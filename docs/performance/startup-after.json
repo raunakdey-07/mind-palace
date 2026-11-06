@@ -41,10 +41,10 @@
       "returncode": 0,
       "wall_ms": 273.54
     },
-    "mindpalace_import": {
+    "verilore_import": {
       "process_wall_ms": 51.541,
       "returncode": 1,
-      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import json,resource,sys,time; s=time.perf_counter(); import mindpalace; print(json.dumps({'wall_ms':(time.perf_counter()-s)*1000,'module_count':len(sys.modules),'rss_kb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}))\n                                                          ^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'mindpalace'\n"
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import json,resource,sys,time; s=time.perf_counter(); import verilore; print(json.dumps({'wall_ms':(time.perf_counter()-s)*1000,'module_count':len(sys.modules),'rss_kb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}))\n                                                          ^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'verilore'\n"
     },
     "sdk_import": {
       "module_count": 165,

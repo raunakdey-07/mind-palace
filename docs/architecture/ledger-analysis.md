@@ -1,7 +1,7 @@
 # Ledger layering analysis
 
-Scope: an audit of the L0/L1/L2 split in the Mind Palace memory ledger, run at
-commit `a882dae`. The question is whether Mind Palace already separates raw
+Scope: an audit of the L0/L1/L2 split in the Verilore memory ledger, run at
+commit `a882dae`. The question is whether Verilore already separates raw
 source (L0), authoritative claims and evidence (L1), and derived artifacts (L2),
 and what the smallest missing piece is that would make the "durable substrate"
 claim testable rather than asserted.
@@ -109,7 +109,7 @@ use_memory = self.memory_enabled or "claims" in metadata or await memory.enabled
 
 `IngestionService()` defaults to `memory_enabled=False`, and every production
 entry point constructs it that way: `api/routers/ingest.py:14`,
-`api/routers/corpora.py:90`, `mindpalace_sdk.py:356`. Measured on a corpus with
+`api/routers/corpora.py:90`, `verilore_sdk.py:356`. Measured on a corpus with
 memory off:
 
 - A document with no `claims:` in frontmatter produced 0 archived versions. Its
@@ -264,7 +264,7 @@ decision.
 ## Reproducing this
 
 ```text
-MEMORY_TEST_DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace \
+MEMORY_TEST_DATABASE_URL=postgresql://vladmin:secret@localhost:5432/verilore \
   ./venvmp/bin/python -m pytest \
   tests/test_memory_core.py tests/test_memory_public.py tests/test_memory_query.py \
   tests/test_memory_snapshot_seal.py tests/test_memory_multiple_evidence.py \

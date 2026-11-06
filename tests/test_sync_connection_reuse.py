@@ -44,9 +44,9 @@ TENANT = "conn-reuse-tenant"
 
 
 @pytest.fixture
-def repo(tmp_path):
+def repo(tvl_path):
     """A directory of three documents, each of which produces a claim."""
-    docs = tmp_path / "docs"
+    docs = tvl_path / "docs"
     docs.mkdir()
     for name in ("alpha", "beta", "gamma"):
         (docs / f"{name}.md").write_text(CLAIM_BEARING.replace("Connection Reuse", name))
@@ -177,7 +177,7 @@ async def test_the_tenant_scope_is_written_for_every_document(repo, monkeypatch)
         await original_lock(db, corpus_id_)
         seen.append(
             (
-                await db.execute(text("SELECT current_setting('mindpalace.tenant_scope', true)"))
+                await db.execute(text("SELECT current_setting('verilore.tenant_scope', true)"))
             ).scalar()
         )
 
@@ -211,7 +211,7 @@ def test_a_corpus_label_becomes_a_disposable_corpus_name():
     """
     from scripts.benchmark.ingest_profile import DISPOSABLE_PREFIX, _disposable_name
 
-    assert _disposable_name("mind-palace") == "_profile_mind_palace"
+    assert _disposable_name("verilore") == "_profile_verilore"
     assert _disposable_name("cv-embed") == "_profile_cv_embed"
     assert _disposable_name("cv embed") == "_profile_cv_embed"
     # A name that already carries the prefix is used as it stands, so a caller
@@ -220,7 +220,7 @@ def test_a_corpus_label_becomes_a_disposable_corpus_name():
     assert _disposable_name("_profile_mp").startswith(DISPOSABLE_PREFIX)
 
 
-async def test_the_benchmark_deletes_the_corpus_it_wrote_into(tmp_path, monkeypatch):
+async def test_the_benchmark_deletes_the_corpus_it_wrote_into(tvl_path, monkeypatch):
     """The disposable corpus is gone when the run ends, and the label's is not.
 
     The live corpus is the one a reader is using. The benchmark used to erase
@@ -250,7 +250,7 @@ async def test_the_benchmark_deletes_the_corpus_it_wrote_into(tmp_path, monkeypa
 
     monkeypatch.setattr(ingestion_service.IngestionService, "sync_repo", fake_sync_repo)
 
-    docs = tmp_path / "docs"
+    docs = tvl_path / "docs"
     docs.mkdir()
     (docs / "one.md").write_text(CLAIM_BEARING)
 

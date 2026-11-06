@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Pydantic models for Mind Palace API request/response schemas."""
+"""Pydantic models for Verilore API request/response schemas."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from api.models.memory import MemoryRequest, MemoryWire
 #:
 #: Four million characters is roughly a very long book. Well past anything a
 #: Markdown document legitimately is, and low enough to bound the work.
-MAX_INGEST_CHARS = int(os.getenv("MIND_PALACE_MAX_INGEST_CHARS", "4000000"))
+MAX_INGEST_CHARS = int(os.getenv("VERILORE_MAX_INGEST_CHARS", "4000000"))
 
 
 class IngestFileRequest(BaseModel):

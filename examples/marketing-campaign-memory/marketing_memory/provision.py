@@ -6,20 +6,20 @@
 Two things happen here, and the distinction matters:
 
 * **Workspace onboarding** creates the application's own rows, and creates the
-  Mind Palace corpora the workspace will use. Creating a corpus is
+  Verilore corpora the workspace will use. Creating a corpus is
   administrative -- a tenant-scoped credential cannot do it, and there is no HTTP
-  route that can -- so it happens through `mindpalace corpus create`, the
+  route that can -- so it happens through `verilore corpus create`, the
   documented operator command, by a process that already holds the maintenance
   database role. This is the one part of the setup that is not a request-handler
   operation, and it is deliberately the part no request handler performs.
-* **Per-workspace Mind Palace credentials** are then issued for exactly the
-  corpora that workspace owns, through `mindpalace credential issue` and the same
+* **Per-workspace Verilore credentials** are then issued for exactly the
+  corpora that workspace owns, through `verilore credential issue` and the same
   documented command. From that point on nothing in the workflow constructs a
   corpus name from client input; it resolves from the rows created here, and Mind
   Palace checks it against the credential.
 
 Both commands are invoked as subprocesses rather than imported. That is the point
-of the example: an integrating application uses Mind Palace's published surface,
+of the example: an integrating application uses Verilore's published surface,
 so this file uses the published surface too, and a test can assert that nothing
 here reaches past it. An earlier version imported `api.services.corpora` and
 `api.services.authz` directly, which worked and proved nothing about whether an
@@ -75,12 +75,12 @@ class Provisioned:
 async def provision(db, base_url: str) -> Provisioned:
     """Create the schema, two organisations, their users and their credentials.
 
-    Every workspace gets its own Mind Palace credential covering exactly its own
+    Every workspace gets its own Verilore credential covering exactly its own
     corpora, issued here because granting access is an administrative operation.
     A client that does not hold one cannot reach that workspace's memory at all,
     which is what makes the isolation assertions mean something.
 
-    Everything after the corpora exist goes over HTTP to a running Mind Palace,
+    Everything after the corpora exist goes over HTTP to a running Verilore,
     through the real middleware and the real authorization path, so the seeding
     below proves the credential works rather than assuming it.
     """
@@ -146,8 +146,8 @@ async def provision(db, base_url: str) -> Provisioned:
     return out
 
 
-def _mindpalace(*arguments: str) -> str:
-    """Run a documented `mindpalace` operator command and return its stdout.
+def _verilore(*arguments: str) -> str:
+    """Run a documented `verilore` operator command and return its stdout.
 
     A subprocess, deliberately. An integrating application does not import Mind
     Palace's Python modules to create a corpus -- it runs the operator command, or
@@ -164,14 +164,14 @@ def _mindpalace(*arguments: str) -> str:
     )
     if result.returncode != 0:
         raise RuntimeError(
-            f"`mindpalace {' '.join(arguments)}` failed ({result.returncode}):\n"
+            f"`verilore {' '.join(arguments)}` failed ({result.returncode}):\n"
             f"{result.stderr[-2000:]}"
         )
     return result.stdout
 
 
 def _repository_root() -> str:
-    """The Mind Palace checkout, so the CLI runs against the same database."""
+    """The Verilore checkout, so the CLI runs against the same database."""
     return str(Path(__file__).resolve().parents[3])
 
 
@@ -190,7 +190,7 @@ def create_corpus(name: str, description: str = "") -> None:
         timeout=300,
     )
     if existing.returncode != 0 and "exists" not in (existing.stdout + existing.stderr).lower():
-        raise RuntimeError(f"`mindpalace corpus create {name}` failed:\n{existing.stderr[-2000:]}")
+        raise RuntimeError(f"`verilore corpus create {name}` failed:\n{existing.stderr[-2000:]}")
 
 
 def issue_credential(name: str, corpora: list[str], role: str = "read_write") -> str:
@@ -198,7 +198,7 @@ def issue_credential(name: str, corpora: list[str], role: str = "read_write") ->
     arguments = [name]
     for corpus in corpora:
         arguments += ["--corpus", corpus]
-    return _mindpalace("credential", "issue", *arguments, "--role", role, "--quiet").strip()
+    return _verilore("credential", "issue", *arguments, "--role", role, "--quiet").strip()
 
 
 BRAND_FACTS = {

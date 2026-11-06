@@ -150,7 +150,7 @@ class MarketingMemory:
     """The workflow.
 
     Memory is reached through the public memory contract and nothing else: no
-    direct SQL against Mind Palace's tables, and no import of an internal service
+    direct SQL against Verilore's tables, and no import of an internal service
     the SDK does not expose. That is deliberate -- if the example needed the
     internals, an adopter would need them too.
     """

@@ -51,7 +51,7 @@ from api.services.authz import LOCAL_PRINCIPAL, Principal
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://mpadmin:secret@localhost:5432/mindpalace",
+    "postgresql://vladmin:secret@localhost:5432/verilore",
 )
 
 # Normalize any sync-style URL to asyncpg
@@ -82,26 +82,26 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 #: The transaction-local setting the row-level policy reads. Named with a
-#: `mindpalace.` prefix so it cannot collide with a PostgreSQL built-in.
-TENANT_SETTING = "mindpalace.tenant_scope"
+#: `verilore.` prefix so it cannot collide with a PostgreSQL built-in.
+TENANT_SETTING = "verilore.tenant_scope"
 
 #: Companion token setting. A scope alone is forgeable by a process that can
 #: run SQL; the token is an HMAC over the scope using a server secret and is
 #: verified (presence + non-empty) by the row-level policy.
-TENANT_TOKEN_SETTING = "mindpalace.scope_token"
+TENANT_TOKEN_SETTING = "verilore.scope_token"
 
 #: The transaction-local setting resource-level authorization reads: which
 #: principal is acting, so a private document can be recognised as its own.
 #: Same trust properties as `TENANT_SETTING` -- the application writes it -- and
 #: documented the same way. See `docs/security.md`.
-PRINCIPAL_SETTING = "mindpalace.acting_principal"
+PRINCIPAL_SETTING = "verilore.acting_principal"
 
 #: The single-user value. Not a wildcard a caller can choose: the application
 #: writes it, and only in the mode documented as local and single-user.
 UNRESTRICTED_SCOPE = "{*}"
 
 _current_principal: ContextVar[Principal] = ContextVar(
-    "mindpalace_principal", default=LOCAL_PRINCIPAL
+    "verilore_principal", default=LOCAL_PRINCIPAL
 )
 
 
@@ -163,7 +163,7 @@ def _apply_tenant_scope(session, transaction, connection):
     so reinstating the capability is a migration rather than a hunt.
     """
     scope = _scope_value()
-    secret = os.environ.get("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
+    secret = os.environ.get("VERILORE_SCOPE_SECRET", "dev-scope-secret")
     token = hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()
     connection.execute(
         text("SELECT set_config(:name, :value, true)"),
@@ -241,7 +241,7 @@ async def admin_session_scope(
 
     Falls back to `DATABASE_URL` when no administrative URL is configured, which
     is what makes the single-user local workflow work with one setting. A
-    tenant-scoped deployment sets `MIND_PALACE_ADMIN_DATABASE_URL`; the refusal
+    tenant-scoped deployment sets `VERILORE_ADMIN_DATABASE_URL`; the refusal
     then comes from PostgreSQL, which is the right place for it.
 
     `NullPool` like the application engine, so a session is never shared with a

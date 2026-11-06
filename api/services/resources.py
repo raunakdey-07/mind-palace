@@ -70,7 +70,7 @@ def owner_for(principal, private: bool) -> str | None:
         # be the opposite of what the caller asked for.
         raise ValueError(
             "a private document needs an authenticated principal to own it; the "
-            "current one has no identity. Set MIND_PALACE_AUTH_MODE=required and "
+            "current one has no identity. Set VERILORE_AUTH_MODE=required and "
             "present a credential, or write the document as shared."
         )
     return principal_id

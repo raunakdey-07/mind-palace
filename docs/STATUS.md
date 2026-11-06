@@ -1,6 +1,6 @@
 # Project status
 
-The current, verifiable state of Mind Palace and everything still outstanding.
+The current, verifiable state of Verilore and everything still outstanding.
 
 Every figure here names the command that produced it and the commit it was
 measured at. A number that was not measured is marked **not established** rather
@@ -44,8 +44,8 @@ row by row, including the two rows whose harness no longer runs at this head.
 | latest tag | **`v0.9.2`** at `19863d8`. `v0.9.1` remains at `be1931a` |
 | `v0.9.2` state | released: tagged on `main` and published as a GitHub Release |
 | previous release | `v0.8.0`, unmodified |
-| migration head | `016_hoist_scope_initplan`, additive and reversible |
-| tests | **2047 passed, 0 failed, 20 skipped** (as of `bb7ee66`, `python -m pytest -q`); 2067 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips that are opt-in and named remain allowlisted**: `MIND_PALACE_MIGRATION_ROUNDTRIP` and `MIND_PALACE_TEST_BUILD_WHEEL`. The additional skips are from `tests/test_embedder_backend_equivalence.py` (18) and `tests/test_search_semantics.py` (1), with reasons for missing optional dependencies (`[torch]`/both backends); `check_skips.py` accounts for them under the default-dependency set. Current head at `3b0562e` produced **2048 passed, 0 failed, 2 skipped** (as of `3b0562e`, 2050 collected). Previous head at `c65ffb2` produced **2032 passed, 0 failed, 2 skipped** (as of `c65ffb2`, 2034 collected); see the recorded run at `c65ffb2` in `docs/performance/test-runs.json`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
+| migration head | `017_rename_to_verilore`, additive and reversible |
+| tests | **2047 passed, 0 failed, 20 skipped** (as of `bb7ee66`, `python -m pytest -q`); 2067 collected, from the junitxml in `docs/performance/evidence/pytest-head.xml`. **The two skips that are opt-in and named remain allowlisted**: `VERILORE_MIGRATION_ROUNDTRIP` and `VERILORE_TEST_BUILD_WHEEL`. The additional skips are from `tests/test_embedder_backend_equivalence.py` (18) and `tests/test_search_semantics.py` (1), with reasons for missing optional dependencies (`[torch]`/both backends); `check_skips.py` accounts for them under the default-dependency set. Current head at `3b0562e` produced **2048 passed, 0 failed, 2 skipped** (as of `3b0562e`, 2050 collected). Previous head at `c65ffb2` produced **2032 passed, 0 failed, 2 skipped** (as of `c65ffb2`, 2034 collected); see the recorded run at `c65ffb2` in `docs/performance/test-runs.json`. Every earlier figure is labelled with the run that produced it, because `check_evidence.py --require-head --junitxml` now rejects an unlabelled figure that this run did not produce -- and it did, at run `38446879617`, for `1613`, `1619`, `1625` and `24`. Superseded figures, kept for the record: `1996 passed` as of `bd3cfc2`, `1992 passed` as of `c61ce10`, `1981 passed` as of `7465fe8`, `1637 passed` as of `d1a4612` (CI run `38446879617`), `1613 passed` as of `312958d` (CI run `38400659433`, 8 skipped) and `1619 passed` as of `c3c8252` (CI run `38410829513`, 8 skipped). Those 8 skips included 6 in `tests/test_ingestion_statistics.py` with the reason `no reachable DATABASE_URL`. **That reason was false and the cause is now established**: SQLAlchemy 2.1 resolves a bare `postgresql://` to psycopg (v3), which this project does not install, and `_db_available()` swallowed the `ModuleNotFoundError`. Those 6 tests now run on the runner, which is the entire difference between 1631 and 1637 here. `docs/performance/test-runs.json` carries the commit, the collected count and the junitxml the runner wrote. |
 | lint | `flake8`, `black --check --line-length 100` clean |
 | release metadata | `check_versioning.py` PASS, `check_evidence.py --strict` PASS |
 | Memory Pack schema | version 1, unchanged since `v0.6.0` |
@@ -91,7 +91,7 @@ are public.
 
 `tests/test_ci_model_provisioning.py` reads the workflow itself and fails if the
 provisioning step is deleted, weakened, made unpinned, or duplicated into a second
-copy in one job but not the other. `MIND_PALACE_LEXICAL=1` needs none of this: it
+copy in one job but not the other. `VERILORE_LEXICAL=1` needs none of this: it
 asserts that no part of the model stack is imported, and passes on a runner with no
 models at all.
 
@@ -117,7 +117,7 @@ assertions in `scripts/release/assert_runtime_role.py`:
 * claim identities do not move and no claim is lost;
 * the pack is byte-identical once `valid_at` is pinned on both sides;
 * supersession survives (history PostgreSQL, recall CockroachDB);
-* the whole read surface works **as `mindpalace_runtime` in server mode with a
+* the whole read surface works **as `verilore_runtime` in server mode with a
   credential**, and a policy keyed on the wrong column fails the job.
 
 **A downgrade 010 -> 007 destroys `memory_principals` and disables row-level
@@ -125,7 +125,7 @@ security on all 9 protected tables. It preserves all 6 claims.** That cost belon
 in the upgrade notes and is not yet written down anywhere an operator would
 find it.
 
-**The runtime changed no memory semantics.** `mindpalace recall`, `explain` and
+**The runtime changed no memory semantics.** `verilore recall`, `explain` and
 `receipt` went from about 6.2 s to about 0.63 s — figures measured on the
 `sentence-transformers` backend, which was the default at v0.9.1 and is now the
 `[torch]` extra — and everything they return is
@@ -148,7 +148,7 @@ Five behaviour changes, all deliberate and measured:
   `SAVEPOINT`, skipped on a read-only session, and best-effort, so it cannot fail a
   query that has already been answered. The cache holds no authority, so every one of
   those boundaries costs latency and nothing else.
-- **Model-free reading is available on purpose.** `MIND_PALACE_LEXICAL=1` takes the
+- **Model-free reading is available on purpose.** `VERILORE_LEXICAL=1` takes the
   lexical rung that already existed as the no-model degradation: 0.63 s instead of
   6.17 s, with the model stack never imported. Both figures are from the
   `sentence-transformers` backend, which was the default at v0.9.0 and is now the
@@ -166,13 +166,13 @@ Five behaviour changes, all deliberate and measured:
 
 ### The `memory` commands need no server either
 
-`mindpalace memory pack` used to default to `http://127.0.0.1:8000`, while
+`verilore memory pack` used to default to `http://127.0.0.1:8000`, while
 `recall`, `explain`, `history`, `receipt` and `ingest-repo` all ran in-process.
 The quickstart's bounded-context command was therefore the one core command that
 failed with a connection refusal unless a server had been started by hand. Every
 `memory` subcommand now uses the same in-process client as those commands when
-neither `--base-url` nor `MIND_PALACE_BASE_URL` names a remote service; either one
-still selects the HTTP client unchanged. `mindpalace serve --run` starts the HTTP
+neither `--base-url` nor `VERILORE_BASE_URL` names a remote service; either one
+still selects the HTTP client unchanged. `verilore serve --run` starts the HTTP
 API for REST, the HTTP SDK, MCP over a network or another process, and without
 `--run` it prints that command and says the CLI commands run in-process.
 
@@ -180,7 +180,7 @@ API for REST, the HTTP SDK, MCP over a network or another process, and without
 re-resolved on every invocation is a local-development artifact rather than a
 shipped input. Warm medians over five runs with no server listening, runtime
 disabled, were `recall` 1.571 s, `explain` 1.789 s, `history` 0.975 s and
-`memory pack` 0.949 s through `.venv/bin/mindpalace`; `uv run --no-sync` medians
+`memory pack` 0.949 s through `.venv/bin/verilore`; `uv run --no-sync` medians
 were 1.627 s, 1.783 s, 1.041 s and 0.967 s, so the lockfile path adds no
 re-resolution cost. Evidence:
 `docs/performance/in-process-cli.json` <- key: summary.venv.recall.median_s
@@ -197,17 +197,17 @@ all; nothing else differs between the columns.
 
 | command | in-process | with runtime |
 |---|---|---|
-| `mindpalace init` | 0.65 s | — |
-| `mindpalace remember` | 0.88 s | — |
-| `mindpalace recall` | 6.17 s | **0.63 s** |
-| `mindpalace explain` | 6.23 s | **0.67 s** |
-| `mindpalace history` | 0.81 s | 0.61 s |
-| `mindpalace receipt` | 6.21 s | 0.62 s |
-| `mindpalace verify` | 0.56 s | 0.56 s |
-| `recall`, `MIND_PALACE_LEXICAL=1` | **0.63 s** | — (bypasses it) |
-| `explain`, `MIND_PALACE_LEXICAL=1` | **0.67 s** | — |
+| `verilore init` | 0.65 s | — |
+| `verilore remember` | 0.88 s | — |
+| `verilore recall` | 6.17 s | **0.63 s** |
+| `verilore explain` | 6.23 s | **0.67 s** |
+| `verilore history` | 0.81 s | 0.61 s |
+| `verilore receipt` | 6.21 s | 0.62 s |
+| `verilore verify` | 0.56 s | 0.56 s |
+| `recall`, `VERILORE_LEXICAL=1` | **0.63 s** | — (bypasses it) |
+| `explain`, `VERILORE_LEXICAL=1` | **0.67 s** | — |
 | SDK `recall`, fresh process, default | 5.11 s | — (`runtime` is opt-in) |
-| SDK `recall`, `MindPalace(runtime=True)` | — | **0.51 s** |
+| SDK `recall`, `Verilore(runtime=True)` | — | **0.51 s** |
 
 The runtime itself: **5.39 s** cold start to `ready` with the model loaded, **0.05 s**
 for a status round trip, **0.10 s** for a query over the socket with no CLI in the
@@ -237,7 +237,7 @@ assuming: `import torch` 1.68 s, `import transformers` 1.20 s (2.66 s together),
 Everything else in a one-shot recall — interpreter, CLI imports, database connection,
 the query itself — is 0.74 s, and the memory work is 61 ms of that.
 
-**Model-free reading.** `MIND_PALACE_LEXICAL=1` imports none of `torch`,
+**Model-free reading.** `VERILORE_LEXICAL=1` imports none of `torch`,
 `transformers` or `sentence_transformers`, verified by inspecting `sys.modules` in the
 process that ran the recall rather than inferred from a timing. The 0.63 s is
 consequently the same figure the runtime reaches, from a cold process, with no
@@ -253,7 +253,7 @@ ships instead, which is the same rung taken on purpose. See
 
 ## Measured at the five-minute path
 
-**First-use path.** `mindpalace init → remember → recall → explain → history →
+**First-use path.** `verilore init → remember → recall → explain → history →
 receipt → verify`, run as documented in a fresh environment against a fresh
 database, offline. Asserted by `tests/test_five_minute_path.py` and by a
 dedicated CI job.
@@ -268,8 +268,8 @@ before relevance narrows anything.
 `remember` is 4× faster than at v0.8.0 because it no longer imports the embedding
 model. The cost of importing it is the number that matters most at the process
 level: `import sentence_transformers` is 5.3 s on mains (10.8 s on battery), so
-`mindpalace remember` runs in
-1.5 s while `mindpalace recall` runs in 14.4 s. Method and limits:
+`verilore remember` runs in
+1.5 s while `verilore recall` runs in 14.4 s. Method and limits:
 [performance/five-minute-path.md](performance/five-minute-path.md).
 
 **Environment note.** Every latency number in this repository's history before
@@ -280,8 +280,8 @@ power is 3 to 4× faster. Compare within a condition, not across them.
 `changed=false`. Four concurrent identical writes produce exactly one version and
 one claim.
 
-**Portability.** A bare `pip install mindpalace-os`, with no CLI extra and no
-database URL, verifies a file written by `mindpalace receipt`.
+**Portability.** A bare `pip install verilore-os`, with no CLI extra and no
+database URL, verifies a file written by `verilore receipt`.
 
 ## Invariants, and when each was last measured
 
@@ -309,7 +309,7 @@ in that database is empty. The run aborts:
 
 ```
 asyncpg.exceptions.UndefinedTableError: relation "memory_principals" does not exist
-[SQL: CREATE OR REPLACE FUNCTION mindpalace_resolve_credential(presented_hash CHAR(64))
+[SQL: CREATE OR REPLACE FUNCTION verilore_resolve_credential(presented_hash CHAR(64))
 ```
 
 The invariant itself may well still hold; what cannot be done is re-measuring it
@@ -338,8 +338,8 @@ and never the absolute digest value.
 
 ## What a live CLI run against a real corpus found
 
-The commands were run against real corpora -- `mindpalace history`,
-`mindpalace recall`, `mindpalace ingest-repo` -- and four defects came out of
+The commands were run against real corpora -- `verilore history`,
+`verilore recall`, `verilore ingest-repo` -- and four defects came out of
 it. The fixes are measured, and the tests that would have caught each one are
 in `tests/test_history_lineage_and_ingest_speed.py`.
 
@@ -420,8 +420,8 @@ as 1,200-character chunks, which cost 256 tokens each to encode.
 
 A document that produced no claims is the other case, and it is not the same
 case. Such a document contributes no claim, so the chunk index is the only
-index it has, and it keeps its vectors. `mindpalace ingest-repo --embed-chunks`
-asks for the vectors for every document, and `mindpalace reindex` rebuilds
+index it has, and it keeps its vectors. `verilore ingest-repo --embed-chunks`
+asks for the vectors for every document, and `verilore reindex` rebuilds
 them from the archive for a corpus that was synced without them.
 
 **The chunk index is not dead, and the search says so by working.** A search
@@ -509,7 +509,7 @@ container-local PostgreSQL and the default ONNX backend:
 
 The before column is `main`; the after column is this branch, both measured on
 the same machine over the same files, with
-`scripts/benchmark/ingest_profile.py`. The `mind-palace` corpus alone goes
+`scripts/benchmark/ingest_profile.py`. The `verilore` corpus alone goes
 from **34.3 s to 25.7 s**, and its connection setup from 4.40 s to 0.04 s.
 
 **Nothing in the archive changed.** The claims, the versions, the chunks and
@@ -519,13 +519,13 @@ the second.
 
 **And the benchmark could erase the corpus it measured.** It wrote into the
 corpus its command line named, and `--reset` erased it, so a benchmark run
-over `--corpus mind-palace=docs` wiped the live `mind-palace` corpus outright.
+over `--corpus verilore=docs` wiped the live `verilore` corpus outright.
 The name on the command line is a report label now; the run writes into a
 corpus whose name begins with `_profile_` and deletes it when the run ends.
 
 ### A table row, and the part of the question that lost the subject
 
-`mindpalace recall "What is the gzipped bundle size and keystroke-to-preview
+`verilore recall "What is the gzipped bundle size and keystroke-to-preview
 latency of the SDK?"` answered with the bundle sizes of two other chunks. The
 SDK's own row was fifth, and the 8,000-character response budget keeps four
 claims, so the reader never saw the row that answers the question.
@@ -556,7 +556,7 @@ question.
 
 **A file removed from a curated directory stayed active in the corpus
 forever.** Its claims kept answering questions, and nothing reported that the
-source was gone. `mindpalace ingest-repo` hardcoded `delete_removed=False`, so
+source was gone. `verilore ingest-repo` hardcoded `delete_removed=False`, so
 the service could retire a document and the CLI never asked for it. The flag
 is `--delete-removed`, and the default is unchanged: a sync that retires
 documents is a decision, and the flag is how the caller makes it.
@@ -564,7 +564,7 @@ documents is a decision, and the flag is how the caller makes it.
 **A corpus that had collected a test claim needed a clean slate**, and the way
 out of that was to drop the whole PostgreSQL database through `podman exec`,
 which took every other corpus in it with the one that was dirty.
-`mindpalace corpus reset` erases one corpus and re-initialises it under the
+`verilore corpus reset` erases one corpus and re-initialises it under the
 same name and the same id, with its grants intact. It asks for `--yes`,
 because the erasure cannot be undone.
 
@@ -937,7 +937,7 @@ No multi-hop relationship reasoning is claimed or supported.
 
 Deleting a corpus used to return 409 whenever the archive referenced it, so a corpus
 that had ever recorded a fact could never be removed. That is now implemented:
-migration `009` adds `mindpalace_erase_corpus`, one SECURITY DEFINER function that
+migration `009` adds `verilore_erase_corpus`, one SECURITY DEFINER function that
 re-checks the caller's transaction-local tenant scope, takes the advisory lock every
 writer takes, and removes all nine archive tables in dependency order plus the live
 projection and every credential's grant. The runtime role holds no `DELETE` on the
@@ -951,8 +951,8 @@ backup retention remains the operator's obligation and its window is the known c
 See [security.md](security.md#data-lifecycle-deletion-erasure-and-what-survives).
 
 Authentication and authorization are built for shared deployments and are off by
-default: `MIND_PALACE_DEPLOYMENT=server` (which refuses to start unless
-`MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_INGEST_ROOTS` are set and the connected
+default: `VERILORE_DEPLOYMENT=server` (which refuses to start unless
+`VERILORE_AUTH_MODE=required`, `VERILORE_INGEST_ROOTS` are set and the connected
 database role actually enforces the policies) plus a least-privileged runtime role.
 An unrecognised profile value is refused rather than reinterpreted. Corpus namespaces
 remain *not* authorization on their own, and an owner is not a tamper-proof boundary.
@@ -961,7 +961,7 @@ is, and PostgreSQL row-level security is beneath it, on every surface: REST, the
 Python SDK, the local runtime socket and MCP. Roles are finer than read/write:
 `corpus_admin` can erase the corpora it holds grants on, `principal_admin` can issue
 credentials, and a workspace credential can no longer mint authority.
-`mindpalace posture` reports whether the connected role enforces the policies, can
+`verilore posture` reports whether the connected role enforces the policies, can
 enumerate credential hashes, or can delete from the archive. `/health/ready`
 reports only the verdict — `503` when the policies are not in force — because it is
 read by whatever probes the service. See [security.md](security.md).
@@ -984,7 +984,7 @@ benchmark harnesses run from, so reproducing the published numbers still means c
 ### 7. A cached read still pays the model import **[v0.9.1] — measured, not changed**
 
 A semantic read whose claim vectors are *all* already cached still costs ~6.6 s on
-mains, against ~0.67 s for the same read with `MIND_PALACE_LEXICAL=1`. The cause is a
+mains, against ~0.67 s for the same read with `VERILORE_LEXICAL=1`. The cause is a
 single argument: `memory_query.py:267` passes `embedder.dimension` to `load_cached`,
 and `Embedder.dimension` calls `_get_model()` — so the read imports
 `sentence_transformers` purely to learn a number.
@@ -1064,7 +1064,7 @@ Three of these cost real time and are recorded so they are not repeated:
 
 ```bash
 sh scripts/benchmark/ensure_postgres.sh
-DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace \
+DATABASE_URL=postgresql://vladmin:secret@localhost:5432/verilore \
   HF_HUB_OFFLINE=1 venvmp/bin/python -m pytest -q
 
 PYTHONPATH=scripts/benchmark DATABASE_URL=... HF_HUB_OFFLINE=1 \

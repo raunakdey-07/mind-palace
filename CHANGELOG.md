@@ -30,8 +30,8 @@ in; an unknown state is `422 invalid_state`.
 
 ### Scope-token enforcement made loud (v0.10.0)
 
-A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) now refuses to
-start on a mismatch between `MIND_PALACE_SCOPE_SECRET` and the database's
+A server-profile deployment (`VERILORE_DEPLOYMENT=server`) now refuses to
+start on a mismatch between `VERILORE_SCOPE_SECRET` and the database's
 `scope_hmac_secret` (the startup refusal pre-existed on main; this release
 adds the readiness check, the rotation-order text, and explicit fail-closed
 behaviour when the probe is unavailable). The refusal names the cause and the
@@ -45,18 +45,18 @@ deployments are unaffected.
 `POST /api/corpora` now translates row-level-security violations (SQLSTATE
 42501) to `403` `forbidden` instead of leaking a 500. Other `ProgrammingError`s
 still propagate as 500. In server mode, corpora are created by the operator
-with `mindpalace corpus create`; `POST /api/corpora` is not an operator path
+with `verilore corpus create`; `POST /api/corpora` is not an operator path
 for a brand-new corpus.
 
 ### RLS scope hoisting (migration 016)
 
-The `mindpalace_tenant` row-level-security policy on every corpus table is now
+The `verilore_tenant` row-level-security policy on every corpus table is now
 written with `(SELECT mp_verified_scope_corpora())` inlined directly in the
 `USING` / `WITH CHECK` expression instead of calling
-`mindpalace_allowed_corpus()`. PostgreSQL cannot inline the wrapper function, so
+`verilore_allowed_corpus()`. PostgreSQL cannot inline the wrapper function, so
 migration 015's policy invoked `mp_verified_scope_corpora()` once per row; the
 inlined form is planned as an InitPlan (evaluated once per query). Semantics are
-unchanged; `mindpalace_allowed_corpus` and its grants are left intact. See
+unchanged; `verilore_allowed_corpus` and its grants are left intact. See
 `tests/test_enforcement_e2e.py::test_latency_and_explain_initplan` for the
 InitPlan / call-count proof (no per-row trap).
 
@@ -93,7 +93,7 @@ and `explain` accept `path_prefix`.
 ### SDK bounded retry and backoff
 
 The remote SDK now retries transient failures instead of failing the first time.
-`MindPalace(timeout=30, retries=2, backoff=0.2)` makes at most `retries + 1`
+`Verilore(timeout=30, retries=2, backoff=0.2)` makes at most `retries + 1`
 attempts, retrying only on `httpx.TimeoutException`, `httpx.RequestError` and
 502/503/504 responses, sleeping `backoff * 2 ** (n - 1)` before retry `n`. A
 timeout becomes `MemoryClientError("timeout", ..., 504)`, a transport error
@@ -135,6 +135,8 @@ the same document still filter out, so no unrelated claim leaks.
 `tests/test_integration_brand_kit_scenario.py`: end-to-end brand-kit lifecycle over real HTTP
 with scope-token enforcement on, reusing the shared `tests/live_server.py` fixture.
 
+
+
 ## [v0.9.3] - 2026-10-27
 
 M017: GitHub issues → branches → PRs → CI green → merge → tag/release, covering prose ingestion, authority states, task-aware retrieval, tenant hardening, 4-way benchmark, release.
@@ -175,35 +177,16 @@ real stale-fact benchmark metrics, and release documentation reconciliation.
 
 > ### Upgrade notes — read before upgrading
 >
-> **Schema.** `alembic upgrade head` moves `007` to `016`. Nine migrations have
-> never shipped in a tag; all nine are new since `v0.9.0`.
+> **Schema.** `alembic upgrade head` moves `007` to `012`. Five migrations have
+> never shipped in a tag; all five are new since `v0.9.0`.
 >
 > | migration | what it adds | reversibility |
 > |---|---|---|
 > | `008_tenant_scoped_access` | service credentials and row-level security on the protected tables | `downgrade` refuses while more than one evidence row per claim exists |
 > | `009_permission_granularity_and_erasure` | per-claim/per-corpus permissions and corpus erasure | reversible; `docs/security.md` names the tables that keep their rows |
 > | `010_bind_unrestricted_scope` | binds the `{*}` tenant sentinel to a role that already reads every row | reversible |
-> | `011_cross_document_supersession` | cross-document supersession edges | reversible |
-> | `012_claim_embedding_hnsw` | HNSW index on claim embeddings | reversible |
-> | `013_info_state` | `info_state`, `extraction_mode`, `provenance_state` on claims | additive; no downgrade path |
-> | `014_scope_token` | HMAC-verified scope token: `mp_verify_scope_token()`, `scope_token` session setting | reversible |
-> | `015_rls_scope_enforcement` | scope enforcement: `mp_verified_scope_corpora()`, enforcement flag, `scope_token` policy | reversible; enforcement defaults **off** |
-> | `016_hoist_scope_initplan` | inline `(SELECT mp_verified_scope_corpora())` in each `mindpalace_tenant` policy so it is planned as an InitPlan instead of once per row | reversible; restores the 015 policy form |
->
-> **Scope-token enforcement (migration 015).** Enforcement defaults to **off**;
-> until the operator runs
-> `SELECT mp_set_scope_token_enforcement(true)` (as `mindpalace_owner`), the
-> bypass is NOT closed. Verify with:
->
-> ```sql
-> SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
-> ```
->
-> Rotate the secret with `mindpalace secret rotate` (as the owner role, writes
-> the DB row and `--out FILE`). The DB row and `MIND_PALACE_SCOPE_SECRET` must
-> change together or every query returns 0 rows. Safe order: update the DB row
-> first, then roll the env var, expecting a brief outage. Use `--out FILE` (mode
-> 0600) to avoid terminal history.
+| `011_cross_document_supersession` | cross-document supersession edges | reversible |
+| `012_claim_embedding_hnsw` | HNSW index on claim embeddings | reversible |
 >
 > **Server mode needs a grant step.** The `server` profile requires
 > `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_DEPLOYMENT=server`,
@@ -1614,5 +1597,5 @@ decision-provider and Jev research is intentionally unreleased.
   diagnosed to a conclusion. Shipping a migration that breaks the primary write
   path is not acceptable at any confidence level. The design, the three real
   findings it produced, the adversarial suite, and the reinstating steps are in
-  [`docs/withdrawn/`](docs/archive/withdrawn/README.md). Corpus-level isolation is
+  [`docs/archive/withdrawn/`](docs/archive/withdrawn/README.md). Corpus-level isolation is
   unchanged and remains the shipped guarantee.

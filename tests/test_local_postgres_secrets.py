@@ -20,29 +20,29 @@ import pytest
 @pytest.fixture
 def server_env(monkeypatch):
     """A configuration that is otherwise ready to serve."""
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/content")
-    monkeypatch.setenv("MIND_PALACE_RUNTIME_PASSWORD", "a-real-password")
-    monkeypatch.setenv("MIND_PALACE_CURSOR_SECRET", "a-real-cursor-secret-" + "x" * 32)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/content")
+    monkeypatch.setenv("VERILORE_RUNTIME_PASSWORD", "a-real-password")
+    monkeypatch.setenv("VERILORE_CURSOR_SECRET", "a-real-cursor-secret-" + "x" * 32)
     return monkeypatch
 
 
 def test_a_local_deployment_may_use_the_defaults(monkeypatch):
     """The developer's machine is the case the defaults are for.
 
-    `MIND_PALACE_DEPLOYMENT=local` is the documented single-user workflow. A
+    `VERILORE_DEPLOYMENT=local` is the documented single-user workflow. A
     placeholder secret there is no worse than the documented
-    `postgresql://mpadmin:secret@localhost:5432/mindpalace` the README
+    `postgresql://vladmin:secret@localhost:5432/verilore` the README
     already tells people to use.
     """
     from api.services.authz import server_mode_errors
 
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_RUNTIME_PASSWORD", "mindpalace-local-runtime-password")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_RUNTIME_PASSWORD", "verilore-local-runtime-password")
     monkeypatch.setenv(
-        "MIND_PALACE_CURSOR_SECRET",
-        "mindpalace-local-dev-cursor-secret-00000000000000000000",
+        "VERILORE_CURSOR_SECRET",
+        "verilore-local-dev-cursor-secret-00000000000000000000",
     )
 
     assert server_mode_errors() == []
@@ -57,11 +57,11 @@ def test_a_server_deployment_refuses_the_runtime_password_default(server_env):
     """
     from api.services.authz import server_mode_errors
 
-    server_env.setenv("MIND_PALACE_RUNTIME_PASSWORD", "mindpalace-local-runtime-password")
+    server_env.setenv("VERILORE_RUNTIME_PASSWORD", "verilore-local-runtime-password")
 
     problems = server_mode_errors()
 
-    assert any("MIND_PALACE_RUNTIME_PASSWORD" in p for p in problems), problems
+    assert any("VERILORE_RUNTIME_PASSWORD" in p for p in problems), problems
 
 
 def test_a_server_deployment_refuses_the_cursor_secret_default(server_env):
@@ -73,13 +73,13 @@ def test_a_server_deployment_refuses_the_cursor_secret_default(server_env):
     from api.services.authz import server_mode_errors
 
     server_env.setenv(
-        "MIND_PALACE_CURSOR_SECRET",
-        "mindpalace-local-dev-cursor-secret-00000000000000000000",
+        "VERILORE_CURSOR_SECRET",
+        "verilore-local-dev-cursor-secret-00000000000000000000",
     )
 
     problems = server_mode_errors()
 
-    assert any("MIND_PALACE_CURSOR_SECRET" in p for p in problems), problems
+    assert any("VERILORE_CURSOR_SECRET" in p for p in problems), problems
 
 
 def test_a_server_deployment_with_real_secrets_is_allowed(server_env):

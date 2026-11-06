@@ -1,4 +1,4 @@
-"""Integration tests for Mind Palace API endpoints."""
+"""Integration tests for Verilore API endpoints."""
 
 import importlib.metadata
 from unittest.mock import AsyncMock, Mock, patch
@@ -30,8 +30,8 @@ async def test_openapi_describes_the_product_not_a_rag_wrapper():
     assert resp.status_code == 200
     info = resp.json()["info"]
     assert info["description"] == "The Durable AI Memory Substrate"
-    assert info["title"] == "Mind Palace API"
-    assert info["version"] == importlib.metadata.version("mindpalace-os")
+    assert info["title"] == "Verilore API"
+    assert info["version"] == importlib.metadata.version("verilore-os")
 
 
 @pytest.mark.asyncio

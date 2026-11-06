@@ -289,9 +289,7 @@ def claim_key(statement: str, key: str | None = None) -> str:
     if key is not None:
         key = key.strip()
         if not key:
-            raise RememberError(
-                "a claim key cannot be blank; omit it to let Mind Palace choose one"
-            )
+            raise RememberError("a claim key cannot be blank; omit it to let Verilore choose one")
         return key
     from api.services.memory import _hash
 
@@ -424,7 +422,7 @@ def validate_statement(statement: str) -> str:
     if not statement:
         raise RememberError(
             "the statement is empty; remember something, "
-            'for example: mindpalace remember "Production uses PostgreSQL."'
+            'for example: verilore remember "Production uses PostgreSQL."'
         )
     if len(statement) > MAX_STATEMENT:
         raise RememberError(
@@ -589,7 +587,7 @@ async def remember(
         if statement is None:
             raise RememberError(
                 "nothing to remember; pass a statement, "
-                'for example: mindpalace remember "Production uses PostgreSQL."'
+                'for example: verilore remember "Production uses PostgreSQL."'
             )
 
         statement = validate_statement(statement)
@@ -654,7 +652,7 @@ def _read(file: str) -> str:
     The ingest-root check lives here rather than at each caller because every
     `file=` caller -- the CLI, `POST /api/memory/remember`, the SDK and the MCP
     tool -- routes through this one function. Two surfaces enforced
-    MIND_PALACE_INGEST_ROOTS (`/api/ingest/repo` and `/api/corpora/{name}/sync`)
+    VERILORE_INGEST_ROOTS (`/api/ingest/repo` and `/api/corpora/{name}/sync`)
     and this one did not, so a path the deployment refused came back through the
     other door. One guard here closes all four.
     """
@@ -674,7 +672,7 @@ def _read(file: str) -> str:
         raise RememberError(f"cannot read {file}: {exc.strerror or exc}") from exc
     except (UnicodeDecodeError, ValueError) as exc:
         raise RememberError(
-            f"{file} is not text Mind Palace can store: {exc}. "
+            f"{file} is not text Verilore can store: {exc}. "
             "Remember a statement, or a Markdown file."
         ) from exc
     if not content.strip():
@@ -695,7 +693,7 @@ async def _write(
 
     `require_embeddings=False`: a first memory must not depend on a model
     download. Ranking degrades to lexical; the claim and its evidence are recorded
-    either way, and `mindpalace reindex` fills the vectors in later.
+    either way, and `verilore reindex` fills the vectors in later.
     """
     from api.services.memory import SupersessionTargetUnresolved
 

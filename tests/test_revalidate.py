@@ -185,10 +185,10 @@ def test_integrity_exception_propagates():
             )
 
 
-def test_load_artifact_path_confinement(tmp_path, monkeypatch):
-    root = tmp_path / "docs"
+def test_load_artifact_path_confinement(tvl_path, monkeypatch):
+    root = tvl_path / "docs"
     root.mkdir()
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
     from mcp_server import _load_artifact
 
     ok = root / "a.json"
@@ -196,7 +196,7 @@ def test_load_artifact_path_confinement(tmp_path, monkeypatch):
     assert _load_artifact(str(ok)) == {"x": 1}
     # traversal
     assert _load_artifact(str(root / ".." / "secret.json")) is None
-    outside = tmp_path / "outside.json"
+    outside = tvl_path / "outside.json"
     outside.write_text('{"y": 2}')
     assert _load_artifact(str(outside)) is None
 

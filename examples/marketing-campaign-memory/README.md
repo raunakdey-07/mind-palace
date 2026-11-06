@@ -1,11 +1,11 @@
 # Marketing campaign memory — reference integration
 
 A thin FastAPI-shaped integration showing how a multi-user marketing application
-would use Mind Palace as its memory layer, and what it has to get right before
+would use Verilore as its memory layer, and what it has to get right before
 that is safe.
 
 This is **not** the marketing application. It is the part that decides whether
-Mind Palace can be adopted by one, and it exists to make four claims testable:
+Verilore can be adopted by one, and it exists to make four claims testable:
 
 1. An organisation's brand memory is reusable by every campaign in that
    organisation, and by nobody else's.
@@ -30,21 +30,21 @@ authoritative memory without explicit approval. It proves these because they are
 properties of the memory layer, not of model behaviour.
 
 **What a real LLM evaluation harness tests** (output quality): whether an actual
-model, given the Mind Palace context package, produces on-brand, constraint-
+model, given the Verilore context package, produces on-brand, constraint-
 adherent copy. That is measured separately by the agency-readiness benchmark
 (`benchmarks/agency_readiness/`); it is not what
 this example asserts.
 
-**Execution mode:** the example reaches Mind Palace over HTTP through the public
+**Execution mode:** the example reaches Verilore over HTTP through the public
 REST contract. It can run against an externally started service
-(`MIND_PALACE_URL` / `MIND_PALACE_BASE_URL`) or against an in-process mounted
+(`VERILORE_URL` / `VERILORE_BASE_URL`) or against an in-process mounted
 application (no socket, no port). Both paths exercise the same middleware,
 authorization choke point and database policies; only the transport differs.
 
 **Real:** the corpus mapping, the authorization decisions, the role matrix, the
 archive, receipts and the query surfaces. Memory is reached over **HTTP, through
 the public REST contract** — `httpx`, a bearer credential and a JSON body, to a
-running Mind Palace at `MIND_PALACE_URL`. No direct SQL against Mind Palace's
+running Verilore at `VERILORE_URL`. No direct SQL against Verilore's
 tables, no import of `api.services`, no import of the server's ASGI application
 object, no knowledge of its models or repositories.
 
@@ -66,30 +66,30 @@ Two earlier versions failed that test and were fixed rather than excepted:
 Corpus creation and credential issuance have no HTTP route **by design** — a
 network endpoint that mints a tenant boundary would be the thing this whole design
 exists to avoid. They are now issued through the documented operator commands,
-`mindpalace corpus create` and `mindpalace credential issue`, as subprocesses:
+`verilore corpus create` and `verilore credential issue`, as subprocesses:
 exactly what an integrating application's onboarding step would run. Onboarding is
 an operator task; nothing a request handler performs uses it.
 
 ## Run it
 
-Mind Palace has to be running first — this demo is a client of it, which is the
+Verilore has to be running first — this demo is a client of it, which is the
 point.
 
 ```bash
 # 1. The service, in one shell.
 alembic -c migrations/alembic.ini upgrade head
-MIND_PALACE_AUTH_MODE=required uvicorn api.main:app --host 127.0.0.1 --port 8000
+VERILORE_AUTH_MODE=required uvicorn api.main:app --host 127.0.0.1 --port 8000
 
 # 2. The demo, in another.
 python examples/marketing-campaign-memory/demo.py
 ```
 
-`MIND_PALACE_URL` points the demo at the service; it defaults to
+`VERILORE_URL` points the demo at the service; it defaults to
 `http://127.0.0.1:8000`.
 
 ```bash
-# To see the application layer's own refusals rather than Mind Palace's:
-MIND_PALACE_AUTH_MODE=off python examples/marketing-campaign-memory/demo.py
+# To see the application layer's own refusals rather than Verilore's:
+VERILORE_AUTH_MODE=off python examples/marketing-campaign-memory/demo.py
 ```
 
 The demo prints which authorization mode the *service* is running in, read from
@@ -99,7 +99,7 @@ permissively would be worse than no demo, because it would look like isolation.
 It also refuses to run if the service answers `503`, rather than reporting a mode
 it could not confirm.
 
-The Mind Palace application is mounted in-process rather than started as a
+The Verilore application is mounted in-process rather than started as a
 service, so no port is needed. Every memory call still goes over HTTP through
 the real middleware, the real authorization choke point and the real database
 policies; only the socket is gone.
@@ -107,7 +107,7 @@ policies; only the socket is gone.
 Against a real deployment, set the base URL instead:
 
 ```bash
-MIND_PALACE_BASE_URL=http://mindpalace.internal:8000 python your_app.py
+VERILORE_BASE_URL=http://verilore.internal:8000 python your_app.py
 ```
 
 ## How tenants map onto memory
@@ -140,7 +140,7 @@ schools") is not true of its sibling.
 | Draft assets              | the campaign                   | members of the workspace              |
 | Review decisions          | the campaign                   | members of the workspace              |
 | Application records       | the workspace                  | members of that workspace             |
-| Mind Palace credentials   | the deployment operator        | whoever holds the secret              |
+| Verilore credentials   | the deployment operator        | whoever holds the secret              |
 
 Collaborators inside a workspace are not over-isolated: two users with different
 ids and the same role see the same workspace memory. The boundary is the
@@ -203,7 +203,7 @@ It is worth being precise about what this does **not** establish. A recorded
 approval says a reviewer accepted an asset; it does not say the underlying
 product claim was true, and it does not say the generator followed its context
 faithfully. Provenance and authority in the archive are separate from model
-behaviour, and only the first two are Mind Palace's to guarantee.
+behaviour, and only the first two are Verilore's to guarantee.
 
 ## Files
 
@@ -212,15 +212,15 @@ behaviour, and only the first two are Mind Palace's to guarantee.
 | `marketing_memory/tenancy.py`  | workspaces, memberships, roles, campaigns, and the corpus mapping |
 | `marketing_memory/service.py`  | the workflow and the permission matrix                            |
 | `marketing_memory/generator.py`| the simulated generator                                           |
-| `marketing_memory/memory.py`   | the HTTP memory client — the only place Mind Palace is reached    |
+| `marketing_memory/memory.py`   | the HTTP memory client — the only place Verilore is reached    |
 | `marketing_memory/provision.py`| onboarding: schema, corpora, credentials, seed facts               |
 | `demo.py`                      | the runnable walkthrough                                          |
 
 Two databases, kept apart on purpose. This application owns `users`,
 `memberships`, `campaigns`, `assets` and `decisions` in its own
-`marketing_app` schema. Mind Palace owns the memory, its provenance and its
+`marketing_app` schema. Verilore owns the memory, its provenance and its
 versions. The application records its own approval in its own tables and never
-writes into Mind Palace's — an approval is a fact about a workflow, not about a
+writes into Verilore's — an approval is a fact about a workflow, not about a
 memory.
 
 The tests live in `tests/test_marketing_reference_integration.py` so that CI runs

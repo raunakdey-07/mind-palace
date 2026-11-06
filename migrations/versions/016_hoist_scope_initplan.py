@@ -1,17 +1,17 @@
 """Migration 016: hoist per-row scope function out of RLS policies (InitPlan).
 
-Recreates the `mindpalace_tenant` policy on every table in CORPUS_COLUMN_TABLES
+Recreates the `verilore_tenant` policy on every table in CORPUS_COLUMN_TABLES
 with the scope check inlined directly in the USING / WITH CHECK expression,
-instead of indirected through `mindpalace_allowed_corpus()`.
+instead of indirected through `verilore_allowed_corpus()`.
 
 PostgreSQL cannot inline the wrapper function, so migration 015's policy caused
-`mp_verified_scope_corpora()` to be invoked once per row (~50,000 calls on
-50,000 `memory_claims`). Inlining puts `(SELECT mp_verified_scope_corpora())`
+`vl_verified_scope_corpora()` to be invoked once per row (~50,000 calls on
+50,000 `memory_claims`). Inlining puts `(SELECT vl_verified_scope_corpora())`
 directly in the policy, where the planner can evaluate it once as an InitPlan
 instead of per row.
 
 Semantics are unchanged: exactly the same rows are visible to the same scopes.
-`mindpalace_allowed_corpus` and its grants are left intact (the function remains
+`verilore_allowed_corpus` and its grants are left intact (the function remains
 for compatibility); only the policy expression changes.
 
 `chunks` is intentionally left untouched: its policy reaches the corpus through
@@ -46,7 +46,7 @@ CORPUS_COLUMN_TABLES = (
     "memory_claim_embeddings",
 )
 
-POLICY_PREFIX = "mindpalace_tenant"
+POLICY_PREFIX = "verilore_tenant"
 
 
 def _policy_column(table: str) -> str:
@@ -56,13 +56,13 @@ def _policy_column(table: str) -> str:
 def _scope_expression(column: str) -> str:
     """Inlined scope predicate hoistable to an InitPlan.
 
-    Equivalent to `mindpalace_allowed_corpus(<column>)` under migration 015:
-    `btrim(candidate) = ANY ((SELECT mp_verified_scope_corpora()))::text[]`
-    OR `'*' = ANY ((SELECT mp_verified_scope_corpora()))::text[]`.
+    Equivalent to `verilore_allowed_corpus(<column>)` under migration 015:
+    `btrim(candidate) = ANY ((SELECT vl_verified_scope_corpora()))::text[]`
+    OR `'*' = ANY ((SELECT vl_verified_scope_corpora()))::text[]`.
     """
     return (
-        f"btrim({column}::text) = ANY (((SELECT mp_verified_scope_corpora()))::text[]) "
-        f"OR '*' = ANY (((SELECT mp_verified_scope_corpora()))::text[])"
+        f"btrim({column}::text) = ANY (((SELECT vl_verified_scope_corpora()))::text[]) "
+        f"OR '*' = ANY (((SELECT vl_verified_scope_corpora()))::text[])"
     )
 
 
@@ -82,7 +82,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Restore the migration 015 policy form (indirect via
-    `mindpalace_allowed_corpus()`), faithfully reversing upgrade()."""
+    `verilore_allowed_corpus()`), faithfully reversing upgrade()."""
     for table in CORPUS_COLUMN_TABLES:
         column = _policy_column(table)
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
@@ -90,6 +90,6 @@ def downgrade() -> None:
         op.execute(f"DROP POLICY IF EXISTS {POLICY_PREFIX} ON {table}")
         op.execute(f"""
             CREATE POLICY {POLICY_PREFIX} ON {table}
-                USING (mindpalace_allowed_corpus({column}))
-                WITH CHECK (mindpalace_allowed_corpus({column}))
+                USING (verilore_allowed_corpus({column}))
+                WITH CHECK (verilore_allowed_corpus({column}))
         """)

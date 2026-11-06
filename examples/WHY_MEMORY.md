@@ -1,6 +1,6 @@
 # Why persistent corpus memory?
 
-**Mind Palace is a persistent, portable memory layer for AI applications working
+**Verilore is a persistent, portable memory layer for AI applications working
 with an evolving corpus.** It is not a model of human memory, a conversation
 store, or an agent that decides what is true. Markdown remains the authored
 source; PostgreSQL retains versions, assertions, and exact supporting evidence;

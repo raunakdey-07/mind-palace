@@ -137,9 +137,9 @@ filesystem paths.
 ### Python SDK
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-client = MindPalace(base_url="http://127.0.0.1:8000")
+client = Verilore(base_url="http://127.0.0.1:8000")
 page = client.memory.feed(corpus="project", page_size=50)
 while page.has_more:
     page = client.memory.feed(
@@ -154,8 +154,8 @@ Timeouts, transport failures, and invalid successful responses use the SDK's
 ### CLI
 
 ```bash
-mindpalace memory feed --corpus project --page-size 50
-mindpalace memory feed --corpus project --page-size 50 --cursor "$CURSOR"
+verilore memory feed --corpus project --page-size 50
+verilore memory feed --corpus project --page-size 50 --cursor "$CURSOR"
 ```
 
 The CLI prints the compact canonical `FeedResponse` JSON and exits nonzero for a

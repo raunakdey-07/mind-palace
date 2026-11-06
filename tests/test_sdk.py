@@ -1,9 +1,9 @@
-"""SDK smoke tests: the developer-facing MindPalace client.
+"""SDK smoke tests: the developer-facing Verilore client.
 
 These run against a live database when DATABASE_URL is set; they exercise
 the exact flow from the product thesis:
 
-    mp = MindPalace("my-corpus")
+    mp = Verilore("my-corpus")
     mp.sync("./docs")
     context = mp.context("question", budget_tokens=4000)
 """
@@ -74,9 +74,9 @@ def _cleanup_sdk_corpus():
                 )
                 conn.execute(
                     sa.text(
-                        "SELECT set_config('mindpalace.tenant_scope', '{*}', true); "
-                        "SELECT set_config('mindpalace.erasure', 'on', true); "
-                        "SELECT mindpalace_erase_corpus(id) FROM corpora "
+                        "SELECT set_config('verilore.tenant_scope', '{*}', true); "
+                        "SELECT set_config('verilore.erasure', 'on', true); "
+                        "SELECT verilore_erase_corpus(id) FROM corpora "
                         "WHERE name = 'sdk-test-corpus'"
                     )
                 )
@@ -92,11 +92,11 @@ def _cleanup_sdk_corpus():
 
 
 @requires_db
-def test_sdk_end_to_end(tmp_path):
+def test_sdk_end_to_end(tvl_path):
     """The full product flow: create -> sync -> context with attribution."""
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    docs = tmp_path / "docs"
+    docs = tvl_path / "docs"
     docs.mkdir()
     (docs / "auth.md").write_text("""---
 title: "Authentication Guide"
@@ -111,7 +111,7 @@ summary: "How authentication works"
 The system uses flurble-token authentication with wibble rotation every hour.
 """)
 
-    mp = MindPalace("sdk-test-corpus")
+    mp = Verilore("sdk-test-corpus")
 
     summary = mp.sync(str(docs))
     assert summary.success
@@ -131,10 +131,10 @@ The system uses flurble-token authentication with wibble rotation every hour.
 
 
 @requires_db
-def test_sdk_budget_enforced(tmp_path):
-    from mindpalace_sdk import MindPalace
+def test_sdk_budget_enforced(tvl_path):
+    from verilore_sdk import Verilore
 
-    docs = tmp_path / "docs"
+    docs = tvl_path / "docs"
     docs.mkdir()
     for i in range(5):
         (docs / f"doc{i}.md").write_text(f"""---
@@ -148,7 +148,7 @@ document_type: "note"
 Padding text {"x" * 900} unique marker {i}.
 """)
 
-    mp = MindPalace("sdk-test-corpus")
+    mp = Verilore("sdk-test-corpus")
     mp.sync(str(docs))
 
     pack = mp.context("unique markers in budget docs", budget_tokens=1024)

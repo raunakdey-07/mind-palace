@@ -57,7 +57,7 @@ HEAD = "312958d9" + "0" * 32
 OLD = "3108404" + "0" * 32
 
 
-def _junit(tmp_path: Path, cases: list[tuple[str, str, str, str]]) -> Path:
+def _junit(tvl_path: Path, cases: list[tuple[str, str, str, str]]) -> Path:
     """Write a junitxml shaped like pytest's.
 
     Each case is ``(classname, name, outcome, reason)``; ``outcome`` is one of
@@ -78,7 +78,7 @@ def _junit(tmp_path: Path, cases: list[tuple[str, str, str, str]]) -> Path:
             "passed": "",
         }[outcome]
         body.append(f'<testcase classname="{classname}" name="{name}">{child}</testcase>')
-    path = tmp_path / "junit.xml"
+    path = tvl_path / "junit.xml"
     path.write_text(
         f'<?xml version="1.0" encoding="utf-8"?><testsuites>'
         f'<testsuite {attrs}>{"".join(body)}</testsuite></testsuites>'
@@ -102,14 +102,14 @@ def test_the_two_opt_in_skips_are_the_whole_allowlist():
         "test_a_built_wheel_contains_every_declared_module",
     }
     for name, (variable, why) in module.ALLOWLIST.items():
-        assert variable.startswith("MIND_PALACE_"), name
+        assert variable.startswith("VERILORE_"), name
         assert len(why) > 40, f"{name} needs a reason, not a placeholder"
 
 
-def test_an_unlisted_skip_is_rejected(tmp_path, monkeypatch, capsys):
+def test_an_unlisted_skip_is_rejected(tvl_path, monkeypatch, capsys):
     module = _check_skips()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [("tests.test_x", "test_something_new", "skipped", "no reachable DATABASE_URL")],
     )
     _run(monkeypatch, module.main, "--junit", str(junit))
@@ -117,16 +117,16 @@ def test_an_unlisted_skip_is_rejected(tmp_path, monkeypatch, capsys):
     assert "test_something_new" in capsys.readouterr().out
 
 
-def test_an_allowlisted_skip_passes(tmp_path, monkeypatch):
+def test_an_allowlisted_skip_passes(tvl_path, monkeypatch):
     module = _check_skips()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             (
                 "tests.test_wheel_contents",
                 "test_a_built_wheel_contains_every_declared_module",
                 "skipped",
-                "set MIND_PALACE_TEST_BUILD_WHEEL=1 to build and inspect a wheel",
+                "set VERILORE_TEST_BUILD_WHEEL=1 to build and inspect a wheel",
             )
         ],
     )
@@ -134,7 +134,7 @@ def test_an_allowlisted_skip_passes(tmp_path, monkeypatch):
     assert module.main() == 0
 
 
-def test_an_allowlisted_name_that_skips_for_another_reason_is_rejected(tmp_path, monkeypatch):
+def test_an_allowlisted_name_that_skips_for_another_reason_is_rejected(tvl_path, monkeypatch):
     """The allowlist is keyed on the reason as well as the name.
 
     A test can keep its name and start skipping because the database went away.
@@ -142,7 +142,7 @@ def test_an_allowlisted_name_that_skips_for_another_reason_is_rejected(tmp_path,
     """
     module = _check_skips()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             (
                 "tests.test_wheel_contents",
@@ -213,27 +213,27 @@ def test_backend_absent_is_exactly_the_seven_skips_the_default_causes():
         )
 
 
-def test_the_default_dependency_job_allows_the_torch_skips(tmp_path, monkeypatch):
+def test_the_default_dependency_job_allows_the_torch_skips(tvl_path, monkeypatch):
     module = _check_skips()
-    junit = _junit(tmp_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
+    junit = _junit(tvl_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
     _run(monkeypatch, module.main, "--junit", str(junit), "--default-dependency")
     assert module.main() == 0
 
 
-def test_the_same_skips_are_refused_without_the_flag(tmp_path, monkeypatch, capsys):
+def test_the_same_skips_are_refused_without_the_flag(tvl_path, monkeypatch, capsys):
     """The scoping is the whole point: these are only correct in one job.
 
     Under the base allowlist they are refused, which is what the
     `embedding-backends` job would see if it did not pass `--forbid-skips`.
     """
     module = _check_skips()
-    junit = _junit(tmp_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
+    junit = _junit(tvl_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
     _run(monkeypatch, module.main, "--junit", str(junit))
     assert module.main() == 1
     assert "test_both_vectors_are_unit_length" in capsys.readouterr().out
 
 
-def test_forbid_skips_fails_on_any_skip(tmp_path, monkeypatch, capsys):
+def test_forbid_skips_fails_on_any_skip(tvl_path, monkeypatch, capsys):
     """The mutation the embedding-backends job relies on.
 
     If `[torch]` stopped being installed there, `importorskip` would turn the five
@@ -243,7 +243,7 @@ def test_forbid_skips_fails_on_any_skip(tmp_path, monkeypatch, capsys):
     """
     module = _check_skips()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             (
                 "tests.test_embedder_backend_equivalence",
@@ -258,26 +258,26 @@ def test_forbid_skips_fails_on_any_skip(tmp_path, monkeypatch, capsys):
     assert "test_both_vectors_are_unit_length" in capsys.readouterr().out
 
 
-def test_forbid_skips_passes_when_nothing_skipped(tmp_path, monkeypatch):
+def test_forbid_skips_passes_when_nothing_skipped(tvl_path, monkeypatch):
     """Otherwise `--forbid-skips` would be untestable: a gate that always fails
     would satisfy the mutation above without checking anything."""
     module = _check_skips()
-    junit = _junit(tmp_path, [("tests.test_embedder", "test_backend_is_preferred", "passed", "")])
+    junit = _junit(tvl_path, [("tests.test_embedder", "test_backend_is_preferred", "passed", "")])
     _run(monkeypatch, module.main, "--junit", str(junit), "--forbid-skips")
     assert module.main() == 0
 
 
-def test_forbid_skips_also_refuses_the_two_opt_in_skips(tmp_path, monkeypatch):
+def test_forbid_skips_also_refuses_the_two_opt_in_skips(tvl_path, monkeypatch):
     """Zero means zero, including the ones that are otherwise allowlisted."""
     module = _check_skips()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             (
                 "tests.test_migrations",
                 "test_migrations_apply_downgrade_and_reapply",
                 "skipped",
-                "set MIND_PALACE_MIGRATION_ROUNDTRIP=1",
+                "set VERILORE_MIGRATION_ROUNDTRIP=1",
             )
         ],
     )
@@ -285,7 +285,7 @@ def test_forbid_skips_also_refuses_the_two_opt_in_skips(tmp_path, monkeypatch):
     assert module.main() == 1
 
 
-def test_a_backend_absent_name_skipping_for_another_reason_is_refused(tmp_path, monkeypatch):
+def test_a_backend_absent_name_skipping_for_another_reason_is_refused(tvl_path, monkeypatch):
     """Same rule as the base allowlist, and it matters more here.
 
     These entries exist because the dependency is absent. A test that keeps its
@@ -294,7 +294,7 @@ def test_a_backend_absent_name_skipping_for_another_reason_is_refused(tmp_path, 
     """
     module = _check_skips()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             (
                 "tests.test_search_semantics",
@@ -308,10 +308,10 @@ def test_a_backend_absent_name_skipping_for_another_reason_is_refused(tmp_path, 
     assert module.main() == 1
 
 
-def test_the_two_flags_together_are_refused_rather_than_being_lenient(tmp_path, monkeypatch):
+def test_the_two_flags_together_are_refused_rather_than_being_lenient(tvl_path, monkeypatch):
     """Allowing the torch skips and forbidding all skips cannot both be asked for."""
     module = _check_skips()
-    junit = _junit(tmp_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
+    junit = _junit(tvl_path, [(c, n, "skipped", r) for c, n, r in BACKEND_ABSENT_CASES])
     _run(
         monkeypatch,
         module.main,
@@ -341,7 +341,7 @@ def test_the_gate_checks_itself():
     assert "self-tests passed" in done.stdout, done.stdout
 
 
-def test_the_six_ingestion_statistics_skips_are_caught(tmp_path, monkeypatch):
+def test_the_six_ingestion_statistics_skips_are_caught(tvl_path, monkeypatch):
     """The actual regression, not a hypothetical one.
 
     The names are the six in `tests/test_ingestion_statistics.py`, and the
@@ -357,7 +357,7 @@ def test_the_six_ingestion_statistics_skips_are_caught(tmp_path, monkeypatch):
         "test_a_sync_below_the_threshold_never_runs_analyze",
     ]
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             ("tests.test_ingestion_statistics", n, "skipped", "no reachable DATABASE_URL")
             for n in names
@@ -367,19 +367,19 @@ def test_the_six_ingestion_statistics_skips_are_caught(tmp_path, monkeypatch):
     assert module.main() == 1
 
 
-def test_a_missing_junit_fails_rather_than_passing_quietly(tmp_path, monkeypatch):
+def test_a_missing_junit_fails_rather_than_passing_quietly(tvl_path, monkeypatch):
     module = _check_skips()
-    _run(monkeypatch, module.main, "--junit", str(tmp_path / "nope.xml"))
+    _run(monkeypatch, module.main, "--junit", str(tvl_path / "nope.xml"))
     assert module.main() == 1
 
 
 # --------------------------------------------------------- runner-mode counts
 
 
-def test_junit_counts_are_read_from_the_file(tmp_path):
+def test_junit_counts_are_read_from_the_file(tvl_path):
     module = _check_evidence()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [
             ("t", "a", "passed", ""),
             ("t", "b", "passed", ""),
@@ -393,23 +393,23 @@ def test_junit_counts_are_read_from_the_file(tmp_path):
     assert counts == {"passed": "4", "failed": "0", "skipped": "2", "collected": "6"}
 
 
-def test_junit_counts_count_failures_out_of_passed(tmp_path):
+def test_junit_counts_count_failures_out_of_passed(tvl_path):
     module = _check_evidence()
     junit = _junit(
-        tmp_path,
+        tvl_path,
         [("t", "a", "passed", ""), ("t", "b", "failure", ""), ("t", "c", "skipped", "x")],
     )
     assert module.junit_counts(junit)["passed"] == "1"
 
 
-def test_junit_counts_reject_a_file_that_is_not_a_junit(tmp_path):
+def test_junit_counts_reject_a_file_that_is_not_a_junit(tvl_path):
     module = _check_evidence()
-    broken = tmp_path / "not.xml"
+    broken = tvl_path / "not.xml"
     broken.write_text("this is not xml at all <<<")
     assert module.junit_counts(broken) is None
 
 
-def test_a_hand_edited_figure_is_rejected(tmp_path, monkeypatch):
+def test_a_hand_edited_figure_is_rejected(tvl_path, monkeypatch):
     """(i) The figure was edited by hand to something this run did not produce.
 
     `1619` is real -- it is in `RUN_RECORD`, from a workstation at an older
@@ -419,7 +419,7 @@ def test_a_hand_edited_figure_is_rejected(tmp_path, monkeypatch):
     """
     module = _check_evidence()
     monkeypatch.setattr(module, "collected_test_count", lambda: 1627)
-    junit = _junit(tmp_path, [("t", f"t{i}", "passed", "") for i in range(1625)])
+    junit = _junit(tvl_path, [("t", f"t{i}", "passed", "") for i in range(1625)])
     assert module.junit_counts(junit)["passed"] == "1625"
 
     recorded = {
@@ -443,7 +443,7 @@ def test_a_hand_edited_figure_is_rejected(tmp_path, monkeypatch):
     assert notes
 
 
-def test_a_figure_from_an_older_commit_is_rejected(tmp_path, monkeypatch):
+def test_a_figure_from_an_older_commit_is_rejected(tvl_path, monkeypatch):
     """(ii) The figure is true, and describes a tree that is not this one.
 
     The same 1619, produced at the older commit and carried forward with no
@@ -452,7 +452,7 @@ def test_a_figure_from_an_older_commit_is_rejected(tmp_path, monkeypatch):
     """
     module = _check_evidence()
     monkeypatch.setattr(module, "collected_test_count", lambda: 1627)
-    junit = _junit(tmp_path, [("t", f"t{i}", "passed", "") for i in range(1619)])
+    junit = _junit(tvl_path, [("t", f"t{i}", "passed", "") for i in range(1619)])
     assert module.junit_counts(junit)["passed"] == "1619"
 
     recorded = {

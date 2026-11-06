@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Entry point for the local runtime: `python -m mindpalace_runtime`.
+"""Entry point for the local runtime: `python -m verilore_runtime`.
 
 A module rather than a console script because the runtime is started by the CLI
 spawning `sys.executable -m`, which guarantees it runs the *same* interpreter and
-the *same* installed Mind Palace as the command that started it. A console script
+the *same* installed Verilore as the command that started it. A console script
 would depend on PATH, and `pip install --user` plus a virtualenv is a good way to
 end up with two versions of the product and a socket served by the wrong one.
 """
@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     except RuntimeError_ as exc:
         # The only thing that prints here. Everything else the runtime does, it does
         # through the product's own error translation.
-        print(f"mindpalace runtime: {exc}", file=sys.stderr)
+        print(f"verilore runtime: {exc}", file=sys.stderr)
         return 1
 
 

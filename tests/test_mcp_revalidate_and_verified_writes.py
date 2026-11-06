@@ -56,16 +56,16 @@ def test_memory_revalidate_is_registered():
 
 
 @pytest.fixture
-def tmp_root(tmp_path, monkeypatch):
-    root = tmp_path / "docs"
+def tvl_root(tvl_path, monkeypatch):
+    root = tvl_path / "docs"
     root.mkdir()
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
     return root
 
 
-def test_quote_exact_accepted(tmp_root, loop):
+def test_quote_exact_accepted(tvl_root, loop):
     _skip_without_db()
-    doc = tmp_root / "note.md"
+    doc = tvl_root / "note.md"
     doc.write_text("The production datastore is PostgreSQL.\n")
     result = loop.run_until_complete(
         __import__("mcp_server").mcp.call_tool(
@@ -80,9 +80,9 @@ def test_quote_exact_accepted(tmp_root, loop):
     assert not result.is_error, json.loads(result.content[0].text)
 
 
-def test_quote_mutation_rejected(tmp_root, loop):
+def test_quote_mutation_rejected(tvl_root, loop):
     _skip_without_db()
-    doc = tmp_root / "note.md"
+    doc = tvl_root / "note.md"
     doc.write_text("The production datastore is PostgreSQL.\n")
     result = loop.run_until_complete(
         __import__("mcp_server").mcp.call_tool(
@@ -120,10 +120,10 @@ def test_unresolved_supersedes_rejected(loop):
 def test_sdk_revalidate_current_then_stale():
     _skip_without_db()
     os.environ.setdefault("DATABASE_URL", os.environ["DATABASE_URL"])
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     corpus = "sdk-reval-corpus"
-    mp = MindPalace(corpus)
+    mp = Verilore(corpus)
     mp.remember("Production uses PostgreSQL.", key="datastore")
     r = mp.explain("What datastore does production use?")
     receipt = r.receipt

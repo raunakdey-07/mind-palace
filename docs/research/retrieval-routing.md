@@ -51,7 +51,7 @@ error is caught, and a read-only connection could not answer a question it had
 every right to answer.
 
 The cache is now filled by the ingestion service, which already embeds, and by
-`mindpalace reindex` through `backfill_claim_embeddings`. The read path only
+`verilore reindex` through `backfill_claim_embeddings`. The read path only
 reads. A corpus with no cache still answers, just more slowly, and dropping the
 table changes latency and nothing else.
 

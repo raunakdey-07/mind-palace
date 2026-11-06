@@ -57,7 +57,7 @@ def disposable_postgres_url() -> Generator[str, None, None]:
     database = validation.DisposableDatabase(source_url)
     try:
         database.create()
-        cursor_secret = os.environ.setdefault("MIND_PALACE_CURSOR_SECRET", CURSOR_SECRET)
+        cursor_secret = os.environ.setdefault("VERILORE_CURSOR_SECRET", CURSOR_SECRET)
         validation.run_migrations(database.url, cursor_secret)
         yield database.url
     finally:
@@ -325,11 +325,11 @@ async def test_feed_concurrent_insertion_preserves_live_keyset_semantics(
         assert equal_items[1].observed_at == boundary_time
         assert set(equal_ids).issubset(continuation_ids)
 
-        timestamp_groups = {}
+        timestavl_groups = {}
         for item in fresh:
-            timestamp_groups.setdefault(item.observed_at, []).append(item.version_id)
-        assert any(len(ids) >= 2 for ids in timestamp_groups.values())
-        assert all(ids == sorted(ids) for ids in timestamp_groups.values())
+            timestavl_groups.setdefault(item.observed_at, []).append(item.version_id)
+        assert any(len(ids) >= 2 for ids in timestavl_groups.values())
+        assert all(ids == sorted(ids) for ids in timestavl_groups.values())
 
         before_id = target_late[3].version_id
         later_id = target_late[2].version_id

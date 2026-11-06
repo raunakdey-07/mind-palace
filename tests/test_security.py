@@ -47,9 +47,9 @@ requires_db = pytest.mark.skipif(not _db_available(), reason="no reachable DATAB
 # --- static analysis of ingestion paths ---
 
 
-def test_sync_paths_are_relative_to_root(tmp_path):
+def test_sync_paths_are_relative_to_root(tvl_path):
     """rglob + relative_to guarantees paths stay inside the source root."""
-    d = tmp_path / "src"
+    d = tvl_path / "src"
     (d / "sub").mkdir(parents=True)
     (d / "sub" / "a.md").write_text("# A")
 
@@ -62,10 +62,10 @@ def test_sync_paths_are_relative_to_root(tmp_path):
         assert ".." not in r.split("/")
 
 
-def test_unsupported_extension_rejected_not_executed(tmp_path):
+def test_unsupported_extension_rejected_not_executed(tvl_path):
     from api.services.source_formats import parse_file
 
-    f = tmp_path / "evil.exe"
+    f = tvl_path / "evil.exe"
     f.write_bytes(b"MZ\x90\x00")
     with pytest.raises(ValueError):
         parse_file(f)
@@ -83,10 +83,10 @@ def test_oversized_document_is_chunked_not_crashed():
 
 
 @requires_db
-async def test_prompt_injection_content_stored_as_inert_text(tmp_path):
+async def test_prompt_injection_content_stored_as_inert_text(tvl_path):
     """Instruction-like corpus text is stored verbatim as data.
 
-    Mind Palace never executes corpus content; whether it influences an LLM
+    Verilore never executes corpus content; whether it influences an LLM
     is the consuming application's responsibility. This test pins that the
     content round-trips exactly — no interpretation, no execution.
     """

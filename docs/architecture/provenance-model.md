@@ -1,6 +1,6 @@
 # Provenance model
 
-Every claim Mind Palace returns is anchored to text that was archived, and the
+Every claim Verilore returns is anchored to text that was archived, and the
 anchor is enforced by the database rather than by application code. Evidence:
 `migrations/versions/004_memory.py`,
 `migrations/versions/005_multiple_evidence.py`, `api/services/memory.py`,

@@ -1,6 +1,6 @@
 """M014.2: the Memory Receipt, and the three properties it does and does not prove.
 
-The receipt's job is to answer "what exactly did Mind Palace tell my application,
+The receipt's job is to answer "what exactly did Verilore tell my application,
 and can I check that later?". These tests pin the answer, including the cases where
 verification must refuse, and the case that matters most for honesty: authenticity
 is NOT established without a trust anchor that lives outside the artifact.
@@ -137,7 +137,7 @@ def test_every_receipt_mutation_is_caught_in_the_right_bucket(receipt, mutate, b
 
 
 def test_tampering_the_receipt_without_reminting_is_caught(receipt):
-    receipt["query"] = "something Mind Palace never said"
+    receipt["query"] = "something Verilore never said"
     result = verify_receipt(receipt, PACK)
     assert not result["verified"]
     assert any("query digest mismatch" in r for r in result["integrity"])

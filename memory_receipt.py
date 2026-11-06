@@ -4,7 +4,7 @@
 """Memory Receipt: a portable record of what was remembered, and on what basis.
 
 Standard library only, like `memory_pack` and `memory_proof`, so a receipt can be
-minted, exported and checked with no Mind Palace runtime present.
+minted, exported and checked with no Verilore runtime present.
 
 WHAT A RECEIPT IS
 -----------------
@@ -12,7 +12,7 @@ A Memory Pack says what the archive currently holds. A receipt says what Mind
 Palace *returned to one application, for one query, at one historical state*, and
 carries the proof needed to check that later. It answers:
 
-    What exactly did Mind Palace tell my application?
+    What exactly did Verilore tell my application?
     From which authoritative version?
     At what historical state?
     With what evidence?
@@ -24,7 +24,7 @@ than embedding it, so a response carrying a receipt stays bounded.
 QUERY BINDING
 --------------
 A proof that "claim X exists" is much weaker than a proof that "for query Q, this
-is the authoritative memory Mind Palace returned". A receipt records both the
+is the authoritative memory Verilore returned". A receipt records both the
 exact query string and a digest over it, so the binding is explicit and checkable.
 
 This is still not a claim about retrieval *quality*. Verification establishes that
@@ -207,7 +207,7 @@ def build_receipt(
     resolved_query = query if query is not None else pack.raw.get("query", "")
 
     entries = proof["entries"]
-    # The receipt must name the answer Mind Palace would have given AT THIS
+    # The receipt must name the answer Verilore would have given AT THIS
     # INSTANT. Picking the CURRENT claim unconditionally is wrong for a historical
     # valid_at: it would attach a receipt naming PostgreSQL to a question asked in
     # February, when the archive recorded SQLite.

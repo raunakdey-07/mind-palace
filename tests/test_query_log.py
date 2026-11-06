@@ -20,9 +20,9 @@ from api.services import query_log
 
 
 @pytest.fixture
-def log(tmp_path, monkeypatch):
-    path = tmp_path / "logs" / "queries.jsonl"
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", str(path))
+def log(tvl_path, monkeypatch):
+    path = tvl_path / "logs" / "queries.jsonl"
+    monkeypatch.setenv("VERILORE_QUERY_LOG", str(path))
     return path
 
 
@@ -97,7 +97,7 @@ def test_a_retry_is_two_rows_not_one_quiet_merge(log):
     assert len(rows(log)) == 2
 
 
-def test_an_unwritable_path_returns_none_and_does_not_raise(monkeypatch, tmp_path):
+def test_an_unwritable_path_returns_none_and_does_not_raise(monkeypatch, tvl_path):
     """A full disk must not turn a recall into a 500.
 
     Two shapes: a directory where a file is expected, and a path Python rejects
@@ -105,13 +105,13 @@ def test_an_unwritable_path_returns_none_and_does_not_raise(monkeypatch, tmp_pat
     a guard that only catches the first turns an unusual path into an exception
     in the middle of somebody's query.
     """
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", str(tmp_path))  # a directory
+    monkeypatch.setenv("VERILORE_QUERY_LOG", str(tvl_path))  # a directory
     assert query_log.record(operation="query", query="q", started=0.0) is None
 
-    monkeypatch.setattr(query_log, "default_path", lambda: tmp_path / "x" / "\0bad")
+    monkeypatch.setattr(query_log, "default_path", lambda: tvl_path / "x" / "\0bad")
     assert query_log.record(operation="query", query="q", started=0.0) is None
 
-    blocker = tmp_path / "a-file"
+    blocker = tvl_path / "a-file"
     blocker.write_text("not a directory")
     monkeypatch.setattr(query_log, "default_path", lambda: blocker / "logs" / "q.jsonl")
     assert query_log.record(operation="query", query="q", started=0.0) is None
@@ -119,8 +119,8 @@ def test_an_unwritable_path_returns_none_and_does_not_raise(monkeypatch, tmp_pat
 
 def test_the_log_is_off_for_a_tenant_scoped_connection(monkeypatch):
     """A server deployment's retention policy is not this module's to choose."""
-    monkeypatch.delenv("MIND_PALACE_QUERY_LOG", raising=False)
-    monkeypatch.setenv("MIND_PALACE_TENANT_SCOPE", "some-corpus-id")
+    monkeypatch.delenv("VERILORE_QUERY_LOG", raising=False)
+    monkeypatch.setenv("VERILORE_TENANT_SCOPE", "some-corpus-id")
     assert query_log.tenant_scoped_now() is True
     assert query_log.enabled(tenant_scoped=True) is False
 
@@ -132,23 +132,23 @@ def test_the_log_is_off_unless_asked_for(monkeypatch):
     every test session -- so `docs/security.md`'s promise that logs hold no query
     text was false on the machine making it. The setting is the whole contract now.
     """
-    monkeypatch.delenv("MIND_PALACE_QUERY_LOG", raising=False)
-    monkeypatch.delenv("MIND_PALACE_TENANT_SCOPE", raising=False)
+    monkeypatch.delenv("VERILORE_QUERY_LOG", raising=False)
+    monkeypatch.delenv("VERILORE_TENANT_SCOPE", raising=False)
     assert query_log.tenant_scoped_now() is False
     assert query_log.enabled(tenant_scoped=False) is False
 
 
 def test_setting_it_to_one_turns_the_log_on_everywhere(monkeypatch):
     """Local or deployed, opt-in means opt-in. `tenant_scoped` no longer decides."""
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", "1")
+    monkeypatch.setenv("VERILORE_QUERY_LOG", "1")
     assert query_log.enabled(tenant_scoped=False) is True
     assert query_log.enabled(tenant_scoped=True) is True
 
 
 def test_the_setting_overrides_both_ways(monkeypatch):
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", "0")
+    monkeypatch.setenv("VERILORE_QUERY_LOG", "0")
     assert query_log.enabled(tenant_scoped=False) is False
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", "1")
+    monkeypatch.setenv("VERILORE_QUERY_LOG", "1")
     assert query_log.enabled(tenant_scoped=True) is True
 
 
@@ -186,11 +186,11 @@ def test_a_corrupt_line_does_not_break_feedback(log):
     assert stamped["verdict"] == "wrong"
 
 
-def test_the_context_manager_logs_when_the_operation_raises(tmp_path, monkeypatch):
+def test_the_context_manager_logs_when_the_operation_raises(tvl_path, monkeypatch):
     """A failed call is traffic too, and it is the traffic worth having."""
-    monkeypatch.setenv("MIND_PALACE_QUERY_LOG", "1")
-    path = tmp_path / "logs" / "queries.jsonl"
-    monkeypatch.setenv("MIND_PALACE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("VERILORE_QUERY_LOG", "1")
+    path = tvl_path / "logs" / "queries.jsonl"
+    monkeypatch.setenv("VERILORE_DATA_DIR", str(tvl_path))
     with pytest.raises(RuntimeError):
         with query_log.Call("query", "a question that failed", corpus="c"):
             raise RuntimeError("boom")

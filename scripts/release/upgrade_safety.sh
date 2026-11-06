@@ -36,8 +36,8 @@ AFTER="$WORK/after"
 
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
-export MIND_PALACE_RUNTIME=0
-export MIND_PALACE_AUTH_MODE=off
+export VERILORE_RUNTIME=0
+export VERILORE_AUTH_MODE=off
 
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -72,10 +72,10 @@ say "upgrading to this branch's head"
 #     assert_upgrade.py runs as a superuser, and a superuser bypasses row-level
 #     security -- so it cannot see a policy keyed on the wrong column. This
 #     project's development database carried exactly that bug for months
-#     (`USING (mindpalace_allowed_corpus(id))` on `memory_documents`, whose
+#     (`USING (verilore_allowed_corpus(id))` on `memory_documents`, whose
 #     column is `corpus_id`) and every superuser test passed.
 #
-#     So the same archive is re-read as `mindpalace_runtime`, through a
+#     So the same archive is re-read as `verilore_runtime`, through a
 #     credential granted to the existing corpora, and the two views must agree.
 say "provisioning the least-privileged role and asserting the runtime view"
 
@@ -104,21 +104,21 @@ fi
 # to the server through the environment -- exactly as a real deployment does.
 SCOPE_SECRET=$(openssl rand -hex 32)
 if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-  -c "INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"; then
+  -c "INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT vl_set_scope_token_enforcement(true);"; then
   echo "::error::could not rotate the scope secret or enable enforcement."
   echo "::error::The server started below would refuse to start, which would mask"
   echo "::error::the real upgrade assertion. Fatal rather than skipped."
   exit 1
 fi
-export MIND_PALACE_SCOPE_SECRET="$SCOPE_SECRET"
-export MIND_PALACE_ENFORCE_SCOPE_TOKEN=on
+export VERILORE_SCOPE_SECRET="$SCOPE_SECRET"
+export VERILORE_ENFORCE_SCOPE_TOKEN=on
 
 # Same scheme, host, port and database; a different identity. The scheme is kept
 # because a driver-qualified URL (`postgresql+asyncpg://`) is what the engine
 # expects, and userinfo is the only part that changes.
 SCHEME="${DATABASE_URL%%://*}"
 REST="${DATABASE_URL##*@}"
-RUNTIME_URL="${SCHEME}://mindpalace_runtime:upgrade-safety-role-password@${REST}"
+RUNTIME_URL="${SCHEME}://verilore_runtime:upgrade-safety-role-password@${REST}"
 
 if [ -z "$REST" ] || [ "$REST" = "$DATABASE_URL" ]; then
   echo "::error::could not build a runtime-role URL from DATABASE_URL"
@@ -129,7 +129,7 @@ fi
 # That is not tidiness: the operator step being asserted is "before the grant
 # this reader sees one corpus, after the grant it sees them all", and the only way
 # to observe the first half is to be the process that performs the second.
-MIND_PALACE_SUPERUSER_URL="$DATABASE_URL" \
+VERILORE_SUPERUSER_URL="$DATABASE_URL" \
 "$PY" "$REPO/scripts/release/assert_runtime_role.py" \
   --superuser-url "$DATABASE_URL" \
   --runtime-url "$RUNTIME_URL" \

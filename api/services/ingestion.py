@@ -208,7 +208,7 @@ class IngestionService:
 
         `embed_chunks` asks for the vectors anyway, for a caller who wants the
         legacy chunk-level search over the whole corpus. A chunk search gives
-        the chunks it needs a vector when it runs, and `mindpalace reindex`
+        the chunks it needs a vector when it runs, and `verilore reindex`
         rebuilds them from the archive for a corpus that was synced without
         them.
         """
@@ -686,7 +686,7 @@ class IngestionService:
         Returns a machine-readable sync summary. A failed document never
         leaves a false 'successfully indexed' state.
 
-        `repo_path` is checked against `MIND_PALACE_INGEST_ROOTS` here rather
+        `repo_path` is checked against `VERILORE_INGEST_ROOTS` here rather
         than by each caller. The CLI and the two routes each checked it
         themselves, which left the SDK's `sync()` and the MCP `sync` tool -- both
         of which arrive here directly -- reading outside the configured roots.

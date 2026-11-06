@@ -329,7 +329,7 @@ def _extract_receipt_claims(receipt_data: dict) -> tuple[str, Any, list[str]]:
     if not isinstance(receipt_data, dict):
         raise ValueError("receipt: missing response")
 
-    # A full receipt bundle as written by `mindpalace receipt` carries both the
+    # A full receipt bundle as written by `verilore receipt` carries both the
     # receipt and the response it describes.
     response = receipt_data.get("response") if "response" in receipt_data else None
     if isinstance(response, dict):

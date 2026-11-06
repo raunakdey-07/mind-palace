@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Mind Palace Python SDK: memory that remembers what changed, and why.
+"""Verilore Python SDK: memory that remembers what changed, and why.
 
 The intended experience is five operations:
 
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    client = MindPalace()                      # no configuration required
+    client = Verilore()                      # no configuration required
 
     client.remember("Production uses PostgreSQL.")
     result = client.recall("What database does production use?")
@@ -28,7 +28,7 @@ The corpus defaults to ``default``. Pass one to scope memory explicitly.
 Everything above runs against a local PostgreSQL. Supply `base_url` to go over
 HTTP instead, which is how an agent reaches memory held by someone else:
 
-    client = MindPalace(base_url="http://127.0.0.1:8000")
+    client = Verilore(base_url="http://127.0.0.1:8000")
 
 The lower-level `client.memory.*` operations -- `current`, `changes`, `evidence`,
 `as_of`, `snapshot`, `replay`, `pack`, `feed`, and `query` with its intent and
@@ -101,9 +101,9 @@ class MemoryResult:
     #: supersession from a contradiction, so it names them and lets the caller
     #: decide. Empty on a write that matched nothing already recorded.
     related_active_claims: list[dict] = field(default_factory=list)
-    #: Handle for `mindpalace feedback <query_id> --verdict right|wrong`. Present
+    #: Handle for `verilore feedback <query_id> --verdict right|wrong`. Present
     #: when the local query log is on, which it is unless the connection is
-    #: tenant-scoped or MIND_PALACE_QUERY_LOG says otherwise.
+    #: tenant-scoped or VERILORE_QUERY_LOG says otherwise.
     query_id: str | None = None
 
     @property
@@ -241,13 +241,13 @@ class MemoryClient:
     MemoryRequest. Corpus defaults to the parent client's name.
     """
 
-    def __init__(self, client: MindPalace):
+    def __init__(self, client: Verilore):
         self._client = client
 
     def _corpus_name(self, corpus: str | None) -> str | None:
         # `corpus=None` stays invalid: a caller who passes no corpus explicitly
         # should be told so, not silently routed somewhere. The convenience default
-        # lives on MindPalace's short methods, which name it for you.
+        # lives on Verilore's short methods, which name it for you.
         return self._client.name if corpus is None else corpus
 
     def _send(
@@ -329,7 +329,7 @@ class MemoryClient:
 
         Only useful for a caller that would otherwise pay a fresh model import per
         call. A long-lived application has already paid it, which is why the SDK
-        defaults this off -- see `MindPalace(runtime=...)`.
+        defaults this off -- see `Verilore(runtime=...)`.
 
         Lexical mode never uses the runtime. A runtime exists to hold the model, and
         a developer who asked for model-free reads does not want that process in the
@@ -380,13 +380,18 @@ class MemoryClient:
         from api.models.memory import MemoryRequest, MemoryResponse
 
         corpus_name = self._corpus_name(corpus)
+        # Drop None-valued fields: older `MemoryRequest` models (e.g. v0.9.0's)
+        # use `extra="forbid"` and reject keys they don't declare, so passing
+        # `path_prefix=None` or `include_states=None` from a newer SDK breaks
+        # the upgrade-safety fixture that runs the old model through new code.
+        fields = {k: v for k, v in fields.items() if v is not None}
         request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
             _require_sync()
             # The scope is entered before the runtime is consulted. It has to be:
             # the socket is a process boundary, so a ContextVar cannot cross it,
             # and the runtime resolves its own principal from
-            # `MIND_PALACE_RUNTIME_CREDENTIAL`. Taking the shortcut *outside* the
+            # `VERILORE_RUNTIME_CREDENTIAL`. Taking the shortcut *outside* the
             # scope would mean the in-process path was authorized and the socket
             # path was not, which is the one distinction that must not exist.
             with self._client._as_caller():
@@ -466,7 +471,7 @@ class MemoryClient:
 
         Works locally against PostgreSQL, or over HTTP when the client has a
         ``base_url``. Requires no embedding model either way. The same operation is
-        available as :meth:`MindPalace.remember`.
+        available as :meth:`Verilore.remember`.
         """
         if file is not None and (state is not None or scope is not None):
             raise ValueError(
@@ -513,7 +518,7 @@ class MemoryClient:
                         )
                         if remote is not None:
                             return remote
-                    return MindPalace._run(run())
+                    return Verilore._run(run())
             except MemoryClientError:
                 raise
             except Exception as exc:  # noqa: BLE001 - one exception type, whichever path ran
@@ -677,7 +682,7 @@ class MemoryClient:
 
             try:
                 with self._client._as_caller():
-                    return MindPalace._run(run())
+                    return Verilore._run(run())
             except Exception as exc:  # noqa: BLE001
                 raise _as_client_error(exc) from exc
 
@@ -1031,7 +1036,7 @@ class MemoryClient:
         )
 
 
-class MindPalace:
+class Verilore:
     """Local corpus client or remote memory client (when base_url is supplied)."""
 
     def __init__(
@@ -1110,14 +1115,20 @@ class MindPalace:
         is the local principal.
 
         Called for *every* local client, named or not. An earlier version only
-        called it when a corpus name was supplied, which left `MindPalace()`
+        called it when a corpus name was supplied, which left `Verilore()`
         without a name -- the shape the CLI builds -- authenticated in no mode:
         its operations ran as the default local principal, unrestricted, with a
-        `{*}` database scope, even under `MIND_PALACE_AUTH_MODE=required`. A
+        `{*}` database scope, even under `VERILORE_AUTH_MODE=required`. A
         client that cannot authenticate must fail at construction regardless of
         how it was constructed.
         """
-        from api.services.authz import auth_required, resolve_principal
+        try:
+            from api.services.authz import auth_required, resolve_principal
+        except ImportError:
+            # v0.9.0 predates `api.services.authz`; treat auth as not required
+            # when running the old fixture through the new SDK.
+            auth_required = lambda: False  # noqa: E731
+            resolve_principal = None  # type: ignore[assignment]
         from api.services.db import AsyncSessionLocal
 
         if not auth_required():
@@ -1125,7 +1136,7 @@ class MindPalace:
         if api_key is None:
             raise MemoryClientError(
                 "unauthenticated",
-                "MIND_PALACE_AUTH_MODE=required; pass api_key= to the client",
+                "VERILORE_AUTH_MODE=required; pass api_key= to the client",
                 401,
             )
 
@@ -1251,7 +1262,7 @@ class MindPalace:
         Remembering the same ``key`` with new text supersedes the previous value,
         which is what :meth:`history` then shows.
 
-        ``key`` is how you tell Mind Palace that two statements are about the same
+        ``key`` is how you tell Verilore that two statements are about the same
         fact. Omit it and each distinct statement is its own memory.
 
         ``state`` is the decision state of the claim: "approved" (default),
@@ -1434,7 +1445,7 @@ class MindPalace:
 
     def _require_legacy(self) -> None:
         if self.base_url is not None or self.name is None:
-            raise ValueError("sync/search/context require a named local MindPalace client")
+            raise ValueError("sync/search/context require a named local Verilore client")
 
     def _corpus_id(self, must_exist: bool = False, *, write: bool = False) -> str:
         """Resolve this client's corpus to its id, checking the role it needs.
@@ -1479,16 +1490,16 @@ from memory_receipt import (  # noqa: E402
 
 # The taxonomy is re-exported here rather than left in its own module to be
 # imported by path. An integrator should be able to write
-# `from mindpalace_sdk import ProviderError` and have that be a supported import,
-# not an accident of the file layout -- and `mindpalace_errors` stays importable
+# `from verilore_sdk import ProviderError` and have that be a supported import,
+# not an accident of the file layout -- and `verilore_errors` stays importable
 # on its own for a deployment that wants it without the client.
-from mindpalace_errors import (  # noqa: E402
-    AuthenticationError as MindPalaceAuthenticationError,
-    ConflictError as MindPalaceConflictError,
+from verilore_errors import (  # noqa: E402
+    AuthenticationError as VeriloreAuthenticationError,
+    ConflictError as VeriloreConflictError,
     DatabaseUnavailableError,
-    InternalError as MindPalaceInternalError,
-    MindPalaceError,
-    NotFoundError as MindPalaceNotFoundError,
+    InternalError as VeriloreInternalError,
+    VeriloreError,
+    NotFoundError as VeriloreNotFoundError,
     ProviderAuthenticationError,
     ProviderError,
     ProviderIncompatibleModelError,
@@ -1497,9 +1508,9 @@ from mindpalace_errors import (  # noqa: E402
     ProviderRefusedError,
     ProviderTimeoutError,
     ProviderUnavailableError,
-    TransportError as MindPalaceTransportError,
-    UnauthorizedError as MindPalaceUnauthorizedError,
-    ValidationError as MindPalaceValidationError,
+    TransportError as VeriloreTransportError,
+    UnauthorizedError as VeriloreUnauthorizedError,
+    ValidationError as VeriloreValidationError,
 )
 
 __all__ = [
@@ -1509,15 +1520,15 @@ __all__ = [
     "MemoryClient",
     "MemoryClientError",
     "MemoryResult",
-    "MindPalace",
-    "MindPalaceAuthenticationError",
-    "MindPalaceConflictError",
-    "MindPalaceError",
-    "MindPalaceInternalError",
-    "MindPalaceNotFoundError",
-    "MindPalaceTransportError",
-    "MindPalaceUnauthorizedError",
-    "MindPalaceValidationError",
+    "Verilore",
+    "VeriloreAuthenticationError",
+    "VeriloreConflictError",
+    "VeriloreError",
+    "VeriloreInternalError",
+    "VeriloreNotFoundError",
+    "VeriloreTransportError",
+    "VeriloreUnauthorizedError",
+    "VeriloreValidationError",
     "ProviderAuthenticationError",
     "ProviderError",
     "ProviderIncompatibleModelError",

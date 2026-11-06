@@ -1,6 +1,6 @@
 # Dispatch evolving-corpus workload
 
-These are hand-authored engineering fixtures, not facts about Verilore itself.
+These are hand-authored engineering fixtures, not facts about Mind Palace itself.
 `eval/memory_benchmarks.yaml` is the workload manifest and ground truth. Resolve
 its directories relative to `eval/`. Corpus identity is the path below each stage
 root, never the stage-prefixed path. Do not ingest this entire tree as one corpus.

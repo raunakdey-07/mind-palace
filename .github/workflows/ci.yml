@@ -904,7 +904,7 @@ jobs:
           MIND_PALACE_TEST_DB: off
         run: |
           /tmp/wheelenv/bin/pip install --quiet pytest build
-          MIND_PALACE_TEST_BUILD_WHEEL=1 MIND_PALACE_TEST_DB=off /tmp/wheelenv/bin/python -m pytest "$GITHUB_WORKSPACE/tests/test_wheel_contents.py::test_a_built_wheel_contains_every_declared_module" -v
+          /tmp/wheelenv/bin/python -m pytest "$GITHUB_WORKSPACE/tests/test_wheel_contents.py::test_a_built_wheel_contains_every_declared_module" -v
 
       # The portability claim, tested as a claim: a bare `pip install
       # mindpalace-os`, no CLI extra, no database URL and no network, verifying a

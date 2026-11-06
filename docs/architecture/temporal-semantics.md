@@ -126,7 +126,7 @@ It requests `page_size + 1` rows, trims the extra one after computing
 `has_more`, and never uses `OFFSET`, Python-side history loading, or a
 process-local cursor store. Valid page sizes are 1 through 500, default 50.
 Captured 10,000-row `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans in
-[`docs/m009/query-plans.md`](../m009/query-plans.md) show no `OFFSET`, the tuple
+[`docs/archive/m009/query-plans.md`](../archive/m009/query-plans.md) show no `OFFSET`, the tuple
 keyset predicate on middle and tail pages, and `idx_memory_versions_observed` on
 the `memory_versions` access path.
 
@@ -136,7 +136,7 @@ Each HTTP request is one PostgreSQL statement under MVCC. Successive requests
 can see successive committed states; no snapshot is held across requests.
 
 The recorded concurrency artifact
-([`docs/m009/concurrency-validation.json`](../m009/concurrency-validation.json))
+([`docs/archive/m009/concurrency-validation.json`](../archive/m009/concurrency-validation.json))
 started with 30 versions, read page 1 at size 5, then inserted four
 target-corpus rows including two tied at the boundary timestamp, one later row,
 and one late row whose observation key preceded the cursor, plus four rows in

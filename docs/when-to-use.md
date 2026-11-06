@@ -44,7 +44,7 @@ That is a good fit when:
   this is the wrong tool — the abstention is the feature, and hiding it makes the
   wrong answers worse.
 * **Two users must not see each other's memory inside one corpus.**
-  [Per-resource authorization is withdrawn](withdrawn/README.md). A corpus is a
+  [Per-resource authorization is withdrawn](archive/withdrawn/README.md). A corpus is a
   *namespace*; every credential that can reach a corpus can reach every document
   in it. The supported answer is **one corpus per confidentiality boundary**, and
   for mutually distrusting tenants, one database per tenant.

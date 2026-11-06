@@ -182,7 +182,7 @@ partially stored, and a later successful ingest is not affected.
 
 ## What this document does not tell you
 
-How to write claims *from* unstructured text. `docs/wedge-decision-note.md` argues
+How to write claims *from* unstructured text. `docs/archive/wedge-decision-note.md` argues
 that a structural extractor was a later decision; one now exists and is described
 under "Plain Markdown" below.
 

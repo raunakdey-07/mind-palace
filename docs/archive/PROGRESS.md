@@ -6,7 +6,7 @@ finished and nothing in it is claimed.
 Every number came from a command run in the session named beside it.
 
 **The full history of all twelve sessions, unedited, is
-[docs/internal/progress-history.md](internal/progress-history.md).** This file
+[full progress history](internal/progress-history.md).** This file
 was 1397 lines; that is where the detail went, not the bin. Figures quoted below
 are the ones still load-bearing. Anything not here is in the history file or in
 the document the phase links.
@@ -18,8 +18,8 @@ the document the phase links.
 - **1a** DONE. Five benchmark scripts with zero callers → `scripts/archive/`
   (911 lines). Kept, not deleted: their numbers are cited.
 - **1b** DONE. This file 1397 → one page. History moved unedited, byte-identical
-  (verified by `diff -q` against `git show HEAD:docs/PROGRESS.md`).
-- **1c** DONE. `docs/first-hour-audit.md` refreshed in place: install measured at
+  (verified by `diff -q` against `git show HEAD:docs/archive/PROGRESS.md`).
+- **1c** DONE. `docs/archive/first-hour-audit.md` refreshed in place: install measured at
   79 s, not the 202 s it claimed. The 5.9 GB figure was right.
 - **1d** DONE. First-hour read load 19 files / 7134 lines → 3.
 - **1e** DONE. Nine ignored `eval/results/` files and the two adjudication

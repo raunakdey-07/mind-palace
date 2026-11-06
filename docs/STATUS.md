@@ -186,7 +186,7 @@ re-resolution cost. Evidence:
 `docs/performance/in-process-cli.json` <- key: summary.venv.recall.median_s
 
 All of them are held by tests rather than by inspection, as is every property in
-[product/first-use-audit.md](product/first-use-audit.md).
+[product/first-use-audit.md](archive/product/first-use-audit.md).
 
 ## Measured at v0.9.0
 
@@ -315,7 +315,7 @@ asyncpg.exceptions.UndefinedTableError: relation "memory_principals" does not ex
 The invariant itself may well still hold; what cannot be done is re-measuring it
 with the harness as shipped. This is a defect in the harness-versus-migration
 pair, not a statement about the archive: the same `search_path` pinning was
-already found and documented in [the withdrawn record](withdrawn/README.md) as
+already found and documented in [the withdrawn record](archive/withdrawn/README.md) as
 breaking schema replay.
 
 Evidence: `docs/performance/baseline-packs.json` <- key: set_digest
@@ -636,7 +636,7 @@ Named **v3**, not v2: `docs/performance/heldout-v2-freeze.json` already exists,
 would make the identifier mean two things.
 
 Authored from the ten maintainer questions in
-[the first-hour audit](first-hour-audit.md) and from the question shapes the
+[the first-hour audit](archive/first-hour-audit.md) and from the question shapes the
 measured failure classes predict, paraphrased rather than quoted. No retrieval
 code was read while writing them. **It has not been scored.** Scoring happens
 once, at one commit, and any retrieval change tuned against it is a development

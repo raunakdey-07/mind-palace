@@ -42,7 +42,7 @@ correct plan, and how much of the plan is guesswork?** Concretely:
 
 That is a lower bound on the real first-hour experience and it is directly
 comparable across models. It is NOT a substitute for the first-hour audit in
-`docs/first-hour-audit.md`, which executed the path end to end in a clean
+`docs/archive/first-hour-audit.md`, which executed the path end to end in a clean
 container. Where the two disagree, the audit is right and this is wrong.
 
 "Minutes lost" is estimated from the reader's own self-reported reasoning --

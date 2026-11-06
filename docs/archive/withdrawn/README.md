@@ -78,7 +78,7 @@ This is not a PostgreSQL bug and cannot be fixed by reordering the policy: a
 predicate that hides a row before it exists cannot also be the predicate that
 admits it. `WITH CHECK` on the insert path was never the problem.
 
-**Minimal reproduction:** `docs/withdrawn/test_insert_on_conflict_rls.py`. Three
+**Minimal reproduction:** `docs/archive/withdrawn/test_insert_on_conflict_rls.py`. Three
 tests: the plain insert succeeds, the `ON CONFLICT` insert raises `42501`, and
 the two policy sides are shown to disagree for the same row. It passes on a
 database with 011 applied and fails on one without it, in both directions.
@@ -182,7 +182,7 @@ sits inside the permissive policy's own `USING`.
 
 `POST /api/memory/remember` began returning `503` for a write that has always
 succeeded, once the resource policy was installed. The mechanism is established
-above and reproduced in `docs/withdrawn/test_insert_on_conflict_rls.py`.
+above and reproduced in `docs/archive/withdrawn/test_insert_on_conflict_rls.py`.
 
 The migration was removed from the chain, the write path was reverted, and the
 capability is reported as designed-and-prototyped rather than shipped. Shipping a

@@ -7,10 +7,10 @@ test cannot run without it, and a test that cannot run is not a test.
 To run it:
 
     # 1. apply the withdrawn migration to a disposable database
-    cp docs/withdrawn/011_resource_level_authorization.py migrations/versions/
+    cp docs/archive/withdrawn/011_resource_level_authorization.py migrations/versions/
     alembic upgrade head
     # 2. put this file back in tests/ (it imports tenant_harness by name)
-    cp docs/withdrawn/test_insert_on_conflict_rls.py tests/
+    cp docs/archive/withdrawn/test_insert_on_conflict_rls.py tests/
     pytest tests/test_insert_on_conflict_rls.py
     # 3. remove it again
     rm tests/test_insert_on_conflict_rls.py migrations/versions/011_*.py

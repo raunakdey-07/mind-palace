@@ -6,7 +6,7 @@ source (L0), authoritative claims and evidence (L1), and derived artifacts (L2),
 and what the smallest missing piece is that would make the "durable substrate"
 claim testable rather than asserted.
 
-Nothing in `api/`, `tests/`, `docs/m009/`, or git history was modified. The only
+Nothing in `api/`, `tests/`, `docs/archive/m009/`, or git history was modified. The only
 file this audit added is this one. Probes ran in throwaway schemas inside a
 rolled-back transaction, following the pattern already used by
 `tests/test_memory_ingestion.py` and `tests/test_memory_core.py`.

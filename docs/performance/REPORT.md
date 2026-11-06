@@ -227,7 +227,7 @@ Focused results included:
 The full suite includes the existing Starlette TestClient deprecation and
 asyncio-mark warnings. No new warning category was introduced.
 
-M009 evidence under `docs/m009/` was not edited or regenerated. The feed's
+M009 evidence under `docs/archive/m009/` was not edited or regenerated. The feed's
 released keyset, cursor, concurrency, health, and 10k evidence remain the
 correctness baseline.
 

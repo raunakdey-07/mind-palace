@@ -4,7 +4,7 @@ Each entry names a failure, how it shows up, why it happens, and what the
 repository already does about it. Sources: `api/services/memory_feed.py`,
 `api/services/memory_public.py`, `api/main.py`, `api/services/ingestion.py`,
 [`docs/deployment.md`](../deployment.md), and
-[`docs/m009/RELEASE_READINESS.md`](../m009/RELEASE_READINESS.md).
+[`docs/archive/m009/RELEASE_READINESS.md`](../archive/m009/RELEASE_READINESS.md).
 
 ## Cursor and feed
 
@@ -23,7 +23,7 @@ it by watching for `invalid_cursor` rate after a configuration change.
 **A cursor is replayed against another corpus.** The signed payload carries the
 corpus name and `decode_cursor` compares it to the request, returning
 `422 cursor_corpus_mismatch`. The live wrong-corpus check is recorded in
-`docs/m009/live-interface-validation.json`, where REST and SDK both return that
+`docs/archive/m009/live-interface-validation.json`, where REST and SDK both return that
 code.
 
 **A row committed behind an issued boundary is missed.** This is the documented

@@ -108,7 +108,7 @@ jobs:
         run: |
           python scripts/check_evidence.py --strict
 
-      # Every path README.md, CHANGELOG.md, STATUS.md, PROGRESS.md and the
+      # Every path README.md, CHANGELOG.md, STATUS.md, docs/archive/PROGRESS.md and the
       # release map name must exist in `git ls-files`.
       #
       # `check_evidence.py` scans STATUS.md and README.md for markdown *links*

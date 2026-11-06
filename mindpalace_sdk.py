@@ -296,9 +296,7 @@ class MemoryClient:
                     if backoff:
                         time.sleep(backoff * (2 ** (attempt - 1)))
                     continue
-                raise MemoryClientError(
-                    "timeout", timeout_message, 504, attempts=attempt
-                ) from exc
+                raise MemoryClientError("timeout", timeout_message, 504, attempts=attempt) from exc
             except httpx.RequestError as exc:
                 if attempt <= retries:
                     if backoff:

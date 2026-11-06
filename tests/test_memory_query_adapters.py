@@ -60,8 +60,9 @@ async def client():
 
 @pytest.fixture
 def intent_contract():
-    if "intent" not in MemoryRequest.model_fields:
-        pytest.skip("Awaiting core-owned MemoryRequest.intent field")
+    # `MemoryRequest.intent` is a required field on main; the import-time
+    # contract this fixture used to wait for is the shipped behavior.
+    return None
 
 
 @pytest.fixture

@@ -139,8 +139,7 @@ async def test_historical_receipt_names_the_superseded_truth(store):
 
     when = datetime(2026, 1, 15, tzinfo=timezone.utc)
     response = await _ask(store, "primary datastore", include_receipt=True, valid_at=when)
-    if not response.receipt:
-        pytest.skip("historical query returned no current memory at that instant")
+    assert response.receipt, "historical query returned no current memory at that instant"
     quoted = {r["answer"]["claim"] for r in response.receipt["receipts"]}
     assert quoted, "receipt named no claim"
     result = verify_response_receipt(response.receipt, response.model_dump(mode="json"))

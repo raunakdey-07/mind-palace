@@ -97,8 +97,7 @@ def test_a_read_only_credential_cannot_snapshot_through_the_sdk(capsys):
         if "mpk_" in line:
             secret = line.strip().split(":", 1)[-1].strip()
             break
-    if not secret:
-        pytest.skip("could not issue a read-only credential")
+    assert secret, "could not issue a read-only credential"
 
     probe = (
         "from mindpalace_sdk import MindPalace\n"

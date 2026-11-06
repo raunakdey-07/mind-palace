@@ -602,14 +602,6 @@ async def test_scaling_is_bounded_and_covers_public_operations(workload_file, po
 @pytest.fixture
 def real_spec_file(postgres_url):
     file = Path(__file__).resolve().parents[1] / "eval/memory_benchmarks.yaml"
-    if not file.is_file():
-        pytest.skip(
-            "M006 shared eval/memory_benchmarks.yaml not present yet; dataset agent pending"
-        )
-    raw = yaml.safe_load(file.read_text())
-    missing = [s["directory"] for s in raw["stages"] if not (file.parent / s["directory"]).is_dir()]
-    if missing:
-        pytest.skip("M006 shared stage corpus not present yet: " + ", ".join(missing))
     return file
 
 

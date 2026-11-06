@@ -106,8 +106,17 @@ helm/
 !/docs/archive/
 !/docs/archive/**
 !/docs/quickstart.md
+# The worked example the README Quickstart ingests. It is a plain ADR with no
+# frontmatter and no `claims:` block, which is the thing being demonstrated, so
+# it has to be a real file on a clean clone.
+!/docs/adr/
+!/docs/adr/**
 !/docs/integration/
 !/docs/integration/**
+# Registering the agent. Three clients, three config shapes, and the README points
+# here for them, so the file has to survive a clone or the link 404s on a fresh
+# checkout. tests/test_mcp_client_docs.py parses the JSON in it and checks every
+# tool name against what the server actually advertises.
 !/docs/mcp.md
 !/docs/evaluation/
 /docs/evaluation/*

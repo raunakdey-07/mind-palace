@@ -52,6 +52,7 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from api.models.memory import FeedResponse, MemoryResponse
     from api.services.context_packer import ContextPack
+    import httpx
 
 #: The corpus a first memory lands in, matching the CLI. Passing a name scopes
 #: memory explicitly and is never required.
@@ -403,8 +404,6 @@ class MemoryClient:
                 except Exception as exc:  # noqa: BLE001 - re-raised, or translated
                     raise _as_client_error(exc) from exc
 
-        import httpx
-
         response, attempts = self._send(
             "post",
             f"{self._client.base_url}/api/memory/{operation}",
@@ -684,8 +683,6 @@ class MemoryClient:
             except Exception as exc:  # noqa: BLE001
                 raise _as_client_error(exc) from exc
 
-        import httpx
-
         payload = {}
         if receipt_data is not None:
             payload["receipt"] = receipt_data
@@ -938,8 +935,6 @@ class MemoryClient:
 
             with self._client._as_caller():
                 return asyncio.run(run())
-        import httpx
-
         params = {"corpus": corpus_name, "page_size": page_size}
         if cursor is not None:
             params["cursor"] = cursor

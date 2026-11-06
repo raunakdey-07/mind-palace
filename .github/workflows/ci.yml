@@ -538,8 +538,8 @@ jobs:
           python -m pip install flake8 black
       - name: Run flake8 and black
         run: |
-          flake8 api cli tests scripts --max-line-length=100
-          black --check api cli tests scripts --line-length 100
+          flake8 api cli tests scripts mindpalace_sdk.py mcp_server.py memory_pack.py memory_proof.py memory_proof_cli.py memory_receipt.py mindpalace_errors.py mindpalace_runtime.py --max-line-length=100
+          black --check api cli tests scripts mindpalace_sdk.py mcp_server.py memory_pack.py memory_proof.py memory_proof_cli.py memory_receipt.py mindpalace_errors.py mindpalace_runtime.py --line-length 100
 
   # The two embedding backends have to stay interchangeable, because the archive
   # stores vectors and records only the model name and the dimension. If they drift

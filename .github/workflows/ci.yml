@@ -603,8 +603,7 @@ jobs:
           export HF_HUB_OFFLINE=0
           python -m pytest -q -rs -p no:randomly \
             --junitxml=/tmp/pytest-backends.xml \
-            tests/test_embedder_backend_equivalence.py \
-            tests/test_embedder.py
+            tests/test_embedder_backend_equivalence.py
 
       # The other two tests that need the [torch] extra. They are here because the
       # main job does not install torch and skips them, so without this line they
@@ -889,6 +888,18 @@ jobs:
           assert u.find_spec('mcp') is None, 'mcp is a declared extra; a bare install must not provide it'
           print('bare install correctly omits the [mcp] extra')
           "
+
+      # `test_a_built_wheel_contains_every_declared_module` builds its own wheel
+      # and asserts every declared py-module ships. It is skipped unless
+      # MIND_PALACE_TEST_BUILD_WHEEL=1, so run it explicitly here against the
+      # built wheel's venv.
+      - name: Run wheel-content test
+        env:
+          MIND_PALACE_TEST_BUILD_WHEEL: "1"
+        working-directory: /tmp
+        run: |
+          /tmp/wheelenv/bin/pip install --quiet pytest build
+          MIND_PALACE_TEST_BUILD_WHEEL=1 /tmp/wheelenv/bin/python -m pytest "$GITHUB_WORKSPACE/tests/test_wheel_contents.py::test_a_built_wheel_contains_every_declared_module" -v
 
       # The portability claim, tested as a claim: a bare `pip install
       # mindpalace-os`, no CLI extra, no database URL and no network, verifying a

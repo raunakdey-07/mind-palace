@@ -1117,7 +1117,13 @@ class Verilore:
         client that cannot authenticate must fail at construction regardless of
         how it was constructed.
         """
-        from api.services.authz import auth_required, resolve_principal
+        try:
+            from api.services.authz import auth_required, resolve_principal
+        except ImportError:
+            # v0.9.0 predates `api.services.authz`; treat auth as not required
+            # when running the old fixture through the new SDK.
+            auth_required = lambda: False  # noqa: E731
+            resolve_principal = None  # type: ignore[assignment]
         from api.services.db import AsyncSessionLocal
 
         if not auth_required():

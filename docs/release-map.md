@@ -69,14 +69,16 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-**The latest tagged public release is `v0.10.0`** (tagged on `main` at
-`039c541`, published as a GitHub Release).
+**The latest tagged public release is `v0.10.0`**, tagged by the owner from the
+commit that merges PR #171.
 
 `v0.10.0` is **released**. `pyproject.toml` says `0.10.0`, `CHANGELOG.md` has a
-`[v0.10.0]` entry, the `v0.10.0` tag exists on `origin`, and the release is
-published. `pip install verilore==0.10.0` resolves to it.
+`[v0.10.0]` entry. `pip install verilore==0.10.0` does not resolve — nothing is
+on PyPI. Install with:
 
-`v0.9.3` remains the previous tagged release at `19863d8`.
+uv tool install git+https://github.com/raunakdey-07/verilore@v0.10.0
+
+`v0.9.3` remains the previous tagged release, tagged at `039c541`.
 
 `v0.9.0` is therefore the release in which a developer can adopt Verilore —
 seven commands that take a statement and a question, answers that arrive fast, outputs

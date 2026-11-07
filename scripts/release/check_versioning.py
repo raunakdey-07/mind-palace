@@ -163,6 +163,8 @@ def main() -> None:
     m0065 = (ROOT / "docs/evaluation/m0065.md").read_text(encoding="utf-8")
     m00675 = (ROOT / "docs/evaluation/m00675-reproducibility.md").read_text(encoding="utf-8")
 
+    # v0.10.0 was once staged during M016 and folded into v0.9.0; it is now a real
+    # release, so the absence checks were removed.
     require(pyproject, r'^version = "0\.10\.0"$', "package version is v0.10.0")
     require(changelog, r"^## \[v0\.10\.0\]", "v0.10.0 changelog entry")
     require(changelog, r"^## \[v0\.9\.3\]", "v0.9.3 changelog entry")

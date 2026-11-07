@@ -375,9 +375,9 @@ Fifteen tools are advertised. `memory_recall`, `memory_explain`, `memory_current
 ## From Python
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-client = MindPalace()                              # no configuration required
+client = Verilore()                              # no configuration required
 
 client.remember("We will use PostgreSQL as the primary datastore.", key="decision.datastore")
 result = client.recall("Which datastore did we choose?")
@@ -400,7 +400,7 @@ Two complete runnable versions:
 ### Against a service someone else runs
 
 ```python
-client = MindPalace(base_url="http://127.0.0.1:8000")
+client = Verilore(base_url="http://127.0.0.1:8000")
 ```
 
 Everything above works unchanged over HTTP.
@@ -408,7 +408,7 @@ Everything above works unchanged over HTTP.
 ### Sharing the warm runtime with a script
 
 ```python
-client = MindPalace(runtime=True)     # opt in; off by default
+client = Verilore(runtime=True)     # opt in; off by default
 ```
 
 Optional, and rarely needed: a long-running application has the model resident
@@ -426,7 +426,7 @@ proves it.
 | Surface | Entry point |
 |---|---|
 | CLI | `verilore remember \| recall \| explain \| history \| receipt \| verify` |
-| Python SDK | `MindPalace().remember() / .recall() / .explain() / .history()` |
+| Python SDK | `Verilore().remember() / .recall() / .explain() / .history()` |
 | REST | `POST /api/memory/remember`, `POST /api/memory/query`, … |
 | MCP | `memory_recall`, `memory_explain`, and the archive operations |
 
@@ -510,7 +510,7 @@ memory_pack.py  dependency-free portable memory reader
 memory_receipt.py  the receipt contract, standard library only
 memory_proof.py    proof construction and verification
 memory_proof_cli.py standalone verifier, no optional dependencies
-mindpalace_sdk.py  the SDK
+verilore_sdk.py  the SDK
 mcp_server.py   MCP server
 tests/          the suite, against real PostgreSQL
 examples/       runnable examples

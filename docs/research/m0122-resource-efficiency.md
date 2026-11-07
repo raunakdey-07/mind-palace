@@ -144,7 +144,7 @@ run from outside the repository:
 ```
 memory_pack imported; heavy modules pulled in: none
 status: no_relevant_memory | digest len: 64
-root modules in wheel: ['mcp_server.py', 'memory_pack.py', 'mindpalace_sdk.py']
+root modules in wheel: ['mcp_server.py', 'memory_pack.py', 'verilore_sdk.py']
 ```
 
 ## 8. Files changed, and why

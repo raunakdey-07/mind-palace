@@ -1047,8 +1047,8 @@ filesystem from a caller, and whether it goes through that one resolver.
 | `POST /api/ingest/repo` | a directory | yes | yes — `api/routers/ingest.py:76` |
 | `POST /api/ingest/file` | content in the request body, no path | n/a | n/a |
 | `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:115` |
-| SDK `MindPalace.sync(path)` | a directory | yes | yes — `api/services/ingestion.py:694` |
-| SDK `MindPalace.remember(file=…)` | one file | yes | yes — `api/services/remember.py:563` |
+| SDK `Verilore.sync(path)` | a directory | yes | yes — `api/services/ingestion.py:694` |
+| SDK `Verilore.remember(file=…)` | one file | yes | yes — `api/services/remember.py:563` |
 | MCP `sync(corpus, path)` | a directory | yes | yes — same `sync_repo` |
 | MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:262` |
 | `verilore verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
@@ -1069,7 +1069,7 @@ fixed:
 1. `remember --file` — the service read any path.
 2. `verilore ingest <path>` — a bare `open()` *before* its HTTP call, so the
    read happened whether or not a server was listening.
-3. `sync_repo`, reached directly by `MindPalace.sync()` and by the MCP `sync`
+3. `sync_repo`, reached directly by `Verilore.sync()` and by the MCP `sync`
    tool. The CLI and the two routes each checked the path themselves, which is
    how the audit table above came to list the SDK and MCP rows as "yes, via the
    service" when the service did not check at all. An independent review found

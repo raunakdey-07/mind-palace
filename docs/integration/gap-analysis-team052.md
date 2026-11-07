@@ -35,7 +35,7 @@ cut line is "owner decides" for every item.
 | MP-SE-05 | Conflict representation | P0 | **exists** | `MemoryResponse.conflicts`; `api/services/memory.py` conflict scan; `tests/test_memory_adjudication.py` | core | owner decides |
 | MP-SE-06 | Semantic retrieval | P1 | **exists** (quality limits) | `api/routers/query.py`, `api/routers/search.py`, `memory_query.py`; `tests/test_search_semantics.py` (18 backend skips); frozen M006.75 45/60 exact | core | owner decides |
 | MP-SE-07 | Bounded context packing | P1 | **exists** (chars, not tokens) | `api/routers/memory.py:244` (`POST /pack`), `memory_pack.py`, `ContextPack`; budget in Unicode characters (see §2.3) | core | owner decides |
-| MP-SE-08 | Python SDK | P0 | **exists** | `mindpalace_sdk.py` (53 KB); `tests/test_sdk.py`, `test_memory_client.py`; typed errors documented | core | owner decides |
+| MP-SE-08 | Python SDK | P0 | **exists** | `verilore_sdk.py` (53 KB); `tests/test_sdk.py`, `test_memory_client.py`; typed errors documented | core | owner decides |
 | MP-SE-09 | REST API | P0 | **exists** | `api/routers/*.py` (memory, corpora, ingest, context, query, search); `examples/MEMORY_API.md` | core | owner decides |
 | MP-SE-10 | Immutable snapshots | P2 | **exists** | `api/routers/memory.py:232` (`POST /snapshot`), `:238` (`POST /replay`); `memory_snapshot_seals`; `tests/test_memory_snapshot_seal.py` | core | owner decides |
 | MP-SE-11 | Change feed | P2 | **exists** | `api/routers/memory.py:156` (`GET /feed`); `FeedResponse`; pagination documented (no exactly-once guarantee) | core | owner decides |
@@ -53,7 +53,7 @@ cut line is "owner decides" for every item.
 | MP-SE-23 | Generation-service integration | P1 | **partial** | `POST /api/memory/pack`, `POST /api/context`, SDK; no generation orchestration in core (correct — belongs in adapter). | consumer adapter | owner decides |
 | MP-SE-24 | Generation provenance | P2 | **partial** | `memory_proof` / `memory_receipt` / `memory_pack` digests; `source_hash`, `version_id`, `observed_at` in responses. | core (primitives) + adapter (logging) | owner decides |
 | MP-SE-25 | Durable sync/retries | P1 | **absent** (core) | No outbox in core; report §7.4 recommends app-level outbox. Belongs in consumer adapter. | consumer adapter | owner decides |
-| MP-SE-26 | Graceful memory-service failure | P1 | **partial** | SDK raises `MemoryClientError` with code/message/status; default timeout 30s (`mindpalace_sdk.py:918`); `httpx.TimeoutException` → 504 (`mindpalace_sdk.py:334`); no automatic retry. **Probe g confirmed:** connection refused → `MemoryClientError` (transport_error, 503); no retry loop observed. | core (SDK) + adapter | owner decides |
+| MP-SE-26 | Graceful memory-service failure | P1 | **partial** | SDK raises `MemoryClientError` with code/message/status; default timeout 30s (`verilore_sdk.py:918`); `httpx.TimeoutException` → 504 (`verilore_sdk.py:334`); no automatic retry. **Probe g confirmed:** connection refused → `MemoryClientError` (transport_error, 503); no retry loop observed. | core (SDK) + adapter | owner decides |
 | MP-SE-27 | Marketing evaluation benchmark | P1 | **absent** | No marketing benchmark in core; agency_readiness benchmark is domain-neutral marketing-shaped fixtures (not a consumer benchmark). | Verilore example | owner decides |
 | MP-SE-28 | Multi-user isolation tests | P0 | **exists** (core) | `tests/test_tenant_isolation.py`, `test_tenant_connection_isolation.py`, `test_tenant_control_effectiveness.py`, `test_scope_forgery.py`, `test_credential_management.py`, `test_error_and_log_hygiene.py`. V1 comparison: 202 tests combined across all nine tenant-isolation files (not test_tenant_isolation.py alone), zero outcome differences between main run and rerun; issue #84. | core | owner decides |
 | MP-SE-29 | Retention and permanent erasure | P0 (real deploy) | **partial** | `DELETE /api/corpora/{name}` → `mindpalace_erase_corpus` (migration 009); append-only triggers remain; receipts/packs/backups survive (docs/security.md §data lifecycle). No TTL/purge. | core (primitives) + adapter (policy) | owner decides |
@@ -103,9 +103,9 @@ approved current claim. Draft/rejected claims are withheld from `current` and
 
 SDK example:
 
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
-    mp = MindPalace("acme")
+    mp = Verilore("acme")
     mp.memory.remember("Never use the word curated in copy.", key="brand.rule.curated")
     mp.memory.remember("Never use the word curated in copy.", key="brand.rule.curated", state="rejected")
     pack = mp.memory.pack(query="")            # withheld_counts["rejected"] == 1; "curated" absent
@@ -185,14 +185,14 @@ From tests: V1 comparison (issue #84): 202 tests combined across all nine tenant
 
 **Verified by probe g (run 41287500689).**
 
-Verified from code (`mindpalace_sdk.py`):
-- SDK raises `MemoryClientError` with `code`, `message`, `status_code` on HTTP errors (`mindpalace_sdk.py:139`).
-- Default timeout is 30s (`mindpalace_sdk.py:918`: `timeout: float = 30`), passed as `timeout=self._client.timeout` to httpx calls (`mindpalace_sdk.py:331,447,604,819`).
-- `httpx.TimeoutException` → `MemoryClientError("timeout", ..., 504)` (`mindpalace_sdk.py:334,450,607,822`).
-- `httpx.RequestError` → `MemoryClientError("transport_error", ..., 503)` (`mindpalace_sdk.py:336,451,606,821`).
+Verified from code (`verilore_sdk.py`):
+- SDK raises `MemoryClientError` with `code`, `message`, `status_code` on HTTP errors (`verilore_sdk.py:139`).
+- Default timeout is 30s (`verilore_sdk.py:918`: `timeout: float = 30`), passed as `timeout=self._client.timeout` to httpx calls (`verilore_sdk.py:331,447,604,819`).
+- `httpx.TimeoutException` → `MemoryClientError("timeout", ..., 504)` (`verilore_sdk.py:334,450,607,822`).
+- `httpx.RequestError` → `MemoryClientError("transport_error", ..., 503)` (`verilore_sdk.py:336,451,606,821`).
 
 **Verified by probe g (run 41287500689, raw output issue #105 comment 6555683810):**
-- Connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang. SDK default timeout 30s confirmed from source (`mindpalace_sdk.py:918`).
+- Connection refused to port 9999 → `MemoryClientError` (transport_error, 503) raised immediately; no hang. SDK default timeout 30s confirmed from source (`verilore_sdk.py:918`).
 
 The SDK now defaults to `retries=2` and `backoff=0.2` alongside the 30 s timeout, so a brief blip is retried at most `retries + 1` times with exponential backoff (0.2 s, 0.4 s) before `MemoryClientError("timeout", ..., 504)` or `MemoryClientError("transport_error", ..., 503)`. `retries=0` turns retrying off. A retried `remember` is safe because identical arguments on the same day return `UNCHANGED`, so a retry never writes a second version.
 

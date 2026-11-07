@@ -151,7 +151,7 @@ verilore runtime stop          # just this one
 ```
 
 The runtime is never required. On a platform without `AF_UNIX` it is not started at
-all. `MindPalace(runtime=True)` is opt-in for the same reason: a long-running
+all. `Verilore(runtime=True)` is opt-in for the same reason: a long-running
 application has the model resident, so a runtime would only add a socket hop and a
 second copy of the model.
 

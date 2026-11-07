@@ -23,7 +23,7 @@ memory, so a second run reports `already recorded` and changes nothing.
 
 ## What it uses
 
-`mindpalace_sdk.MindPalace` and nothing else. Every call is a public method:
+`verilore_sdk.Verilore` and nothing else. Every call is a public method:
 
 | call | what the example does with it |
 |---|---|
@@ -31,7 +31,7 @@ memory, so a second run reports `already recorded` and changes nothing.
 | `client.recall(question)` | answer, and abstain honestly when nothing was decided |
 | `client.explain(question)` | the claim, its evidence, and the authoritative digest |
 | `client.memory.history(corpus=..., path=...)` | what a decision said before it changed |
-| `MindPalace(name=..., runtime=True)` | use the warm local runtime when one is running |
+| `Verilore(name=..., runtime=True)` | use the warm local runtime when one is running |
 
 The SDK is the only import. If this file needed a change to work, the SDK would not be
 usable yet — which is why it exists.

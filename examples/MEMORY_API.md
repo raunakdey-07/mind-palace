@@ -2,7 +2,7 @@
 
 The implemented contract is `api/models/memory.py`, with operation validation,
 transaction ownership, projection, and packing in `api/services/memory_public.py`.
-REST (`api/routers/memory.py`), SDK (`mindpalace_sdk.py`), MCP (`mcp_server.py`),
+REST (`api/routers/memory.py`), SDK (`verilore_sdk.py`), MCP (`mcp_server.py`),
 and CLI (`cli/memory.py`) delegate ordinary memory operations to that boundary.
 The M009 feed is a separate operational read contract over the same archive and
 is exposed through REST, SDK, and CLI. This is persistent, evidence-backed
@@ -64,8 +64,8 @@ for the complete consistency model and polling limitation at the final page.
 The SDK and CLI expose the same method/command:
 
 ```python
-from mindpalace_sdk import MindPalace
-page = MindPalace(base_url="http://127.0.0.1:8000").memory.feed(
+from verilore_sdk import Verilore
+page = Verilore(base_url="http://127.0.0.1:8000").memory.feed(
     corpus="my-corpus", page_size=50
 )
 ```
@@ -290,10 +290,10 @@ legacy retrieval initialization. Remote clients use HTTP for memory only; remote
 `sync`, `search`, and `context` are not supported.
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
 # Use the corpus name printed by a completed demo, or your own existing corpus.
-mp = MindPalace()  # local memory-only client; no corpus created
+mp = Verilore()  # local memory-only client; no corpus created
 current = mp.memory.current(corpus="my-corpus", query="streaming")
 history = mp.memory.history(corpus="my-corpus", query="streaming")
 changes = mp.memory.changes(corpus="my-corpus", query="streaming")
@@ -315,7 +315,7 @@ question_pack = mp.memory.query(
 )  # unlike lexical reads, loads the configured model on demand
 print(question_pack.canonical_json())
 
-remote = MindPalace("my-corpus", base_url="http://127.0.0.1:8000", timeout=30)
+remote = Verilore("my-corpus", base_url="http://127.0.0.1:8000", timeout=30)
 print(remote.memory.current(query="streaming").canonical_json())
 print(remote.memory.query("What carries Dispatch events now?").canonical_json())
 ```

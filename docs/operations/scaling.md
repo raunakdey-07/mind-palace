@@ -129,7 +129,7 @@ a different fixture and supersede nothing in that record.
 | `api.main` process wall time | 6,783.009 ms | 798.901 ms |
 | Imported modules | 4,221 | 682 |
 | Peak RSS | 861,428 KB | 80,696 KB |
-| `mindpalace_sdk` import | 63.876 ms | 63.876 ms |
+| `verilore_sdk` import | 63.876 ms | 63.876 ms |
 
 After the change, `api.main` imports without Torch, `sentence_transformers`, or
 `transformers`. The public SDK import was already model-free. The CLI root help

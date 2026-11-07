@@ -7,12 +7,12 @@ provider's.
 
 ## One vocabulary
 
-Every failure Verilore raises on purpose is a subclass of `MindPalaceError`,
+Every failure Verilore raises on purpose is a subclass of `VeriloreError`,
 importable from the public SDK:
 
 ```python
-from mindpalace_sdk import (
-    MindPalaceError,
+from verilore_sdk import (
+    VeriloreError,
     MindPalaceValidationError,   # 422, memory
     MindPalaceNotFoundError,     # 404, memory
     MindPalaceUnauthorizedError, # 403, auth
@@ -71,7 +71,7 @@ except MindPalaceValidationError:
     show_input_error(exc.message)            # yours: the request
 except DatabaseUnavailableError:
     queue_for_later(exc.request_id)         # ours, temporarily
-except MindPalaceError as exc:
+except VeriloreError as exc:
     page_oncall(exc.request_id)             # ours: a defect
 ```
 

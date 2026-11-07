@@ -325,7 +325,7 @@ feed command.
 The main developer-experience gaps are unauthenticated HTTP surfaces,
 filesystem-based sync paths, no archive export/import, and no supported
 `verilore` import alias. The repository documents the supported
-`mindpalace_sdk` module rather than implying that `import verilore` works.
+`verilore_sdk` module rather than implying that `import verilore` works.
 
 ## 18. Reliability / Failure Modes
 

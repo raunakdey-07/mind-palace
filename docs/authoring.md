@@ -544,7 +544,7 @@ An agent has two ways to write memory. The older is to write a document with a
 `claims:` block and call `sync(corpus, path)`. The newer is `memory_remember`,
 described below. The one-statement write also exists on the CLI
 (`verilore remember "..." --key k`), the SDK
-(`MindPalace(name).remember(statement, *, corpus, key, file)`) and REST
+(`Verilore(name).remember(statement, *, corpus, key, file)`) and REST
 (`POST /remember`).
 
 `remember` asserts a statement is a fact, and handing that assertion to a model is

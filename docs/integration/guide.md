@@ -167,9 +167,9 @@ provenance. **Always pass a `path_prefix`** — without it, the pack sees the wh
 corpus, including sibling campaigns and unapproved drafts.
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace(
+mp = Verilore(
     os.environ["BRAND_CORPUS"],
     base_url=client_url,
     api_key=BRAND_MEMORY_KEY,
@@ -335,9 +335,9 @@ Configure the client with `timeout=3, retries=1` on the generation path. On
 "brand memory unavailable".
 
 ```python
-from mindpalace_sdk import MemoryClientError
+from verilore_sdk import MemoryClientError
 
-gen_client = MindPalace(
+gen_client = Verilore(
     os.environ["BRAND_CORPUS"],
     base_url=client_url,
     api_key=BRAND_MEMORY_KEY,

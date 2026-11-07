@@ -11,7 +11,7 @@
 Reproduce: `venvmp/bin/python scripts/benchmark/m0116_integration.py`. Artifact:
 `docs/performance/m0116-integration.json`.
 
-The SDK import probe confirms that `mindpalace_sdk` pulls in no `torch`,
+The SDK import probe confirms that `verilore_sdk` pulls in no `torch`,
 `sentence_transformers` or `transformers`.
 
 ## The whole script
@@ -19,10 +19,10 @@ The SDK import probe confirms that `mindpalace_sdk` pulls in no `torch`,
 ```python
 import os
 
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 from memory_pack import MemoryPack
 
-memory = MindPalace("integration-demo", base_url=os.environ["MP_BASE_URL"])
+memory = Verilore("integration-demo", base_url=os.environ["MP_BASE_URL"])
 raw = memory.memory.query(corpus="integration-demo", query=QUESTION)
 pack = MemoryPack.from_json(raw.canonical_json())
 

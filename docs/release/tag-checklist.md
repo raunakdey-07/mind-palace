@@ -56,7 +56,7 @@ Current state, measured 2026-10-13:
 - [ ] The wheel builds, and a **bare** install outside the source tree can run
       `verilore-proof verify` on a real receipt with no database and no
       network.
-- [ ] `mindpalace_errors`, the runtime entry point and the verifier all ship.
+- [ ] `verilore_errors`, the runtime entry point and the verifier all ship.
 - [ ] The MCP extra serves a real MCP session with all tools documented.
 
 ### The README's first command actually works

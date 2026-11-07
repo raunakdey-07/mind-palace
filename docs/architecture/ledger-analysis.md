@@ -109,7 +109,7 @@ use_memory = self.memory_enabled or "claims" in metadata or await memory.enabled
 
 `IngestionService()` defaults to `memory_enabled=False`, and every production
 entry point constructs it that way: `api/routers/ingest.py:14`,
-`api/routers/corpora.py:90`, `mindpalace_sdk.py:356`. Measured on a corpus with
+`api/routers/corpora.py:90`, `verilore_sdk.py:356`. Measured on a corpus with
 memory off:
 
 - A document with no `claims:` in frontmatter produced 0 archived versions. Its

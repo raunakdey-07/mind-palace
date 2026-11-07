@@ -207,7 +207,7 @@ all; nothing else differs between the columns.
 | `recall`, `VERILORE_LEXICAL=1` | **0.63 s** | — (bypasses it) |
 | `explain`, `VERILORE_LEXICAL=1` | **0.67 s** | — |
 | SDK `recall`, fresh process, default | 5.11 s | — (`runtime` is opt-in) |
-| SDK `recall`, `MindPalace(runtime=True)` | — | **0.51 s** |
+| SDK `recall`, `Verilore(runtime=True)` | — | **0.51 s** |
 
 The runtime itself: **5.39 s** cold start to `ready` with the model loaded, **0.05 s**
 for a status round trip, **0.10 s** for a query over the socket with no CLI in the

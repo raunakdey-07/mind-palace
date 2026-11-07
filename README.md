@@ -1,8 +1,10 @@
 # Verilore
 
-[![Release](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/mind-palace/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/raunakdey-07/verilore)](https://github.com/raunakdey-07/verilore/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/verilore/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/verilore/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+
+Verilore was called Mind Palace until v0.10.0.
 
 [Current release: v0.9.3](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
@@ -35,7 +37,7 @@ runbooks. These commands run in CI against a built wheel (`scripts/cleanroom_qui
 
 ```bash
 # The default install is ONNX, not torch: cold `recall` 1.4 s, install 216 MB.
-git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
+git clone https://github.com/raunakdey-07/verilore.git && cd verilore
 python -m venv .venv && . .venv/bin/activate && pip install -e '.[cli,mcp]'
 export VERILORE_RUNTIME_PASSWORD=choose-a-local-password
 export VERILORE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
@@ -166,9 +168,9 @@ and both rejections with their messages.
 From Python, with no server and no subprocess:
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-client = MindPalace("default")
+client = Verilore("default")
 client.remember("Support answers within one business day.", key="support.sla")
 memory = client.recall("What is the support SLA?").current_memories[0]
 print(f"{memory.claim}  [{memory.status}]")

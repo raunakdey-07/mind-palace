@@ -176,7 +176,7 @@ published artifact before running the default `--clean` mode, which overwrites i
 `deployment.md` lines 191 to 198 describe exactly what the image contains
 and what it does not, and the `Dockerfile` matches. The image copies `api`,
 `migrations`, and `content`, installs `requirements-docker.txt`, and runs as UID
-`10001` with `HF_HOME=/tmp/huggingface`. It excludes `cli`, `mindpalace_sdk`,
+`10001` with `HF_HOME=/tmp/huggingface`. It excludes `cli`, `verilore_sdk`,
 `mcp_server`, `scripts`, `tests`, `docs`, `examples`, and twelve research-only
 service modules.
 

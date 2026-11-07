@@ -13,9 +13,9 @@ A small documentation tree, ingested and queried.
 
 ```bash
 python - <<'EOF'
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace("product-docs")
+mp = Verilore("product-docs")
 summary = mp.sync("examples/docs")
 print(summary)
 
@@ -33,9 +33,9 @@ Point Verilore at any directory containing Markdown.
 
 ```bash
 python - <<'EOF'
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace("repo-memory")
+mp = Verilore("repo-memory")
 mp.sync("./")   # or any repository path with .md files
 
 pack = mp.context("Where is database initialization handled?", budget_tokens=4000)
@@ -49,9 +49,9 @@ Papers and notes.
 
 ```bash
 python - <<'EOF'
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace("research")
+mp = Verilore("research")
 mp.sync("~/notes/papers")   # adjust to your path
 
 pack = mp.context("Which methods were used for class imbalance?", budget_tokens=4000)

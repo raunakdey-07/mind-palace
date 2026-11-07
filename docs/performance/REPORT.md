@@ -47,13 +47,13 @@ forced offline where available.
 | `api.main` process wall time (ms) | 6,783.009 | 798.901 | 88.2% faster |
 | Imported modules (count) | 4,221 | 682 | 83.8% fewer |
 | Peak RSS (KB) | 861,428 | 80,696 | 90.6% smaller |
-| `mindpalace_sdk` import (ms) | 63.876 | 63.876 | unchanged |
+| `verilore_sdk` import (ms) | 63.876 | 63.876 | unchanged |
 | CLI root help (ms) | 265.914 | 336.643 | noise-level variation |
 
 After lazy loading, `api.main` imports without Torch,
-`sentence_transformers`, or `transformers`. The public `mindpalace_sdk` import
+`sentence_transformers`, or `transformers`. The public `verilore_sdk` import
 was already model-free. `import verilore` is not a supported Python import in
-this repository; the documented module is `mindpalace_sdk`, so the failed probe
+this repository; the documented module is `verilore_sdk`, so the failed probe
 is recorded as a naming check, not a product regression.
 
 ### Semantic model

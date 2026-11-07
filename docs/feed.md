@@ -137,9 +137,9 @@ filesystem paths.
 ### Python SDK
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-client = MindPalace(base_url="http://127.0.0.1:8000")
+client = Verilore(base_url="http://127.0.0.1:8000")
 page = client.memory.feed(corpus="project", page_size=50)
 while page.has_more:
     page = client.memory.feed(

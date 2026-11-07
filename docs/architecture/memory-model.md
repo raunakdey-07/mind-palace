@@ -138,7 +138,7 @@ absence.
 
 Ordinary memory operations share one typed boundary
 (`api/services/memory_public.py`) reached by REST (`api/routers/memory.py`), the
-Python SDK (`mindpalace_sdk.py`), MCP (`mcp_server.py`), and the remote CLI
+Python SDK (`verilore_sdk.py`), MCP (`mcp_server.py`), and the remote CLI
 (`cli/memory.py`). Adapters translate transport and errors; they do not
 implement archive policy. Operations are `query`, `current`, `history`,
 `changes`, `evidence`, `as-of`, `snapshot`, `replay`, and `pack`.

@@ -148,7 +148,7 @@ running it:
    `RESTRICT` is the coherent choice: a principal who owns a document cannot be
    deleted until it is erased or shared.
 
-**The error taxonomy and request ids are implemented** (`mindpalace_errors.py`,
+**The error taxonomy and request ids are implemented** (`verilore_errors.py`,
 `identify_request` middleware). The existing `detail` shape is preserved; the new
 fields were added beside it.
 

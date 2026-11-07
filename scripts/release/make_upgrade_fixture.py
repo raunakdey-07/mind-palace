@@ -165,9 +165,9 @@ def main() -> int:
     else:
         writes, snap = asyncio.run(build())
 
-    from verilore_sdk import Verilore
+    from mindpalace_sdk import MindPalace  # v0.9.0's own SDK, under its v0.9.0 name; this script runs against the v0.9.0 tree.
 
-    mp = Verilore(name="default")
+    mp = MindPalace(name="default")
     question = "What datastore does production use?"
 
     # Two artifacts, built the way the CLI builds them.

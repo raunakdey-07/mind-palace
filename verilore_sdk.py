@@ -181,13 +181,7 @@ def _as_client_error(exc: Exception) -> Exception:
     not be dressed up as an API failure, which would send a user looking at their
     request instead of at the bug.
     """
-    try:
-        from api.services.authz import AuthorizationError
-    except ImportError:
-        # v0.9.0 predates api.services.authz; AuthorizationError doesn't exist there.
-        AuthorizationError = type(
-            "AuthorizationError", (Exception,), {"code": "", "message": "", "status_code": 0}
-        )
+    from api.services.authz import AuthorizationError
     from api.services.memory_public import MemoryError as ServiceMemoryError
 
     if isinstance(exc, MemoryClientError):
@@ -390,7 +384,6 @@ class MemoryClient:
         # use `extra="forbid"` and reject keys they don't declare, so passing
         # `path_prefix=None` or `include_states=None` from a newer SDK breaks
         # the upgrade-safety fixture that runs the old model through new code.
-        fields = {k: v for k, v in fields.items() if v is not None}
         request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
             _require_sync()
@@ -1128,12 +1121,7 @@ class Verilore:
         client that cannot authenticate must fail at construction regardless of
         how it was constructed.
         """
-        try:
-            from api.services.authz import auth_required, resolve_principal
-        except ImportError:
-            # v0.9.0 predates api.services.authz; treat auth as not required.
-            auth_required = lambda: False  # noqa: E731
-            resolve_principal = None  # type: ignore[assignment]
+        from api.services.authz import auth_required, resolve_principal
         from api.services.db import AsyncSessionLocal
 
         if not auth_required():

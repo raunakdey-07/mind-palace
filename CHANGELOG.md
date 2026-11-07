@@ -72,6 +72,14 @@ by default (`include_states` brings them back); claim state no longer comes
 from body text (stored as a `status:` line on the document plus `info_state`
 on the authored claim); the SDK retries by default (`retries=2`).
 
+#### Draft/rejected/superseded claims withheld by default
+
+`/api/memory/current` and `/api/memory/pack` now withhold claims whose
+`info_state` is `draft`, `rejected` or `superseded`. history and query are
+unchanged. Claim carries `info_state` (excluded when `approved`), and
+`MemoryResponse` carries `withheld_counts` (present only when something was
+withheld). The new request field `include_states` opts individual states back
+in; an unknown state is `422 invalid_state`.
 ### Features
 
 `include_states` and `withheld_counts` on `MemoryResponse`; `info_state` on
@@ -81,6 +89,14 @@ scoping with in-scope conflicts and scoped ranking; supersession mistakes are
 timeout/retries/backoff; MCP `memory_remember` accepts `state` and `scope`;
 prose extraction no longer truncates wrapped sentences and reports
 `prose_not_extracted`; ingest responses carry `warnings`.
+
+#### Corpus creation over HTTP
+
+`POST /api/corpora` now translates row-level-security violations (SQLSTATE
+42501) to `403` `forbidden` instead of leaking a 500. Other
+`ProgrammingError`s still propagate as 500. In server mode, corpora are
+created by the operator with `verilore corpus create`; `POST /api/corpora` is
+not an operator path for a brand-new corpus.
 
 #### Prose extraction
 

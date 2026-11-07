@@ -69,8 +69,8 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-**The latest tagged public release is `v0.10.0`**, tagged by the owner from the
-commit that merges PR #171.
+**The latest tagged public release is `v0.10.0`**, tagged by the owner on
+`main`.
 
 `v0.10.0` is **released**. `pyproject.toml` says `0.10.0`, `CHANGELOG.md` has a
 `[v0.10.0]` entry. Verilore is not published on PyPI; install from the tag:

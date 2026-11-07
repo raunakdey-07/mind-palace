@@ -73,10 +73,11 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 commit that merges PR #171.
 
 `v0.10.0` is **released**. `pyproject.toml` says `0.10.0`, `CHANGELOG.md` has a
-`[v0.10.0]` entry. `pip install verilore==0.10.0` does not resolve — nothing is
-on PyPI. Install with:
+`[v0.10.0]` entry. Verilore is not published on PyPI; install from the tag:
 
+```
 uv tool install git+https://github.com/raunakdey-07/verilore@v0.10.0
+```
 
 `v0.9.3` remains the previous tagged release, tagged at `039c541`.
 
@@ -86,18 +87,6 @@ that can be inspected and proved afterwards, and a decision log that works on a 
 project. `v0.9.1` is what is meant to make that claim checkable from a clean
 machine, and `v0.9.3` adds the M017 readiness work: prose ingestion, authority states,
 task-aware retrieval, tenant hardening, and the 4-way agency benchmark.
-
-`v0.9.0` is therefore the release in which a developer can adopt Verilore —
-seven commands that take a statement and a question, answers that arrive fast, outputs
-that can be inspected and proved afterwards, and a decision log that works on a real
-project. `v0.9.1` is what is meant to make that claim checkable from a clean
-machine, and the unreleased work on top of it is a security change: authorization
-implemented and enforced for shared deployments, row-level security on every
-tenant-owned table, corpus erasure, and a tenant-isolation suite that runs against a
-least-privileged database role.
-
-`v0.9.1` is a patch on `v0.9.0`: no memory semantics, no retrieval behaviour, no
-public response field, and no benchmark input changed.
 
 `v0.9.1` is a patch on `v0.9.0`: no memory semantics, no retrieval behaviour, no
 public response field, and no benchmark input changed.

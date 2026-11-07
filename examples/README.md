@@ -1,6 +1,6 @@
-# Mind Palace Examples
+# Verilore Examples
 
-Minimal, reproducible examples of using Mind Palace as AI memory infrastructure.
+Minimal, reproducible examples of using Verilore as AI memory infrastructure.
 
 All examples assume a running PostgreSQL+pgvector database (see the README
 Quick Start) and `DATABASE_URL` set in your environment.
@@ -13,9 +13,9 @@ A small documentation tree, ingested and queried.
 
 ```bash
 python - <<'EOF'
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace("product-docs")
+mp = Verilore("product-docs")
 summary = mp.sync("examples/docs")
 print(summary)
 
@@ -29,13 +29,13 @@ EOF
 
 ## Example B — Repository memory
 
-Point Mind Palace at any directory containing Markdown.
+Point Verilore at any directory containing Markdown.
 
 ```bash
 python - <<'EOF'
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace("repo-memory")
+mp = Verilore("repo-memory")
 mp.sync("./")   # or any repository path with .md files
 
 pack = mp.context("Where is database initialization handled?", budget_tokens=4000)
@@ -49,9 +49,9 @@ Papers and notes.
 
 ```bash
 python - <<'EOF'
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace("research")
+mp = Verilore("research")
 mp.sync("~/notes/papers")   # adjust to your path
 
 pack = mp.context("Which methods were used for class imbalance?", budget_tokens=4000)
@@ -67,11 +67,11 @@ Connect an MCP-compatible client (Claude Desktop, any MCP host):
 ```json
 {
   "mcpServers": {
-    "mind-palace": {
+    "verilore": {
       "command": "/path/to/your/venv/bin/python",
       "args": ["-m", "mcp_server"],
       "env": {
-        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/verilore"
       }
     }
   }

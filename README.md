@@ -1,8 +1,10 @@
-# Mind Palace
+# Verilore
 
-[![Release](https://img.shields.io/github/v/release/raunakdey-07/mind-palace)](https://github.com/raunakdey-07/mind-palace/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/mind-palace/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/mind-palace/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/raunakdey-07/verilore)](https://github.com/raunakdey-07/verilore/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/raunakdey-07/verilore/ci.yml?branch=main&label=CI)](https://github.com/raunakdey-07/verilore/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+
+Verilore was called Mind Palace until v0.10.0.
 
 [Current release: v0.9.3](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
@@ -10,9 +12,9 @@
 **Memory for AI applications that remembers what changed, what was true when, and
 why to believe the recorded state.**
 
-Add Mind Palace to an application, record a fact, and get back an answer with its
+Add Verilore to an application, record a fact, and get back an answer with its
 source, the time it was true, and the exact characters that support it. Export a
-receipt and verify it on a machine that has never heard of Mind Palace.
+receipt and verify it on a machine that has never heard of Verilore.
 
 ```text
 remember   a statement becomes memory, with evidence
@@ -23,54 +25,54 @@ receipt    what was returned, plus the digest of the whole response
 verify     offline: no database, no model, no network
 ```
 
-Run `mindpalace` with no arguments and it prints the first three commands, in
+Run `verilore` with no arguments and it prints the first three commands, in
 the order a newcomer needs them.
 
 ---
 
 ## Quickstart
 
-For wiring Mind Palace into a coding agent so it tracks your project's decisions and
+For wiring Verilore into a coding agent so it tracks your project's decisions and
 runbooks. These commands run in CI against a built wheel (`scripts/cleanroom_quickstart.py`).
 
 ```bash
 # The default install is ONNX, not torch: cold `recall` 1.4 s, install 216 MB.
-git clone https://github.com/raunakdey-07/mind-palace.git && cd mind-palace
+git clone https://github.com/raunakdey-07/verilore.git && cd verilore
 python -m venv .venv && . .venv/bin/activate && pip install -e '.[cli,mcp]'
-export MIND_PALACE_RUNTIME_PASSWORD=choose-a-local-password
-export MIND_PALACE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
-export MIND_PALACE_INGEST_ROOTS="$PWD"
+export VERILORE_RUNTIME_PASSWORD=choose-a-local-password
+export VERILORE_CURSOR_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))")
+export VERILORE_INGEST_ROOTS="$PWD"
 docker compose up -d postgresql
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore
 python -m alembic -c migrations/alembic.ini upgrade head
-$ mindpalace init
+$ verilore init
 
 # Ingest a plain ADR. No frontmatter, no `claims:` block: headings, list items and
 # `Key: Value` lines become claims, each quoted from the file it came from.
 # docs/adr/001-datastore.md is the worked example; point this at your own.
-$ mindpalace ingest-repo ./docs/adr --corpus project
+$ verilore ingest-repo ./docs/adr --corpus project
 
 # Recall. An ambiguous answer prints the claims it could not separate, with ids.
-$ mindpalace recall "What is the primary datastore?" --corpus project
+$ verilore recall "What is the primary datastore?" --corpus project
 
 # Record what replaces it. `--topic-key` retires what is live under that key, across
 # files: the new statement is a different document from the old one.
-$ mindpalace remember "The primary datastore is PostgreSQL 16." \
+$ verilore remember "The primary datastore is PostgreSQL 16." \
   --corpus project --key architecture.datastore --topic-key architecture.datastore
 
 # What is true now, and what it displaced.
-$ mindpalace recall "What is the primary datastore?" --corpus project
-$ mindpalace history "" --corpus project
+$ verilore recall "What is the primary datastore?" --corpus project
+$ verilore history "" --corpus project
 
 # Verify the answer offline: no database, no model, no network.
-$ mindpalace receipt "What is the primary datastore?" --corpus project -o receipt.json
-$ mindpalace verify receipt.json
+$ verilore receipt "What is the primary datastore?" --corpus project -o receipt.json
+$ verilore verify receipt.json
 ```
 
 The first `recall` builds an ONNX session: about 1.4 s, then 0.3 s. A background
 runtime holds it and the connection pool warm after that;
-`mindpalace runtime status` says whether one is up. `MIND_PALACE_RUNTIME=0` turns
-it off, and `MIND_PALACE_LEXICAL=1` turns the model off entirely.
+`verilore runtime status` says whether one is up. `VERILORE_RUNTIME=0` turns
+it off, and `VERILORE_LEXICAL=1` turns the model off entirely.
 
 `pip install -e '.[cli,mcp]'` resolves 79 distributions totalling 216 MB, of which
 the three embedding packages are 79 MB. `sentence-transformers` and torch are the
@@ -79,30 +81,30 @@ two backends return the same vectors -- measured minimum cosine 0.99999833 -- so
 buys a different import time and nothing else. The one thing that does need it is
 `rerank=true` on the REST search endpoint, which asks for the cross-encoder
 reranker; on the default stack that raises, because returning unreranked results
-under a rerank request would be a lie. `mindpalace search` and every other command
+under a rerank request would be a lie. `verilore search` and every other command
 leave it off.
 
 Your agent gets the same commands over MCP, with the same `match_status` and
 `candidates` on the answer and the same `supersedes_claim_id` on the write, which
 takes an id prefix or a phrase from the claim's own text. A document can say so
 itself: `supersedes: 0001.md` in its frontmatter. Point the client at
-`mindpalace-mcp` with `DATABASE_URL` and `MIND_PALACE_INGEST_ROOTS` set; the JSON
+`verilore-mcp` with `DATABASE_URL` and `VERILORE_INGEST_ROOTS` set; the JSON
 for OpenCode, Zed and Claude Code is in [connecting an agent](docs/mcp.md).
 
 `recall` and `remember` also report a `query_id`. Grade a wrong answer; it appends
-to `~/.mind-palace/logs/queries.jsonl` and changes nothing else.
+to `~/.verilore/logs/queries.jsonl` and changes nothing else.
 
 ## Managing corpora and credentials
 
-- `mindpalace ingest-repo <path> --delete-removed` retires documents whose source file is gone.
-- `mindpalace corpus reset <name> --yes` erases and re-initialises one corpus, with its grants intact.
-- `mindpalace corpus delete <name> --yes` removes a corpus entirely.
-- `mindpalace posture` reports whether the database role actually enforces row-level security.
-- `mindpalace credential issue|list|grant|ungrant|revoke` manages access without changing a secret.
+- `verilore ingest-repo <path> --delete-removed` retires documents whose source file is gone.
+- `verilore corpus reset <name> --yes` erases and re-initialises one corpus, with its grants intact.
+- `verilore corpus delete <name> --yes` removes a corpus entirely.
+- `verilore posture` reports whether the database role actually enforces row-level security.
+- `verilore credential issue|list|grant|ungrant|revoke` manages access without changing a secret.
 
 ## Out-of-the-box Linux and WSL2
 
-On Linux and WSL2, `mindpalace init` starts a stopped local PostgreSQL container
+On Linux and WSL2, `verilore init` starts a stopped local PostgreSQL container
 publishing the configured port and provisions a `pgvector` container when nothing
 is running; a remote database is never touched. Connection and authentication
 failures print the specific remediation (start the service, fix the password)
@@ -110,14 +112,14 @@ instead of a traceback. `pytest` auto-detects a local development Postgres, so t
 suite runs with no `DATABASE_URL`.
 
 ```bash
-mindpalace feedback <query_id> --verdict wrong --note "meant the cache"
-mindpalace feedback-summary
+verilore feedback <query_id> --verdict wrong --note "meant the cache"
+verilore feedback-summary
 ```
 
 ## Documents and claims
 
 `remember` is for facts you have in hand. A directory of Markdown you already have
-goes through `mindpalace ingest-repo ./docs`, and there are two ways for a document
+goes through `verilore ingest-repo ./docs`, and there are two ways for a document
 to become memory.
 
 **Plain Markdown needs no annotation.** A heading path scopes what follows it, and
@@ -166,9 +168,9 @@ and both rejections with their messages.
 From Python, with no server and no subprocess:
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-client = MindPalace("default")
+client = Verilore("default")
 client.remember("Support answers within one business day.", key="support.sla")
 memory = client.recall("What is the support SLA?").current_memories[0]
 print(f"{memory.claim}  [{memory.status}]")
@@ -237,14 +239,14 @@ records one discrepancy this release found and did not paper over.
 
 ## Head-to-head stale-fact benchmark
 
-A reproducible comparison between Mind Palace and a plain top-k chunk RAG baseline
+A reproducible comparison between Verilore and a plain top-k chunk RAG baseline
 using the same ONNX embedding model. Run with:
 
 ```
-DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace python scripts/benchmark_stale_facts.py
+DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore python scripts/benchmark_stale_facts.py
 ```
 
-The script ingests a multi-evolution ADR and spec corpus, runs Mind Palace and
+The script ingests a multi-evolution ADR and spec corpus, runs Verilore and
 three RAG baselines (plain top-k, recency-reranked, metadata-filtered) over
 33 questions across supersession, spec updates, half-absent compounds, and cached
 answer revalidation, and prints a comparison table.

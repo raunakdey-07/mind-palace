@@ -59,7 +59,7 @@ def test_memory_revalidate_is_registered():
 def tmp_root(tmp_path, monkeypatch):
     root = tmp_path / "docs"
     root.mkdir()
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", str(root))
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", str(root))
     return root
 
 
@@ -120,10 +120,10 @@ def test_unresolved_supersedes_rejected(loop):
 def test_sdk_revalidate_current_then_stale():
     _skip_without_db()
     os.environ.setdefault("DATABASE_URL", os.environ["DATABASE_URL"])
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     corpus = "sdk-reval-corpus"
-    mp = MindPalace(corpus)
+    mp = Verilore(corpus)
     mp.remember("Production uses PostgreSQL.", key="datastore")
     r = mp.explain("What datastore does production use?")
     receipt = r.receipt

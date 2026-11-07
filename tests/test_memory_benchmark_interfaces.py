@@ -67,7 +67,7 @@ async def interfaces(workload, monkeypatch):
     import mcp_server
     from api.main import app
     from cli.main import app as cli_app
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     # execute() still owns db.begin(); sessions() makes its commit release a
     # savepoint, never the workload's outer transaction. No executor is patched.
@@ -85,7 +85,7 @@ async def interfaces(workload, monkeypatch):
                     future.cancel()
 
         monkeypatch.setattr(httpx, "post", post)
-        sdk = MindPalace(base_url=BASE_URL).memory
+        sdk = Verilore(base_url=BASE_URL).memory
 
         async def sdk_call(operation, request):
             fields = request.model_dump(mode="json", exclude_unset=True)
@@ -223,7 +223,7 @@ async def test_a_g_benchmark_labels_and_snapshots_across_interfaces(workload, in
 
 
 async def assert_not_found(workload, interfaces, operation, request, code):
-    from mindpalace_sdk import MemoryClientError
+    from verilore_sdk import MemoryClientError
 
     with no_destructive_sql(workload):
         with pytest.raises(memory_public.MemoryError) as direct:

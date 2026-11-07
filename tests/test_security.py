@@ -86,7 +86,7 @@ def test_oversized_document_is_chunked_not_crashed():
 async def test_prompt_injection_content_stored_as_inert_text(tmp_path):
     """Instruction-like corpus text is stored verbatim as data.
 
-    Mind Palace never executes corpus content; whether it influences an LLM
+    Verilore never executes corpus content; whether it influences an LLM
     is the consuming application's responsibility. This test pins that the
     content round-trips exactly — no interpretation, no execution.
     """

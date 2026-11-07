@@ -50,7 +50,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts" / "benchmark"))
 
-URL = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+URL = "postgresql://mpadmin:secret@localhost:5432/verilore"
 VALID_AT = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
 PROBE = (
     "What is the current database?",

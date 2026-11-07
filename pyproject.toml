@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mindpalace-os"
+name = "verilore"
 version = "0.9.3"
-description = "Mind Palace - AI-native Research Operating System"
+description = "Verilore - AI-native Research Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,7 +15,7 @@ dependencies = [
     "asyncpg==0.30.0",
     "pydantic>=2.0.0",
     "python-frontmatter>=1.1.0",
-    # Declared here, not only in requirements.txt. `pip install mindpalace-os`
+    # Declared here, not only in requirements.txt. `pip install verilore-os`
     # is a documented install path in the README, and the documented migrate step
     # is `python -m alembic ...`. Without this the bare wheel has no alembic and
     # that step fails with "No module named alembic" on a clean machine.
@@ -33,10 +33,10 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0.0",
     "pyyaml>=6.0",
     "langchain-text-splitters>=1.0.0",
-    # Typer is core because `mindpalace` is an unconditional console script in
+    # Typer is core because `verilore` is an unconditional console script in
     # [project.scripts], and a conditional entry point is not something setuptools
-    # can express. Declared as an extra, a bare `pip install mindpalace-os` created
-    # a `mindpalace` executable that died with ModuleNotFoundError on `import typer`
+    # can express. Declared as an extra, a bare `pip install verilore-os` created
+    # a `verilore` executable that died with ModuleNotFoundError on `import typer`
     # -- and the wheel job never caught it, because `transformers` depends on typer
     # and `transformers` used to arrive with `sentence-transformers`. Removing that
     # default dependency removed the accidental transit and exposed it.
@@ -71,14 +71,14 @@ dev = [
 ]
 
 [project.scripts]
-mindpalace = "cli.main:app"
+verilore = "cli.main:app"
 # Standalone, dependency-free proof tooling. A separate entry point, not a
 # subcommand of the Typer CLI, because Typer is an optional extra: anyone who
 # installs the package must be able to verify a proof without it.
-mindpalace-proof = "memory_proof_cli:main"
+verilore-proof = "memory_proof_cli:main"
 # The MCP server, as a command an agent can actually launch. Same reason: an
 # agent configuration should not have to know a module path or a virtualenv.
-mindpalace-mcp = "mcp_server:main"
+verilore-mcp = "mcp_server:main"
 
 [tool.setuptools]
 # Top-level single-file modules alongside the api/cli packages.
@@ -87,21 +87,21 @@ mindpalace-mcp = "mcp_server:main"
 # memory_proof and memory_proof_cli ship for the same reason: verifying a
 # recorded memory must not require the server, the database or a model.
 py-modules = [
-    "mindpalace_errors",
-    "mindpalace_sdk",
+    "verilore_errors",
+    "verilore_sdk",
     "mcp_server",
     "memory_pack",
     "memory_proof",
     "memory_proof_cli",
     "memory_receipt",
     # The local runtime's entry point. The CLI starts it as
-    # `sys.executable -m mindpalace_runtime`, which guarantees it runs the same
-    # interpreter and the same installed Mind Palace as the command that started it.
+    # `sys.executable -m verilore_runtime`, which guarantees it runs the same
+    # interpreter and the same installed Verilore as the command that started it.
     # A console script would depend on PATH, and `pip install --user` beside a
     # virtualenv is a good way to end up with a socket served by the wrong build.
     # Without this module in the wheel, the runtime silently never starts on an
     # installed package and every command is 6 seconds.
-    "mindpalace_runtime",
+    "verilore_runtime",
 ]
 
 [tool.setuptools.packages.find]
@@ -122,7 +122,7 @@ include = ["api*", "cli*", "migrations*"]
 # documented third step of the README -- `python -m alembic -c
 # migrations/alembic.ini upgrade head` -- has nothing to point at. Measured: the
 # bare wheel was 13 MB with no alembic and no migrations, so `pip install
-# mindpalace-os` could not reach a working first command.
+# verilore-os` could not reach a working first command.
 migrations = ["alembic.ini", "*.mako", "versions/*.py", "versions/*.mako"]
 
 [tool.pytest.ini_options]

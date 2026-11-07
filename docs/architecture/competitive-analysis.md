@@ -16,7 +16,7 @@ architecture review. Neither ranks systems, and neither reports a head-to-head r
 The review covers Graphiti, Mem0 OSS, Letta/MemFS, MemPalace, Laya, and
 conventional RAG or vector-memory systems. It records architecture and published
 implementation boundaries. It does not rank systems or claim a head-to-head
-result, because no external system was run against the Mind Palace corpus.
+result, because no external system was run against the Verilore corpus.
 
 The pinned review references are:
 
@@ -29,13 +29,13 @@ The pinned review references are:
   `5e420db9f2871bc3106ba14372d4f8d94c5e63ae`, `letta` 0.33.2
 - Letta documentation mirror: `691c48b202a1efa3dddbe585d5cebe709cfee202`
 
-The main conclusion is narrower than “Mind Palace stores verbatim memory” or
+The main conclusion is narrower than “Verilore stores verbatim memory” or
 “MemPalace does not preserve raw experience.” Both claims are too broad.
 MemPalace stores verbatim conversation drawers by default. Letta's MemFS stores
 Markdown and YAML files in a git repository. The difference that survives the
 review is the authority and evidence contract:
 
-- Mind Palace claims are authored in source material and must appear literally
+- Verilore claims are authored in source material and must appear literally
   in an archived chunk with character offsets.
 - Supersession, conflicts, validity windows, and snapshot membership are
   explicit archive state.

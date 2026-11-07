@@ -46,7 +46,7 @@ def _unb64(value: str) -> bytes:
 
 
 def _cursor_secret() -> bytes:
-    value = os.getenv("MIND_PALACE_CURSOR_SECRET")
+    value = os.getenv("VERILORE_CURSOR_SECRET")
     if value is None or not value.strip():
         raise MemoryError(
             "cursor_unavailable",

@@ -90,7 +90,7 @@ async def reserve_corpus(name):
 
 def run(args):
     from api.models.memory import MemoryRequest
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     MemoryRequest(corpus=args.corpus)  # Validate before any persistent write.
     check(bool(os.environ.get("DATABASE_URL")), "Set DATABASE_URL explicitly before running")
@@ -160,9 +160,9 @@ def run(args):
 
     try:
         start = perf_counter()
-        mp = MindPalace(args.corpus, create_if_missing=False)
+        mp = Verilore(args.corpus, create_if_missing=False)
         report["sdk_initialization_ms"] = round((perf_counter() - start) * 1000, 3)
-        with TemporaryDirectory(prefix="mindpalace-m005-") as temporary:
+        with TemporaryDirectory(prefix="verilore-m005-") as temporary:
             staging = Path(temporary)
             for source in (FIXTURES / "stage-a").glob("*.md"):
                 shutil.copyfile(source, staging / source.name)

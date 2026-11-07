@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from mindpalace_errors import (
+from verilore_errors import (
     ProviderError,
     ProviderIncompatibleModelError,
     ProviderMalformedResponseError,
@@ -247,7 +247,7 @@ def test_a_timeout_is_retryable_and_distinct_from_an_outage():
 
 def test_provider_failures_are_distinguishable_from_memory_errors():
     """A provider outage must not be classifiable as anything else."""
-    from mindpalace_errors import InternalError, NotFoundError, ValidationError
+    from verilore_errors import InternalError, NotFoundError, ValidationError
 
     for error in (
         ProviderUnavailableError("down"),
@@ -277,7 +277,7 @@ def test_classification_never_forwards_the_providers_own_words(raised):
     hand-written message. `classify_provider_error` chooses the wording; the
     original text is only ever inspected to pick a category, never copied.
     """
-    from mindpalace_errors import classify_provider_error
+    from verilore_errors import classify_provider_error
 
     secret = "sk-secret"
     error = classify_provider_error(raised, operation="recall")
@@ -294,16 +294,16 @@ def test_classification_never_forwards_the_providers_own_words(raised):
 def test_the_categories_are_the_ones_that_change_retry_policy():
     """Each classification must be decidable by looking at it, not by reading a
     traceback -- otherwise an integrator has no way to choose a backoff."""
-    from mindpalace_errors import classify_provider_error
+    from verilore_errors import classify_provider_error
 
     cases = [
-        (TimeoutError("timeout"), "mp_provider_timeout", True),
-        (Exception("HTTP 429 too many requests"), "mp_provider_rate_limited", True),
-        (OSError("connection refused"), "mp_provider_unavailable", True),
-        (Exception("401 unauthorized"), "mp_provider_auth", False),
-        (Exception("unexpected dimension"), "mp_provider_incompatible_model", False),
-        (Exception("content filter refusal"), "mp_provider_refused", False),
-        (ValueError("something else entirely"), "mp_provider_unavailable", True),
+        (TimeoutError("timeout"), "vl_provider_timeout", True),
+        (Exception("HTTP 429 too many requests"), "vl_provider_rate_limited", True),
+        (OSError("connection refused"), "vl_provider_unavailable", True),
+        (Exception("401 unauthorized"), "vl_provider_auth", False),
+        (Exception("unexpected dimension"), "vl_provider_incompatible_model", False),
+        (Exception("content filter refusal"), "vl_provider_refused", False),
+        (ValueError("something else entirely"), "vl_provider_unavailable", True),
     ]
     for raised, code, retryable in cases:
         error = classify_provider_error(raised)

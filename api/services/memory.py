@@ -155,7 +155,7 @@ def memory_document_id(corpus_id: str, path: str) -> str:
         new row for relation "memory_documents" violates check constraint
         "memory_documents_check"
 
-    That is `mindpalace remember` -- the README's third step -- on a fresh
+    That is `verilore remember` -- the README's third step -- on a fresh
     install. See tests/test_default_corpus_is_writable.py.
     """
     return hashlib.sha256(f"{corpus_id.strip()}:{path}".encode("utf-8")).hexdigest()
@@ -1331,9 +1331,9 @@ def _supersession_chains(claims: list[dict]) -> list[list[dict]]:
     so a claim that was retired is found together with the claim that retired
     it, whichever one the reader happened to anchor on.
 
-    Walking backwards only is the defect this exists to fix. `mindpalace history
+    Walking backwards only is the defect this exists to fix. `verilore history
     "PyTorch embedder"` anchored on the newer claim and walked back to the older
-    one, so the timeline was right. `mindpalace history "How did the default
+    one, so the timeline was right. `verilore history "How did the default
     embedding backend and install size change?"` anchored on the *older* claim,
     found nothing to walk back to, and reported the retired claim as the one
     that is true now.
@@ -1404,14 +1404,14 @@ def _query_result(versions, query_text, valid_at=None, *, lineage: bool = False)
             for item in version["evidence"]
         )
     # Interrogatives and function words are not part of what a claim is about, so
-    # they cannot be required of it. `mindpalace history "What is the primary
-    # datastore?"` and `mindpalace history "primary datastore"` now reach the same
+    # they cannot be required of it. `verilore history "What is the primary
+    # datastore?"` and `verilore history "primary datastore"` now reach the same
     # claims, which is what an MCP agent will send; only this normalisation stands
     # between them. An empty result means an empty query, which returns everything,
     # as it always has.
     # Interrogatives and function words are not part of what a claim is about, so
-    # they cannot be required of it. `mindpalace history "What is the primary
-    # datastore?"` and `mindpalace history "primary datastore"` now reach the same
+    # they cannot be required of it. `verilore history "What is the primary
+    # datastore?"` and `verilore history "primary datastore"` now reach the same
     # claims, which is what an MCP agent sends; only this normalisation stands
     # between them. A query with no content words left is an empty query, which
     # returns everything, as it always has.

@@ -8,12 +8,12 @@ command still works when those imports are made to fail.
 
 Two reasons that guarantee is worth having:
 
-* `MIND_PALACE_LEXICAL=1` exists to be usable in a lightweight or offline
+* `VERILORE_LEXICAL=1` exists to be usable in a lightweight or offline
   deployment. If the model stack were needed merely to *import* the package, the mode
   would be unusable in exactly the environment it was built for.
 * It is what makes the dependency model safe to revisit later. v0.9.0 deliberately did
   not move `sentence-transformers` into an optional extra -- doing so would mean a
-  plain `pip install mindpalace-os` stopped ranking semantically, which is a
+  plain `pip install verilore` stopped ranking semantically, which is a
   surprising behaviour change for every existing user. That decision is only safe
   because the code does not need the stack to run.
 
@@ -70,10 +70,10 @@ def _run(argv: list[str], lexical: bool = False) -> tuple[int, str, str]:
     # are about what happens *in this process*: with a warm runtime answering, the
     # child never touches a model at all, so blocking the model stack would prove
     # nothing and the degradation note would never be reachable.
-    env["MIND_PALACE_RUNTIME"] = "0"
-    env.pop("MIND_PALACE_LEXICAL", None)
+    env["VERILORE_RUNTIME"] = "0"
+    env.pop("VERILORE_LEXICAL", None)
     if lexical:
-        env["MIND_PALACE_LEXICAL"] = "1"
+        env["VERILORE_LEXICAL"] = "1"
     program = (
         BLOCKER
         + "\n"
@@ -119,7 +119,7 @@ def _section(text: str, prefix: str) -> str:
 
 
 def test_the_cli_imports_with_no_model_stack():
-    """`mindpalace --help` must not need torch. This is the packaging guarantee."""
+    """`verilore --help` must not need torch. This is the packaging guarantee."""
     code, out, err = _run(["--help"], lexical=True)
     assert code == 0, err[-2000:]
     assert "HEAVY=[]" in out, out
@@ -159,7 +159,7 @@ def unembedded_corpus():
     degrade. A corpus whose vectors are already cached -- or one with nothing to
     rank at all -- answers without ever reaching for the model, so asserting the
     note against either of those would be testing the leftovers of a previous
-    test rather than the behaviour. `mindpalace remember` writes claims without
+    test rather than the behaviour. `verilore remember` writes claims without
     embeddings by design, so authoring the corpus this way is the honest setup.
     """
     from api.services import remember as remember_service
@@ -205,7 +205,7 @@ def test_semantic_mode_degrades_instead_of_crashing_when_no_model_exists(unembed
         "lexical ranking is indistinguishable from a semantic answer, and the two "
         "select different keys."
     )
-    assert "MIND_PALACE_LEXICAL" in err, err[-1500:]
+    assert "VERILORE_LEXICAL" in err, err[-1500:]
     # And it must not have leaked into the answer. Checked against the command's own
     # stdout, not the harness's: `_run` deliberately re-emits the captured stderr on
     # the child's stdout so the parent can see it at all.

@@ -39,8 +39,8 @@ def isolated_state(tmp_path):
     """
     state = tmp_path / "state"
     state.mkdir(parents=True, exist_ok=True)
-    previous = os.environ.get("MIND_PALACE_STATE_DIR")
-    os.environ["MIND_PALACE_STATE_DIR"] = str(state)
+    previous = os.environ.get("VERILORE_STATE_DIR")
+    os.environ["VERILORE_STATE_DIR"] = str(state)
     try:
         from api import runtime as runtime_module
 
@@ -48,22 +48,22 @@ def isolated_state(tmp_path):
         yield runtime_module, state
     finally:
         if previous is None:
-            os.environ.pop("MIND_PALACE_STATE_DIR", None)
+            os.environ.pop("VERILORE_STATE_DIR", None)
         else:
-            os.environ["MIND_PALACE_STATE_DIR"] = previous
+            os.environ["VERILORE_STATE_DIR"] = previous
 
 
 def child_env(state: Path, **extra: str) -> dict:
-    env = dict(os.environ, PYTHONPATH=str(ROOT), MIND_PALACE_STATE_DIR=str(state))
-    env.pop("MIND_PALACE_LEXICAL", None)
-    env.pop("MIND_PALACE_RUNTIME", None)
+    env = dict(os.environ, PYTHONPATH=str(ROOT), VERILORE_STATE_DIR=str(state))
+    env.pop("VERILORE_LEXICAL", None)
+    env.pop("VERILORE_RUNTIME", None)
     env.update(extra)
     return env
 
 
 def launch(state: Path, **extra: str) -> subprocess.Popen:
     return subprocess.Popen(
-        [sys.executable, "-m", "mindpalace" "_runtime"],
+        [sys.executable, "-m", "verilore" "_runtime"],
         cwd=str(ROOT),
         env=child_env(state, **extra),
         stdin=subprocess.DEVNULL,
@@ -332,7 +332,7 @@ def test_a_protocol_mismatch_is_refused_with_the_fix(tmp_path):
             reply = asyncio.run(ask(runtime_module.PROTOCOL + 1))
             assert not reply["ok"], reply
             assert reply["error"]["code"] == "protocol_mismatch", reply
-            assert "mindpalace runtime stop" in reply["error"]["message"], reply
+            assert "verilore runtime stop" in reply["error"]["message"], reply
 
             # And the correct protocol still works on the same runtime.
             good = runtime_module.call({"op": "status"}, timeout=10.0)
@@ -369,8 +369,8 @@ def test_a_runtime_from_a_different_build_refuses_with_the_fix(tmp_path):
             assert not reply["ok"], reply
             assert reply["error"]["code"] == "build_mismatch", reply
             # The instruction has to be copy-pasteable, not merely present.
-            assert "mindpalace runtime stop" in reply["error"]["message"], reply
-            assert "MIND_PALACE_RUNTIME=0" in reply["error"]["message"], reply
+            assert "verilore runtime stop" in reply["error"]["message"], reply
+            assert "VERILORE_RUNTIME=0" in reply["error"]["message"], reply
 
             # The real build is still served by the same process.
             good = runtime_module.call({"op": "status"}, timeout=10.0)
@@ -391,9 +391,9 @@ def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
     `build` and `token` and none of them says which database this is.
 
     Reproduced by hand before this test existed: a runtime started against an
-    empty database answered `mindpalace recall` with `NO_RELEVANT_MEMORY` for a
+    empty database answered `verilore recall` with `NO_RELEVANT_MEMORY` for a
     claim that was in fact in the database the command named, and the same
-    question answered in-process (`MIND_PALACE_RUNTIME=0`) returned the claim.
+    question answered in-process (`VERILORE_RUNTIME=0`) returned the claim.
 
     The child is pointed at the maintenance database, which this suite already
     requires to exist and which is never this one. It needs no schema: a runtime
@@ -449,11 +449,11 @@ def test_a_runtime_attached_to_another_database_refuses_with_the_fix(tmp_path):
             assert not reply["ok"], reply
             assert reply["error"]["code"] == "database_mismatch", reply
             # The instruction has to be copy-pasteable, not merely present.
-            assert "mindpalace runtime stop" in reply["error"]["message"], reply
-            assert "MIND_PALACE_RUNTIME=0" in reply["error"]["message"], reply
+            assert "verilore runtime stop" in reply["error"]["message"], reply
+            assert "VERILORE_RUNTIME=0" in reply["error"]["message"], reply
 
             # A caller that agrees with the runtime is still served, and the answer
-            # names the database, so `mindpalace runtime status` can tell a person
+            # names the database, so `verilore runtime status` can tell a person
             # which one is warm.
             reply = ask(other_id)
             assert reply["ok"], reply
@@ -501,11 +501,11 @@ def test_the_build_hash_moves_when_the_code_moves(tmp_path, monkeypatch):
 def test_a_stale_runtime_is_discarded_and_the_command_still_succeeds(tmp_path):
     """The user-visible contract: the command works, and the runtime goes away.
 
-    `mindpalace remember` routes through the runtime. With a stale one it must
+    `verilore remember` routes through the runtime. With a stale one it must
     fall back to in-process rather than failing -- and must stop the stale process
     so the *next* command is fast as well as correct.
     """
-    from mindpalace_sdk import _discard_stale_runtime
+    from verilore_sdk import _discard_stale_runtime
 
     with isolated_state(tmp_path) as (runtime_module, state):
         process = launch(state)
@@ -529,7 +529,7 @@ def test_the_socket_is_private_and_never_a_port(tmp_path):
     """The authorisation boundary is the filesystem, and it must be a socket.
 
     Asserted rather than assumed: a regression to a TCP bind would make every
-    `mindpalace recall` on a laptop a service on the network.
+    `verilore recall` on a laptop a service on the network.
     """
     with isolated_state(tmp_path) as (runtime_module, state):
         import stat as stat_module
@@ -565,7 +565,7 @@ def _runtime_pids() -> list[int]:
             cmdline = (entry / "cmdline").read_bytes().decode("utf-8", "replace")
         except OSError:
             continue
-        if "mindpalace_runtime" in cmdline or "mindpalace" + "_runtime" in cmdline:
+        if "verilore_runtime" in cmdline or "verilore" + "_runtime" in cmdline:
             found.append(int(entry.name))
     return found
 

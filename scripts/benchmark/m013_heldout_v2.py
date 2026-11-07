@@ -43,7 +43,7 @@ from m0115_dataset import Question, build_corpus  # noqa: E402
 from m0115_dataset import dataset_hash as dev_dataset_hash  # noqa: E402
 
 VALID_AT = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-URL = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+URL = "postgresql://mpadmin:secret@localhost:5432/verilore"
 FREEZE_PATH = ROOT / "docs/performance/heldout-v2-freeze.json"
 
 #: ---------------------------------------------------------------------------

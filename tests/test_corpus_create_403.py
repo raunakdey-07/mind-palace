@@ -41,9 +41,9 @@ async def test_corpus_create_returns_403_not_500(world, monkeypatch):
     rejects the row, which used to escape as a 500 ProgrammingError. The
     create-corpus path now translates it to 403.
     """
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", "dev-scope-secret")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off")
 
     response = await world.client.post(
         "/api/corpora",
@@ -59,7 +59,7 @@ async def test_corpus_create_returns_403_not_500(world, monkeypatch):
 async def test_admin_cannot_create_new_corpus_over_http(world):
     """A principal with manage_corpus cannot create a brand-new corpus over
     HTTP today (returns 403). Documented known gap; corpora are created by the
-    operator with `mindpalace corpus create`. The world fixture runs in
+    operator with `verilore corpus create`. The world fixture runs in
     required auth mode, so the issued admin credential authenticates.
 
     world.db_module.admin_session_scope() and principal_scope(ADMIN_PRINCIPAL)
@@ -85,12 +85,12 @@ async def test_admin_cannot_create_new_corpus_over_http(world):
     # Currently 403: the service layer raises AuthorizationError before any
     # INSERT (api/services/corpora.py::create_corpus checks
     # principal.unrestricted, which is false for every credential). Corpora are
-    # created by the operator with `mindpalace corpus create`.
-    # Corpora are created by the operator with `mindpalace corpus create`.
+    # created by the operator with `verilore corpus create`.
+    # Corpora are created by the operator with `verilore corpus create`.
     assert response.status_code == 403, f"expected 403, got {response.status_code}: {response.text}"
     detail = response.json()["detail"]
     assert detail["code"] == "forbidden", response.json()
-    assert "mindpalace corpus create" in detail["message"], detail
+    assert "verilore corpus create" in detail["message"], detail
 
 
 @pytest.mark.asyncio
@@ -102,9 +102,9 @@ async def test_corpus_create_programming_error_propagates_500(world, monkeypatch
     is translated to 403. Other ProgrammingErrors (e.g. 42P01 undefined_table)
     must still surface as 500 so operators can see real database errors.
     """
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", "dev-scope-secret")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", "dev-scope-secret")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off")
 
     mock_orig = MagicMock()
     mock_orig.sqlstate = "42P01"  # undefined_table, not an RLS violation

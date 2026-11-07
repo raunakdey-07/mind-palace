@@ -3,7 +3,7 @@
 
 """The one place that explains a dead database.
 
-Both `mindpalace init` and the per-command failure text need to say the same
+Both `verilore init` and the per-command failure text need to say the same
 thing, so the guidance lives here and is imported rather than restated. The
 underlying exception is never the only thing a developer sees, and never the
 first: it is appended for debugging, after the reason and the command to run.
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 
 def database_hint() -> str:
-    """Where Mind Palace believes the database is, named for this process.
+    """Where Verilore believes the database is, named for this process.
 
     Read from the environment rather than hardcoded, so the advice names the
     database this command would actually use. Never raises: advice that fails is
@@ -32,7 +32,7 @@ def database_hint() -> str:
 def _url() -> str:
     import os
 
-    return os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/mindpalace")
+    return os.getenv("DATABASE_URL", "postgresql://mpadmin:secret@localhost:5432/verilore")
 
 
 def storage_unavailable(exc: Exception | None = None) -> str:
@@ -42,7 +42,7 @@ def storage_unavailable(exc: Exception | None = None) -> str:
     """
     detail = f"\n\n{type(exc).__name__}: {exc}" if exc is not None else ""
     return (
-        "Mind Palace needs persistent storage, and it could not reach it.\n"
+        "Verilore needs persistent storage, and it could not reach it.\n"
         "\n"
         f"Why: it could not connect to PostgreSQL at {database_hint()}.\n"
         "\n"
@@ -51,5 +51,5 @@ def storage_unavailable(exc: Exception | None = None) -> str:
         "\n"
         "Then check it works:\n"
         "  python -m alembic -c migrations/alembic.ini upgrade head\n"
-        "  mindpalace init" + detail
+        "  verilore init" + detail
     )

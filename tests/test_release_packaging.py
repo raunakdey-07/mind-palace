@@ -2,7 +2,7 @@
 """The distribution must ship the runtime, and not the research tooling.
 
 `scripts/` was in the wheel's `include` list from `v0.6.0`, which meant every
-`pip install mindpalace-os` carried the release checks, the benchmark harnesses and
+`pip install verilore` carried the release checks, the benchmark harnesses and
 the scale fixtures. Measured: 54 files, 590 KB of 1,328 KB unpacked -- 44% of the
 distribution -- for code that no runtime path imports.
 
@@ -54,8 +54,8 @@ def test_the_runtime_surface_is_still_included():
 
     assert {"api*", "cli*"} <= include, include
     for required in (
-        "mindpalace_sdk",
-        "mindpalace_runtime",
+        "verilore_sdk",
+        "verilore_runtime",
         "memory_receipt",
         "memory_proof",
         "memory_proof_cli",
@@ -65,8 +65,8 @@ def test_the_runtime_surface_is_still_included():
         assert required in modules, f"{required} is no longer a py-module; the wheel loses it"
 
     scripts = config["project"]["scripts"]
-    assert scripts["mindpalace"] == "cli.main:app", scripts
-    assert scripts["mindpalace-proof"] == "memory_proof_cli:main", scripts
+    assert scripts["verilore"] == "cli.main:app", scripts
+    assert scripts["verilore-proof"] == "memory_proof_cli:main", scripts
 
 
 def test_nothing_outside_scripts_imports_the_scripts_package():
@@ -81,7 +81,7 @@ def test_nothing_outside_scripts_imports_the_scripts_package():
     shipped += [
         ROOT / f"{name}.py"
         for name in (
-            "mindpalace_sdk",
+            "verilore_sdk",
             "mcp_server",
             "memory_pack",
             "memory_proof",
@@ -115,13 +115,13 @@ def test_nothing_outside_scripts_imports_the_scripts_package():
 def test_each_console_script_declares_the_extra_it_needs():
     """A console script that cannot run from its declared install is a packaging bug.
 
-    This is not hypothetical. The wheel CI job asserted `mindpalace-mcp --help`
+    This is not hypothetical. The wheel CI job asserted `verilore-mcp --help`
     against a **bare** install, which cannot supply `mcp` -- it is a declared extra.
     The job failed with `ModuleNotFoundError: No module named 'mcp'`, and its
     `|| import mcp_server` fallback could not have saved it, for the same reason.
 
     `typer` is the interesting counter-case, and the reason this test is worth having.
-    It is also an extra, so `mindpalace` ought to be uninstallable without it -- but a
+    It is also an extra, so `verilore` ought to be uninstallable without it -- but a
     bare install *does* get typer, because `transformers` requires it. So the CLI's
     availability depends on an unrelated package's dependency graph, and this test
     pins the declaration rather than the accident.
@@ -139,9 +139,9 @@ def test_each_console_script_declares_the_extra_it_needs():
 
     expectations = {
         # console script -> (what it needs, the extra that provides it)
-        "mindpalace": ({"typer"}, "cli"),
-        "mindpalace-proof": (set(), None),
-        "mindpalace-mcp": ({"mcp"}, "mcp"),
+        "verilore": ({"typer"}, "cli"),
+        "verilore-proof": (set(), None),
+        "verilore-mcp": ({"mcp"}, "mcp"),
     }
 
     scripts = config["project"]["scripts"]
@@ -154,15 +154,15 @@ def test_each_console_script_declares_the_extra_it_needs():
         missing = needed - available
         assert not missing, (
             f"`{script}` needs {sorted(missing)}, which a "
-            f"'mindpalace-os{'[' + extra + ']' if extra else ''}' install does not "
+            f"'verilore{'[' + extra + ']' if extra else ''}' install does not "
             f"provide. Base: {sorted(base)}; {extra!r} extra: "
             f"{sorted(extras.get(extra, [])) if extra else 'nothing extra'}."
         )
 
     # The portability claim rests on this one staying dependency-free: someone handed
     # a receipt may install the wheel and nothing else.
-    assert not expectations["mindpalace-proof"][0] & base, (
-        "mindpalace-proof gained a base dependency; verifying a receipt must need no "
+    assert not expectations["verilore-proof"][0] & base, (
+        "verilore-proof gained a base dependency; verifying a receipt must need no "
         "database, model, server or network"
     )
 

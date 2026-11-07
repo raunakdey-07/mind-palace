@@ -1,12 +1,12 @@
-# Integration guide: Mind Palace in a content-generation app
+# Integration guide: Verilore in a content-generation app
 
-Wire Mind Palace into a FastAPI app using only this document. Every `python`
+Wire Verilore into a FastAPI app using only this document. Every `python`
 block below runs in CI against a live server (`tests/test_integration_guide_examples.py`);
 no block is illustrative prose.
 
 Conventions used throughout:
 
-- `MIND_PALACE_URL` is the server base URL (for example `http://mindpalace.internal:8000`)
+- `VERILORE_URL` is the server base URL (for example `http://mindpalace.internal:8000`)
 - `BRAND_MEMORY_KEY` is the server-side bearer credential for the brand in question
 - All `python` blocks run in one shared namespace, in file order, so later blocks
   may use names defined earlier.
@@ -39,12 +39,12 @@ psql "$ADMIN_DATABASE_URL" -v runtime_password="$PW" -f scripts/db/runtime_roles
 
 Rotate the scope secret and enable enforcement as the owner role. The secret
 and the enforcement flag are a pair: the server computes HMAC tokens from
-`MIND_PALACE_SCOPE_SECRET`, and the database verifies them against
+`VERILORE_SCOPE_SECRET`, and the database verifies them against
 `memory_server_secrets.scope_hmac_secret`. They must change together, or every
 tenant-scoped query returns zero rows.
 
 ```bash
-mindpalace secret rotate --database-url "$ADMIN_DATABASE_URL" --out scope-secret.txt
+verilore secret rotate --database-url "$ADMIN_DATABASE_URL" --out scope-secret.txt
 ```
 
 ```bash
@@ -52,7 +52,7 @@ psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "SET ROLE mindpalace_owner; SEL
 ```
 
 ```bash
-MIND_PALACE_SCOPE_SECRET="$(cat scope-secret.txt)" MIND_PALACE_ENFORCE_SCOPE_TOKEN=on MIND_PALACE_AUTH_MODE=required MIND_PALACE_DEPLOYMENT=server MIND_PALACE_INGEST_ROOTS=/srv/brand-docs uvicorn api.main:app --host 0.0.0.0 --port 8000
+VERILORE_SCOPE_SECRET="$(cat scope-secret.txt)" VERILORE_ENFORCE_SCOPE_TOKEN=on VERILORE_AUTH_MODE=required VERILORE_DEPLOYMENT=server VERILORE_INGEST_ROOTS=/srv/brand-docs uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Rotation order and the brief outage window.** Update the database row first,
@@ -66,9 +66,9 @@ Point your app at the server:
 ```python
 import os
 
-MIND_PALACE_URL = os.environ["MIND_PALACE_URL"]
+VERILORE_URL = os.environ["VERILORE_URL"]
 BRAND_MEMORY_KEY = os.environ["BRAND_MEMORY_KEY"]
-client_url = MIND_PALACE_URL
+client_url = VERILORE_URL
 ```
 
 ---
@@ -88,8 +88,8 @@ Create a credential for a new brand with the operator command (the maintenance
 role, not the app):
 
 ```bash
-mindpalace corpus create trailhead
-mindpalace credential issue trailhead-backend --corpus trailhead --role read_write
+verilore corpus create trailhead
+verilore credential issue trailhead-backend --corpus trailhead --role read_write
 ```
 
 Hold the secret server-side, in the same environment that serves the app. A
@@ -167,9 +167,9 @@ provenance. **Always pass a `path_prefix`** — without it, the pack sees the wh
 corpus, including sibling campaigns and unapproved drafts.
 
 ```python
-from mindpalace_sdk import MindPalace
+from verilore_sdk import Verilore
 
-mp = MindPalace(
+mp = Verilore(
     os.environ["BRAND_CORPUS"],
     base_url=client_url,
     api_key=BRAND_MEMORY_KEY,
@@ -298,7 +298,7 @@ assert found is not None, "rejected claim must be visible with include_states"
 assert found.info_state == "rejected", found.info_state
 ```
 
-### Writing a brand kit Mind Palace can read
+### Writing a brand kit Verilore can read
 
 Write rules and facts as bullets or `Field: value` lines, one per line. A
 wrapped bullet is one statement and is read whole, from its first line to the
@@ -335,9 +335,9 @@ Configure the client with `timeout=3, retries=1` on the generation path. On
 "brand memory unavailable".
 
 ```python
-from mindpalace_sdk import MemoryClientError
+from verilore_sdk import MemoryClientError
 
-gen_client = MindPalace(
+gen_client = Verilore(
     os.environ["BRAND_CORPUS"],
     base_url=client_url,
     api_key=BRAND_MEMORY_KEY,

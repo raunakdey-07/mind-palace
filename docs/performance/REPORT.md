@@ -47,13 +47,13 @@ forced offline where available.
 | `api.main` process wall time (ms) | 6,783.009 | 798.901 | 88.2% faster |
 | Imported modules (count) | 4,221 | 682 | 83.8% fewer |
 | Peak RSS (KB) | 861,428 | 80,696 | 90.6% smaller |
-| `mindpalace_sdk` import (ms) | 63.876 | 63.876 | unchanged |
+| `verilore_sdk` import (ms) | 63.876 | 63.876 | unchanged |
 | CLI root help (ms) | 265.914 | 336.643 | noise-level variation |
 
 After lazy loading, `api.main` imports without Torch,
-`sentence_transformers`, or `transformers`. The public `mindpalace_sdk` import
-was already model-free. `import mindpalace` is not a supported Python import in
-this repository; the documented module is `mindpalace_sdk`, so the failed probe
+`sentence_transformers`, or `transformers`. The public `verilore_sdk` import
+was already model-free. `import verilore` is not a supported Python import in
+this repository; the documented module is `verilore_sdk`, so the failed probe
 is recorded as a naming check, not a product regression.
 
 ### Semantic model
@@ -105,7 +105,7 @@ copied. The transferable principles are:
 - isolate synchronous inference from unrelated event-loop work when profiling
   justifies it.
 
-Mind Palace already reuses a singleton model and batches `embed()` calls. The
+Verilore already reuses a singleton model and batches `embed()` calls. The
 new lock closes the concurrent first-use gap without adding a model registry or
 new infrastructure. Laya's specific routing taxonomy, LRU capacities, CUDA
 kernels, and decision protocol do not apply to persistent corpus memory.
@@ -185,7 +185,7 @@ The reusable harness is `scripts/performance_probe.py`:
 ```bash
 venvmp/bin/python scripts/performance_probe.py startup
 venvmp/bin/python scripts/performance_probe.py semantic
-DATABASE_URL=... MIND_PALACE_CURSOR_SECRET=... \
+DATABASE_URL=... VERILORE_CURSOR_SECRET=... \
   venvmp/bin/python scripts/performance_probe.py operations
 ```
 
@@ -316,7 +316,7 @@ an MCP feed surface based on this audit.
   requirement; do not make DB-only endpoints pay for it.
 - Move CPU inference off the event loop only after a concurrency profile shows
   event-loop blocking is material.
-- Establish a supported `mindpalace` Python import alias only if integration
+- Establish a supported `verilore` Python import alias only if integration
   demand justifies a public packaging change.
 - Complete a reproducible 100k feed benchmark with a faster disposable fixture
   loader or a dedicated DB-only benchmark database.

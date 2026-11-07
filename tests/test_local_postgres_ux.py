@@ -2,7 +2,7 @@
 
 Three defects came out of one real run on a laptop that had been rebooted.
 
-1. **A refused connection bypassed the guidance handler.** `MindPalace(...)`
+1. **A refused connection bypassed the guidance handler.** `Verilore(...)`
    is constructed outside the `try` that turns failures into advice, and its
    constructor connects to the database immediately. So a dead port produced a
    130-line `asyncio`/`sqlalchemy`/`asyncpg` stack trace instead of a sentence
@@ -14,11 +14,11 @@ Three defects came out of one real run on a laptop that had been rebooted.
    not need the operator to remember either.
 
 3. **`podman-compose` refused to start.** The compose file demanded
-   `${MIND_PALACE_RUNTIME_PASSWORD:?...}`, which `podman-compose` evaluates
+   `${VERILORE_RUNTIME_PASSWORD:?...}`, which `podman-compose` evaluates
    eagerly across every service -- so the file could not start the one
    service that had no secret in it.
 
-And one gap the same run exposed: a bare `mindpalace` printed "Missing
+And one gap the same run exposed: a bare `verilore` printed "Missing
 command." and a usage line, which is a statement about the user's typing
 rather than about the product.
 
@@ -45,7 +45,7 @@ ROOT = Path(__file__).resolve().parents[1]
 #: that runs them.
 DEAD_PORT = 5499
 
-DEAD_DATABASE_URL = f"postgresql://mpadmin:secret@127.0.0.1:{DEAD_PORT}/mindpalace"
+DEAD_DATABASE_URL = f"postgresql://mpadmin:secret@127.0.0.1:{DEAD_PORT}/verilore"
 
 
 def _invoke(args, env: dict | None = None):
@@ -61,8 +61,8 @@ def _invoke(args, env: dict | None = None):
     from cli.main import app
 
     environment = dict(os.environ)
-    environment.pop("MIND_PALACE_RUNTIME", None)
-    environment["MIND_PALACE_RUNTIME"] = "0"
+    environment.pop("VERILORE_RUNTIME", None)
+    environment["VERILORE_RUNTIME"] = "0"
     if env:
         environment.update(env)
     return CliRunner().invoke(app, args, env=environment)
@@ -80,7 +80,7 @@ def _run_cli(args, database_url: str, extra_env: dict | None = None) -> subproce
     environment = {
         **os.environ,
         "DATABASE_URL": database_url,
-        "MIND_PALACE_RUNTIME": "0",
+        "VERILORE_RUNTIME": "0",
     }
     if extra_env:
         environment.update(extra_env)
@@ -113,7 +113,7 @@ def test_ingest_repo_reports_an_unreachable_database_without_a_traceback(tmp_pat
     done = _run_cli(
         ["ingest-repo", str(docs), "--corpus", "unreachable-db"],
         DEAD_DATABASE_URL,
-        {"MIND_PALACE_INGEST_ROOTS": str(tmp_path)},
+        {"VERILORE_INGEST_ROOTS": str(tmp_path)},
     )
 
     assert done.returncode != 0
@@ -162,7 +162,7 @@ def test_a_rejected_password_says_the_password_is_wrong():
     """
     done = _run_cli(
         ["recall", "what is the datastore"],
-        "postgresql://mpadmin:wrong-password@localhost:5432/mindpalace",
+        "postgresql://mpadmin:wrong-password@localhost:5432/verilore",
     )
 
     assert done.returncode != 0
@@ -207,7 +207,7 @@ def test_the_debug_environment_variable_also_shows_the_traceback():
     done = _run_cli(
         ["recall", "what is the datastore"],
         DEAD_DATABASE_URL,
-        {"MIND_PALACE_DEBUG": "1"},
+        {"VERILORE_DEBUG": "1"},
     )
 
     assert done.returncode != 0
@@ -436,7 +436,7 @@ def test_a_remote_database_is_never_touched(monkeypatch, tmp_path):
     monkeypatch.setattr(postgres, "_container_clis", lambda: [str(bindir / "podman")])
     monkeypatch.setattr(postgres, "db_ready", lambda *a, **k: False)
     monkeypatch.setattr(postgres, "tcp_open", lambda *a, **k: False)
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@db.internal:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@db.internal:5432/verilore")
 
     postgres.ensure_local_postgres()
 
@@ -445,10 +445,10 @@ def test_a_remote_database_is_never_touched(monkeypatch, tmp_path):
 
 
 def test_a_missing_container_is_provisioned_with_a_restart_policy(monkeypatch, tmp_path):
-    """`mindpalace init` is one command, so it has to be able to create the database.
+    """`verilore init` is one command, so it has to be able to create the database.
 
     There is no stopped container to start on a machine that has never run
-    Mind Palace, so `init` provisions one. The `--restart unless-stopped`
+    Verilore, so `init` provisions one. The `--restart unless-stopped`
     flag is what stops the original defect from coming back after the next
     reboot, so it is asserted rather than assumed.
     """
@@ -460,7 +460,7 @@ def test_a_missing_container_is_provisioned_with_a_restart_policy(monkeypatch, t
     monkeypatch.setattr(postgres, "_container_clis", lambda: [str(bindir / "podman")])
     monkeypatch.setattr(postgres, "db_ready", lambda *a, **k: False)
     monkeypatch.setattr(postgres, "tcp_open", lambda *a, **k: False)
-    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@127.0.0.1:5432/mindpalace")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://mpadmin:secret@127.0.0.1:5432/verilore")
 
     postgres.provision_local_postgres(timeout=0.1)
 
@@ -487,7 +487,7 @@ def test_a_database_on_another_port_is_never_provisioned(monkeypatch, tmp_path):
     monkeypatch.setattr(postgres, "db_ready", lambda *a, **k: False)
     monkeypatch.setattr(postgres, "tcp_open", lambda *a, **k: False)
     monkeypatch.setenv(
-        "DATABASE_URL", f"postgresql://mpadmin:secret@127.0.0.1:{DEAD_PORT}/mindpalace"
+        "DATABASE_URL", f"postgresql://mpadmin:secret@127.0.0.1:{DEAD_PORT}/verilore"
     )
 
     postgres.provision_local_postgres(timeout=0.1)
@@ -544,12 +544,12 @@ def test_the_compose_file_still_declares_a_runtime_password():
     """
     compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
-    assert "MIND_PALACE_RUNTIME_PASSWORD" in compose
-    assert "MIND_PALACE_CURSOR_SECRET" in compose
+    assert "VERILORE_RUNTIME_PASSWORD" in compose
+    assert "VERILORE_CURSOR_SECRET" in compose
 
 
 # --------------------------------------------------------------------------
-# 4. A bare `mindpalace` says what to do next.
+# 4. A bare `verilore` says what to do next.
 # --------------------------------------------------------------------------
 
 
@@ -565,16 +565,16 @@ def test_a_bare_invocation_prints_a_getting_started_guide():
     assert result.exit_code == 0, result.output
     output = result.output
     assert "Missing command" not in output
-    assert "mindpalace init" in output
-    assert "mindpalace remember" in output
-    assert "mindpalace recall" in output
+    assert "verilore init" in output
+    assert "verilore remember" in output
+    assert "verilore recall" in output
 
 
 def test_a_bare_invocation_mentions_where_the_full_list_is():
     """Three commands are a start, not the whole product."""
     result = _invoke([])
 
-    assert "mindpalace --help" in result.output
+    assert "verilore --help" in result.output
 
 
 def test_the_guide_does_not_replace_the_help_page():
@@ -595,7 +595,7 @@ def test_the_installed_entry_point_prints_the_guide():
     """`python -m cli.main` is what a developer without a console script runs.
 
     The in-process test above would pass even if the module entry point were
-    broken, and the module entry point is what the wheel's `mindpalace`
+    broken, and the module entry point is what the wheel's `verilore`
     script is a thin wrapper around.
     """
     done = subprocess.run(
@@ -604,11 +604,11 @@ def test_the_installed_entry_point_prints_the_guide():
         text=True,
         timeout=120,
         cwd=str(ROOT),
-        env={**os.environ, "MIND_PALACE_RUNTIME": "0"},
+        env={**os.environ, "VERILORE_RUNTIME": "0"},
     )
 
     assert done.returncode == 0, done.stdout + done.stderr
-    assert "mindpalace init" in done.stdout
+    assert "verilore init" in done.stdout
 
 
 @pytest.mark.parametrize("command", ["recall", "ingest-repo"])
@@ -626,7 +626,7 @@ def test_a_refused_connection_is_clean_in_a_real_process(command, tmp_path):
         docs.mkdir()
         (docs / "a.md").write_text("# A\n\nThe datastore is PostgreSQL.\n", encoding="utf-8")
         args += [str(docs), "--corpus", "unreachable-db"]
-        extra["MIND_PALACE_INGEST_ROOTS"] = str(tmp_path)
+        extra["VERILORE_INGEST_ROOTS"] = str(tmp_path)
     else:
         args += ["what is the datastore"]
 

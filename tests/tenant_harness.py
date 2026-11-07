@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 #: Names are corpus names, not tenant identifiers: the application resolves them
-#: from its own records and Mind Palace treats them as opaque.
+#: from its own records and Verilore treats them as opaque.
 ALPHA = "alpha"
 BETA = "beta"
 ALPHA_CORPORA = {
@@ -287,7 +287,7 @@ def require_auth_mode(monkeypatch) -> None:
     other test in the suite. A permissive default would make every refusal
     assertion in this file vacuously true.
     """
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
 
 
 def provision_session_runtime():
@@ -417,7 +417,7 @@ def _drop_session_role() -> None:
 
 #: The maintenance database used to list the cluster's databases. It must already
 #: exist; nothing here ever creates a cluster.
-MAINTENANCE_DB = os.getenv("MIND_PALACE_TEST_MAINTENANCE_DB", "postgres")
+MAINTENANCE_DB = os.getenv("VERILORE_TEST_MAINTENANCE_DB", "postgres")
 
 
 def _all_database_names() -> list[str]:

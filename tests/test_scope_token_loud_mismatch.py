@@ -151,25 +151,25 @@ async def _set_enforcement(database_url: str, enabled: bool) -> None:
 
 def _server_env(monkeypatch, scope_secret: str) -> None:
     """Configure the process as a server with enforcement on and a given secret."""
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "on")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", scope_secret)
-    monkeypatch.delenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "on")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", scope_secret)
+    monkeypatch.delenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", raising=False)
 
 
 def _local_env(monkeypatch) -> None:
     """Configure the process as local (the five-minute path)."""
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "local")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "off")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.delenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", raising=False)
-    monkeypatch.delenv("MIND_PALACE_SCOPE_SECRET", raising=False)
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "local")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "off")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.delenv("VERILORE_ENFORCE_SCOPE_TOKEN", raising=False)
+    monkeypatch.delenv("VERILORE_SCOPE_SECRET", raising=False)
 
 
 async def test_scope_token_secret_matches_startup_ok(monkeypatch):
-    """When MIND_PALACE_SCOPE_SECRET matches the database secret and
+    """When VERILORE_SCOPE_SECRET matches the database secret and
     enforcement is on, server startup succeeds."""
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
@@ -184,7 +184,7 @@ async def test_scope_token_secret_matches_startup_ok(monkeypatch):
 
 
 async def test_scope_token_secret_mismatch_refuses_startup(monkeypatch):
-    """When MIND_PALACE_SCOPE_SECRET disagrees with the database row,
+    """When VERILORE_SCOPE_SECRET disagrees with the database row,
     enforce_startup_posture raises RuntimeError naming the cause."""
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
@@ -231,12 +231,12 @@ async def test_scope_token_mismatch_env_off_db_off(monkeypatch):
     """
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", _RANDOM_SECRET)
-    monkeypatch.setenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "1")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", _RANDOM_SECRET)
+    monkeypatch.setenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", "1")
     await _set_db_secret(database_url, _OTHER_SECRET)
     await _set_enforcement(database_url, False)
     try:
@@ -285,12 +285,12 @@ async def test_scope_token_mismatch_env_off_db_on(monkeypatch):
     """
     database_url = os.environ["DATABASE_URL"]
     snapshot = await _snapshot_secrets(database_url)
-    monkeypatch.setenv("MIND_PALACE_DEPLOYMENT", "server")
-    monkeypatch.setenv("MIND_PALACE_AUTH_MODE", "required")
-    monkeypatch.setenv("MIND_PALACE_INGEST_ROOTS", "/srv/content")
-    monkeypatch.setenv("MIND_PALACE_ENFORCE_SCOPE_TOKEN", "off")
-    monkeypatch.setenv("MIND_PALACE_SCOPE_SECRET", _RANDOM_SECRET)
-    monkeypatch.setenv("MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY", "1")
+    monkeypatch.setenv("VERILORE_DEPLOYMENT", "server")
+    monkeypatch.setenv("VERILORE_AUTH_MODE", "required")
+    monkeypatch.setenv("VERILORE_INGEST_ROOTS", "/srv/content")
+    monkeypatch.setenv("VERILORE_ENFORCE_SCOPE_TOKEN", "off")
+    monkeypatch.setenv("VERILORE_SCOPE_SECRET", _RANDOM_SECRET)
+    monkeypatch.setenv("VERILORE_I_UNDERSTAND_SCOPE_FORGERY", "1")
     await _set_db_secret(database_url, _OTHER_SECRET)
     await _set_enforcement(database_url, True)
     try:

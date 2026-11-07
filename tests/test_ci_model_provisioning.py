@@ -88,7 +88,7 @@ def test_both_testing_jobs_verify_before_the_network_goes_away(workflow):
 def test_verification_loads_through_the_application_offline(workflow):
     """`--verify` must run with offline mode set, and must use the script.
 
-    Loading the model files directly would not prove Mind Palace can use them; the
+    Loading the model files directly would not prove Verilore can use them; the
     script loads through `Embedder` and `Reranker`, the classes the routers call.
     """
     for job in TESTING_JOBS:

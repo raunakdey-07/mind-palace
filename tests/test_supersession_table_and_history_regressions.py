@@ -262,7 +262,7 @@ def _records(body: str) -> list[dict]:
 
 def test_the_sync_summary_counts_the_claims():
     """A sync report that counts only chunks cannot say the corpus learned nothing."""
-    from mindpalace_sdk import SyncSummary
+    from verilore_sdk import SyncSummary
 
     summary = SyncSummary(success=True, chunk_count=12, claim_count=34)
     assert summary.claim_count == 34

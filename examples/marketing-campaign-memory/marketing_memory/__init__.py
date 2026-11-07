@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""A thin marketing-campaign integration on Mind Palace.
+"""A thin marketing-campaign integration on Verilore.
 
 It is deliberately not the marketing application. It is the part that decides
-whether Mind Palace can be *adopted* by one, and it exists to make four claims
+whether Verilore can be *adopted* by one, and it exists to make four claims
 testable:
 
 * an organisation's brand memory is reusable by every campaign in that

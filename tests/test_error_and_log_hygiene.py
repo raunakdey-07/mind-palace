@@ -50,7 +50,7 @@ def _capture_api_logs() -> tuple[logging.Handler, io.StringIO]:
     """Collect what the application logger writes while the block runs."""
     stream = io.StringIO()
     handler = logging.StreamHandler(stream)
-    logger = logging.getLogger("mindpalace.api")
+    logger = logging.getLogger("verilore.api")
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
     return handler, stream
@@ -62,7 +62,7 @@ def api_logs():
     try:
         yield stream
     finally:
-        logging.getLogger("mindpalace.api").removeHandler(handler)
+        logging.getLogger("verilore.api").removeHandler(handler)
 
 
 def _mount_failing_route(app, exc: Exception):
@@ -95,7 +95,7 @@ def unauthenticated_probe(monkeypatch):
     """Let the probe route through the authentication middleware.
 
     The suite runs in both modes, and CI runs it with
-    `MIND_PALACE_AUTH_MODE=required`. Without this the probe is answered `401`
+    `VERILORE_AUTH_MODE=required`. Without this the probe is answered `401`
     before it ever reaches the middleware under test -- and the test would pass
     for the wrong reason, having asserted a 500 it never got.
 

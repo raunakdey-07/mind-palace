@@ -1,4 +1,4 @@
-# When to use Mind Palace, and when not to
+# When to use Verilore, and when not to
 
 One page, for somebody deciding whether to install this rather than read the rest
 of the documentation. Every number here is measured; the command that produced
@@ -6,7 +6,7 @@ each one is named.
 
 ## Use it when the answer has to be right, and the cost of being wrong is real
 
-The property Mind Palace is built around is that it declines. On 157 questions
+The property Verilore is built around is that it declines. On 157 questions
 written by someone other than the authors, it answered when it should have
 declined **once**:
 
@@ -79,7 +79,7 @@ works. Asking for the reasoning behind it, phrased indirectly, does not.
 
 The first `recall` downloads an embedding model (about 90 MB) and builds an ONNX
 session, which takes roughly 1.4 seconds; afterwards the warm runtime brings it to
-about 0.3 s. `MIND_PALACE_LEXICAL=1` removes the model entirely, at the cost of
+about 0.3 s. `VERILORE_LEXICAL=1` removes the model entirely, at the cost of
 needing shared vocabulary between question and record.
 
 The 6-second first recall in older notes was the `sentence-transformers` import, and

@@ -1,4 +1,4 @@
-"""Shared test fixtures for Mind Palace."""
+"""Shared test fixtures for Verilore."""
 
 import hashlib
 import os
@@ -16,7 +16,7 @@ from sqlalchemy.pool import NullPool
 
 # M009 cursor tests exercise the real HMAC boundary. Production configuration
 # supplies this value explicitly; tests use a deterministic non-secret value.
-os.environ.setdefault("MIND_PALACE_CURSOR_SECRET", "m009-test-cursor-secret-" + "x" * 48)
+os.environ.setdefault("VERILORE_CURSOR_SECRET", "m009-test-cursor-secret-" + "x" * 48)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -34,9 +34,9 @@ def pytest_sessionstart(session) -> None:
     """
     import session_database
 
-    if os.getenv("MIND_PALACE_TEST_DB", "session").lower() == "off":
+    if os.getenv("VERILORE_TEST_DB", "session").lower() == "off":
         print(
-            "\n[tests] MIND_PALACE_TEST_DB=off: running against DATABASE_URL as-is. "
+            "\n[tests] VERILORE_TEST_DB=off: running against DATABASE_URL as-is. "
             "Results depend on whatever is already in that database."
         )
         return
@@ -46,8 +46,8 @@ def pytest_sessionstart(session) -> None:
         # Zero-config probe: if both variables are unset, try the default local
         # development instance, auto-starting a stopped local container if one
         # is present. This is what makes `pytest` work out-of-the-box right
-        # after `mindpalace init`, without manual env var exports.
-        default_url = "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+        # after `verilore init`, without manual env var exports.
+        default_url = "postgresql://mpadmin:secret@localhost:5432/verilore"
         try:
             from cli import postgres as _postgres
 
@@ -74,10 +74,10 @@ def pytest_sessionstart(session) -> None:
             "Set DATABASE_URL (or MEMORY_TEST_DATABASE_URL) to a PostgreSQL with "
             "pgvector available, for example:\n"
             "  docker compose up -d postgresql\n"
-            "  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace\n"
+            "  export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore\n"
             "  python -m alembic -c migrations/alembic.ini upgrade head\n"
             "To run deliberately against a shared database without creating a "
-            "session one, set MIND_PALACE_TEST_DB=off."
+            "session one, set VERILORE_TEST_DB=off."
         )
 
     # `create_session_database` saves and restores `os.environ["DATABASE_URL"]`
@@ -94,20 +94,20 @@ def pytest_sessionstart(session) -> None:
         #
         # This used to print the reason and carry on against `DATABASE_URL`
         # as-is. On CI that meant the entire suite passed against the SHARED
-        # `mindpalace` database -- the exact situation this module exists to
+        # `verilore` database -- the exact situation this module exists to
         # prevent -- while reporting a green result and eight skips that read
         # like the design. The failure was loud in the log and silent in the
         # exit code, which is the worst place for it to be loud.
         #
         # So it now stops the session. A missing privilege to CREATE DATABASE
         # is an environment problem, and the way to fix it is documented rather
-        # than worked around. `MIND_PALACE_TEST_DB=off` is the explicit opt-out
+        # than worked around. `VERILORE_TEST_DB=off` is the explicit opt-out
         # for anyone who genuinely wants the shared database -- and it still
         # prints what it is doing.
-        if os.getenv("MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC", "").strip() == "1":
+        if os.getenv("VERILORE_TEST_DB_ALLOW_NONHERMETIC", "").strip() == "1":
             print(
                 f"\n[tests] could not create a session database: {exc}\n"
-                "[tests] MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC=1: falling back to "
+                "[tests] VERILORE_TEST_DB_ALLOW_NONHERMETIC=1: falling back to "
                 "DATABASE_URL as-is. This run is NOT hermetic."
             )
             return
@@ -119,7 +119,7 @@ def pytest_sessionstart(session) -> None:
             "'someone changed the database'.\n"
             "Fix the environment (the role needs CREATEDB, or the maintenance "
             f"database {session_database.MAINTENANCE_DB!r} must exist), or set "
-            "MIND_PALACE_TEST_DB_ALLOW_NONHERMETIC=1 to accept a non-hermetic "
+            "VERILORE_TEST_DB_ALLOW_NONHERMETIC=1 to accept a non-hermetic "
             "run deliberately."
         ) from exc
 
@@ -181,7 +181,7 @@ def session_recorder_isolation(tmp_path_factory):
 
     The recorder is on by default for a loopback connection, which is exactly what
     the test session's database is. So every product call the suite made appended
-    a row to the developer's real `~/.mind-palace/logs/queries.jsonl`: 32,738 rows
+    a row to the developer's real `~/.verilore/logs/queries.jsonl`: 32,738 rows
     of fake product facts -- battery runtimes, mesh bands, campaign targets -- in
     the file whose entire purpose is grading two weeks of actual usage.
 
@@ -202,20 +202,20 @@ def session_recorder_isolation(tmp_path_factory):
     log and nothing else would notice, so the count is compared on the way out and
     the suite fails naming the file.
     """
-    home = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    home = Path(os.path.expanduser("~/.verilore")) / "logs" / "queries.jsonl"
     before = _row_count(home)
     scratch = tmp_path_factory.mktemp("flight-recorder") / "queries.jsonl"
-    previous = os.environ.get("MIND_PALACE_QUERY_LOG")
-    os.environ["MIND_PALACE_QUERY_LOG"] = str(scratch)
+    previous = os.environ.get("VERILORE_QUERY_LOG")
+    os.environ["VERILORE_QUERY_LOG"] = str(scratch)
     yield scratch
     if previous is None:
-        os.environ.pop("MIND_PALACE_QUERY_LOG", None)
+        os.environ.pop("VERILORE_QUERY_LOG", None)
     else:
-        os.environ["MIND_PALACE_QUERY_LOG"] = previous
+        os.environ["VERILORE_QUERY_LOG"] = previous
     after = _row_count(home)
     assert after == before, (
         f"the test suite added {after - before} row(s) to {home}. A subprocess "
-        "built its own `env=` dict and did not pass MIND_PALACE_QUERY_LOG; "
+        "built its own `env=` dict and did not pass VERILORE_QUERY_LOG; "
         "request the `recorder_path` fixture and pass it in that dict."
     )
 
@@ -229,16 +229,16 @@ def _row_count(path: Path) -> int:
 def recorder_path():
     """The session's scratch log path, for a subprocess that inherits nothing.
 
-    A hand-built `env=` dict does not inherit `MIND_PALACE_QUERY_LOG`, so a CLI
+    A hand-built `env=` dict does not inherit `VERILORE_QUERY_LOG`, so a CLI
     subprocess started that way resolves the recorder's default and writes into
     the developer's home directory. Request this and pass the value as
-    `"MIND_PALACE_QUERY_LOG": recorder_path` in that dict.
+    `"VERILORE_QUERY_LOG": recorder_path` in that dict.
 
     A fixture rather than a module-level function because the session fixture that
     sets the variable must be the single source of the path; a function here would
     read the environment at call time and be right only by accident.
     """
-    return os.environ.get("MIND_PALACE_QUERY_LOG", "0")
+    return os.environ.get("VERILORE_QUERY_LOG", "0")
 
 
 @pytest.fixture(scope="session", autouse=True)

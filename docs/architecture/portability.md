@@ -1,6 +1,6 @@
 # Portability audit
 
-Scope: moving Mind Palace data and deployments between places. Archive
+Scope: moving Verilore data and deployments between places. Archive
 export/import, Memory Pack as a portable artifact, the documented meaning of
 "portable", and the dependencies that decide whether a second installation
 behaves like the first.
@@ -9,7 +9,7 @@ Companion document: [developer-experience.md](../archive/product/developer-exper
 
 ## Summary of the position
 
-Mind Palace has portable interfaces, not a portable archive. Every adapter
+Verilore has portable interfaces, not a portable archive. Every adapter
 speaks the same typed contract, and that part holds up under inspection. What
 does not exist is any way to move the archive itself between PostgreSQL
 instances. This is a stated non-goal, consistently documented, and not a defect.
@@ -48,7 +48,7 @@ database, and the only mechanism available is `pg_dump` and `pg_restore`
 against a server that has the same extensions. `migrations/versions/001_initial_schema.py`
 provisions `vector`, `pgcrypto`, and `pg_trgm`, so a target server needs
 pgvector available. Nothing in the repository automates or documents that
-transfer. The new `mindpalace reindex --corpus NAME` command rebuilds only the
+transfer. The new `verilore reindex --corpus NAME` command rebuilds only the
 derived live projection from the archive; it is not an archive export. Moving
 the authoritative archive still requires a controlled `pg_dump` and
 `pg_restore` against a server with the same extensions and migrations.
@@ -176,7 +176,7 @@ published artifact before running the default `--clean` mode, which overwrites i
 `deployment.md` lines 191 to 198 describe exactly what the image contains
 and what it does not, and the `Dockerfile` matches. The image copies `api`,
 `migrations`, and `content`, installs `requirements-docker.txt`, and runs as UID
-`10001` with `HF_HOME=/tmp/huggingface`. It excludes `cli`, `mindpalace_sdk`,
+`10001` with `HF_HOME=/tmp/huggingface`. It excludes `cli`, `verilore_sdk`,
 `mcp_server`, `scripts`, `tests`, `docs`, `examples`, and twelve research-only
 service modules.
 
@@ -230,9 +230,9 @@ not recorded per document.
 
 ### Version metadata can disagree with itself
 
-On this checkout, `pip list` and `pip show` report `mindpalace-os 0.1.0` from a
+On this checkout, `pip list` and `pip show` report `verilore 0.1.0` from a
 stale `mindpalace_os-0.1.0.dist-info`, while
-`importlib.metadata.version("mindpalace-os")` returns `0.6.0` from the in-tree
+`importlib.metadata.version("verilore")` returns `0.6.0` from the in-tree
 `mindpalace_os.egg-info/PKG-INFO`, because the project root on `sys.path` takes
 precedence. `pyproject.toml` declares `0.6.0`.
 

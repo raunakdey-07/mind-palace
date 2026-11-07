@@ -3,7 +3,7 @@
 
 Three commands print JSON, and a script depends on the exact shape of all three.
 The v0.9.0 changelog claims `explain --json` emits the same `{response, receipt}`
-bundle `mindpalace receipt` writes; before this file nothing held that claim. Two
+bundle `verilore receipt` writes; before this file nothing held that claim. Two
 tests in `test_api.py` were found during the v0.9.0 release audit passing for the
 wrong reason -- they asserted on a substring that a different error path also
 contained -- so an unasserted contract here is not a theoretical risk.
@@ -117,7 +117,7 @@ def test_explain_json_is_the_response_and_receipt_bundle(seeded_corpus):
     `canonical_json()` omits the receipt on purpose -- its digest is computed over
     that JSON, so embedding it would be circular. A script asking `explain --json`
     for the basis of an answer still wants the digest, so the CLI emits the bundle
-    `mindpalace receipt` writes rather than dropping it and going quietly less
+    `verilore receipt` writes rather than dropping it and going quietly less
     useful than the human-readable form.
     """
     payload = run(["explain", "When do we run backups?", "--corpus", seeded_corpus, "--json"])
@@ -139,7 +139,7 @@ def test_the_explain_bundle_verifies_against_its_own_response(seeded_corpus):
     """Well-shaped is not the same as correct. Verify it the way a recipient would.
 
     Offline, with no database and no model, because that is the entire point of
-    exporting a receipt: someone who has never heard of Mind Palace must be able to
+    exporting a receipt: someone who has never heard of Verilore must be able to
     check it.
     """
     from memory_receipt import verify_response_receipt

@@ -50,10 +50,10 @@ def _metadata() -> dict[str, Any]:
 
 
 def _cli_path() -> Path:
-    local = ROOT / "venvmp" / "bin" / "mindpalace"
+    local = ROOT / "venvmp" / "bin" / "verilore"
     if local.exists():
         return local
-    return Path(sys.executable).with_name("mindpalace")
+    return Path(sys.executable).with_name("verilore")
 
 
 def _child_env() -> dict[str, str]:
@@ -123,7 +123,7 @@ def run_semantic() -> dict[str, Any]:
 def run_startup() -> dict[str, Any]:
     probes = {
         "sdk_import": (
-            "import json,resource,sys,time; s=time.perf_counter(); import mindpalace_sdk; "
+            "import json,resource,sys,time; s=time.perf_counter(); import verilore_sdk; "
             "print(json.dumps({'wall_ms':(time.perf_counter()-s)*1000,"
             "'module_count':len(sys.modules),"
             "'rss_kb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,"
@@ -141,7 +141,7 @@ def run_startup() -> dict[str, Any]:
             "'transformers_loaded':'transformers' in sys.modules}))"
         ),
         "mindpalace_import": (
-            "import json,resource,sys,time; s=time.perf_counter(); import mindpalace; "
+            "import json,resource,sys,time; s=time.perf_counter(); import verilore; "
             "print(json.dumps({'wall_ms':(time.perf_counter()-s)*1000,"
             "'module_count':len(sys.modules),"
             "'rss_kb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}))"
@@ -291,8 +291,8 @@ async def run_operations(sizes: list[int], warmups: int, iterations: int) -> dic
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise RuntimeError("DATABASE_URL is required for the operation probe")
-    if not os.getenv("MIND_PALACE_CURSOR_SECRET"):
-        raise RuntimeError("MIND_PALACE_CURSOR_SECRET is required for the feed probe")
+    if not os.getenv("VERILORE_CURSOR_SECRET"):
+        raise RuntimeError("VERILORE_CURSOR_SECRET is required for the feed probe")
     result = {
         "mode": "operations",
         "metadata": _metadata(),

@@ -193,7 +193,7 @@ REVOKE DELETE ON memory_documents, memory_versions, memory_chunks, memory_claims
     memory_snapshot_seals, memory_claim_embeddings FROM mindpalace_runtime;
 
 -- Operator step: enable scope-token enforcement. Off by default; an operator
--- with mindpalace_owner runs this once a real MIND_PALACE_SCOPE_SECRET is set:
+-- with mindpalace_owner runs this once a real VERILORE_SCOPE_SECRET is set:
 --   SELECT mp_set_scope_token_enforcement(true);
 -- (callable by mindpalace_owner only).
 

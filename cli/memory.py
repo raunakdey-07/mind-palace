@@ -5,7 +5,7 @@
 
 These run in-process by default, against the same local database as `recall`,
 `explain`, `history`, `receipt` and `ingest-repo`. `--base-url` (or
-`MIND_PALACE_BASE_URL`) switches the command to the HTTP client for a service
+`VERILORE_BASE_URL`) switches the command to the HTTP client for a service
 someone else runs.
 """
 
@@ -17,8 +17,8 @@ from typing import Annotated
 import typer
 from typing import TYPE_CHECKING
 
-# `mindpalace_sdk` reaches httpx, asyncio and yaml, which measured 28 ms of the
-# ~400 ms `mindpalace --help` on this machine -- and `memory` is a subcommand
+# `verilore_sdk` reaches httpx, asyncio and yaml, which measured 28 ms of the
+# ~400 ms `verilore --help` on this machine -- and `memory` is a subcommand
 # that `--help` never runs. So it is imported inside the functions that use it,
 # and named here for a type checker only.
 #
@@ -28,10 +28,10 @@ from typing import TYPE_CHECKING
 # would raise NameError the first time it caught an exception. That failure is
 # invisible until an error occurs, which is the worst time to find it.
 if TYPE_CHECKING:  # pragma: no cover - names the lazy imports for a checker
-    import mindpalace_sdk
+    import verilore_sdk
 
-    MemoryClientError = mindpalace_sdk.MemoryClientError
-    MindPalace = mindpalace_sdk.MindPalace
+    MemoryClientError = verilore_sdk.MemoryClientError
+    Verilore = verilore_sdk.Verilore
 
 
 app = typer.Typer(
@@ -49,7 +49,7 @@ BaseURL = Annotated[
     typer.Option(
         "--base-url",
         help=(
-            "Use a running Mind Palace service instead of the local database, "
+            "Use a running Verilore service instead of the local database, "
             "for example http://127.0.0.1:8000. Omit to run in-process."
         ),
     ),
@@ -61,7 +61,7 @@ Path = Annotated[str | None, typer.Option("--path")]
 #: A remote service can also be named for the process, so a shell or a CI job
 #: that talks to one host does not have to repeat `--base-url` on every command.
 #: The flag wins when both are present, because it is the more specific intent.
-BASE_URL_ENV = "MIND_PALACE_BASE_URL"
+BASE_URL_ENV = "VERILORE_BASE_URL"
 
 
 def _base_url(base_url: str | None) -> str | None:
@@ -80,7 +80,7 @@ def _dispatch(method: str, corpus: str, query: str, base_url: str | None, **fiel
     # Postgres recovery, lexical-mode handling and warm-runtime choice as
     # `recall` and `explain`, so these commands cannot drift from them.
     from cli.main import _client, _fail, _run
-    from mindpalace_sdk import MemoryClientError
+    from verilore_sdk import MemoryClientError
 
     try:
         client = _client(_base_url(base_url))
@@ -184,7 +184,7 @@ def feed(
 ) -> None:
     """Consume the durable corpus-scoped change feed."""
     from cli.main import _client, _fail, _run
-    from mindpalace_sdk import MemoryClientError
+    from verilore_sdk import MemoryClientError
 
     try:
         client = _client(_base_url(base_url))

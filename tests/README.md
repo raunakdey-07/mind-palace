@@ -28,20 +28,20 @@ an oversight:
   also uses.
 * Because it is *not* rewritten, on CI -- where both variables are set -- part
   of the suite runs against the session database and part runs against the
-  shared `mindpalace` database. That is a real split and it has caused a real
+  shared `verilore` database. That is a real split and it has caused a real
   confusion.
 
 So the session prints, **once**, which database each variable names:
 
 ```
-[tests] DATABASE_URL was            mindpalace on localhost:5432
+[tests] DATABASE_URL was            verilore on localhost:5432
 [tests] DATABASE_URL is now         mindpalace_test_1234_0 on localhost:5432  (built and dropped here)
-[tests] MEMORY_TEST_DATABASE_URL is  mindpalace on localhost:5432
+[tests] MEMORY_TEST_DATABASE_URL is  verilore on localhost:5432
 [tests] NOTE: MEMORY_TEST_DATABASE_URL names a DIFFERENT database from the session one.
 [tests]       Tests that read it create their schemas there, not here.
 ```
 
-Set `MIND_PALACE_TEST_DB=off` to skip the session database and run against
+Set `VERILORE_TEST_DB=off` to skip the session database and run against
 `DATABASE_URL` as-is. The suite prints that it is doing so. Use it only when the
 contents of that database are the thing under examination.
 
@@ -72,8 +72,8 @@ by CI in their own steps:
 
 | test | variable | why |
 |---|---|---|
-| `test_migrations_apply_downgrade_and_reapply` | `MIND_PALACE_MIGRATION_ROUNDTRIP=1` | creates and drops a database |
-| `test_a_built_wheel_contains_every_declared_module` | `MIND_PALACE_TEST_BUILD_WHEEL=1` | builds a wheel, which takes minutes |
+| `test_migrations_apply_downgrade_and_reapply` | `VERILORE_MIGRATION_ROUNDTRIP=1` | creates and drops a database |
+| `test_a_built_wheel_contains_every_declared_module` | `VERILORE_TEST_BUILD_WHEEL=1` | builds a wheel, which takes minutes |
 
 Adding a third entry means writing down why. Widening the allowlist to make a
 build green is not that.

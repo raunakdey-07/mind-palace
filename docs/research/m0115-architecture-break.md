@@ -76,7 +76,7 @@ follows is the extraction this milestone needed, not a re-summary.
 Verified at the pinned revisions, by reading implementations rather than
 product pages. `verified` means the behaviour was located in code or schema.
 
-| Capability | MemPalace | Mem0 | Letta | Graphiti | Mind Palace |
+| Capability | MemPalace | Mem0 | Letta | Graphiti | Verilore |
 |---|---|---|---|---|---|
 | raw/verbatim source | verified | verified (`infer=False`) | verified | partial (episodes) | verified |
 | structured claims | not verified | verified (inferred) | not verified | verified (edges) | verified (authored) |
@@ -97,7 +97,7 @@ product pages. `verified` means the behaviour was located in code or schema.
 | bounded context | not verified | not verified | verified (blocks) | not verified | verified |
 | developer simplicity | verified (`mine`/`search`) | verified | verified | partial | partial |
 
-The one row Mind Palace loses is relationship reasoning, and it is measured
+The one row Verilore loses is relationship reasoning, and it is measured
 below rather than assumed.
 
 ## 5. MemPalace
@@ -108,7 +108,7 @@ first. Its reported 96.6% R@5 on LongMemEval is a different dataset, task and
 metric from anything here and is **not comparable**; it is evidence about its
 approach, not a score to beat.
 
-What is transferable: source fidelity. Mind Palace already keeps it, and the
+What is transferable: source fidelity. Verilore already keeps it, and the
 authored claim is *additional* to the quote rather than a replacement for it.
 
 ## 6. Mem0
@@ -430,7 +430,7 @@ elsewhere.
 
 The honest answer to the central question.
 
-> What does Mind Palace do that a developer could not get by combining
+> What does Verilore do that a developer could not get by combining
 > MemPalace-style raw retrieval, Mem0-style simple memory, Letta-style blocks,
 > and Graphiti-style relationship retrieval?
 

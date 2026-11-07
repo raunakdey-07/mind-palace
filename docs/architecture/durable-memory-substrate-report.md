@@ -1,8 +1,8 @@
-# Mind Palace — Durable Memory Substrate Report
+# Verilore — Durable Memory Substrate Report
 
 ## 1. Thesis
 
-Mind Palace is a durable, versioned, evidence-backed memory ledger and
+Verilore is a durable, versioned, evidence-backed memory ledger and
 retrieval layer for AI systems operating over evolving corpora.
 
 The repository supports the thesis for corpora whose material has been
@@ -11,7 +11,7 @@ it does not yet provide archive export/import or authorization. Those limits are
 part of the position, not reasons to hide the distinction between a projection
 and an authority.
 
-## 2. What Mind Palace Actually Is Today
+## 2. What Verilore Actually Is Today
 
 The durable core is PostgreSQL-backed and append-only. It stores observed
 source versions, authored claims, exact evidence, validity bounds, supersession,
@@ -35,13 +35,13 @@ lexical ranking rather than failing. See
 
 ## 3. Competitive Landscape
 
-The current capability matrix compares Mind Palace with Graphiti, Mem0 OSS,
+The current capability matrix compares Verilore with Graphiti, Mem0 OSS,
 Letta/MemFS, MemPalace, Laya, and conventional RAG or vector-memory systems.
 
 The external review is pinned in
 [`docs/competitive/capability-matrix.md`](../competitive/capability-matrix.md)
 and [`docs/competitive/landscape.md`](../competitive/landscape.md). No external
-system was run against the Mind Palace corpus. The comparison is architectural,
+system was run against the Verilore corpus. The comparison is architectural,
 not a ranking.
 
 The important overlap is larger than the earlier audit implied:
@@ -55,30 +55,30 @@ The important overlap is larger than the earlier audit implied:
 - Laya supplies execution-engineering lessons about routing, lazy resources,
   batching, resident state, and benchmark discipline.
 
-## 4. Mind Palace vs Graphiti
+## 4. Verilore vs Graphiti
 
 Graphiti makes temporal context graphs its primary representation. It derives
 entities and edges, carries validity information on edges, and links facts back
 to episodes. That is a strong fit when graph traversal and graph-native
 queries are the requirement.
 
-Mind Palace keeps a relational source and assertion ledger. A claim is authored
+Verilore keeps a relational source and assertion ledger. A claim is authored
 in source material and must appear literally in an archived chunk with offsets.
 This is a narrower write model and a stronger evidence contract for the returned
 assertion.
 
-A graph is not required by the current Mind Palace queries. The current
+A graph is not required by the current Verilore queries. The current
 relationship queries run over relational keys, versions, and claims. The research
 graph helpers are not on the released query path.
 
-## 5. Mind Palace vs Mem0
+## 5. Verilore vs Mem0
 
 Mem0's simple API is a useful product model. Applications can send content and
 later search it, with scopes, metadata, expiration, and update/delete behavior.
 Its default path can infer structured memories, and its documentation tells
 users to request raw storage when verbatim content is required.
 
-Mind Palace should not replace authored memory with inferred memory. The current
+Verilore should not replace authored memory with inferred memory. The current
 write path validates source text and rejects a claim that is not literally
 supported by the archive. That preserves a clear answer to “who decided this
 was true?”
@@ -87,14 +87,14 @@ The simple surface is still available through SDK sync, search, context, and
 memory operations. The audit defers a new `memory.add()` facade until the
 product decides how it should represent authored versus derived material.
 
-## 6. Mind Palace vs Letta
+## 6. Verilore vs Letta
 
 Letta's MemFS is an agent-owned file repository. Files are Markdown with YAML
 frontmatter, edits become git commits, and blocks can be attached to multiple
 agents. This is a strong model for agent-independent, inspectable, and portable
 memory.
 
-Mind Palace differs in the authority unit. A Mind Palace claim is tied to a
+Verilore differs in the authority unit. A Verilore claim is tied to a
 source version and an exact evidence span. A Letta memory file is authored by
 the agent and its history is represented by commits. Both approaches preserve
 history; they answer different questions.
@@ -103,14 +103,14 @@ The next product lesson from Letta is shared state. A corpus can be used by
 several agents without making memory agent-owned, but shared writes still need
 identity, permissions, and conflict policy.
 
-## 7. Mind Palace vs MemPalace
+## 7. Verilore vs MemPalace
 
 MemPalace directly challenges the idea that extraction-first storage is
 sufficient. Its default drawers keep verbatim conversation text, and its rooms
 and wings provide a navigable organization model. It also publishes benchmark
 artifacts and explicitly records the cost of its lossy AAAK representation.
 
-Mind Palace already keeps raw `memory_versions.content`, including frontmatter
+Verilore already keeps raw `memory_versions.content`, including frontmatter
 and the full source body. It adds a second layer that extraction-only systems
 usually lack: authored claims, exact evidence, validity windows, supersession,
 conflicts, and replayable snapshots.
@@ -129,7 +129,7 @@ and keeps the comparison honest.
 
 ## 8. Lessons from Laya
 
-The following Laya principles are already reflected in Mind Palace:
+The following Laya principles are already reflected in Verilore:
 
 - route and validate before loading an expensive runtime;
 - construct semantic resources lazily;
@@ -160,7 +160,7 @@ comparison pinned `valid_at` so that the test measured L2 independence rather
 than wall-clock state.
 
 The gap was that no code path rebuilt L2. The follow-up adds `api/services/rehydrate.py`
-and `mindpalace reindex`. The command writes only L2 rows and never calls
+and `verilore reindex`. The command writes only L2 rows and never calls
 `record_version`.
 
 ## 10. Raw vs Authoritative vs Derived Memory
@@ -288,7 +288,7 @@ retrieval evaluation boundary is recorded in
 
 ## 18. Graph Decision
 
-Mind Palace does not need a graph database for its current relational queries.
+Verilore does not need a graph database for its current relational queries.
 The useful graph ideas, such as temporal edges and episode lineage, can be
 represented as derived projections when a workload demonstrates a need.
 
@@ -437,7 +437,7 @@ The audit fixed two concrete gaps in that path:
 - sync summaries include bounded per-file error reasons, and the SDK preserves
   them.
 
-The new `mindpalace reindex --corpus NAME` command restores live search from
+The new `verilore reindex --corpus NAME` command restores live search from
 the archive without touching L0 or L1.
 
 - The Quick Start still needs clearer guidance that a corpus without authored
@@ -466,7 +466,7 @@ still requires external comparison and production evidence.
 
 The post-release follow-up implements:
 
-- `api/services/rehydrate.py` and `mindpalace reindex`;
+- `api/services/rehydrate.py` and `verilore reindex`;
 - repository support for preserving an archived document ID during rehydration;
 - lazy, locked reranker initialization;
 - sanitized semantic dependency errors on search, context, and ask;
@@ -528,7 +528,7 @@ rules are specified.
 
 ## 33. Final Architectural Position
 
-Mind Palace can become the durable memory substrate underneath AI systems for
+Verilore can become the durable memory substrate underneath AI systems for
 corpora whose source material is archived and whose claims are authored with
 evidence. That claim is defensible today for the archive-backed path.
 

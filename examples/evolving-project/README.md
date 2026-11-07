@@ -1,6 +1,6 @@
 # Dispatch: an evolving engineering project
 
-These are authored demonstration sources, not claims about Mind Palace itself.
+These are authored demonstration sources, not claims about Verilore itself.
 Run `python examples/memory_demo.py` from the repository root after installing the
 project and applying migrations. See [the walkthrough](../MEMORY.md) for commands
 and [the public contract](../MEMORY_API.md) for selectors and limits.

@@ -42,8 +42,8 @@ from collections.abc import Iterable
 #: Interrogatives are here because a question is not a claim. "What is the primary
 #: datastore?" is about the datastore and is not about "what"; matching on the word
 #: makes a question match every sentence in the corpus and match nothing useful.
-#: `mindpalace history "What is the primary datastore?"` and
-#: `mindpalace history "primary datastore"` return the same timeline because of this
+#: `verilore history "What is the primary datastore?"` and
+#: `verilore history "primary datastore"` return the same timeline because of this
 #: line, and nothing else.
 STOPWORDS = frozenset(
     """a an the of for to in on at by from with without and or as well that this these those

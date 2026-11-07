@@ -6,6 +6,28 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+### Rename to Verilore (user-facing names only)
+
+The project is renamed from Mind Palace to Verilore. All user-facing names
+change: the distribution and CLI are now `verilore` (plus `verilore-mcp`,
+`verilore-proof`); modules are `verilore_sdk`, `verilore_errors`,
+`verilore_runtime`; classes are `Verilore`, `VeriloreError` (`MemoryClient`
+and `MemoryClientError` keep their names); environment variables are
+`VERILORE_*` (formerly `MIND_PALACE_*`); API error codes are `vl_*` (formerly
+`mp_*`); the component string is `verilore`; the MCP server name is
+`verilore`; and compose service/database names are `verilore`.
+
+Database object names are unchanged: SQL functions (`mp_*`, `mindpalace_*`),
+RLS policies, session settings (`mindpalace.*`), and roles
+(`mindpalace_runtime`, `mindpalace_owner`) keep their original names for
+compatibility with existing databases. There is no migration 017 and no
+role-rename script.
+
+`MemoryClient` and `MemoryClientError` keep their names.
+
+The default data directory moves from `~/.mind-palace` to `~/.verilore`;
+move the folder to keep old query logs.
+
 ### Prose extraction never truncates and no longer drops prose silently
 
 A wrapped sentence is one claim, internal line break included, not a claim

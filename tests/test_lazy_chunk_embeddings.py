@@ -276,8 +276,8 @@ def test_the_session_gets_one_thread_per_physical_core():
 
 def test_the_thread_count_can_be_overridden():
     """An operator whose machine this cannot see can say what to use."""
-    os.environ["MIND_PALACE_ONNX_THREADS"] = "3"
+    os.environ["VERILORE_ONNX_THREADS"] = "3"
     try:
         assert _intra_op_threads() == 3
     finally:
-        os.environ.pop("MIND_PALACE_ONNX_THREADS")
+        os.environ.pop("VERILORE_ONNX_THREADS")

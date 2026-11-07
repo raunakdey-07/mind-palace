@@ -196,11 +196,11 @@ def live_runtime(tmp_path_factory):
     from api import runtime as runtime_module
 
     state = tmp_path_factory.mktemp("m016-state")
-    os.environ["MIND_PALACE_STATE_DIR"] = str(state)
+    os.environ["VERILORE_STATE_DIR"] = str(state)
     runtime_module._ensure_token()
 
     process = subprocess.Popen(
-        [sys.executable, "-m", "mindpalace" "_runtime"],
+        [sys.executable, "-m", "verilore" "_runtime"],
         cwd=str(ROOT),
         env=dict(os.environ, PYTHONPATH=str(ROOT)),
         stdin=subprocess.DEVNULL,
@@ -228,7 +228,7 @@ def live_runtime(tmp_path_factory):
             process.wait(timeout=15)
         except subprocess.TimeoutExpired:  # pragma: no cover - only on a hang
             process.kill()
-        os.environ.pop("MIND_PALACE_STATE_DIR", None)
+        os.environ.pop("VERILORE_STATE_DIR", None)
 
 
 @pytest.fixture(scope="module")
@@ -488,17 +488,17 @@ def test_a_failure_is_translated_not_invented(seeded, live_runtime):
     An unknown corpus is used because it fails for a reason the runtime cannot
     disguise: the authoritative lookup happens in the same code either way.
     """
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
     missing = f"m016-no-such-corpus-{os.getpid()}"
 
     # `create_if_missing=False` because a client that creates its corpus would never
     # see the failure this test is about.
     with pytest.raises(MemoryClientError) as through_runtime:
-        MindPalace(name=missing, runtime=True, create_if_missing=False).recall("anything")
+        Verilore(name=missing, runtime=True, create_if_missing=False).recall("anything")
 
     with pytest.raises(MemoryClientError) as in_process:
-        MindPalace(name=missing, create_if_missing=False).recall("anything")
+        Verilore(name=missing, create_if_missing=False).recall("anything")
 
     direct = in_process.value
     assert through_runtime.value.code == direct.code, (through_runtime.value.code, direct.code)
@@ -537,7 +537,7 @@ def test_a_runtime_from_a_different_build_is_refused(seeded, live_runtime, monke
 
     assert not reply.get("ok"), reply
     assert reply["error"]["code"] == "protocol_mismatch", reply
-    assert "mindpalace runtime stop" in reply["error"]["message"], reply
+    assert "verilore runtime stop" in reply["error"]["message"], reply
 
 
 def test_one_failure_one_exception_class_everywhere(seeded, live_runtime):
@@ -548,20 +548,20 @@ def test_one_failure_one_exception_class_everywhere(seeded, live_runtime):
     the test that holds it: a caller writes one `except` clause and it works however
     the request was served.
     """
-    from mindpalace_sdk import MemoryClientError, MindPalace
+    from verilore_sdk import MemoryClientError, Verilore
 
     missing = f"m016-no-such-corpus-{os.getpid()}"
 
     # Each leg makes the same call over a different transport, so the only variable
     # is how the request was served.
     local_error = _capture(
-        lambda: MindPalace(name=missing, create_if_missing=False).recall("anything")
+        lambda: Verilore(name=missing, create_if_missing=False).recall("anything")
     )
     runtime_error = _capture(
-        lambda: MindPalace(name=missing, runtime=True, create_if_missing=False).recall("anything")
+        lambda: Verilore(name=missing, runtime=True, create_if_missing=False).recall("anything")
     )
     remote_error = _capture(
-        lambda: MindPalace(base_url="http://127.0.0.1:1").memory.current(corpus=missing)
+        lambda: Verilore(base_url="http://127.0.0.1:1").memory.current(corpus=missing)
     )
 
     for label, error in (
@@ -606,7 +606,7 @@ def test_a_bad_token_is_refused(seeded, live_runtime, monkeypatch):
 
 
 def test_the_runtime_ships_in_the_wheel():
-    """The CLI starts the runtime as `python -m mindpalace_runtime`.
+    """The CLI starts the runtime as `python -m verilore_runtime`.
 
     If that module is not packaged, `spawn()` fails silently on an installed
     package and every command quietly stays 6 seconds with nothing in the output to
@@ -616,7 +616,7 @@ def test_the_runtime_ships_in_the_wheel():
 
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     modules = pyproject["tool"]["setuptools"]["py-modules"]
-    for required in ("mindpalace_runtime", "mindpalace_sdk", "memory_receipt"):
+    for required in ("verilore_runtime", "verilore_sdk", "memory_receipt"):
         assert required in modules, (
             f"{required} must ship in the wheel; without it the runtime never starts "
             "on an installed package"
@@ -629,15 +629,15 @@ def test_the_runtime_is_never_required(seeded, live_runtime, monkeypatch):
     The runtime is an optimisation. A test suite, a CI job, and a deployment that
     turns it off must all be able to reach the same answers.
     """
-    monkeypatch.setenv("MIND_PALACE_RUNTIME", "0")
+    monkeypatch.setenv("VERILORE_RUNTIME", "0")
     from api import runtime as runtime_module
 
     assert not runtime_module.enabled()
     assert not runtime_module.reachable()
-    from mindpalace_sdk import MindPalace
+    from verilore_sdk import Verilore
 
     direct = fingerprint(
-        MindPalace(name=seeded).recall(QUESTIONS["ordinary"]).model_dump(mode="json")
+        Verilore(name=seeded).recall(QUESTIONS["ordinary"]).model_dump(mode="json")
     )
-    monkeypatch.delenv("MIND_PALACE_RUNTIME")
+    monkeypatch.delenv("VERILORE_RUNTIME")
     assert direct == fingerprint(ask_in_process(seeded, QUESTIONS["ordinary"]))

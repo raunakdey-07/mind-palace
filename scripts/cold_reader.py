@@ -66,8 +66,8 @@ OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 
 TASKS = {
     "cli": (
-        "You have just installed Mind Palace on a machine with PostgreSQL running "
-        "at postgresql://mpadmin:secret@localhost:5432/mindpalace. Using ONLY the "
+        "You have just installed Verilore on a machine with PostgreSQL running "
+        "at postgresql://mpadmin:secret@localhost:5432/verilore. Using ONLY the "
         "README you have been given, and a shell, store the statement "
         '"The production datastore changed from SQLite to PostgreSQL." and then '
         'answer the question "What datastore does production use?" with the '
@@ -77,14 +77,14 @@ TASKS = {
     ),
     "sdk": (
         "Using ONLY the README you have been given, write and run a Python script "
-        'that uses the Mind Palace Python SDK to store the statement "We will use '
+        'that uses the Verilore Python SDK to store the statement "We will use '
         'PostgreSQL as the primary datastore." and then answer "Which datastore '
         'did we choose?". Report the script and its output. If something fails, '
         "report the error verbatim. Do not read any file outside the README."
     ),
     "mcp": (
         "Using ONLY the README you have been given, write and run a script that "
-        "talks to the mindpalace-mcp server over stdio, lists its tools, and calls "
+        "talks to the verilore-mcp server over stdio, lists its tools, and calls "
         'memory_recall to answer "What datastore does production use?" for the '
         "default corpus. Report the script and its output. If something fails, "
         "report the error verbatim. Do not read any file outside the README."
@@ -130,7 +130,7 @@ def ask(model: str, readme: str, task: str, timeout: float = 600.0) -> dict:
     }
 
 
-COMMAND = re.compile(r"^\s*(?:\$|#)\s+(mindpalace[\w .\"'/-]*)", re.MULTILINE)
+COMMAND = re.compile(r"^\s*(?:\$|#)\s+(verilore[\w .\"'/-]*)", re.MULTILINE)
 
 
 def main() -> int:

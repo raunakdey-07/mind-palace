@@ -6,7 +6,7 @@
 This is the data a marketing application has anyway -- who the user is, which
 workspace they belong to, what role they hold there, which campaigns exist and
 what state their content is in. It is stored in the application's own schema,
-next to Mind Palace's tables and never mixed with them.
+next to Verilore's tables and never mixed with them.
 
 The important part is `corpus_for_workspace` and `corpus_for_campaign`. A client
 never supplies a corpus name. The application resolves one from these rows, so a
@@ -160,7 +160,7 @@ CREATE INDEX IF NOT EXISTS decisions_lineage
 
 
 async def create_schema(db: AsyncSession) -> None:
-    """Idempotent. An application's schema is not a Mind Palace migration."""
+    """Idempotent. An application's schema is not a Verilore migration."""
     for statement in SCHEMA_SQL.split(";"):
         if statement.strip():
             await db.execute(text(statement))

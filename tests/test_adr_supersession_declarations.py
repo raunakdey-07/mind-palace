@@ -254,7 +254,7 @@ async def test_history_shows_0001_as_replaced_by_0002(store):
     together but the supersession edge, so a history that matched on each claim's own
     text reported that `adr-001` was never replaced -- the opposite of what happened.
 
-    Exercised through `_query_result`, which is what `mindpalace history` reads. The
+    Exercised through `_query_result`, which is what `verilore history` reads. The
     query is the bare subject, not a sentence: that operation requires every query
     token to appear in the claim, so "What is the primary datastore?" matches nothing
     at all, because "what" is in no claim. `recall` is unaffected -- it ranks by
@@ -277,7 +277,7 @@ async def test_history_shows_0001_as_replaced_by_0002(store):
 async def test_a_question_and_a_subject_phrase_return_the_same_timeline(store):
     """What an MCP agent sends has to reach what a person types.
 
-    `mindpalace history` matched on raw query tokens, so "what", "is" and "the"
+    `verilore history` matched on raw query tokens, so "what", "is" and "the"
     had to appear in a claim and a natural-language question matched nothing at
     all. The two forms below now return byte-identical timelines.
     """

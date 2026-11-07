@@ -1,6 +1,6 @@
 # The local runtime, and model-free mode
 
-Two ways to make Mind Palace fast without a GPU, and an explicit account of what
+Two ways to make Verilore fast without a GPU, and an explicit account of what
 each one costs.
 
 The background runtime keeps the embedding model and connection pool warm, so the
@@ -14,7 +14,7 @@ network deployment, see [authentication and deployment](deployment.md).
 ## The local runtime
 
 Optional, and invisible in normal use. It exists because of one measured fact: on
-mains power a one-shot `mindpalace recall` from a fresh process costs 6.53 s, of which
+mains power a one-shot `verilore recall` from a fresh process costs 6.53 s, of which
 61 ms is memory work and the rest is `import torch`, `import transformers` and
 `import sentence_transformers` (5.32 s together) plus model construction (0.49 s).
 
@@ -26,9 +26,9 @@ abstention, receipt digest and Memory Pack digest. That is
 
 | | before | after |
 |---|---|---|
-| `mindpalace recall` | 6.17 s | 0.63 s |
-| `mindpalace explain` | 6.23 s | 0.67 s |
-| `mindpalace receipt` | 6.21 s | 0.62 s |
+| `verilore recall` | 6.17 s | 0.63 s |
+| `verilore explain` | 6.23 s | 0.67 s |
+| `verilore receipt` | 6.21 s | 0.62 s |
 | SDK `recall`, `runtime=True` | 5.11 s | 0.51 s |
 
 Measured on the `sentence-transformers` backend, which was the default through
@@ -46,15 +46,15 @@ declared dependencies, and `sentence-transformers` is the `[torch]` extra.
 
 The runtime amortises the model load across commands. The backend removes it: the
 same published MiniLM weights run under onnxruntime with no torch in the process.
-Measured on this machine, one-shot, `MIND_PALACE_RUNTIME=0`:
+Measured on this machine, one-shot, `VERILORE_RUNTIME=0`:
 
 | | `sentence-transformers` | onnxruntime |
 |---|---|---|
 | `import` | 6.15 s | 0.40 s |
 | model + first encode | 4.69 s | 1.00 s |
-| `mindpalace recall` | 7.63 s | 1.42 s |
-| `mindpalace receipt -o receipt.json` | 7.57 s | 1.19 s |
-| `mindpalace ingest-repo` | 7.77 s | 1.35 s |
+| `verilore recall` | 7.63 s | 1.42 s |
+| `verilore receipt -o receipt.json` | 7.57 s | 1.19 s |
+| `verilore ingest-repo` | 7.77 s | 1.35 s |
 | the embedding stack, installed | 5.1 GB | 90 MB |
 
 The last row is the stack each column names and nothing else: `onnxruntime`,
@@ -63,7 +63,7 @@ The last row is the stack each column names and nothing else: `onnxruntime`,
 FastAPI, SQLAlchemy, asyncpg and `mcp`'s tree come too — 216 MB across 79
 distributions for `pip install -e '.[cli,mcp]'`, measured.
 
-`mindpalace --help` is 0.25 s either way; it never loads a model.
+`verilore --help` is 0.25 s either way; it never loads a model.
 
 The two backends are interchangeable, which is what makes this safe. The archive
 stores vectors and records the model name and dimension, never the backend, so a
@@ -85,16 +85,16 @@ connection pool, and paying the session build once instead of once per command.
 ### Commands
 
 ```console
-$ mindpalace runtime status
+$ verilore runtime status
 Runtime is not running.
   commands still work; each one starts its own runtime if you want a warm one
-  start it with: mindpalace runtime start
+  start it with: verilore runtime start
 
-$ mindpalace runtime start --wait
+$ verilore runtime start --wait
 Runtime starting. It loads the model in the background.
   runtime: ready  model: loaded  up: 6s
 
-$ mindpalace runtime status --json
+$ verilore runtime status --json
 { "state": "ready", "pid": 1234, "model": "loaded", "protocol": 1, ... }
 ```
 
@@ -104,8 +104,8 @@ fast, so by the time the user reaches for `recall` the model is resident.
 
 ### Security boundary
 
-- A Unix domain socket, never a TCP port. `$XDG_RUNTIME_DIR/mindpalace`, or
-  `~/.cache/mindpalace`. The directory is `0700` and the socket is `0600`, so the
+- A Unix domain socket, never a TCP port. `$XDG_RUNTIME_DIR/verilore`, or
+  `~/.cache/verilore`. The directory is `0700` and the socket is `0600`, so the
   filesystem is the authorisation boundary.
 - Every request carries a token read from a `0600` file next to the socket. Never a
   command-line argument, which any local user could read out of `ps`. The token is a
@@ -115,7 +115,7 @@ fast, so by the time the user reaches for `recall` the model is resident.
   that binds a TCP port.
 - Nothing about memory content is logged. The runtime's own output is discarded; the
   five product spans go through the product's telemetry, which never carries content.
-- `MIND_PALACE_STATE_DIR` overrides the location, which is how the test suite gets a
+- `VERILORE_STATE_DIR` overrides the location, which is how the test suite gets a
   runtime of its own without touching a developer's.
 
 ### Lifecycle
@@ -146,12 +146,12 @@ fast, so by the time the user reaches for `recall` the model is resident.
 ### Turning it off
 
 ```bash
-export MIND_PALACE_RUNTIME=0     # CLI, SDK and runtime command alike
-mindpalace runtime stop          # just this one
+export VERILORE_RUNTIME=0     # CLI, SDK and runtime command alike
+verilore runtime stop          # just this one
 ```
 
 The runtime is never required. On a platform without `AF_UNIX` it is not started at
-all. `MindPalace(runtime=True)` is opt-in for the same reason: a long-running
+all. `Verilore(runtime=True)` is opt-in for the same reason: a long-running
 application has the model resident, so a runtime would only add a socket hop and a
 second copy of the model.
 
@@ -166,7 +166,7 @@ failed is about relevance and abstention rather than about processes.
 ## Model-free / lexical mode
 
 ```bash
-MIND_PALACE_LEXICAL=1 mindpalace recall "What datastore does production use?"
+VERILORE_LEXICAL=1 verilore recall "What datastore does production use?"
 ```
 
 Means: **deliberately use the model-free lexical relevance path.**
@@ -178,8 +178,8 @@ semantics. The mode is announced once on stderr, so it never contaminates an ans
 JSON document, or a pipe:
 
 ```console
-$ MIND_PALACE_LEXICAL=1 mindpalace recall "What datastore does production use?"
-retrieval: lexical (model-free, MIND_PALACE_LEXICAL=1)
+$ VERILORE_LEXICAL=1 verilore recall "What datastore does production use?"
+retrieval: lexical (model-free, VERILORE_LEXICAL=1)
 The production datastore changed from SQLite to PostgreSQL.
    source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
    time:   true as of 2026-10-08 03:40 UTC
@@ -189,7 +189,7 @@ The production datastore changed from SQLite to PostgreSQL.
 
 In-process, cold process, runtime disabled, same corpus:
 
-| | semantic | `MIND_PALACE_LEXICAL=1` |
+| | semantic | `VERILORE_LEXICAL=1` |
 |---|---|---|
 | `recall` | 6.17 s | **0.63 s** |
 | `explain` | 6.23 s | **0.67 s** |
@@ -251,7 +251,7 @@ correct for ranking, and it has a consequence worth knowing before you rely on t
 mode:
 
 ```console
-$ MIND_PALACE_LEXICAL=1 mindpalace recall "What datastore does production use?"
+$ VERILORE_LEXICAL=1 verilore recall "What datastore does production use?"
 No memory matched that question.
   NO_RELEVANT_MEMORY
 ```
@@ -261,7 +261,7 @@ Two `datastore` memories exist — one superseded, one current — so `datastore
 Ask with a term that actually distinguishes them and it answers:
 
 ```console
-$ MIND_PALACE_LEXICAL=1 mindpalace recall "When did we switch to CockroachDB?"
+$ VERILORE_LEXICAL=1 verilore recall "When did we switch to CockroachDB?"
 The production datastore is now distributed CockroachDB.
 ```
 
@@ -276,7 +276,7 @@ everything would otherwise pass.
 A lexical read **bypasses the runtime**. A runtime exists to hold the model, and a
 developer who asked for model-free reads does not want that process in the path.
 Bypassing it needs no protocol change and no second implementation: the same
-`execute` runs in the caller's own process. `mindpalace runtime status` continues to
+`execute` runs in the caller's own process. `verilore runtime status` continues to
 report on the runtime honestly; it simply is not involved in that read.
 
 ### Why not a lexical fast path
@@ -305,7 +305,7 @@ reads opts in and knows exactly what they are getting.
 
 ### The model dependency itself
 
-`pip install mindpalace-os` installs onnxruntime, tokenizers and huggingface-hub,
+`pip install verilore` installs onnxruntime, tokenizers and huggingface-hub,
 which is what the default read path uses. `sentence-transformers` is the `[torch]`
 extra. It was a declared dependency until this change, on the grounds that moving it
 would make an existing user's plain install silently lose semantic ranking. The
@@ -317,7 +317,7 @@ What each stack costs, measured on this machine:
 
 | | installed size |
 |---|---:|
-| the Mind Palace wheel | **227 KB** (was 425 KB until `v0.9.1`, which stopped shipping `scripts/`) |
+| the Verilore wheel | **227 KB** (was 425 KB until `v0.9.1`, which stopped shipping `scripts/`) |
 | `pip install -e '.[cli,mcp]'`, ONNX backend, 79 distributions | **216 MB** |
 | `sentence-transformers` + `torch` + `transformers` + numpy/scipy/scikit-learn | **1,347 MB** |
 | cached `all-MiniLM-L6-v2` weights | 88 MB |
@@ -337,14 +337,14 @@ rather than a code change.
 ## The query log
 
 Every `recall` and `remember` appends one JSON object to
-`~/.mind-palace/logs/queries.jsonl`: timestamp, operation, the query,
+`~/.verilore/logs/queries.jsonl`: timestamp, operation, the query,
 `match_status`, the top three scores, the claim ids returned, and latency. Writes
 one line per call, keyed by a `query_id` that both the response and the log carry.
 
 **On by default on a local connection, off on a scoped one.** A tenant-scoped
 connection is a server deployment, and logging there is somebody's retention
-policy to set. `MIND_PALACE_QUERY_LOG=0` turns it off everywhere;
-`MIND_PALACE_QUERY_LOG=/path/to/file.jsonl` moves it; `MIND_PALACE_DATA_DIR`
+policy to set. `VERILORE_QUERY_LOG=0` turns it off everywhere;
+`VERILORE_QUERY_LOG=/path/to/file.jsonl` moves it; `VERILORE_DATA_DIR`
 moves the directory it lives in.
 
 **No memory content is recorded.** Not the claim text, not the source path, not
@@ -355,10 +355,10 @@ exactly where content ends up by accident.
 Grade a call with the `query_id` a response reported:
 
 ```console
-$ mindpalace feedback b062424783ba --verdict wrong --note "meant the cache"
+$ verilore feedback b062424783ba --verdict wrong --note "meant the cache"
 recorded 'wrong' against the query of 2026-10-16T19:56:52+00:00
 
-$ mindpalace feedback-summary
+$ verilore feedback-summary
 log:  /home/you/.mind-palace/logs/queries.jsonl
 calls: 214    graded: 37
 

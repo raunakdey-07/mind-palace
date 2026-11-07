@@ -153,7 +153,7 @@ async def test_the_release_workflow_from_query_to_offline_verification(store, tm
     )
     pristine = (where / "pack.json").read_text(encoding="utf-8")
 
-    # --- 3. Someone else verifies it, with no Mind Palace runtime -----------
+    # --- 3. Someone else verifies it, with no Verilore runtime -----------
     verified = _verify(where / "pack.json", where / "receipt.json", where)
     assert verified.returncode == EXIT_OK, verified.stderr + verified.stdout
     assert "VERIFIED" in verified.stdout

@@ -27,8 +27,8 @@ real regression from this branch, must make it fail:
 
 | Mutation | Result |
 |---|---|
-| remove `mindpalace_errors` from `py-modules` | FAIL, ModuleNotFoundError |
-| remove both `CHAR(64)` strips | FAIL: the first `mindpalace remember` cannot write |
+| remove `verilore_errors` from `py-modules` | FAIL, ModuleNotFoundError |
+| remove both `CHAR(64)` strips | FAIL: the first `verilore remember` cannot write |
 
 The second mutation removes **both** of the default-corpus fixes, not one. Each
 alone is sufficient, so removing only one leaves the job green -- which is
@@ -126,7 +126,7 @@ def _dollar_lines(block: str) -> list[str]:
     """The ``$ `` lines of a fence, with shell continuations joined.
 
     A trailing backslash is part of the command, not of the fence. Left alone
-    the extractor emitted `mindpalace recall "..." \\` as one command, which the
+    the extractor emitted `verilore recall "..." \\` as one command, which the
     shell runs with an unterminated quote -- and it passed, because the job that
     would have caught it was never wired to this script.
     """
@@ -155,10 +155,10 @@ def _dollar_lines(block: str) -> list[str]:
 def readme_python_snippet() -> str:
     """The first ```python block that constructs a client, verbatim."""
     for block in re.findall(r"```python\n(.*?)```", README.read_text(), re.S):
-        # `MindPalace(` rather than `MindPalace()`: the assertion is that the
+        # `Verilore(` rather than `Verilore()`: the assertion is that the
         # README contains a snippet constructing a client, not that it names
         # one with no arguments. A named corpus is the documented form.
-        if "MindPalace(" in block:
+        if "Verilore(" in block:
             return block
     raise SystemExit("cleanroom: no SDK snippet found in README.md")
 
@@ -172,7 +172,7 @@ class Runner:
         # mask exactly the omission this script exists to catch. It surfaced as
         # ModuleNotFoundError for a module the wheel *did* contain.
         self.interpreter = str(python or sys.executable)
-        self.env = {**os.environ, "DATABASE_URL": database_url, "MIND_PALACE_RUNTIME": "0"}
+        self.env = {**os.environ, "DATABASE_URL": database_url, "VERILORE_RUNTIME": "0"}
 
     def sh(self, command: str, *, expect: int = 0, label: str = "") -> subprocess.CompletedProcess:
         result = subprocess.run(
@@ -206,7 +206,7 @@ def main() -> int:
         "--bare",
         action="store_true",
         help="install the wheel ALONE, with no requirements.txt. This is the "
-        "`pip install mindpalace-os` path the README also documents, and it is "
+        "`pip install verilore` path the README also documents, and it is "
         "the only way to find out whether the wheel is self-sufficient.",
     )
     parser.add_argument(
@@ -268,7 +268,7 @@ def main() -> int:
     runner = Runner(work, session_url)
     checks: list[tuple[str, bool, str]] = []
 
-    # The MCP check at the end runs `mindpalace-mcp`, and that console script
+    # The MCP check at the end runs `verilore-mcp`, and that console script
     # only exists with the `[mcp]` extra. The script installed the bare wheel and
     # then ran it anyway, so the last check could never pass -- which is very
     # likely why this file had no caller. The bare path must stay bare: not
@@ -329,11 +329,11 @@ def main() -> int:
 
         print("== migrate ==")
         if args.bare:
-            # `mindpalace init` applies the schema itself. A wheel that ships its
+            # `verilore init` applies the schema itself. A wheel that ships its
             # migrations cannot do this without them, and a wheel that declares
             # alembic cannot do it without that -- which is why this is the only
             # migrate step the bare path gets.
-            result = runner.sh("mindpalace init", expect=None, label="mindpalace init (bare)")
+            result = runner.sh("verilore init", expect=None, label="verilore init (bare)")
             checks.append(
                 (
                     "bare wheel applies its own schema",
@@ -356,12 +356,12 @@ def main() -> int:
             # dressed as a prompt, are not part of the runnable quickstart.
             if "receipt.json" in command or "verify" in command:
                 continue
-            # `mindpalace-mcp` bare is long-lived and covered by the MCP check
+            # `verilore-mcp` bare is long-lived and covered by the MCP check
             # below. `--help` is not: it prints usage, returns immediately, and
             # is the one invocation a reader tries when they cannot find the
             # server. It printed nothing until 2026-10-15, which is exactly the
             # kind of thing only a test catches.
-            if command.startswith("mindpalace-mcp") and "--help" not in command:
+            if command.startswith("verilore-mcp") and "--help" not in command:
                 continue
             # These two guards used to be `"\\" in command` and `"#" in
             # command`, added to skip the README's one unjoined line
@@ -381,19 +381,19 @@ def main() -> int:
             result = runner.sh(command, expect=None, label=label)  # noqa: S602
             checks.append((label, result.returncode == 0, (result.stderr or "")[:200]))
 
-            if command.startswith("mindpalace recall") and "incident" in command:
+            if command.startswith("verilore recall") and "incident" in command:
                 ok = "NO_RELEVANT_MEMORY" in result.stdout
                 checks.append(("uncovered question abstains", ok, result.stdout.strip()[:160]))
                 if not ok:
                     print(f"   !! expected abstention, got: {result.stdout.strip()[:200]}")
-            if command.startswith("mindpalace recall") and "datastore does production" in command:
+            if command.startswith("verilore recall") and "datastore does production" in command:
                 ok = "PostgreSQL" in result.stdout
                 checks.append(
                     ("recall returns the documented answer", ok, result.stdout.strip()[:160])
                 )
                 if not ok:
                     print(f"   !! expected PostgreSQL, got: {result.stdout.strip()[:200]}")
-            if command.startswith("mindpalace explain"):
+            if command.startswith("verilore explain"):
                 ok = "EVIDENCE" in result.stdout
                 checks.append(("explain shows an evidence span", ok, result.stdout.strip()[:160]))
 
@@ -409,13 +409,12 @@ def main() -> int:
         # It is not extracted from the README because SKIP_PATTERNS excludes
         # receipt commands, so this line is the single place it is written.
         result = runner.sh(
-            'mindpalace receipt "What is the primary datastore?" '
-            "--corpus project -o receipt.json",
+            'verilore receipt "What is the primary datastore?" ' "--corpus project -o receipt.json",
             label="receipt",
         )
         bad = {**runner.env, "DATABASE_URL": "postgresql://nobody:nobody@127.0.0.1:1/nothing"}
         offline = subprocess.run(
-            "mindpalace verify receipt.json",
+            "verilore verify receipt.json",
             shell=True,
             cwd=work,
             env=bad,
@@ -439,7 +438,7 @@ def main() -> int:
         print("== MCP, documented argument shape ==")
         mcp = """
 import json, os, subprocess, sys
-server = os.path.join(os.path.dirname(sys.executable), "mindpalace-mcp")
+server = os.path.join(os.path.dirname(sys.executable), "verilore-mcp")
 proc = subprocess.Popen([server], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL, text=True, env=dict(os.environ), bufsize=1)
 def send(o):

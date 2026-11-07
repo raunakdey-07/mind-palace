@@ -36,8 +36,8 @@ AFTER="$WORK/after"
 
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
-export MIND_PALACE_RUNTIME=0
-export MIND_PALACE_AUTH_MODE=off
+export VERILORE_RUNTIME=0
+export VERILORE_AUTH_MODE=off
 
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -110,8 +110,8 @@ if ! psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   echo "::error::the real upgrade assertion. Fatal rather than skipped."
   exit 1
 fi
-export MIND_PALACE_SCOPE_SECRET="$SCOPE_SECRET"
-export MIND_PALACE_ENFORCE_SCOPE_TOKEN=on
+export VERILORE_SCOPE_SECRET="$SCOPE_SECRET"
+export VERILORE_ENFORCE_SCOPE_TOKEN=on
 
 # Same scheme, host, port and database; a different identity. The scheme is kept
 # because a driver-qualified URL (`postgresql+asyncpg://`) is what the engine
@@ -129,7 +129,7 @@ fi
 # That is not tidiness: the operator step being asserted is "before the grant
 # this reader sees one corpus, after the grant it sees them all", and the only way
 # to observe the first half is to be the process that performs the second.
-MIND_PALACE_SUPERUSER_URL="$DATABASE_URL" \
+VERILORE_SUPERUSER_URL="$DATABASE_URL" \
 "$PY" "$REPO/scripts/release/assert_runtime_role.py" \
   --superuser-url "$DATABASE_URL" \
   --runtime-url "$RUNTIME_URL" \

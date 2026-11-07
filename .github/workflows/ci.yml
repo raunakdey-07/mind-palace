@@ -26,19 +26,19 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg15
         env:
-          POSTGRES_DB: mindpalace
+          POSTGRES_DB: verilore
           POSTGRES_USER: mpadmin
           POSTGRES_PASSWORD: secret
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-cmd="pg_isready -U mpadmin -d verilore"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
 
     env:
-      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
@@ -147,13 +147,13 @@ jobs:
       - name: Provision the least-privileged runtime role
         id: provision
         run: |
-          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+          psql postgresql://mpadmin:secret@localhost:5432/verilore -v ON_ERROR_STOP=1 \
             -v runtime_password=ci-runtime-role-password \
             -f scripts/db/runtime_roles.sql
           # Rotate a real scope secret and enable enforcement as the owner role.
           #
           # The secret and the enforcement flag are rotated into the SHARED
-          # `mindpalace` database so the server-posture steps below can prove a
+          # `verilore` database so the server-posture steps below can prove a
           # secure deployment starts with enforcement on. They MUST NOT be
           # exported to $GITHUB_ENV: every later step in this job inherits the
           # job environment, and "Run tests" builds a fresh session database
@@ -164,7 +164,7 @@ jobs:
           # posture step that needs the secret reads it as a step output below.
           SCOPE_SECRET=$(openssl rand -hex 32)
           echo "secret=$SCOPE_SECRET" >> $GITHUB_OUTPUT
-          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+          psql postgresql://mpadmin:secret@localhost:5432/verilore -v ON_ERROR_STOP=1 \
             -c "SET ROLE mindpalace_owner; INSERT INTO memory_server_secrets (name, value) VALUES ('scope_hmac_secret', '$SCOPE_SECRET') ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value; SELECT mp_set_scope_token_enforcement(true);"
 
       # The script must work on a database that has never had it applied. Running
@@ -172,11 +172,11 @@ jobs:
       # (running it again with a new password) is what the documentation claims.
       - name: The role script is safe to re-run
         run: |
-          psql postgresql://mpadmin:secret@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+          psql postgresql://mpadmin:secret@localhost:5432/verilore -v ON_ERROR_STOP=1 \
             -v runtime_password=ci-runtime-role-password \
             -f scripts/db/runtime_roles.sql
           PGPASSWORD=ci-runtime-role-password psql \
-            postgresql://mindpalace_runtime@localhost:5432/mindpalace -v ON_ERROR_STOP=1 \
+            postgresql://mindpalace_runtime@localhost:5432/verilore -v ON_ERROR_STOP=1 \
             -tAc "SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user"
 
       # These two run IMMEDIATELY after provisioning, not at the end of the job.
@@ -187,7 +187,7 @@ jobs:
       #   tests/tenant_harness.py:66  RUNTIME_PASSWORD = "tenant-isolation-test-password"
       #
       # and the harness runs a modified copy of scripts/db/runtime_roles.sql
-      # against $DATABASE_URL. On CI that is the SHARED mindpalace database, so
+      # against $DATABASE_URL. On CI that is the SHARED verilore database, so
       # the tenant-isolation step rotates the runtime role's password. Every
       # later step that authenticates as mindpalace_runtime with
       # ci-runtime-role-password then fails to connect, and `posture` degrades
@@ -219,10 +219,10 @@ jobs:
       # missing driver -- cannot be mistaken for a posture refusal.
       - name: A server deployment refuses an unsafe database role
         env:
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          MIND_PALACE_DEPLOYMENT: server
-          MIND_PALACE_AUTH_MODE: required
-          MIND_PALACE_INGEST_ROOTS: /content
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
+          VERILORE_DEPLOYMENT: server
+          VERILORE_AUTH_MODE: required
+          VERILORE_INGEST_ROOTS: /content
         run: |
           set +e
           python - <<'PYEOF' > /tmp/posture.out 2>&1
@@ -250,15 +250,15 @@ jobs:
       # import -- which is the thing the negative step above actually tests.
       - name: A server deployment starts on the least-privileged role
         env:
-          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
-          MIND_PALACE_DEPLOYMENT: server
-          MIND_PALACE_AUTH_MODE: required
-          MIND_PALACE_INGEST_ROOTS: /content
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/verilore
+          VERILORE_DEPLOYMENT: server
+          VERILORE_AUTH_MODE: required
+          VERILORE_INGEST_ROOTS: /content
           # The rotated secret (provisioned above, exposed as a step output so it
           # cannot leak into "Run tests" and other later steps) and enforcement
           # on: this step really proves a secure server deployment starts up.
-          MIND_PALACE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
-          MIND_PALACE_ENFORCE_SCOPE_TOKEN: on
+          VERILORE_SCOPE_SECRET: ${{ steps.provision.outputs.secret }}
+          VERILORE_ENFORCE_SCOPE_TOKEN: on
         run: |
           python -c "from api.main import app; print('server profile accepted the runtime role')"
           python - <<'PYEOF'
@@ -269,12 +269,12 @@ jobs:
           PYEOF
 
 
-      # A deployment must not be tenant-safe by accident. `mindpalace posture`
+      # A deployment must not be tenant-safe by accident. `verilore posture`
       # exits non-zero when the role would bypass the policies, so this fails the
       # build rather than leaving it to an operator to notice in production.
       - name: The runtime role cannot bypass row-level security
         env:
-          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/mindpalace
+          DATABASE_URL: postgresql://mindpalace_runtime:ci-runtime-role-password@localhost:5432/verilore
         run: python -m cli.main posture
 
       - name: Evaluate deterministic memory lifecycle (offline)
@@ -345,7 +345,7 @@ jobs:
       # produced them.
       - name: Run tests
         env:
-          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
@@ -359,7 +359,7 @@ jobs:
       # job-wide), so it cannot leak into later steps.
       - name: End-to-end enforcement-on suite
         env:
-          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
@@ -406,7 +406,7 @@ jobs:
       # second pytest session (and rebuilding another session database).
       - name: Report lexical-mode speedup from this run
         env:
-          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          MEMORY_TEST_DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
@@ -463,8 +463,8 @@ jobs:
       # downgrade that throws leaves an operator with no way back.
       - name: The migration chain survives a downgrade and a re-apply
         env:
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          MIND_PALACE_MIGRATION_ROUNDTRIP: "1"
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
+          VERILORE_MIGRATION_ROUNDTRIP: "1"
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
@@ -477,22 +477,22 @@ jobs:
       # This is a CLIENT example. examples/marketing-campaign-memory/README.md
       # says so in its own "Run it" section, in two shells:
       #
-      #   1. MIND_PALACE_AUTH_MODE=required uvicorn api.main:app --port 8000
+      #   1. VERILORE_AUTH_MODE=required uvicorn api.main:app --port 8000
       #   2. python examples/marketing-campaign-memory/demo.py
       #
       # The step ran only the second one, so the demo tried to reach
       # 127.0.0.1:8000 and died with `httpx.ConnectError: All connection
       # attempts failed`. It is a real HTTP client by design -- it imports none
-      # of Mind Palace -- so there is nothing for it to fall back to.
+      # of Verilore -- so there is nothing for it to fall back to.
       #
       # This never showed up before because every earlier step in the job failed
       # first and this one was skipped. A skipped step is not a passing step.
       - name: The marketing reference integration runs standalone
         env:
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          MIND_PALACE_AUTH_MODE: required
-          MIND_PALACE_RUNTIME: "0"
-          MIND_PALACE_URL: http://127.0.0.1:8000
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
+          VERILORE_AUTH_MODE: required
+          VERILORE_RUNTIME: "0"
+          VERILORE_URL: http://127.0.0.1:8000
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: |
@@ -505,7 +505,7 @@ jobs:
           trap 'kill "$server" 2>/dev/null || true' EXIT
           ready=""
           for _ in $(seq 1 60); do
-            if curl -sf -o /dev/null "$MIND_PALACE_URL/openapi.json"; then ready=1; break; fi
+            if curl -sf -o /dev/null "$VERILORE_URL/openapi.json"; then ready=1; break; fi
             if ! kill -0 "$server" 2>/dev/null; then
               echo "::error::the server exited before becoming ready"
               cat /tmp/server.log
@@ -514,7 +514,7 @@ jobs:
             sleep 1
           done
           if [ -z "$ready" ]; then
-            echo "::error::the server never became ready at $MIND_PALACE_URL"
+            echo "::error::the server never became ready at $VERILORE_URL"
             cat /tmp/server.log
             exit 1
           fi
@@ -540,8 +540,8 @@ jobs:
           python -m pip install flake8 black
       - name: Run flake8 and black
         run: |
-          flake8 api cli tests scripts mindpalace_sdk.py mcp_server.py memory_pack.py memory_proof.py memory_proof_cli.py memory_receipt.py mindpalace_errors.py mindpalace_runtime.py --max-line-length=100
-          black --check api cli tests scripts mindpalace_sdk.py mcp_server.py memory_pack.py memory_proof.py memory_proof_cli.py memory_receipt.py mindpalace_errors.py mindpalace_runtime.py --line-length 100
+          flake8 api cli tests scripts verilore_sdk.py mcp_server.py memory_pack.py memory_proof.py memory_proof_cli.py memory_receipt.py verilore_errors.py verilore_runtime.py --max-line-length=100
+          black --check api cli tests scripts verilore_sdk.py mcp_server.py memory_pack.py memory_proof.py memory_proof_cli.py memory_receipt.py verilore_errors.py verilore_runtime.py --line-length 100
       - name: Enforce release truth
         run: |
           python scripts/check_release_truth.py
@@ -561,7 +561,7 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg15
         env:
-          POSTGRES_DB: mindpalace
+          POSTGRES_DB: verilore
           POSTGRES_USER: mpadmin
           POSTGRES_PASSWORD: secret
         ports:
@@ -573,7 +573,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
 
     steps:
       - name: Checkout repository
@@ -644,19 +644,19 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg15
         env:
-          POSTGRES_DB: mindpalace
+          POSTGRES_DB: verilore
           POSTGRES_USER: mpadmin
           POSTGRES_PASSWORD: secret
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-cmd="pg_isready -U mpadmin -d verilore"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
 
     env:
-      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+      DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
 
@@ -711,15 +711,15 @@ jobs:
       # server that nobody started. The console script is used, not
       # `python -m`, so this is the command the README actually tells people to run.
       #
-      # `MIND_PALACE_RUNTIME=0` here on purpose: the journey must work with no
+      # `VERILORE_RUNTIME=0` here on purpose: the journey must work with no
       # background process at all. The runtime is an optimisation, and this is the
       # test that says so.
       - name: Run the documented command sequence
         env:
-          MIND_PALACE_RUNTIME: "0"
+          VERILORE_RUNTIME: "0"
         run: |
-          mindpalace init
-          mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+          verilore init
+          verilore remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
           # Assert the default read really ran semantically. A missing model makes
           # this command degrade to lexical and still print a correct answer, so
           # checking only stdout cannot tell the two apart -- and a job that silently
@@ -728,51 +728,51 @@ jobs:
           # Matches the degradation marker rather than asserting stderr is empty:
           # `sentence-transformers` writes a weight-loading progress bar to stderr,
           # so an emptiness check fails on a perfectly healthy run.
-          if mindpalace recall 'What datastore does production use?' 2>&1 1>/dev/null \
+          if verilore recall 'What datastore does production use?' 2>&1 1>/dev/null \
              | grep -q 'could not be loaded'; then
             echo "::error::the default read degraded to lexical; it should have used the embedding model"
             exit 1
           fi
-          mindpalace recall "What datastore does production use?"
-          mindpalace explain "What datastore does production use?"
-          mindpalace remember "The production datastore is now distributed CockroachDB." --key datastore
-          mindpalace history datastore
-          mindpalace receipt "What datastore does production use?" -o receipt.json
-          mindpalace verify receipt.json
+          verilore recall "What datastore does production use?"
+          verilore explain "What datastore does production use?"
+          verilore remember "The production datastore is now distributed CockroachDB." --key datastore
+          verilore history datastore
+          verilore receipt "What datastore does production use?" -o receipt.json
+          verilore verify receipt.json
           python examples/decision-memory/decision_memory.py
           python examples/project-log/project_log.py
 
       - name: Verify offline, with no database reachable
         env:
           DATABASE_URL: postgresql://nobody@127.0.0.1:1/nothing
-          MIND_PALACE_RUNTIME: "0"
+          VERILORE_RUNTIME: "0"
         run: |
-          mindpalace verify receipt.json
+          verilore verify receipt.json
 
-      # `MIND_PALACE_LEXICAL=1` is a documented mode, so it gets the same treatment as
+      # `VERILORE_LEXICAL=1` is a documented mode, so it gets the same treatment as
       # the default path: run from a clean checkout, on the documented corpus, and
       # check it actually avoids the model rather than taking a slower route to the
       # same place. The import assertion is the real check -- a timing difference on
       # a shared runner would be noise.
       - name: The documented model-free mode reads without the model
         env:
-          MIND_PALACE_RUNTIME: "0"
-          MIND_PALACE_LEXICAL: "1"
+          VERILORE_RUNTIME: "0"
+          VERILORE_LEXICAL: "1"
         run: |
-          mindpalace recall "What datastore does production use?"
-          mindpalace explain "What datastore does production use?"
-          mindpalace history datastore
+          verilore recall "What datastore does production use?"
+          verilore explain "What datastore does production use?"
+          verilore history datastore
           # Assert it actually answers, not merely that it exits 0. A mode that
           # abstained on everything would satisfy every other line here, and that is
           # the failure mode this step exists to catch. The question names a
           # distinctive term on purpose: ranking scores the terms that discriminate
           # between candidates, so a question whose only shared term is one every
           # candidate carries is legitimately abstained on.
-          mindpalace recall "When did we switch to CockroachDB?" | tee /dev/stderr | grep -q CockroachDB
+          verilore recall "When did we switch to CockroachDB?" | tee /dev/stderr | grep -q CockroachDB
           # It must announce itself, so nobody is mistaken about which mode answered.
-          test "$(mindpalace recall 'When did we switch to CockroachDB?' 2>&1 1>/dev/null)" = \
-            "retrieval: lexical (model-free, MIND_PALACE_LEXICAL=1)"
-          mindpalace receipt "When did we switch to CockroachDB?" -o lexical-receipt.json
+          test "$(verilore recall 'When did we switch to CockroachDB?' 2>&1 1>/dev/null)" = \
+            "retrieval: lexical (model-free, VERILORE_LEXICAL=1)"
+          verilore receipt "When did we switch to CockroachDB?" -o lexical-receipt.json
           python - <<'PY'
           import subprocess, sys
 
@@ -796,24 +796,24 @@ jobs:
       - name: Verify a receipt written in lexical mode
         env:
           DATABASE_URL: postgresql://nobody@127.0.0.1:1/nothing
-          MIND_PALACE_RUNTIME: "0"
+          VERILORE_RUNTIME: "0"
         run: |
-          mindpalace verify lexical-receipt.json
+          verilore verify lexical-receipt.json
 
       # The runtime is the other half of this release. It must come up, be
       # inspectable, produce the same answers as the in-process path, and stop
       # cleanly. Not timed here: a shared CI runner's numbers are not measurements.
       - name: The local runtime comes up, and the same answers come back through it
         run: |
-          mindpalace runtime start --wait
-          mindpalace runtime status
-          mindpalace runtime status --json
-          mindpalace recall "What datastore does production use?"
-          mindpalace recall "What datastore does production use?" --json
-          mindpalace runtime stop
+          verilore runtime start --wait
+          verilore runtime status
+          verilore runtime status --json
+          verilore recall "What datastore does production use?"
+          verilore recall "What datastore does production use?" --json
+          verilore runtime stop
           # With no runtime, the commands still work and still answer.
-          mindpalace runtime status
-          mindpalace recall "What datastore does production use?"
+          verilore runtime status
+          verilore recall "What datastore does production use?"
 
   wheel:
     name: Clean install from the built wheel
@@ -824,13 +824,13 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg15
         env:
-          POSTGRES_DB: mindpalace
+          POSTGRES_DB: verilore
           POSTGRES_USER: mpadmin
           POSTGRES_PASSWORD: secret
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U mpadmin -d mindpalace"
+          --health-cmd="pg_isready -U mpadmin -d verilore"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
@@ -858,7 +858,7 @@ jobs:
       # Run from a directory that is not the repository, so a missing module cannot
       # be rescued by the source tree still being on the path.
       #
-      # This job asserted `mindpalace-mcp --help` against a *bare* install, which
+      # This job asserted `verilore-mcp --help` against a *bare* install, which
       # cannot work: `mcp` is a declared extra, so the import raised
       # `ModuleNotFoundError: No module named 'mcp'`, and the step's
       # `|| import mcp_server` fallback failed for exactly the same reason. MCP is
@@ -869,20 +869,20 @@ jobs:
           python -m venv /tmp/wheelenv
           wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
           /tmp/wheelenv/bin/pip install "$wheel"
-          # Bare, with no extra. `mindpalace` is an unconditional [project.scripts]
+          # Bare, with no extra. `verilore` is an unconditional [project.scripts]
           # entry point, so a bare install has to be able to run it -- which is why
           # typer is a core dependency rather than the [cli] extra. This assertion
           # is what caught that, and it only worked by accident before: typer used
           # to arrive transitively via transformers <- sentence-transformers, and
           # removing that default dependency removed the transit. Do not add an
           # extra here to make this pass; fix the dependency instead.
-          /tmp/wheelenv/bin/mindpalace --help > /dev/null
-          /tmp/wheelenv/bin/mindpalace-proof --help > /dev/null
-          # The CLI starts the runtime as `python -m mindpalace_runtime`. If that
+          /tmp/wheelenv/bin/verilore --help > /dev/null
+          /tmp/wheelenv/bin/verilore-proof --help > /dev/null
+          # The CLI starts the runtime as `python -m verilore_runtime`. If that
           # module is not packaged, the runtime silently never starts and every
           # command stays 6 seconds with nothing to say why.
           /tmp/wheelenv/bin/python -c "
-          import mindpalace_runtime, api.runtime, cli.runtime, mindpalace_sdk
+          import verilore_runtime, api.runtime, cli.runtime, verilore_sdk
           import memory_pack, memory_proof, memory_proof_cli, memory_receipt
           print('bare install: CLI, verifier, SDK and the runtime entry point all ship')
           "
@@ -895,7 +895,7 @@ jobs:
           "
 
       # The portability claim, tested as a claim: a bare `pip install
-      # mindpalace-os`, no CLI extra, no database URL and no network, verifying a
+      # verilore`, no CLI extra, no database URL and no network, verifying a
       # receipt file. The CLI extras are optional, so this path is the only one a
       # recipient of a receipt can rely on.
       #
@@ -935,7 +935,7 @@ jobs:
               current_memories=[claim], evidence=[evidence], sources=[source],
           )
 
-          # A receipt bundle written by `mindpalace receipt`: the response it
+          # A receipt bundle written by `verilore receipt`: the response it
           # describes travels with it, so verification needs nothing else.
           bundle = receipt_for_response(response)
           assert bundle["receipt_count"] == 1, bundle["receipt_count"]
@@ -997,7 +997,7 @@ jobs:
       # class and fails the whole word, so a literal suffix cannot be trusted to a
       # single shell.
       #
-      # The check is a real MCP session, not an import. `mindpalace-mcp --help` is
+      # The check is a real MCP session, not an import. `verilore-mcp --help` is
       # useless here: `main()` takes no arguments and goes straight to
       # `mcp.run_stdio_async()`, so it would block on stdin until the job timed out.
       # "It imported" and "it serves" are different claims, and only the second is what
@@ -1007,7 +1007,7 @@ jobs:
         run: |
           wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
           /tmp/wheelenv/bin/pip install "${wheel}[mcp]"
-          test -x /tmp/wheelenv/bin/mindpalace-mcp
+          test -x /tmp/wheelenv/bin/verilore-mcp
           /tmp/wheelenv/bin/python - <<'PY'
           import json, subprocess, sys
 
@@ -1020,7 +1020,7 @@ jobs:
           ]
 
           server = subprocess.Popen(
-              ["/tmp/wheelenv/bin/mindpalace-mcp"],
+              ["/tmp/wheelenv/bin/verilore-mcp"],
               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
               stderr=subprocess.DEVNULL, text=True, bufsize=1,
           )
@@ -1039,7 +1039,7 @@ jobs:
               server.wait(timeout=30)
 
           init = replies[1]["result"]
-          assert init["serverInfo"]["name"] == "mind-palace", init
+          assert init["serverInfo"]["name"] == "verilore", init
           tools = replies[2]["result"]["tools"]
           names = sorted(tool["name"] for tool in tools)
           assert len(tools) == 17, names
@@ -1071,7 +1071,7 @@ jobs:
           # This job sets DATABASE_URL per-step, and the other steps here set it
           # to an unreachable server on purpose. So it is named here, against the
           # job's own service, rather than assumed present.
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
         run: |
           wheel=$(ls "$GITHUB_WORKSPACE"/dist/*.whl)
           # The script creates its own database, so it needs psycopg2. That is a
@@ -1087,7 +1087,7 @@ jobs:
 
       # LAST STEP. `test_a_built_wheel_contains_every_declared_module` builds
       # its own wheel and asserts every declared py-module ships. It is skipped
-      # unless MIND_PALACE_TEST_BUILD_WHEEL=1, so run it explicitly here.
+      # unless VERILORE_TEST_BUILD_WHEEL=1, so run it explicitly here.
       #
       # Last because it installs the test tooling into /tmp/wheelenv, which the
       # bare-install checks above require to stay bare: psycopg2 and pgvector
@@ -1095,7 +1095,7 @@ jobs:
       # only pytest and build are added.
       - name: Run wheel-content test
         env:
-          MIND_PALACE_TEST_BUILD_WHEEL: "1"
+          VERILORE_TEST_BUILD_WHEEL: "1"
         run: |
           set -o pipefail
           /tmp/wheelenv/bin/pip install --quiet pytest build
@@ -1126,7 +1126,7 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg15
         env:
-          POSTGRES_DB: mindpalace
+          POSTGRES_DB: verilore
           POSTGRES_USER: mpadmin
           POSTGRES_PASSWORD: secret
         ports:
@@ -1169,8 +1169,8 @@ jobs:
 
       - name: Build a v0.9.0 archive and upgrade it to head
         env:
-          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/mindpalace
-          MIND_PALACE_CURSOR_SECRET: upgrade-safety-ci-cursor-secret-0000000000000000000000
+          DATABASE_URL: postgresql://mpadmin:secret@localhost:5432/verilore
+          VERILORE_CURSOR_SECRET: upgrade-safety-ci-cursor-secret-0000000000000000000000
         run: ./scripts/release/upgrade_safety.sh
 
   build:
@@ -1190,14 +1190,14 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Build Docker image
-        run: docker build -t mindpalace:latest .
+        run: docker build -t verilore:latest .
 
       # Built is not the same as working. An image that builds but cannot reach a
       # database, or that publishes a port the docs say it must not, is not done.
       - name: Start a database the image can reach
         run: |
           docker run -d --name mp-pg \
-            -e POSTGRES_DB=mindpalace \
+            -e POSTGRES_DB=verilore \
             -e POSTGRES_USER=mpadmin \
             -e POSTGRES_PASSWORD=secret \
             -p 5432:5432 pgvector/pgvector:pg15
@@ -1213,8 +1213,8 @@ jobs:
           # Assert the behaviour docs/security.md claims instead of trusting the
           # prose. If the image published on 0.0.0.0 by default this fails, which
           # is the entire point of the assertion.
-          docker run --rm mindpalace:latest --help >/dev/null 2>&1 || true
-          docker ps -a --filter ancestor=mindpalace:latest --format '{{.Ports}}' \
+          docker run --rm verilore:latest --help >/dev/null 2>&1 || true
+          docker ps -a --filter ancestor=verilore:latest --format '{{.Ports}}' \
             | tee /tmp/published
           if grep -qE '0\.0\.0\.0:[0-9]+' /tmp/published; then
             echo "::error::the image published a port on 0.0.0.0 without being asked to"

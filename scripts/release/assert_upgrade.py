@@ -199,14 +199,14 @@ def main() -> int:
         ):
             code, output = run(
                 [sys.executable, "-m", "cli.main", *command],
-                env={"MIND_PALACE_RUNTIME": "0"},
+                env={"VERILORE_RUNTIME": "0"},
             )
-            check(f"`mindpalace {label}` still works", code == 0, output.strip()[:90])
+            check(f"`verilore {label}` still works", code == 0, output.strip()[:90])
 
         # 6. Local mode as a superuser, with no credential at all.
         code, output = run(
             [sys.executable, "-m", "cli.main", "recall", "What datastore does production use?"],
-            env={"MIND_PALACE_RUNTIME": "0", "MIND_PALACE_AUTH_MODE": "off"},
+            env={"VERILORE_RUNTIME": "0", "VERILORE_AUTH_MODE": "off"},
         )
         check("local mode as superuser, no credential", code == 0, output.strip()[:90])
 

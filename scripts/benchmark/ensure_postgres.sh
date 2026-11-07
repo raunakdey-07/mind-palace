@@ -8,13 +8,13 @@ set -e
 
 NAME="${MP_PG_CONTAINER:-mp-pg-scale}"
 IMAGE="docker.io/pgvector/pgvector:pg15"
-URL="postgresql://mpadmin:secret@localhost:5432/mindpalace"
+URL="postgresql://mpadmin:secret@localhost:5432/verilore"
 
 if venvmp/bin/python -c "
 import psycopg2, sys
 try:
     psycopg2.connect(host='localhost', port=5432, user='mpadmin',
-                     password='secret', dbname='mindpalace', connect_timeout=3)
+                     password='secret', dbname='verilore', connect_timeout=3)
 except Exception:
     sys.exit(1)
 " 2>/dev/null; then
@@ -23,7 +23,7 @@ else
     echo "postgres: starting $NAME"
     docker rm -f "$NAME" >/dev/null 2>&1 || true
     docker run -d --name "$NAME" \
-        -e POSTGRES_DB=mindpalace -e POSTGRES_USER=mpadmin -e POSTGRES_PASSWORD=secret \
+        -e POSTGRES_DB=verilore -e POSTGRES_USER=mpadmin -e POSTGRES_PASSWORD=secret \
         -p 5432:5432 "$IMAGE" >/dev/null
     i=0
     while [ "$i" -lt 60 ]; do
@@ -31,7 +31,7 @@ else
 import psycopg2, sys
 try:
     psycopg2.connect(host='localhost', port=5432, user='mpadmin',
-                     password='secret', dbname='mindpalace', connect_timeout=2)
+                     password='secret', dbname='verilore', connect_timeout=2)
 except Exception:
     sys.exit(1)
 " 2>/dev/null; then
@@ -51,7 +51,7 @@ venvmp/bin/python - <<'PY'
 from sqlalchemy import create_engine, text
 
 engine = create_engine(
-    "postgresql+psycopg2://mpadmin:secret@localhost:5432/mindpalace",
+    "postgresql+psycopg2://mpadmin:secret@localhost:5432/verilore",
     isolation_level="AUTOCOMMIT",
 )
 with engine.connect() as conn:

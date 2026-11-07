@@ -81,9 +81,9 @@ document_type: "note"
 Zephyr quantum calibration requires hourly wobble checks.
 """)
 
-        from mindpalace_sdk import MindPalace
+        from verilore_sdk import Verilore
 
-        mp = MindPalace("mcp-test-corpus")
+        mp = Verilore("mcp-test-corpus")
         mp.sync(str(docs))
 
         from mcp_server import mcp

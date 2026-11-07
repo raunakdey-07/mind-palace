@@ -2,7 +2,7 @@
 
 ## The bug
 
-`mindpalace remember` -- step 3 of the README's five-minute path, the first thing
+`verilore remember` -- step 3 of the README's five-minute path, the first thing
 a new user runs after `init` -- failed on a clean install with:
 
 ```

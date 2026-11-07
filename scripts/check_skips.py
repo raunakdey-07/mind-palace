@@ -54,12 +54,12 @@ from pathlib import Path
 #: whose *reason* changed is a different decision and needs a new entry.
 ALLOWLIST: dict[str, tuple[str, str]] = {
     "test_migrations_apply_downgrade_and_reapply": (
-        "MIND_PALACE_MIGRATION_ROUNDTRIP",
+        "VERILORE_MIGRATION_ROUNDTRIP",
         "creates and drops a database, so it is opt-in; CI runs it in its own "
         "step with the variable set",
     ),
     "test_a_built_wheel_contains_every_declared_module": (
-        "MIND_PALACE_TEST_BUILD_WHEEL",
+        "VERILORE_TEST_BUILD_WHEEL",
         "builds a wheel, which takes minutes; CI builds one in the wheel job",
     ),
 }
@@ -247,7 +247,7 @@ def _self_test() -> int:
         ),
     )
     opt_in = junit(
-        ("test_migrations_apply_downgrade_and_reapply", "needs MIND_PALACE_MIGRATION_ROUNDTRIP"),
+        ("test_migrations_apply_downgrade_and_reapply", "needs VERILORE_MIGRATION_ROUNDTRIP"),
     )
 
     print("check_skips self-test")

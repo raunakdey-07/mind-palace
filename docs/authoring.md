@@ -504,7 +504,7 @@ the corpus — a read-only credential is refused.
 
 **Running the server.** There is no `verilore mcp` command. The server is an
 executable on the path, `verilore-mcp`, installed by the `[mcp]` extra
-(`pip install 'verilore-os[mcp]'`). It speaks JSON-RPC over stdin/stdout and
+(`pip install 'verilore[mcp]'`). It speaks JSON-RPC over stdin/stdout and
 ignores `--help`, so probe it with an `initialize` request rather than a flag.
 
 **Getting a credential.** Mint one with the CLI; the raw `mpk_...` secret is what

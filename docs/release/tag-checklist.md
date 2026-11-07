@@ -62,7 +62,7 @@ Current state, measured 2026-10-13:
 ### The README's first command actually works
 
 - [ ] Run it, in a clean container, exactly as printed.
-- [ ] **Today it does not.** `pip install verilore-os` returns 404 on PyPI
+- [ ] **Today it does not.** `pip install verilore` returns 404 on PyPI
       (checked 2026-10-13: the JSON API and the simple index both 404). The
       README has been changed to install from the repository instead, and the
       reason is written next to it. If the distribution is published before the

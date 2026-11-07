@@ -230,9 +230,9 @@ not recorded per document.
 
 ### Version metadata can disagree with itself
 
-On this checkout, `pip list` and `pip show` report `verilore-os 0.1.0` from a
+On this checkout, `pip list` and `pip show` report `verilore 0.1.0` from a
 stale `mindpalace_os-0.1.0.dist-info`, while
-`importlib.metadata.version("verilore-os")` returns `0.6.0` from the in-tree
+`importlib.metadata.version("verilore")` returns `0.6.0` from the in-tree
 `mindpalace_os.egg-info/PKG-INFO`, because the project root on `sys.path` takes
 precedence. `pyproject.toml` declares `0.6.0`.
 

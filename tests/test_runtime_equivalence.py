@@ -606,7 +606,7 @@ def test_a_bad_token_is_refused(seeded, live_runtime, monkeypatch):
 
 
 def test_the_runtime_ships_in_the_wheel():
-    """The CLI starts the runtime as `python -m mindpalace_runtime`.
+    """The CLI starts the runtime as `python -m verilore_runtime`.
 
     If that module is not packaged, `spawn()` fails silently on an installed
     package and every command quietly stays 6 seconds with nothing in the output to
@@ -616,7 +616,7 @@ def test_the_runtime_ships_in_the_wheel():
 
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     modules = pyproject["tool"]["setuptools"]["py-modules"]
-    for required in ("mindpalace_runtime", "verilore_sdk", "memory_receipt"):
+    for required in ("verilore_runtime", "verilore_sdk", "memory_receipt"):
         assert required in modules, (
             f"{required} must ship in the wheel; without it the runtime never starts "
             "on an installed package"

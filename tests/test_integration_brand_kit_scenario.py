@@ -281,9 +281,7 @@ def test_isolation(live_server):  # noqa: F811
 
 def test_memory_down():
     start = time.monotonic()
-    mp_down = Verilore(
-        "acme", base_url="http://127.0.0.1:19999", api_key="x", timeout=1, retries=1
-    )
+    mp_down = Verilore("acme", base_url="http://127.0.0.1:19999", api_key="x", timeout=1, retries=1)
     try:
         mp_down.memory.pack(query="")
     except MemoryClientError as exc:

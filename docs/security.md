@@ -390,7 +390,7 @@ authorization. Backups and replicas inherit the database's own protection and
 are outside this boundary.
 
 **One exception, and it is opt-in and local.** The flight recorder at
-`~/.mind-palace/logs/queries.jsonl` writes a row per call, and a row *does* carry
+`~/.verilore/logs/queries.jsonl` writes a row per call, and a row *does* carry
 the caller's query text verbatim to 512 characters — grading real usage needs the
 question, not a hash of it. So it is off unless `VERILORE_QUERY_LOG=1` is set,
 and it never leaves the machine that set it. The directory is created `0700` and

@@ -31,7 +31,7 @@ async def test_openapi_describes_the_product_not_a_rag_wrapper():
     info = resp.json()["info"]
     assert info["description"] == "The Durable AI Memory Substrate"
     assert info["title"] == "Verilore API"
-    assert info["version"] == importlib.metadata.version("verilore-os")
+    assert info["version"] == importlib.metadata.version("verilore")
 
 
 @pytest.mark.asyncio

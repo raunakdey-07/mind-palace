@@ -2,7 +2,7 @@
 """The distribution must ship the runtime, and not the research tooling.
 
 `scripts/` was in the wheel's `include` list from `v0.6.0`, which meant every
-`pip install verilore-os` carried the release checks, the benchmark harnesses and
+`pip install verilore` carried the release checks, the benchmark harnesses and
 the scale fixtures. Measured: 54 files, 590 KB of 1,328 KB unpacked -- 44% of the
 distribution -- for code that no runtime path imports.
 
@@ -55,7 +55,7 @@ def test_the_runtime_surface_is_still_included():
     assert {"api*", "cli*"} <= include, include
     for required in (
         "verilore_sdk",
-        "mindpalace_runtime",
+        "verilore_runtime",
         "memory_receipt",
         "memory_proof",
         "memory_proof_cli",
@@ -154,7 +154,7 @@ def test_each_console_script_declares_the_extra_it_needs():
         missing = needed - available
         assert not missing, (
             f"`{script}` needs {sorted(missing)}, which a "
-            f"'verilore-os{'[' + extra + ']' if extra else ''}' install does not "
+            f"'verilore{'[' + extra + ']' if extra else ''}' install does not "
             f"provide. Base: {sorted(base)}; {extra!r} extra: "
             f"{sorted(extras.get(extra, [])) if extra else 'nothing extra'}."
         )

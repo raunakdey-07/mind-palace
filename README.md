@@ -92,7 +92,7 @@ itself: `supersedes: 0001.md` in its frontmatter. Point the client at
 for OpenCode, Zed and Claude Code is in [connecting an agent](docs/mcp.md).
 
 `recall` and `remember` also report a `query_id`. Grade a wrong answer; it appends
-to `~/.mind-palace/logs/queries.jsonl` and changes nothing else.
+to `~/.verilore/logs/queries.jsonl` and changes nothing else.
 
 ## Managing corpora and credentials
 

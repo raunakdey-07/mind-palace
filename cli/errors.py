@@ -376,8 +376,7 @@ def _unreadable_advice(exc: Exception) -> Advice:
         "invalid_request",
         "That file could not be read.",
         str(exc).split(": ", 1)[-1],
-        "Check the path. A receipt is written by: verilore receipt "
-        '"<question>" -o receipt.json',
+        "Check the path. A receipt is written by: verilore receipt " '"<question>" -o receipt.json',
         2,
     )
 

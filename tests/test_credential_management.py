@@ -96,9 +96,7 @@ async def test_the_runtime_refuses_every_corpus_without_a_credential(world, monk
     with pytest.raises(authz.AuthorizationError):
         await _runtime_principal()
 
-    monkeypatch.setenv(
-        "VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
-    )
+    monkeypatch.setenv("VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
     principal = await _runtime_principal()
     assert principal.unrestricted is False
     assert not (principal.corpora & set(BETA_CORPORA.values()))
@@ -113,9 +111,7 @@ async def test_a_runtime_credential_cannot_read_another_organisation(world, monk
     """
     from api.runtime import _dispatch, _Runtime
 
-    monkeypatch.setenv(
-        "VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
-    )
+    monkeypatch.setenv("VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
 
     from api.services import authz
@@ -274,9 +270,7 @@ async def test_mcp_resolves_its_credential_as_a_bearer_header(world, monkeypatch
     """
     import mcp_server
 
-    monkeypatch.setenv(
-        "VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"]
-    )
+    monkeypatch.setenv("VERILORE_RUNTIME_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
     monkeypatch.setenv("VERILORE_MCP_CREDENTIAL", world.credentials["alpha-creator"]["secret"])
     monkeypatch.setattr("api.services.db.AsyncSessionLocal", world.db_module.AsyncSessionLocal)
 
@@ -803,9 +797,7 @@ def test_the_shipped_compose_file_does_not_ship_an_unauthenticated_superuser_ser
     assert (
         "VERILORE_AUTH_MODE" in text
     ), "docker-compose must state the authorization mode it ships with"
-    assert (
-        "VERILORE_DEPLOYMENT" in text
-    ), "docker-compose must state which kind of deployment it is"
+    assert "VERILORE_DEPLOYMENT" in text, "docker-compose must state which kind of deployment it is"
 
 
 def test_the_runtime_role_script_can_actually_provision_a_usable_role():

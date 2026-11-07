@@ -289,9 +289,7 @@ def claim_key(statement: str, key: str | None = None) -> str:
     if key is not None:
         key = key.strip()
         if not key:
-            raise RememberError(
-                "a claim key cannot be blank; omit it to let Verilore choose one"
-            )
+            raise RememberError("a claim key cannot be blank; omit it to let Verilore choose one")
         return key
     from api.services.memory import _hash
 

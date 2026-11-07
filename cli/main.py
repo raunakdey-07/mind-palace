@@ -299,7 +299,7 @@ def init(
 
     It used to print the `python -m alembic` line and exit 1. That is honest and
     useless for the install path the README also documents: after
-    `pip install verilore-os` there is no `migrations/` directory in the
+    `pip install verilore` there is no `migrations/` directory in the
     working directory and, before this change, no alembic in the environment at
     all. The instruction was correct and unfollowable.
 
@@ -378,8 +378,7 @@ def init(
     typer.echo("\nThen ask about it:\n")
     typer.echo('  verilore recall "What database does production use?"')
     typer.echo(
-        "\nAlready have Markdown? Point it at the directory:\n"
-        "  verilore ingest-repo ./docs/adr"
+        "\nAlready have Markdown? Point it at the directory:\n" "  verilore ingest-repo ./docs/adr"
     )
 
 

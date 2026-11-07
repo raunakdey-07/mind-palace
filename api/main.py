@@ -31,7 +31,7 @@ from api.services.db import principal_scope
 from api.services.posture import inspect as inspect_posture
 from verilore_errors import VeriloreError
 
-logger = logging.getLogger("mindpalace.api")
+logger = logging.getLogger("verilore.api")
 
 
 def create_app() -> FastAPI:
@@ -50,7 +50,7 @@ def create_app() -> FastAPI:
     return FastAPI(
         title="Verilore API",
         description="The Durable AI Memory Substrate",
-        version=importlib.metadata.version("verilore-os"),
+        version=importlib.metadata.version("verilore"),
         lifespan=_lifespan,
     )
 

@@ -895,7 +895,7 @@ jobs:
           "
 
       # The portability claim, tested as a claim: a bare `pip install
-      # verilore-os`, no CLI extra, no database URL and no network, verifying a
+      # verilore`, no CLI extra, no database URL and no network, verifying a
       # receipt file. The CLI extras are optional, so this path is the only one a
       # recipient of a receipt can rely on.
       #

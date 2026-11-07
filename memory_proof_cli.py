@@ -4,7 +4,7 @@
 """Standalone proof CLI: mint and verify Verifiable Memory proofs.
 
 Deliberately built on `argparse` from the standard library, not on the project's
-Typer CLI. Typer is an OPTIONAL extra (``pip install verilore-os[cli]``), and a
+Typer CLI. Typer is an OPTIONAL extra (``pip install verilore[cli]``), and a
 verification command that fails without an optional dependency would defeat the
 purpose: anyone who can install the package must be able to check a proof without a
 server, a database, a model or a network. Nothing here imports typer, or anything
@@ -95,7 +95,7 @@ def _load_target(path: str) -> tuple[dict, str]:
 
     The response bundle is what `verilore receipt` writes: the authoritative
     response next to the receipt describing it. Reading it here means someone who
-    has only `pip install verilore-os` -- no CLI extra, no server, no database --
+    has only `pip install verilore` -- no CLI extra, no server, no database --
     can still check a receipt they were handed.
     """
     data = _read_json(path, "artifact")

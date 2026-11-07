@@ -3,7 +3,7 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "verilore-os"
+name = "verilore"
 version = "0.9.3"
 description = "Verilore - AI-native Research Operating System"
 readme = "README.md"

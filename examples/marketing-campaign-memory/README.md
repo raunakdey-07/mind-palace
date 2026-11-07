@@ -49,7 +49,7 @@ tables, no import of `api.services`, no import of the server's ASGI application
 object, no knowledge of its models or repositories.
 
 That is the whole claim, so it is tested mechanically:
-`test_the_example_imports_no_mind_palace_internals_at_all` fails if **any** file
+`test_the_example_imports_no_verilore_internals_at_all` fails if **any** file
 under this directory imports `api`, `cli`, `migrations`, or the SDK.
 
 Two earlier versions failed that test and were fixed rather than excepted:

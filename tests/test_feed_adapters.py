@@ -214,7 +214,7 @@ def test_feed_logging_reports_bounded_operational_fields(monkeypatch, caplog):
 
     monkeypatch.setattr(db_module, "session_scope", lambda: Session())
     monkeypatch.setattr(feed_module, "feed", fake_feed)
-    with caplog.at_level(logging.INFO, logger="mindpalace.ops"):
+    with caplog.at_level(logging.INFO, logger="verilore.ops"):
         with TestClient(app) as client:
             response = client.get(
                 "/api/memory/feed",

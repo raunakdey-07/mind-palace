@@ -25,6 +25,9 @@ role-rename script.
 
 `MemoryClient` and `MemoryClientError` keep their names.
 
+The default data directory moves from `~/.mind-palace` to `~/.verilore`;
+move the folder to keep old query logs.
+
 ### Prose extraction never truncates and no longer drops prose silently
 
 A wrapped sentence is one claim, internal line break included, not a claim

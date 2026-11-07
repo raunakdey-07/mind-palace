@@ -181,7 +181,7 @@ def session_recorder_isolation(tmp_path_factory):
 
     The recorder is on by default for a loopback connection, which is exactly what
     the test session's database is. So every product call the suite made appended
-    a row to the developer's real `~/.mind-palace/logs/queries.jsonl`: 32,738 rows
+    a row to the developer's real `~/.verilore/logs/queries.jsonl`: 32,738 rows
     of fake product facts -- battery runtimes, mesh bands, campaign targets -- in
     the file whose entire purpose is grading two weeks of actual usage.
 
@@ -202,7 +202,7 @@ def session_recorder_isolation(tmp_path_factory):
     log and nothing else would notice, so the count is compared on the way out and
     the suite fails naming the file.
     """
-    home = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    home = Path(os.path.expanduser("~/.verilore")) / "logs" / "queries.jsonl"
     before = _row_count(home)
     scratch = tmp_path_factory.mktemp("flight-recorder") / "queries.jsonl"
     previous = os.environ.get("VERILORE_QUERY_LOG")

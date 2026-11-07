@@ -67,7 +67,7 @@ Connect an MCP-compatible client (Claude Desktop, any MCP host):
 ```json
 {
   "mcpServers": {
-    "mind-palace": {
+    "verilore": {
       "command": "/path/to/your/venv/bin/python",
       "args": ["-m", "mcp_server"],
       "env": {

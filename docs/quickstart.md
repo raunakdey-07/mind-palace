@@ -259,9 +259,9 @@ This means the receipt still matches the memory it describes. It does not mean t
 Verification needs no server, no database, no embedding model and no network.
 Hand the file to someone who has never heard of Verilore:
 
-<!-- `verilore-os` is NOT on PyPI. Checked 2026-10-13: pypi.org/pypi/
-     verilore-os/json returns 404 and the simple index returns 404, so the
-     bare `pip install verilore-os` fails today. It is the distribution's
+<!-- `verilore` is NOT on PyPI. Checked 2026-10-13: pypi.org/pypi/
+     verilore/json returns 404 and the simple index returns 404, so the
+     bare `pip install verilore` fails today. It is the distribution's
      declared name (pyproject.toml), not a published one. The command above
      installs the same wheel from the repository instead, which is what actually
      works. Note also that `mind-palace` on PyPI is a different project -- a
@@ -269,7 +269,7 @@ Hand the file to someone who has never heard of Verilore:
      Publishing the distribution is the owner's call, not a documentation fix. -->
 
 ```console
-$ pip install "verilore-os @ git+https://github.com/raunakdey-07/mind-palace.git"
+$ pip install "verilore @ git+https://github.com/raunakdey-07/mind-palace.git"
 $ verilore-proof verify receipt.json
 VERIFIED
 
@@ -525,7 +525,7 @@ stdin/stdout — a client starts it, you do not type at it. It used to print
 nothing at all for `--help`; it prints usage now.
 
 ```console
-$ pip install 'verilore-os[mcp]'
+$ pip install 'verilore[mcp]'
 
 $ verilore credential issue my-agent -c default -r read_write
 $ export VERILORE_MCP_CREDENTIAL=mpk_...

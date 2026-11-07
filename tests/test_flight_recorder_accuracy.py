@@ -15,7 +15,7 @@ question was filed against a row that reads as a failed recall.
 
 **The test suite wrote into the real log.** The recorder is on by default for a
 loopback connection, which is what the test database is, so every product call the
-suite made appended a row to `~/.mind-palace/logs/queries.jsonl`. Thirty-two
+suite made appended a row to `~/.verilore/logs/queries.jsonl`. Thirty-two
 thousand rows of invented product facts -- battery runtimes, mesh bands, campaign
 targets -- in the one file meant to hold real traffic. The isolation is an
 autouse session fixture in `conftest.py`; `test_the_suite_does_not_write_to_the_user_log`
@@ -270,7 +270,7 @@ def test_the_suite_does_not_write_to_the_user_log():
     from api.services.query_log import default_path
 
     configured = default_path()
-    home_default = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    home_default = Path(os.path.expanduser("~/.verilore")) / "logs" / "queries.jsonl"
     assert configured != home_default, (
         "the flight recorder is pointed at the real user log during pytest; "
         "tests/conftest.py:session_recorder_isolation is not in effect"
@@ -307,7 +307,7 @@ def test_a_product_call_from_an_ordinary_test_lands_in_the_scratch_file():
 
 def _user_log_size() -> int:
     """Rows in the developer's own log, or 0 when there is none."""
-    home = Path(os.path.expanduser("~/.mind-palace")) / "logs" / "queries.jsonl"
+    home = Path(os.path.expanduser("~/.verilore")) / "logs" / "queries.jsonl"
     if not home.exists():
         return 0
     return len(home.read_text().splitlines())

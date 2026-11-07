@@ -146,7 +146,7 @@ async def provision(db, base_url: str) -> Provisioned:
     return out
 
 
-def _mindpalace(*arguments: str) -> str:
+def _verilore(*arguments: str) -> str:
     """Run a documented `verilore` operator command and return its stdout.
 
     A subprocess, deliberately. An integrating application does not import Mind
@@ -198,7 +198,7 @@ def issue_credential(name: str, corpora: list[str], role: str = "read_write") ->
     arguments = [name]
     for corpus in corpora:
         arguments += ["--corpus", corpus]
-    return _mindpalace("credential", "issue", *arguments, "--role", role, "--quiet").strip()
+    return _verilore("credential", "issue", *arguments, "--role", role, "--quiet").strip()
 
 
 BRAND_FACTS = {

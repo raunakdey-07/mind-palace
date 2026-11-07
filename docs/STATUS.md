@@ -280,7 +280,7 @@ power is 3 to 4× faster. Compare within a condition, not across them.
 `changed=false`. Four concurrent identical writes produce exactly one version and
 one claim.
 
-**Portability.** A bare `pip install verilore-os`, with no CLI extra and no
+**Portability.** A bare `pip install verilore`, with no CLI extra and no
 database URL, verifies a file written by `verilore receipt`.
 
 ## Invariants, and when each was last measured

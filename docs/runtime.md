@@ -305,7 +305,7 @@ reads opts in and knows exactly what they are getting.
 
 ### The model dependency itself
 
-`pip install verilore-os` installs onnxruntime, tokenizers and huggingface-hub,
+`pip install verilore` installs onnxruntime, tokenizers and huggingface-hub,
 which is what the default read path uses. `sentence-transformers` is the `[torch]`
 extra. It was a declared dependency until this change, on the grounds that moving it
 would make an existing user's plain install silently lose semantic ranking. The
@@ -337,7 +337,7 @@ rather than a code change.
 ## The query log
 
 Every `recall` and `remember` appends one JSON object to
-`~/.mind-palace/logs/queries.jsonl`: timestamp, operation, the query,
+`~/.verilore/logs/queries.jsonl`: timestamp, operation, the query,
 `match_status`, the top three scores, the claim ids returned, and latency. Writes
 one line per call, keyed by a `query_id` that both the response and the log carry.
 

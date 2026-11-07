@@ -14,7 +14,7 @@ from typing import Protocol
 
 from api.models.memory import MemoryRequest, MemoryResponse
 
-logger = logging.getLogger("mindpalace.ops")
+logger = logging.getLogger("verilore.ops")
 
 
 class ClaimEmbedder(Protocol):

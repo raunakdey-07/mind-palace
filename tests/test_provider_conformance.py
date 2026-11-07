@@ -297,13 +297,13 @@ def test_the_categories_are_the_ones_that_change_retry_policy():
     from verilore_errors import classify_provider_error
 
     cases = [
-        (TimeoutError("timeout"), "mp_provider_timeout", True),
-        (Exception("HTTP 429 too many requests"), "mp_provider_rate_limited", True),
-        (OSError("connection refused"), "mp_provider_unavailable", True),
-        (Exception("401 unauthorized"), "mp_provider_auth", False),
-        (Exception("unexpected dimension"), "mp_provider_incompatible_model", False),
-        (Exception("content filter refusal"), "mp_provider_refused", False),
-        (ValueError("something else entirely"), "mp_provider_unavailable", True),
+        (TimeoutError("timeout"), "vl_provider_timeout", True),
+        (Exception("HTTP 429 too many requests"), "vl_provider_rate_limited", True),
+        (OSError("connection refused"), "vl_provider_unavailable", True),
+        (Exception("401 unauthorized"), "vl_provider_auth", False),
+        (Exception("unexpected dimension"), "vl_provider_incompatible_model", False),
+        (Exception("content filter refusal"), "vl_provider_refused", False),
+        (ValueError("something else entirely"), "vl_provider_unavailable", True),
     ]
     for raised, code, retryable in cases:
         error = classify_provider_error(raised)

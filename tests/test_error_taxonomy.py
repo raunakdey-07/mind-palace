@@ -116,7 +116,7 @@ def test_an_unknown_exception_is_an_internal_error_with_no_message():
     hostile = ValueError("connection to postgres://user:pw@host/db failed: row = SECRET_ROW")
     body = envelope(hostile)
 
-    assert body["code"] == "mp_internal_error"
+    assert body["code"] == "vl_internal_error"
     assert body["component"] == "verilore"
     assert body["retryable"] is False
     assert "SECRET_ROW" not in json.dumps(body)

@@ -77,9 +77,7 @@ def default_path() -> Path:
     if override and override != "1" and override.lower() != "true":
         return Path(override).expanduser()
     return (
-        Path(os.getenv("VERILORE_DATA_DIR", "~/.mind-palace")).expanduser()
-        / "logs"
-        / "queries.jsonl"
+        Path(os.getenv("VERILORE_DATA_DIR", "~/.verilore")).expanduser() / "logs" / "queries.jsonl"
     )
 
 

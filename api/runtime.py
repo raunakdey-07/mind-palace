@@ -115,7 +115,7 @@ def build_hash() -> str:
 
     digest = hashlib.sha256()
     try:
-        digest.update(importlib.metadata.version("verilore-os").encode())
+        digest.update(importlib.metadata.version("verilore").encode())
     except importlib.metadata.PackageNotFoundError:
         # A source checkout that was never installed. The file walk below still
         # gives a stable identity, which is what the handshake needs.
@@ -555,7 +555,7 @@ async def _warm(runtime: _Runtime) -> None:
 def _load_model() -> None:
     from api.services.embedder import Embedder
 
-    Embedder().embed(["mind palace runtime warmup"])
+    Embedder().embed(["verilore runtime warmup"])
 
 
 async def _idle_watch(runtime: _Runtime, stop: asyncio.Event) -> None:

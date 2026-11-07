@@ -984,7 +984,7 @@ def _verify_offline(receipt: Path, recorder_path: str, *extra: str) -> subproces
             "PYTHONPATH": str(ROOT),
             # Hand-built, so it inherits nothing -- including the flight
             # recorder's path. Without this the recorder falls back to
-            # ~/.mind-palace/logs/queries.jsonl and writes the suite's rows into
+            # ~/.verilore/logs/queries.jsonl and writes the suite's rows into
             # the file a two-week grading log is meant to live in.
             "VERILORE_QUERY_LOG": recorder_path,
         },
@@ -1089,7 +1089,7 @@ async def test_a_self_contained_receipt_verifies_with_only_the_shipped_package(
     """The portability claim, tested as a claim.
 
     Someone handed a receipt file must be able to check it with `pip install
-    verilore-os` and nothing else: no CLI extra, no server, no database, no
+    verilore` and nothing else: no CLI extra, no server, no database, no
     embedding model, no network. `verilore-proof` is the tool for that, and it
     must read the file `verilore receipt` writes.
     """

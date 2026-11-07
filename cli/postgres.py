@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 READY_TIMEOUT_SECONDS = 5.0
 
 #: The container name the compose file / init creates.
-DEFAULT_CONTAINER_NAME = "mindpalace_postgresql_1"
+DEFAULT_CONTAINER_NAME = "verilore_postgresql_1"
 
 #: The image used when provisioning a fresh local container.
 DEFAULT_IMAGE = "ankane/pgvector"

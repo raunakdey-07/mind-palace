@@ -495,7 +495,7 @@ async def test_a_revoked_membership_stops_the_workflow_immediately(seeded):
         await service.approved_brand_facts(creator)
 
 
-async def test_the_example_imports_no_mind_palace_internals_at_all():
+async def test_the_example_imports_no_verilore_internals_at_all():
     """The claim this example exists to make, checked mechanically.
 
     The integration is supposed to prove that an application can depend on Mind

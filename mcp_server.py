@@ -673,7 +673,7 @@ def main() -> None:
         from importlib.metadata import PackageNotFoundError, version
 
         try:
-            found = version("verilore-os")
+            found = version("verilore")
         except PackageNotFoundError:
             found = "unknown (running from a source tree, not an install)"
         sys.stdout.write(f"verilore-mcp {found}\n")

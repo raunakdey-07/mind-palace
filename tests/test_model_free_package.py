@@ -13,7 +13,7 @@ Two reasons that guarantee is worth having:
   would be unusable in exactly the environment it was built for.
 * It is what makes the dependency model safe to revisit later. v0.9.0 deliberately did
   not move `sentence-transformers` into an optional extra -- doing so would mean a
-  plain `pip install verilore-os` stopped ranking semantically, which is a
+  plain `pip install verilore` stopped ranking semantically, which is a
   surprising behaviour change for every existing user. That decision is only safe
   because the code does not need the stack to run.
 

@@ -165,7 +165,11 @@ def main() -> int:
     else:
         writes, snap = asyncio.run(build())
 
-    from mindpalace_sdk import MindPalace  # v0.9.0's own SDK, under its v0.9.0 name; this script runs against the v0.9.0 tree.
+    try:
+        from mindpalace_sdk import MindPalace
+    except ImportError:
+        # v0.9.0's SDK is mindpalace_sdk; this branch's is verilore_sdk.
+        from verilore_sdk import Verilore as MindPalace
 
     mp = MindPalace(name="default")
     question = "What datastore does production use?"

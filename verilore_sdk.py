@@ -380,10 +380,6 @@ class MemoryClient:
         from api.models.memory import MemoryRequest, MemoryResponse
 
         corpus_name = self._corpus_name(corpus)
-        # Drop None-valued fields: older `MemoryRequest` models (e.g. v0.9.0's)
-        # use `extra="forbid"` and reject keys they don't declare, so passing
-        # `path_prefix=None` or `include_states=None` from a newer SDK breaks
-        # the upgrade-safety fixture that runs the old model through new code.
         request = MemoryRequest.model_validate({"corpus": corpus_name, "query": query, **fields})
         if self._client.base_url is None:
             _require_sync()

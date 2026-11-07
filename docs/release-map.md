@@ -25,7 +25,7 @@ relationship between the two numbering systems.
 | M015.2 | The five-minute memory path | `v0.9.0` |
 | M016 | Instant recall, explicit model-free mode, real-project dogfooding | `v0.9.0` |
 | M016.1 | Final limitation audit: reproducible CI, a smaller wheel, Python 3.15 evaluated | `v0.9.1` |
-| M017 | Prose ingestion, authority states, task-aware retrieval, tenant hardening, benchmark | `v0.9.3` |
+| M017 | Prose ingestion, authority states, task-aware retrieval, tenant hardening, benchmark | `v0.10.0` |
 
 ### The trust boundary, stated here
 
@@ -69,14 +69,17 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 ## Current release
 
-**The latest tagged public release is `v0.9.3`** (tagged on `main` at
-`039c541`, published as a GitHub Release).
+**The latest tagged public release is `v0.10.0`**, tagged by the owner on
+`main`.
 
-`v0.9.3` is **released**. `pyproject.toml` says `0.9.3`, `CHANGELOG.md` has a
-`[v0.9.3]` entry, the `v0.9.3` tag exists on `origin`, and the release is
-published. `pip install verilore==0.9.3` resolves to it.
+`v0.10.0` is **released**. `pyproject.toml` says `0.10.0`, `CHANGELOG.md` has a
+`[v0.10.0]` entry. Verilore is not published on PyPI; install from the tag:
 
-`v0.9.2` remains the previous tagged release at `61500a8`.
+```
+uv tool install git+https://github.com/raunakdey-07/verilore@v0.10.0
+```
+
+`v0.9.3` remains the previous tagged release, tagged at `039c541`.
 
 `v0.9.0` is therefore the release in which a developer can adopt Verilore —
 seven commands that take a statement and a question, answers that arrive fast, outputs
@@ -84,15 +87,6 @@ that can be inspected and proved afterwards, and a decision log that works on a 
 project. `v0.9.1` is what is meant to make that claim checkable from a clean
 machine, and `v0.9.3` adds the M017 readiness work: prose ingestion, authority states,
 task-aware retrieval, tenant hardening, and the 4-way agency benchmark.
-
-`v0.9.0` is therefore the release in which a developer can adopt Verilore —
-seven commands that take a statement and a question, answers that arrive fast, outputs
-that can be inspected and proved afterwards, and a decision log that works on a real
-project. `v0.9.1` is what is meant to make that claim checkable from a clean
-machine, and the unreleased work on top of it is a security change: authorization
-implemented and enforced for shared deployments, row-level security on every
-tenant-owned table, corpus erasure, and a tenant-isolation suite that runs against a
-least-privileged database role.
 
 `v0.9.1` is a patch on `v0.9.0`: no memory semantics, no retrieval behaviour, no
 public response field, and no benchmark input changed.
@@ -115,6 +109,65 @@ imported at runtime. The wheel is 425 KB / 129 files → **227 KB / 74**.
 
 **Python 3.15 lazy imports were evaluated and not adopted.** See
 [the conclusion](#python-315-lazy-imports-were-evaluated-and-not-adopted) below.
+
+### What v0.10.0 changed
+
+**Rename to Verilore.** The project is renamed from Mind Palace to Verilore. All
+user-facing names change: the distribution and CLI are now `verilore` (plus
+`verilore-mcp`, `verilore-proof`); modules are `verilore_sdk`, `verilore_errors`,
+`verilore_runtime`; classes are `Verilore`, `VeriloreError` (`MemoryClient` and
+`MemoryClientError` keep their names); environment variables are `VERILORE_*`
+(formerly `MIND_PALACE_*`); API error codes are `vl_*` (formerly `mp_*`); the
+component string is `verilore`; the MCP server name is `verilore`; and compose
+service/database names are `verilore`.
+
+Database object names are unchanged: SQL functions (`mp_*`, `mindpalace_*`),
+RLS policies, session settings (`mindpalace.*`), and roles (`mindpalace_runtime`,
+`mindpalace_owner`) keep their original names for compatibility with existing
+databases. There is no migration 017 and no role-rename script.
+
+**Security.** Migration 015 installs HMAC-verified scope tokens in the row-level
+policies: `mp_verify_scope_token()` SECURITY DEFINER verifies non-empty tokens
+against `memory_server_secrets` (unreadable by the runtime role); forged tokens
+fail closed (0 rows). Migration 016 hoists the scope function: `mp_verified_scope_corpora()`
+is evaluated once per query via InitPlan instead of once per row — on 50,000 claims
+as the runtime role, full-corpus query median 1,850 ms before, 42 ms after (CI run
+41300654157, #86).
+
+**Breaking changes.** The rename (above). Server deployments refuse to start until
+the scope secret is rotated into the database and enforcement is on, and refuse on a
+mismatch; `/health/ready` reports `not_ready` with `checks.scope_token =
+"mismatch"`. Current and pack withhold draft, rejected and superseded claims by
+default (`include_states` brings them back). Claim state no longer comes from body
+text (stored as a `status:` line on the document plus `info_state` on the authored
+claim). The SDK retries by default (`retries=2`).
+
+**Features.** `include_states` and `withheld_counts` on `MemoryResponse`; `info_state`
+on claims; `remember` accepts `state` and `scope` (scoped keys); `path_prefix`
+scoping with in-scope conflicts and scoped ranking; supersession mistakes are
+422 invalid_request; `history` shows cross-document supersessions; SDK
+timeout/retries/backoff; MCP `memory_remember` accepts `state` and `scope`; prose
+extraction no longer truncates wrapped sentences and reports
+`prose_not_extracted`; ingest responses carry `warnings`.
+
+**Measured** (from #150, CI run 41902031212): pack p50 87.2 ms / p95 97.6 ms over
+200 documents; one current claim costs about 1,500 characters of response JSON, so
+size budget at about 1,500 x the rules and facts needed, never below 8000.
+
+**Upgrade notes.** In this order: stop the service; `alembic upgrade head`
+(migrations 013 to 016, additive and reversible); rename every `MIND_PALACE_*`
+variable to `VERILORE_*`; move `~/.mind-palace` to `~/.verilore` if you want old
+query logs; reinstall as `verilore`; start. Then rotate the scope secret into the
+database and enable enforcement (DB first, then environment — see
+`docs/deployment.md` for the safe rotation order and its outage window).
+
+**Does not do.** No token budgets (budget is response characters, #107); pack spends
+budget on change entries (#151); query and chunk routes do not withhold (#138);
+authored claims: blocks ignore frontmatter status (#140); prose beside bullets is
+not extracted, so write rules as bullets (#158); inserting a list item renumbers
+the claims after it, which distorts history (#160); no metadata filters (#108); no
+single-claim deletion (withdrawal is a rejected version); no comparative benchmark
+result (not measured for this release; the baseline can still run against 1dc88fd).
 
 ### What v0.9.0 changed
 

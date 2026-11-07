@@ -6,7 +6,7 @@
 
 Verilore was called Mind Palace until v0.10.0.
 
-[Current release: v0.9.3](docs/release-map.md) · [Changelog](CHANGELOG.md)
+[Current release: v0.10.0](docs/release-map.md) · [Changelog](CHANGELOG.md)
 
 
 **Memory for AI applications that remembers what changed, what was true when, and

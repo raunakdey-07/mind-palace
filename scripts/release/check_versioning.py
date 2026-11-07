@@ -163,7 +163,10 @@ def main() -> None:
     m0065 = (ROOT / "docs/evaluation/m0065.md").read_text(encoding="utf-8")
     m00675 = (ROOT / "docs/evaluation/m00675-reproducibility.md").read_text(encoding="utf-8")
 
-    require(pyproject, r'^version = "0\.9\.3"$', "package version is v0.9.3")
+    # v0.10.0 was once staged during M016 and folded into v0.9.0; it is now a real
+    # release, so the absence checks were removed.
+    require(pyproject, r'^version = "0\.10\.0"$', "package version is v0.10.0")
+    require(changelog, r"^## \[v0\.10\.0\]", "v0.10.0 changelog entry")
     require(changelog, r"^## \[v0\.9\.3\]", "v0.9.3 changelog entry")
     require(changelog, r"^## \[v0\.9\.2\]", "v0.9.2 changelog entry")
     require(changelog, r"^## \[v0\.9\.1\]", "v0.9.1 changelog entry")
@@ -177,21 +180,8 @@ def main() -> None:
     )
     require(
         readme,
-        r"\[Current release: v0\.9\.3\]\(docs/release-map\.md\)",
+        r"\[Current release: v0\.10\.0\]\(docs/release-map\.md\)",
         "README release-map link",
-    )
-    # v0.10.0 was staged during M016 and then folded into v0.9.0. Nothing may *claim*
-    # it exists -- a changelog heading, a release-map row, a package version, or a
-    # README link would all tell a user to install a release that was never published.
-    # Explaining that it does not exist is fine and is not what this rejects.
-    require_absent(pyproject, r'version = "0\.10\.0"', "the package is not v0.10.0")
-    require_absent(changelog, r"^## \[v0\.10\.0\]", "there is no v0.10.0 changelog entry")
-    require_absent(release_map, r"\| `v0\.10\.0` \|", "no release-map row maps to v0.10.0")
-    require_absent(readme, r"Current release: v0\.10\.0", "the README does not point at v0.10.0")
-    require_absent(
-        release_map,
-        r"`v0\.10\.0` is the current",
-        "v0.10.0 is not the current release",
     )
     require(m006, r"^Public release: `v0\.5\.0`$", "M006 release metadata")
     require(m0065, r"^Public release: `v0\.5\.0`$", "M006.5 release metadata")

@@ -40,8 +40,8 @@ row by row, including the two rows whose harness no longer runs at this head.
 
 | | |
 |---|---|
-| package version | `0.9.3` (`pyproject.toml`) |
-| latest tag | **`v0.9.2`** at `19863d8`. `v0.9.1` remains at `be1931a` |
+| package version | `0.10.0` (`pyproject.toml`) |
+| latest tag | **`v0.9.3`** at `039c541`. `v0.9.2` remains at `61500a8` |
 | `v0.9.2` state | released: tagged on `main` and published as a GitHub Release |
 | previous release | `v0.8.0`, unmodified |
 | migration head | `016_hoist_scope_initplan`, additive and reversible |

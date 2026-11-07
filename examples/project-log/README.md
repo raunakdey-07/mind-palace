@@ -1,6 +1,6 @@
 # Project decision log
 
-Mind Palace used for the thing a real project actually needs memory for: **why was it
+Verilore used for the thing a real project actually needs memory for: **why was it
 decided this way?**
 
 The decisions here are real ones from this repository's own history — the retrieval
@@ -12,7 +12,7 @@ is currently scattered across `CHANGELOG.md`, `docs/STATUS.md` and `docs/researc
 
 ```bash
 pip install -e .
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore
 python -m alembic -c migrations/alembic.ini upgrade head
 python examples/project-log/project_log.py
 ```
@@ -39,7 +39,7 @@ usable yet — which is why it exists.
 ## The format
 
 `decisions.md` is ordinary Markdown with YAML frontmatter, in exactly the shape
-`mindpalace remember --file` accepts. A project can keep its decisions next to its
+`verilore remember --file` accepts. A project can keep its decisions next to its
 code, in a file a human reads and edits, and this example reads it with no parser of
 its own.
 

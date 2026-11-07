@@ -1,6 +1,6 @@
 # Temporal semantics
 
-This document covers the two clocks Mind Palace keeps separate, how selectors
+This document covers the two clocks Verilore keeps separate, how selectors
 resolve them, and what the M009 feed does and does not promise about ordering.
 Evidence: `api/services/memory.py`, `api/services/memory_public.py`,
 `api/services/memory_query.py`, `api/services/memory_feed.py`, and
@@ -85,7 +85,7 @@ reasoning. Explicit `as_of` or `snapshot_id` wins. Failing that, exactly one
 `YYYY-MM-DD` in the question becomes a cutoff at midnight UTC, inclusive. Two
 dates are `422 invalid_timestamp`. A `stage <name>` phrase is
 `422 invalid_timestamp` unless the caller supplies its own `as_of` or
-`snapshot_id`, because Mind Palace has no stage calendar and will not invent one.
+`snapshot_id`, because Verilore has no stage calendar and will not invent one.
 
 Relative phrases such as "before Kafka" select history but never resolve a
 before-entity event boundary. The documented position is that a caller who needs

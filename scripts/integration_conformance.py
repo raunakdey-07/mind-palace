@@ -1,6 +1,6 @@
 """The integration conformance kit: is this installation ready to be built on?
 
-Not a test of Mind Palace. A checklist another product team can run against
+Not a test of Verilore. A checklist another product team can run against
 *their* installation, in their environment, with their credentials, before they
 commit to integrating.
 

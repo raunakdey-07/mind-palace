@@ -49,7 +49,7 @@ BaseURL = Annotated[
     typer.Option(
         "--base-url",
         help=(
-            "Use a running Mind Palace service instead of the local database, "
+            "Use a running Verilore service instead of the local database, "
             "for example http://127.0.0.1:8000. Omit to run in-process."
         ),
     ),

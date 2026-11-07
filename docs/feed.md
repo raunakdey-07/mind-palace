@@ -154,8 +154,8 @@ Timeouts, transport failures, and invalid successful responses use the SDK's
 ### CLI
 
 ```bash
-mindpalace memory feed --corpus project --page-size 50
-mindpalace memory feed --corpus project --page-size 50 --cursor "$CURSOR"
+verilore memory feed --corpus project --page-size 50
+verilore memory feed --corpus project --page-size 50 --cursor "$CURSOR"
 ```
 
 The CLI prints the compact canonical `FeedResponse` JSON and exits nonzero for a

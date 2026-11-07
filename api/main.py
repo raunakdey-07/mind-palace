@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Mind Palace FastAPI application entry point."""
+"""Verilore FastAPI application entry point."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def create_app() -> FastAPI:
     """
     assert_server_configuration()
     return FastAPI(
-        title="Mind Palace API",
+        title="Verilore API",
         description="The Durable AI Memory Substrate",
         version=importlib.metadata.version("verilore-os"),
         lifespan=_lifespan,

@@ -14,7 +14,7 @@ and scored higher than the runtime.md claim that answers it, which carries two
 of the question's five concepts. The order now counts how much of the question
 a claim answers, not only how alike it is.
 
-**Out-of-corpus subject abstention.** "How is Kafka configured in Mind Palace?"
+**Out-of-corpus subject abstention.** "How is Kafka configured in Verilore?"
 matched the project's own name and returned claims about the project's
 portability. A question whose subject the corpus has never used abstains, and
 a question whose subject the corpus's best answer is not about abstains too.
@@ -173,10 +173,10 @@ def _corpus(count, text, key="corpus.own"):
 
 def test_a_question_about_a_subject_the_corpus_never_used_abstains():
     """Nothing in the corpus uses the word, so nothing can answer the question."""
-    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims = _corpus(14, "Verilore is the memory system this corpus describes")
     claims.append(_claim("other", "corpus.other", "The runtime keeps its own state directory"))
     embedder = FakeEmbedder(default=0.55)
-    scores = _order("How does Mind Palace use Kubernetes?", claims, embedder)
+    scores = _order("How does Verilore use Kubernetes?", claims, embedder)
     assert scores == {}
 
 
@@ -199,7 +199,7 @@ def test_a_single_content_term_question_about_an_absent_subject_abstains(questio
     The score does not rescue it: the corpus's best answer here is below the
     strong bar, so the corpus is not answering the question well either.
     """
-    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims = _corpus(14, "Verilore is the memory system this corpus describes")
     claims.append(_claim("other", "corpus.other", "The runtime keeps its own state directory"))
     embedder = FakeEmbedder(default=0.30)
     scores = _order(question, claims, embedder)
@@ -214,7 +214,7 @@ def test_a_corpus_that_answers_strongly_is_not_an_abstention():
     with them is right, and abstaining would be the lexical rule overruling a
     good answer.
     """
-    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims = _corpus(14, "Verilore is the memory system this corpus describes")
     claims.append(
         _claim(
             "architecture",
@@ -229,16 +229,16 @@ def test_a_corpus_that_answers_strongly_is_not_an_abstention():
 
 def test_a_question_about_a_subject_the_corpus_has_still_answers():
     """The gate is about a subject the corpus has never used."""
-    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims = _corpus(14, "Verilore is the memory system this corpus describes")
     claims.append(
         _claim(
             "kube",
             "corpus.kube",
-            "Mind Palace uses Kubernetes for the batch scheduler and nothing else",
+            "Verilore uses Kubernetes for the batch scheduler and nothing else",
         )
     )
     embedder = FakeEmbedder(default=0.55)
-    scores = _order("How does Mind Palace use Kubernetes?", claims, embedder)
+    scores = _order("How does Verilore use Kubernetes?", claims, embedder)
     assert "corpus.kube" in scores
 
 
@@ -248,7 +248,7 @@ def test_a_question_whose_subject_is_the_corpus_own_topic_answers():
     "the Orders Service" is in a ninth of the dev corpus's claims. A question
     that names it has found its subject, and the answer comes back.
     """
-    claims = _corpus(14, "Mind Palace is the memory system this corpus describes")
+    claims = _corpus(14, "Verilore is the memory system this corpus describes")
     claims.append(
         _claim(
             "orders",

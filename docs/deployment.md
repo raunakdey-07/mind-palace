@@ -1,6 +1,6 @@
 # Authentication, deployment, and observability
 
-How to put Mind Palace on a network other people can reach, what it refuses to do
+How to put Verilore on a network other people can reach, what it refuses to do
 until you configure it, and what it emits while running.
 
 Local use needs none of this. The quickstart works against a local database with
@@ -34,7 +34,7 @@ failures return
 `503` with a generic body and no exception details. The legacy `/health` route
 remains available, but it is not the dependency-aware readiness signal.
 
-Container health checks and `mindpalace doctor` use the readiness endpoint,
+Container health checks and `verilore doctor` use the readiness endpoint,
 or liveness plus readiness where appropriate, rather than the always-green
 legacy route.
 
@@ -54,7 +54,7 @@ database.
 If the derived live index is lost, rebuild it from the authoritative archive:
 
 ```bash
-mindpalace reindex --corpus my-corpus
+verilore reindex --corpus my-corpus
 ```
 
 The command acquires the corpus lock and writes only `documents`, `chunks`,
@@ -68,35 +68,35 @@ There is no usable public fallback signing key. Configure a stable,
 high-entropy secret of at least 32 bytes before using the feed:
 
 ```bash
-export MIND_PALACE_CURSOR_SECRET='replace-with-a-random-32-byte-or-longer-secret'
-export MIND_PALACE_READINESS_TIMEOUT_SECONDS='2'
+export VERILORE_CURSOR_SECRET='replace-with-a-random-32-byte-or-longer-secret'
+export VERILORE_READINESS_TIMEOUT_SECONDS='2'
 ```
 
 All service instances that may validate one another's cursors must use the same
 secret. Changing it invalidates outstanding cursors; clients then restart a
 traversal. Never place the secret, signed cursor contents, or database URL in
 logs, release artifacts, or client-visible error messages. Docker Compose
-requires `MIND_PALACE_CURSOR_SECRET` explicitly rather than silently selecting a
+requires `VERILORE_CURSOR_SECRET` explicitly rather than silently selecting a
 predictable development value.
 
 ## Observability
 
-Feed requests emit one structured `mindpalace.ops` record with bounded,
+Feed requests emit one structured `verilore.ops` record with bounded,
 non-content fields: operation, corpus name, requested page size, returned count,
 `has_more`, whether a cursor was supplied, latency, and error category. The
 record does not include cursor contents, signatures, secrets, database URLs, or
 document contents. Existing Prometheus HTTP instrumentation remains available;
-Mind Palace does not introduce a metrics platform.
+Verilore does not introduce a metrics platform.
 
 ### OpenTelemetry
 
 Optional, and off unless you turn it on. `opentelemetry-api` is imported lazily
-and every call is a no-op when it is absent, so installing Mind Palace never
+and every call is a no-op when it is absent, so installing Verilore never
 installs tracing.
 
 ```bash
 pip install opentelemetry-api opentelemetry-sdk
-export OTEL_SERVICE_NAME=mindpalace
+export OTEL_SERVICE_NAME=verilore
 export OTEL_TRACES_EXPORTER=otlp
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
@@ -133,14 +133,14 @@ it must not acquire a dependency to emit a span.
 
 > **Corpus content is data, not instructions.**
 
-Retrieved text is never promoted into trusted system instructions. Mind Palace
+Retrieved text is never promoted into trusted system instructions. Verilore
 attributes evidence and records provenance; **the consuming application enforces its
 own trust boundary.** Anything that can write a document can put text into a recall
 response, so a model that reads one without this distinction is a prompt-injection
 surface, and no receipt or verification status changes that.
 
 - **Authentication is implemented, and off by default.** With
-  `MIND_PALACE_AUTH_MODE=required` every request must present a bearer credential
+  `VERILORE_AUTH_MODE=required` every request must present a bearer credential
   bound to a role and an explicit set of corpora; without one, every request is
   refused. The default, `off`, is the local single-user workflow described below
   and is **not** safe on a shared network. `/health/ready` reports which mode is
@@ -172,7 +172,7 @@ surface, and no receipt or verification status changes that.
 
 ## Authentication
 
-Local development needs none, and the quickstart never asks for one: `mindpalace
+Local development needs none, and the quickstart never asks for one: `verilore
 init`, `remember`, `recall`, `explain`, `history` and `verify` all work against a
 local database with no credentials. That is deliberate. Requiring a key before the
 first memory would make the first five minutes a configuration exercise.
@@ -197,10 +197,10 @@ socket is not a boundary.
 ```bash
 psql "$ADMIN_DATABASE_URL" -v runtime_password="$PW" -f scripts/db/runtime_roles.sql
 
-mindpalace corpus create ws-acme-brand
-mindpalace credential issue service-acme --corpus ws-acme-brand --role read_write
-mindpalace credential list
-mindpalace credential revoke service-acme
+verilore corpus create ws-acme-brand
+verilore credential issue service-acme --corpus ws-acme-brand --role read_write
+verilore credential list
+verilore credential revoke service-acme
 ```
 
 The secret is printed once and stored only as a hash.```
@@ -209,7 +209,7 @@ The secret is printed once and stored only as a hash. Rotation is issue → depl
 creates a corpus or mints a credential, because a network endpoint that does
 either is the thing the design exists to avoid.
 
-They also connect with `MIND_PALACE_ADMIN_DATABASE_URL` when it is set. The
+They also connect with `VERILORE_ADMIN_DATABASE_URL` when it is set. The
 least-privileged runtime role is denied `SELECT` on `memory_principals` on
 purpose — one query would otherwise return every tenant's credential hashes,
 roles and grants — so administrative commands need the maintenance role, the
@@ -218,15 +218,15 @@ same way a migration does. A single-user local deployment sets one
 
 ### Scope-token enforcement
 
-The scope-token secret (`MIND_PALACE_SCOPE_SECRET`) signs each tenant scope
+The scope-token secret (`VERILORE_SCOPE_SECRET`) signs each tenant scope
 token. The secret must be rotated into the database and enforcement enabled
 before a server deployment starts; a mismatch between the DB row and the
 environment variable causes every tenant-scoped query to return zero rows.
-`MIND_PALACE_ENFORCE_SCOPE_TOKEN=on` makes the server verify the secret at
+`VERILORE_ENFORCE_SCOPE_TOKEN=on` makes the server verify the secret at
 startup and refuse to start on a mismatch.
 
 ```bash
-mindpalace secret rotate --database-url "$ADMIN_DATABASE_URL" --out scope-secret.txt
+verilore secret rotate --database-url "$ADMIN_DATABASE_URL" --out scope-secret.txt
 ```
 
 ```bash
@@ -234,7 +234,7 @@ psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "SET ROLE mindpalace_owner; SEL
 ```
 
 ```bash
-MIND_PALACE_SCOPE_SECRET="$(cat scope-secret.txt)" MIND_PALACE_ENFORCE_SCOPE_TOKEN=on MIND_PALACE_AUTH_MODE=required MIND_PALACE_DEPLOYMENT=server MIND_PALACE_INGEST_ROOTS=/srv/brand-docs uvicorn api.main:app --host 0.0.0.0 --port 8000
+VERILORE_SCOPE_SECRET="$(cat scope-secret.txt)" VERILORE_ENFORCE_SCOPE_TOKEN=on VERILORE_AUTH_MODE=required VERILORE_DEPLOYMENT=server VERILORE_INGEST_ROOTS=/srv/brand-docs uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
 The safe rotation order is: update the DB row first, then roll the environment
@@ -245,19 +245,19 @@ variable, expecting a brief outage while the two are out of sync.
 
 ```bash
 # Onboard
-mindpalace corpus create acme-brand
-mindpalace credential issue acme-backend --corpus acme-brand --role read_write
+verilore corpus create acme-brand
+verilore credential issue acme-backend --corpus acme-brand --role read_write
 
 # Widen or narrow without changing the secret
-mindpalace credential grant   acme-backend --corpus acme-campaign
-mindpalace credential ungrant acme-backend --corpus acme-campaign
+verilore credential grant   acme-backend --corpus acme-campaign
+verilore credential ungrant acme-backend --corpus acme-campaign
 
 # Suspend: it can reach nothing, and stays in the audit
-mindpalace credential ungrant acme-backend --corpus acme-brand
+verilore credential ungrant acme-backend --corpus acme-brand
 
 # Offboard
-mindpalace credential revoke acme-backend
-mindpalace corpus delete acme-brand
+verilore credential revoke acme-backend
+verilore corpus delete acme-brand
 ```
 
 `grant`/`ungrant` exist because reissuing changes the secret and breaks every
@@ -270,21 +270,21 @@ arbitrarily.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `MIND_PALACE_AUTH_MODE` | `off` | `required` makes every protected request present a credential. |
-| `MIND_PALACE_DEPLOYMENT` | `local` | `server` refuses to start unless the settings below are right. An unrecognised value is refused. |
-| `MIND_PALACE_INGEST_ROOTS` | unset | `:`-separated directories that every filesystem-ingest surface may read: `ingest/repo`, `sync_repo`, `mindpalace ingest`, and `remember --file` / `memory_remember(file=)`. Or `none` to disable. Required in `server` mode. Full table in [security.md](security.md#every-caller-supplied-file-path). |
-| `MIND_PALACE_ADMIN_DATABASE_URL` | `DATABASE_URL` | The maintenance role, for the administrative CLI commands. |
-| `MIND_PALACE_MAX_INGEST_CHARS` | `4000000` | Largest single document accepted. |
-| `MIND_PALACE_CURSOR_SECRET` | — | HMAC key for feed cursors. One per deployment. |
-| `MIND_PALACE_SCOPE_SECRET` | unset (in-process code falls back to `dev-scope-secret`, api/services/db.py:166) | The HMAC secret that signs the tenant scope token. Must equal the value rotated into the database with `mindpalace secret rotate`. A server deployment refuses to start when it is unset, is `dev-scope-secret`, or disagrees with the database row (api/main.py:135-176). |
-| `MIND_PALACE_ENFORCE_SCOPE_TOKEN` | `off` | `on` makes a server deployment verify at startup that enforcement is enabled in the database and the secret matches. With `off`, a server deployment refuses to start unless `MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, and logs that tenant scope can be forged (api/main.py:120-133). |
+| `VERILORE_AUTH_MODE` | `off` | `required` makes every protected request present a credential. |
+| `VERILORE_DEPLOYMENT` | `local` | `server` refuses to start unless the settings below are right. An unrecognised value is refused. |
+| `VERILORE_INGEST_ROOTS` | unset | `:`-separated directories that every filesystem-ingest surface may read: `ingest/repo`, `sync_repo`, `verilore ingest`, and `remember --file` / `memory_remember(file=)`. Or `none` to disable. Required in `server` mode. Full table in [security.md](security.md#every-caller-supplied-file-path). |
+| `VERILORE_ADMIN_DATABASE_URL` | `DATABASE_URL` | The maintenance role, for the administrative CLI commands. |
+| `VERILORE_MAX_INGEST_CHARS` | `4000000` | Largest single document accepted. |
+| `VERILORE_CURSOR_SECRET` | — | HMAC key for feed cursors. One per deployment. |
+| `VERILORE_SCOPE_SECRET` | unset (in-process code falls back to `dev-scope-secret`, api/services/db.py:166) | The HMAC secret that signs the tenant scope token. Must equal the value rotated into the database with `verilore secret rotate`. A server deployment refuses to start when it is unset, is `dev-scope-secret`, or disagrees with the database row (api/main.py:135-176). |
+| `VERILORE_ENFORCE_SCOPE_TOKEN` | `off` | `on` makes a server deployment verify at startup that enforcement is enabled in the database and the secret matches. With `off`, a server deployment refuses to start unless `VERILORE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, and logs that tenant scope can be forged (api/main.py:120-133). |
 
-`MIND_PALACE_DEPLOYMENT=server` is the switch that stops a convenient local
+`VERILORE_DEPLOYMENT=server` is the switch that stops a convenient local
 default from becoming an unauthenticated-looking shared service:
 
 ```bash
-MIND_PALACE_DEPLOYMENT=server MIND_PALACE_AUTH_MODE=required \
-MIND_PALACE_INGEST_ROOTS=/srv/content \
+VERILORE_DEPLOYMENT=server VERILORE_AUTH_MODE=required \
+VERILORE_INGEST_ROOTS=/srv/content \
     uvicorn api.main:app --host 0.0.0.0
 ```
 
@@ -294,7 +294,7 @@ missing its row-level policy, if the role can enumerate credential hashes, or if
 it holds `DELETE` on the archive.
 
 An API-only deployment — REST and the SDK, never the two filesystem routes —
-should use `MIND_PALACE_INGEST_ROOTS=none` rather than inventing a directory it
+should use `VERILORE_INGEST_ROOTS=none` rather than inventing a directory it
 never reads. Both routes then answer `403` and name the setting; `ingest/file` is
 unaffected; and the server starts. Without either a root list or `none`, it still
 refuses to start, because an unset value means "any path the process can read".
@@ -306,11 +306,11 @@ profile — see `docs/security.md`.
 ### Verifying a deployment
 
 ```bash
-mindpalace posture          # is the connected role subject to the policies?
+verilore posture          # is the connected role subject to the policies?
 curl -s localhost:8000/health/ready | jq .checks
 ```
 
-`mindpalace posture` prints the detail — role name, `BYPASSRLS`, whether the
+`verilore posture` prints the detail — role name, `BYPASSRLS`, whether the
 policies are in force, which tables lack them, and what excess privileges the role
 holds. It is the operator's tool.
 
@@ -329,7 +329,7 @@ A role whose posture cannot be verified answers `503` with
 `"row_level_security": "not_enforced"` rather than `ready`. An unverifiable
 guarantee is not a guarantee.
 
-`MIND_PALACE_AUTH_MODE=required` says the application checks credentials. It says
+`VERILORE_AUTH_MODE=required` says the application checks credentials. It says
 nothing about whether the database enforces anything, and those two answers used
 to be free to disagree — a service could report itself tenant-scoped while
 running as a superuser with the row-level policies entirely inert.
@@ -337,7 +337,7 @@ running as a superuser with the row-level policies entirely inert.
 Readiness used to include the whole capability inventory: the connected role's
 name, whether it was a superuser, whether it could enumerate credential hashes,
 and which archive tables it could `DELETE`. That was a description of the
-database's defenses published to anything that can reach the port. `mindpalace
+database's defenses published to anything that can reach the port. `verilore
 posture` is the right place for it, and the one place it now lives.
 
 ### Rules
@@ -355,13 +355,13 @@ posture` is the right place for it, and the one place it now lives.
 - Creating a corpus needs the unrestricted administrative identity — a corpus row
   is only insertable inside the caller's own tenant scope, and a principal cannot
   hold a grant to something that does not exist yet.
-- Feed cursors are already HMAC-signed with `MIND_PALACE_CURSOR_SECRET` and are
+- Feed cursors are already HMAC-signed with `VERILORE_CURSOR_SECRET` and are
   bound to one corpus. Two clients must not share a signing secret. A cursor is
   not a credential: the scope check runs before it is decoded.
 
 ### What corpus deletion does and does not remove
 
-`mindpalace corpus delete <name>` (or `DELETE /api/corpora/{name}` for a
+`verilore corpus delete <name>` (or `DELETE /api/corpora/{name}` for a
 `manage_corpus` credential) removes, in one transaction: every archive table in
 dependency order, the live projection, and every credential's grant to that
 corpus. It returns a report of table names and row counts, and nothing else —
@@ -381,7 +381,7 @@ versions, retrievable with `history` or `as-of`.
 and connection reuse, and the known limitations.
 
 OIDC, JWT and per-user identity are deliberately not built. A per-user credential
-belongs to the consuming application, which already has users; what Mind Palace
+belongs to the consuming application, which already has users; what Verilore
 enforces is which corpora that application's credential may reach. Adding a token
 scheme here would be a protocol invented for a résumé rather than for a
 requirement.
@@ -427,7 +427,9 @@ modify the real research archive or add another database technology.
   archive availability and signing-key configuration.
 - The API *does* have built-in authentication and per-corpus authorization, but
   they are off by default so local use stays a five-minute path. An unauthenticated
-  service on a network is not tenant-scoped: set `MIND_PALACE_DEPLOYMENT=server`,
-  which refuses to start unless `MIND_PALACE_AUTH_MODE=required`. See
+  service on a network is not tenant-scoped: set `VERILORE_DEPLOYMENT=server`,
+  which refuses to start unless `VERILORE_AUTH_MODE=required`. See
   `docs/security.md` for the full model and its limits.
 - M009 intentionally excludes MCP and does not claim broker, CDC, or
+
+Database objects keep their original names (`mp_*`, `mindpalace_*`, `verilore.*`) for compatibility with existing databases.

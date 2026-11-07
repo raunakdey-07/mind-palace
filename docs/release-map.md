@@ -33,7 +33,7 @@ Verification establishes integrity and recorded provenance. It does not
 establish that the original source was factually correct, and it does not
 establish authenticity unless a digest pinned out of band is supplied. This is
 repeated in [the changelog](../CHANGELOG.md), in the README, and on every verdict
-Mind Palace prints, because it is the easiest thing for a release to overclaim.
+Verilore prints, because it is the easiest thing for a release to overclaim.
 
 ### Why M015.2 and M016 are one release
 
@@ -74,18 +74,18 @@ the existing `M015` / `M015.1` pattern for the same release line and is recorded
 
 `v0.9.3` is **released**. `pyproject.toml` says `0.9.3`, `CHANGELOG.md` has a
 `[v0.9.3]` entry, the `v0.9.3` tag exists on `origin`, and the release is
-published. `pip install mindpalace==0.9.3` resolves to it.
+published. `pip install verilore==0.9.3` resolves to it.
 
 `v0.9.2` remains the previous tagged release at `61500a8`.
 
-`v0.9.0` is therefore the release in which a developer can adopt Mind Palace —
+`v0.9.0` is therefore the release in which a developer can adopt Verilore —
 seven commands that take a statement and a question, answers that arrive fast, outputs
 that can be inspected and proved afterwards, and a decision log that works on a real
 project. `v0.9.1` is what is meant to make that claim checkable from a clean
 machine, and `v0.9.3` adds the M017 readiness work: prose ingestion, authority states,
 task-aware retrieval, tenant hardening, and the 4-way agency benchmark.
 
-`v0.9.0` is therefore the release in which a developer can adopt Mind Palace —
+`v0.9.0` is therefore the release in which a developer can adopt Verilore —
 seven commands that take a statement and a question, answers that arrive fast, outputs
 that can be inspected and proved afterwards, and a decision log that works on a real
 project. `v0.9.1` is what is meant to make that claim checkable from a clean
@@ -118,7 +118,7 @@ imported at runtime. The wheel is 425 KB / 129 files → **227 KB / 74**.
 
 ### What v0.9.0 changed
 
-**The five-minute path.** `mindpalace init`, `remember`, `recall`, `explain`,
+**The five-minute path.** `verilore init`, `remember`, `recall`, `explain`,
 `history`, `receipt`, `verify`. Default corpus, so no scoping to learn. Idempotent
 writes, so a retry after a lost response converges instead of duplicating. Explicit
 abstention, so an unfamiliar question returns nothing rather than a guess.
@@ -129,9 +129,9 @@ one command per process:
 
 | | before | after |
 |---|---|---|
-| `mindpalace recall` | 6.17 s | **0.63 s** |
-| `mindpalace explain` | 6.23 s | **0.67 s** |
-| `mindpalace receipt` | 6.21 s | 0.62 s |
+| `verilore recall` | 6.17 s | **0.63 s** |
+| `verilore explain` | 6.23 s | **0.67 s** |
+| `verilore receipt` | 6.21 s | 0.62 s |
 | SDK `recall`, `runtime=True` | 5.11 s | **0.51 s** |
 
 Measured on the `sentence-transformers` backend, which was the default through
@@ -140,7 +140,7 @@ v0.9.1 and is now the `[torch]` extra.
 The cause was not retrieval. 89% of a one-shot recall was importing the embedding
 stack and loading a model for 61 ms of memory work.
 
-**An explicit model-free mode.** `MIND_PALACE_LEXICAL=1` reads through the lexical
+**An explicit model-free mode.** `VERILORE_LEXICAL=1` reads through the lexical
 relevance rung that already existed as the no-model degradation: **0.63 s** instead
 of **6.17 s**, with `torch`, `transformers` and `sentence_transformers` never
 imported at all. The lexical figure is the same whichever backend is installed;
@@ -158,8 +158,8 @@ writing; the repository requires `>=3.11` and that is unchanged).
 
 | | normal | narrow lazy prototype | `-X lazy_imports=all` |
 |---|---:|---:|---:|
-| `mindpalace --help` | 335 ms | 335 ms | 187 ms |
-| `mindpalace init` | 846 ms | 933 ms | **crashes** |
+| `verilore --help` | 335 ms | 335 ms | 187 ms |
+| `verilore init` | 846 ms | 933 ms | **crashes** |
 | `runtime status` | 194 ms | 227 ms | **crashes** |
 | lexical `recall` | 844 ms | 872 ms | **crashes** |
 

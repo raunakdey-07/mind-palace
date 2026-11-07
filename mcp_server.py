@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""MCP (Model Context Protocol) server for Mind Palace.
+"""MCP (Model Context Protocol) server for Verilore.
 
-A thin adapter exposing the Mind Palace core over MCP so any MCP-compatible
+A thin adapter exposing the Verilore core over MCP so any MCP-compatible
 AI client can use corpus memory as tools. Deliberately minimal:
 context, search, sync, list_corpora, and the public memory operations.
 The memory tools do not expose arbitrary writes; snapshot creates immutable state.
@@ -623,7 +623,7 @@ async def memory_revalidate(
 
 
 MCP_USAGE = """\
-verilore-mcp -- Mind Palace over the Model Context Protocol
+verilore-mcp -- Verilore over the Model Context Protocol
 
 Speaks JSON-RPC 2.0 on stdin/stdout. Start it from an MCP client config, not by
 typing at it: it reads requests from stdin and writes replies to stdout, so a

@@ -20,7 +20,7 @@ feed interface from this audit.
 
 ## 2. Current System Reality
 
-Mind Palace is a durable, versioned, evidence-backed memory ledger and
+Verilore is a durable, versioned, evidence-backed memory ledger and
 retrieval layer for AI systems operating over evolving corpora.
 
 The authoritative archive is PostgreSQL-backed. It stores immutable document
@@ -42,10 +42,10 @@ top of it. The immutable release remains `v0.6.0` at
 
 The matrix in
 [`docs/architecture/competitive-analysis.md`](../../architecture/competitive-analysis.md)
-compares Mind Palace with Graphiti, Mem0 OSS, Letta/MemFS, MemPalace, and
+compares Verilore with Graphiti, Mem0 OSS, Letta/MemFS, MemPalace, and
 conventional RAG or vector search.
 
-The important boundary is authority. Mind Palace makes source claims and exact
+The important boundary is authority. Verilore makes source claims and exact
 evidence authoritative. Graphiti provides a temporal graph and incremental
 derived updates. Mem0 provides scoped conversational or inferred memories.
 Letta provides persisted agent state and shared memory blocks. Those systems
@@ -56,9 +56,9 @@ boundary.
 The comparison is architectural. No head-to-head latency, accuracy, or
 competitive benchmark was run.
 
-## 4. Mind Palace's Actual Differentiators
+## 4. Verilore's Actual Differentiators
 
-Mind Palace can demonstrate the following properties directly:
+Verilore can demonstrate the following properties directly:
 
 1. A returned claim points to an archived source version and one or more exact
    quote spans.
@@ -107,7 +107,7 @@ The audit found several concrete gaps:
 
 ## 6. Temporal Semantics
 
-Mind Palace records two clocks:
+Verilore records two clocks:
 
 - `observed_at` is when the archive observed a version.
 - `valid_from` and `valid_until` are authored validity bounds.
@@ -271,7 +271,7 @@ unversioned operational contract on an unauthenticated tool surface.
 
 ## 14. Portability
 
-Mind Palace has portable interfaces, not a complete portable archive format.
+Verilore has portable interfaces, not a complete portable archive format.
 The schema, stable identifiers, canonical Memory Pack output, and feed contract
 provide useful interchange boundaries. A future export/import format must also
 define schema compatibility, content integrity, source references, migration
@@ -288,7 +288,7 @@ same durable corpus. That is useful for shared applications and offline
 evaluation. It is not an access-control model.
 
 Letta's shared memory blocks provide a useful product reference for making
-shared state explicit and attaching it to multiple agents. Mind Palace can
+shared state explicit and attaching it to multiple agents. Verilore can
 apply that lesson while retaining immutable source versions and explicit claim
 authority. A future shared-corpus design still needs writer identity,
 permissions, conflict policy, and concurrent-write rules.
@@ -324,8 +324,8 @@ feed command.
 
 The main developer-experience gaps are unauthenticated HTTP surfaces,
 filesystem-based sync paths, no archive export/import, and no supported
-`mindpalace` import alias. The repository documents the supported
-`mindpalace_sdk` module rather than implying that `import mindpalace` works.
+`verilore` import alias. The repository documents the supported
+`mindpalace_sdk` module rather than implying that `import verilore` works.
 
 ## 18. Reliability / Failure Modes
 
@@ -426,7 +426,7 @@ into a product guarantee.
 
 ## 22. Architectural Position
 
-Mind Palace should be described as:
+Verilore should be described as:
 
 > A durable, versioned, evidence-backed memory ledger and retrieval layer for
 > AI systems operating over evolving corpora.

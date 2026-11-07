@@ -3,7 +3,7 @@
 
 """Bake-off: the live-index product surface against the authoritative query.
 
-Mind Palace ships two ways to ask a question a corpus:
+Verilore ships two ways to ask a question a corpus:
 
 - ``context()`` / ``GET /context``: embed the question, rank live chunks, concatenate
   text. This is the documented primary product surface.

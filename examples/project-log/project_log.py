@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Use Mind Palace for a project's own decision log.
+"""Use Verilore for a project's own decision log.
 
 This is the dogfooding example, and it is deliberately boring: it imports nothing but
 the public SDK, runs no SQL, reads no internal module, and needs no environment
@@ -59,7 +59,7 @@ QUESTIONS = [
 
 
 def load_decisions() -> list[dict]:
-    """Read decisions.md, in the document format Mind Palace already understands.
+    """Read decisions.md, in the document format Verilore already understands.
 
     The same frontmatter shape `verilore remember --file` accepts, so a project can
     keep its decisions in a normal Markdown file next to its code and this example
@@ -159,7 +159,7 @@ def main() -> int:
     )
     print(f"  wrote {path}")
     print(f"  anyone can check it with: verilore verify {path.name}")
-    print("  no database, no model, no network, and no Mind Palace server")
+    print("  no database, no model, no network, and no Verilore server")
 
     print()
     print("=" * 74)
@@ -174,7 +174,7 @@ def main() -> int:
     print("SUMMARY")
     print("=" * 74)
     print("  A project keeps its decisions in a Markdown file.")
-    print("  Mind Palace turns them into memory you can ask questions of,")
+    print("  Verilore turns them into memory you can ask questions of,")
     print("  with the evidence and the history attached, and a receipt you can hand")
     print("  to someone who cannot check your database.")
     return 0

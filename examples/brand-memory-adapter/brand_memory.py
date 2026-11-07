@@ -4,7 +4,7 @@
 """SDK-only adapter for brand memory in a content app.
 
 No imports from `api.services`, no SQL, no model. The four functions are the
-whole surface a FastAPI app needs to wire Mind Palace into generation:
+whole surface a FastAPI app needs to wire Verilore into generation:
 
 - `load_documents` — ingest (path, content) pairs over HTTP
 - `context_for` — pack claim texts for the prompt; degrades to no memory

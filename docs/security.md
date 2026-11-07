@@ -1,6 +1,6 @@
 # Security and multi-tenant integration
 
-What Mind Palace protects, what it deliberately does not, and what has to be
+What Verilore protects, what it deliberately does not, and what has to be
 configured before real customer data goes in.
 
 This document replaces the older claim that a corpus name is a tenancy
@@ -21,7 +21,7 @@ that decision at all.
 | Profile | Configuration | Safe for |
 | --- | --- | --- |
 | `local` (default) | unset | a local single-user machine, a trusted network segment |
-| `server` | `MIND_PALACE_DEPLOYMENT=server` + `MIND_PALACE_AUTH_MODE=required` + `MIND_PALACE_INGEST_ROOTS` + the least-privileged database role | a shared, multi-user deployment |
+| `server` | `VERILORE_DEPLOYMENT=server` + `VERILORE_AUTH_MODE=required` + `VERILORE_INGEST_ROOTS` + the least-privileged database role | a shared, multi-user deployment |
 | anything else | — | **refused** |
 
 `local` with authentication off is the default because the documented five-minute
@@ -75,7 +75,7 @@ removes them one at a time).
    already read every row, so it cannot be self-asserted by the runtime role.
    Migration `014` adds a companion `mindpalace.scope_token` setting: the
    application sets it to an HMAC-SHA-256 of the tenant scope under
-   `MIND_PALACE_SCOPE_SECRET` (default `dev-scope-secret`), and the row-level
+   `VERILORE_SCOPE_SECRET` (default `dev-scope-secret`), and the row-level
    policy verifies it inside `mp_verify_scope_token`, a `SECURITY DEFINER`
    function owned by the maintenance role. The server secret lives in
    `memory_server_secrets`, a table the runtime role cannot read. A non-empty but
@@ -93,8 +93,8 @@ five, and each is covered:
 | REST (`api/routers/`) | The `Authorization` header, resolved by middleware |
 | Python SDK, local | `api_key=` at construction, resolved before any operation |
 | Python SDK, HTTP | The `Authorization` header on each request |
-| Local runtime socket | `MIND_PALACE_RUNTIME_CREDENTIAL` on the serving process |
-| MCP | `MIND_PALACE_MCP_CREDENTIAL` on the server process |
+| Local runtime socket | `VERILORE_RUNTIME_CREDENTIAL` on the serving process |
+| MCP | `VERILORE_MCP_CREDENTIAL` on the server process |
 
 The last two are configured by the *process*, never by the caller. An MCP tool
 argument or a socket request that named its own credential would not be a
@@ -110,7 +110,7 @@ pinned by tests:
   every mode. It now resolves a principal per dispatch and scopes each operation.
 * An SDK client constructed without a corpus name — the exact shape the CLI
   builds — skipped authentication entirely and ran unrestricted, even under
-  `MIND_PALACE_AUTH_MODE=required`.
+  `VERILORE_AUTH_MODE=required`.
 
 A boundary that holds on REST and not on the socket is not a boundary.
 
@@ -139,7 +139,7 @@ workspace   ──►  ws-<workspace>-brand            (brand memory)
 campaign    ──►  ws-<workspace>-c-<campaign>     (campaign memory)
 ```
 
-The mapping is a pure function of application-owned records. No Mind Palace
+The mapping is a pure function of application-owned records. No Verilore
 method accepts a corpus name, so a client-supplied one has nowhere to land.
 Brand memory is deliberately shared *inside* a workspace; campaign memory is
 not shared even between two campaigns of the same brand.
@@ -158,7 +158,7 @@ owner. `scripts/db/runtime_roles.sql` creates the separation:
 | `mindpalace_runtime` | DML only, `NOSUPERUSER NOBYPASSRLS`, owns nothing | the application |
 
 ```bash
-psql "$ADMIN_DATABASE_URL" -v runtime_password="$MIND_PALACE_RUNTIME_PASSWORD" \
+psql "$ADMIN_DATABASE_URL" -v runtime_password="$VERILORE_RUNTIME_PASSWORD" \
     -f scripts/db/runtime_roles.sql
 ```
 
@@ -170,7 +170,7 @@ is not one. If a secret manager holds the password, provision the role with
 `-v runtime_password_skip=on` and set it there.
 
 **The script also does not print the password.** It used to, on every run:
-`SELECT set_config('mindpalace.runtime_password', ...)` returns the value it was
+`SELECT set_config('verilore.runtime_password', ...)` returns the value it was
 given, and `psql` prints every result set, so the runtime role's password landed
 in the output — including in an archived CI log readable by anyone with repository
 access. The assignment now ends in `\g /dev/null`, which runs the statement and
@@ -193,7 +193,7 @@ isolation from migration `008`, whatever the mode says.
 Do not take that on trust — check the role the process would actually connect as:
 
 ```bash
-mindpalace posture
+verilore posture
 ```
 
 ```
@@ -229,7 +229,7 @@ anything else that can reach the port. It used to answer with the connected
 role's name, whether it was a superuser, whether it held `BYPASSRLS`, whether it
 could enumerate credential hashes, and which archive tables it could `DELETE`.
 None of that belongs in an anonymous response. The detail is what
-`mindpalace posture` prints, for an operator who already holds database
+`verilore posture` prints, for an operator who already holds database
 credentials.
 
 `auth.required: true` says the application checks credentials. It says nothing
@@ -248,8 +248,8 @@ two of them.
 
 | Term | Means | In this codebase |
 | --- | --- | --- |
-| **Identity** | a human, account or service in the *hosting application* | never seen. Mind Palace has no users. |
-| **Principal** | a Mind Palace credential and the permissions attached to it | `authz.Principal` |
+| **Identity** | a human, account or service in the *hosting application* | never seen. Verilore has no users. |
+| **Principal** | a Verilore credential and the permissions attached to it | `authz.Principal` |
 | **Tenant / workspace** | a customer's isolation domain | *not a table*. Realised as a set of granted corpora. |
 | **Corpus** | one memory collection, with its own policy | `corpora.id`; the boundary RLS enforces |
 | **Resource** | a document, chunk, claim or evidence row inside a corpus | **carries no ownership of its own** — see below |
@@ -281,7 +281,7 @@ for, and it needs no schema change. The four supported patterns are in
 
 ## Integration patterns
 
-All four are supported by the same model. None requires a second Mind Palace.
+All four are supported by the same model. None requires a second Verilore.
 
 **A — personal memory.** One corpus per person. Alice holds a grant on hers and
 nothing of Bob's. Her credential cannot enumerate his corpus names, and a request
@@ -301,10 +301,10 @@ that writes, an administrative one. Credentials are named for their purpose and
 revoked individually.
 
 ```bash
-mindpalace corpus create acme-brand
-mindpalace credential issue acme-backend   --corpus acme-brand --role read_write
-mindpalace credential issue acme-readonly  --corpus acme-brand --role read_only
-mindpalace credential issue acme-worker    --corpus acme-brand --role corpus_admin
+verilore corpus create acme-brand
+verilore credential issue acme-backend   --corpus acme-brand --role read_write
+verilore credential issue acme-readonly  --corpus acme-brand --role read_only
+verilore credential issue acme-worker    --corpus acme-brand --role corpus_admin
 ```
 
 ## Roles and permissions
@@ -335,7 +335,7 @@ hand out only the corpora it already reaches.
 
 ## Corpus creation over HTTP (server mode)
 
-In server mode, corpora are created by the operator with `mindpalace corpus create`
+In server mode, corpora are created by the operator with `verilore corpus create`
 (which runs as the maintenance/unrestricted identity). `POST /api/corpora` is not an
 operator path for a brand-new corpus:
 
@@ -343,11 +343,11 @@ operator path for a brand-new corpus:
   `AuthorizationError` before any INSERT
   (`api/services/corpora.py::create_corpus` checks `principal.unrestricted`, which
   is false for every credential), so no credential can create a corpus over HTTP.
-  Corpora are created by the operator with `mindpalace corpus create`.
+  Corpora are created by the operator with `verilore corpus create`.
 
 The 403 body is `{"code": "forbidden", "message": "Creating a corpus over HTTP
 is not permitted for this credential. Corpora are created by the operator with
-`mindpalace corpus create`."}`. It is returned by the service-layer authorization
+`verilore corpus create`."}`. It is returned by the service-layer authorization
 check, before any INSERT, for every authenticated credential. The route's
 42501 ProgrammingError handler (`api/routers/corpora.py`) only matters for an
 unrestricted principal running as the runtime role (off auth mode).
@@ -392,7 +392,7 @@ are outside this boundary.
 **One exception, and it is opt-in and local.** The flight recorder at
 `~/.mind-palace/logs/queries.jsonl` writes a row per call, and a row *does* carry
 the caller's query text verbatim to 512 characters — grading real usage needs the
-question, not a hash of it. So it is off unless `MIND_PALACE_QUERY_LOG=1` is set,
+question, not a hash of it. So it is off unless `VERILORE_QUERY_LOG=1` is set,
 and it never leaves the machine that set it. The directory is created `0700` and
 the file `0600`, both re-asserted on every write so a file left by an older
 version is tightened rather than staying world-readable. A row holds the
@@ -422,7 +422,7 @@ returned claim ids and latency — never claim text, never a source path. See
 | Database superuser or DBA | trusted infrastructure boundary; not contained by RLS | `mindpalace_owner` holds `BYPASSRLS` |
 | Unauthorized corpus deletion | denied — `403` for the wrong role, `404` for another tenant | `delete_corpus`; `mindpalace_erase_corpus` re-checks the scope |
 | Backup copy after live deletion | governed by the operator's backup retention | not removable from here; documented below |
-| Receipt or Memory Pack already exported | outside Mind Palace's deletion control | a file on the customer's machine |
+| Receipt or Memory Pack already exported | outside Verilore's deletion control | a file on the customer's machine |
 
 ### What a compromised application process gets
 
@@ -513,7 +513,7 @@ the exception, not the default.
 * **Deletion is not erasure.** See above. Nothing in this system removes memory
   content from primary storage, and an integrator who needs that must supply it.
 * **MCP inherits the same contract, from an environment variable.** An MCP
-  process without `MIND_PALACE_MCP_CREDENTIAL` refuses every tool in `required`
+  process without `VERILORE_MCP_CREDENTIAL` refuses every tool in `required`
   mode. It is not a way around the HTTP boundary, but it is a separate process
   with its own configuration to get right.
 * **Receipts and packs are not authorization artefacts.** They establish
@@ -530,11 +530,11 @@ HTTP route. There is deliberately no network endpoint that creates a corpus or
 mints a credential; `tests/test_credential_management.py` asserts none exists.
 
 ```bash
-mindpalace corpus create ws-ws-alpha-brand          # the tenant boundary
-mindpalace credential issue service-ws-alpha \
+verilore corpus create ws-ws-alpha-brand          # the tenant boundary
+verilore credential issue service-ws-alpha \
     --corpus ws-ws-alpha-brand --role read_write    # prints the secret once
-mindpalace credential list                          # id prefix, role, scope, state
-mindpalace credential revoke 5982381f5dd1           # by prefix; takes effect at once
+verilore credential list                          # id prefix, role, scope, state
+verilore credential revoke 5982381f5dd1           # by prefix; takes effect at once
 ```
 
 The secret is printed exactly once and only its SHA-256 hash is stored. Rotation
@@ -553,7 +553,7 @@ Revocation takes effect on the next request: nothing caches a resolved principal
 across requests in the HTTP path, and the in-process SDK re-establishes its scope
 per operation.
 
-The scope-token secret (`MIND_PALACE_SCOPE_SECRET`, default `dev-scope-secret`)
+The scope-token secret (`VERILORE_SCOPE_SECRET`, default `dev-scope-secret`)
 is shared between the application and the database: the application computes
 `HMAC-SHA-256(secret, tenant_scope)` as `mindpalace.scope_token`, and the row-level
 policy verifies it against `memory_server_secrets`. Rotate it like a credential —
@@ -568,19 +568,19 @@ nothing happens implicitly.
 
 ```bash
 # Onboard a customer
-mindpalace corpus create acme-brand                     # the boundary
-mindpalace credential issue acme-backend --corpus acme-brand --role read_write
+verilore corpus create acme-brand                     # the boundary
+verilore credential issue acme-backend --corpus acme-brand --role read_write
 
 # Widen or narrow one credential without changing its secret
-mindpalace credential grant  acme-backend --corpus acme-campaign
-mindpalace credential ungrant acme-backend --corpus acme-campaign
+verilore credential grant  acme-backend --corpus acme-campaign
+verilore credential ungrant acme-backend --corpus acme-campaign
 
 # Suspend: stop it reaching anything, keep the credential for audit
-mindpalace credential ungrant acme-backend --corpus acme-brand
+verilore credential ungrant acme-backend --corpus acme-brand
 
 # Offboard: revoke, then erase
-mindpalace credential revoke acme-backend
-mindpalace corpus delete acme-brand
+verilore credential revoke acme-backend
+verilore corpus delete acme-brand
 ```
 
 `credential issue` replaces the grant set rather than merging it, so
@@ -597,7 +597,7 @@ Removing the last corpus leaves a credential that resolves to nothing, and
 
 Two settings, and the second is what stops the first from being a trap:
 
-| `MIND_PALACE_DEPLOYMENT` | `MIND_PALACE_AUTH_MODE` | Result |
+| `VERILORE_DEPLOYMENT` | `VERILORE_AUTH_MODE` | Result |
 | --- | --- | --- |
 | `local` (default) | `off` (default) | The five-minute path. One user, one process, no network. |
 | anything else | — | **Refused.** An unrecognised profile is a mistake, not a default. |
@@ -605,8 +605,8 @@ Two settings, and the second is what stops the first from being a trap:
 | `server` | `off` | **Refuses to start.** |
 
 ```bash
-MIND_PALACE_DEPLOYMENT=server MIND_PALACE_AUTH_MODE=required \
-MIND_PALACE_INGEST_ROOTS=/srv/content \
+VERILORE_DEPLOYMENT=server VERILORE_AUTH_MODE=required \
+VERILORE_INGEST_ROOTS=/srv/content \
     uvicorn api.main:app --host 0.0.0.0
 ```
 
@@ -649,16 +649,16 @@ not defeat isolation, and refusing it would break a legitimate single-role
 deployment for no security gain.
 
 The check cannot be satisfied by a configuration variable that merely claims it.
-`MIND_PALACE_AUTH_MODE=required` is only meaningful because the middleware that
+`VERILORE_AUTH_MODE=required` is only meaningful because the middleware that
 reads the header is unconditionally installed and registered before every route;
 a test asserts that wiring rather than trusting the variable.
 
 ### What this cannot check
 
-Mind Palace does not know what address an external server binds, and cannot
+Verilore does not know what address an external server binds, and cannot
 verify a network boundary it does not own. A reverse proxy in front of it, a
 `--host 0.0.0.0` it cannot see, or a `NetworkPolicy` applied elsewhere are all
-outside this. `MIND_PALACE_DEPLOYMENT=server` is the operator's statement that
+outside this. `VERILORE_DEPLOYMENT=server` is the operator's statement that
 this process is shared, and the code's job is to make that statement *cost
 something to get wrong*.
 
@@ -667,18 +667,18 @@ The shipped `docker-compose.yml` sets `server` and `required` and connects as
 than the unsafe one.
 
 The image's own default command binds `127.0.0.1`. It used to bind `0.0.0.0`,
-which combined with `MIND_PALACE_AUTH_MODE=off` being the default to mean that a
+which combined with `VERILORE_AUTH_MODE=off` being the default to mean that a
 bare `docker run` published an unauthenticated API to whatever network the
 container landed on. Publishing it is now a deliberate act, and the two halves go
 together:
 
 ```bash
 docker run -p 8000:8000 \
-  -e MIND_PALACE_DEPLOYMENT=server \
-  -e MIND_PALACE_AUTH_MODE=required \
-  -e MIND_PALACE_INGEST_ROOTS=/content \
+  -e VERILORE_DEPLOYMENT=server \
+  -e VERILORE_AUTH_MODE=required \
+  -e VERILORE_INGEST_ROOTS=/content \
   -e DATABASE_URL=... \
-  mindpalace \
+  verilore \
   uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -686,7 +686,7 @@ docker run -p 8000:8000 \
 enforces row-level security, so the bind address and the profile cannot drift
 apart unnoticed.
 
-### `MIND_PALACE_INGEST_ROOTS`
+### `VERILORE_INGEST_ROOTS`
 
 `POST /api/ingest/repo` and `POST /api/corpora/{name}/sync` take a path on the
 *server's* filesystem and read it. That is an operator capability, and on a
@@ -694,17 +694,17 @@ shared service it means a caller can ask the service to walk a directory it was
 never given — a narrower exposure than it sounds (`*.md` only, and only what the
 caller could already write) but not one a tenant should have.
 
-`MIND_PALACE_INGEST_ROOTS` is a `:`-separated list of directories a client may
+`VERILORE_INGEST_ROOTS` is a `:`-separated list of directories a client may
 name. A path that does not resolve inside one of them is refused before a single
 file is read. Unset, it means anywhere — which is what a single-operator local
 deployment has always been able to do.
 
-`MIND_PALACE_DEPLOYMENT=server` refuses to start without it, **unless you set it
+`VERILORE_DEPLOYMENT=server` refuses to start without it, **unless you set it
 to `none`**:
 
 ```bash
-MIND_PALACE_INGEST_ROOTS=/srv/content          # these two routes may read here
-MIND_PALACE_INGEST_ROOTS=none                  # these two routes are disabled
+VERILORE_INGEST_ROOTS=/srv/content          # these two routes may read here
+VERILORE_INGEST_ROOTS=none                  # these two routes are disabled
 ```
 
 `none` exists because the requirement as originally written coupled *starting the
@@ -735,7 +735,7 @@ receipt meaningless.
 ### Erasing a corpus
 
 ```bash
-mindpalace corpus delete acme-brand        # local, needs the maintenance role
+verilore corpus delete acme-brand        # local, needs the maintenance role
 DELETE /api/corpora/acme-brand             # for a `manage_corpus` credential
 ```
 
@@ -799,7 +799,7 @@ one. Erasing an absent corpus returns `deleted: false`, not an error.
 | A copy the customer's own application stored | **no** — outside this system entirely |
 | Anything in the application database | **no** — that is the host application's to delete |
 
-Mind Palace cannot remotely erase copies a customer has exported or stored
+Verilore cannot remotely erase copies a customer has exported or stored
 elsewhere, and does not claim to. **No cryptographic erasure is claimed**: rows
 are deleted, not shredded, so a backup taken before the deletion still contains
 them until it expires.
@@ -828,9 +828,9 @@ nothing.
 | `tests/test_tenant_connection_isolation.py` | one pooled connection serving Alpha → Beta → Alpha, across an exception, a rollback, a cancellation and a protocol error, with concurrent requests interleaved |
 | `tests/test_tenant_control_effectiveness.py` | each control removed in turn, asserting what it was holding — including that either layer alone still refuses, and that only removing both opens the path |
 | `tests/test_credential_management.py` | the four non-REST surfaces — runtime socket, unnamed SDK client, MCP, read-only credentials — plus the deployment guard and the readiness posture report |
-| `tests/test_marketing_reference_integration.py` | the reference integration's claims against a **real Mind Palace on a real socket**, plus the workflow's role matrix; and a mechanical check that no file in the example imports `api`, `cli`, `migrations`, or the SDK — no exception list |
+| `tests/test_marketing_reference_integration.py` | the reference integration's claims against a **real Verilore on a real socket**, plus the workflow's role matrix; and a mechanical check that no file in the example imports `api`, `cli`, `migrations`, or the SDK — no exception list |
 | `tests/test_deployment_profiles_and_lifecycle.py` | the configuration matrix; the runtime role's real privileges; erasure authorization, completeness, idempotency, neighbour-intactness and report content; permission granularity |
-| `tests/test_operator_cli.py` | `mindpalace corpus` and `mindpalace credential` through their real entry point, including the issuance → grant → revoke chain |
+| `tests/test_operator_cli.py` | `verilore corpus` and `verilore credential` through their real entry point, including the issuance → grant → revoke chain |
 | `tests/test_scope_forgery.py` | the `{*}` sentinel is not self-assertable; erasure is not reachable by forging a scope; `PUBLIC` holds no `EXECUTE` on the `SECURITY DEFINER` functions; and the residual named-scope forge is *pinned*, so a change in either direction is noticed |
 | `tests/test_error_and_log_hygiene.py` | PostgreSQL's constraint `DETAIL` carries the row; an unhandled error therefore returns and logs neither the row nor the driver stack; `/health/ready` and `/health/live` expose no role name, connection string or capability inventory |
 
@@ -954,13 +954,13 @@ FastAPI application, a background worker, MCP.
 ```text
 browser / client
       ↓
-the host application's own authentication       ← not Mind Palace's job
+the host application's own authentication       ← not Verilore's job
       ↓
 the host application's membership check          ← server-side rows it owns
       ↓
-Mind Palace client, with a credential scoped to that workspace's corpora
+Verilore client, with a credential scoped to that workspace's corpora
       ↓
-Mind Palace's authorization choke point
+Verilore's authorization choke point
       ↓
 row-level security, under the least-privileged runtime role
       ↓
@@ -969,14 +969,14 @@ tenant-scoped rows
 
 Three rules that hold for all of them:
 
-* **The browser never receives a Mind Palace credential** or a database URL.
+* **The browser never receives a Verilore credential** or a database URL.
   Tokens issued to a browser are the host application's own, expiring, and scoped
   to the host application's sessions.
 * **A `tenant_id`, `workspace_id` or corpus name in a validated JSON body is not
   authority.** Those fields identify a requested resource. The caller's authority
   comes from the credential the trusted backend presents.
 * **The mapping is the application's.** `ws-<workspace>-brand` is a naming
-  convention the host application applies to its own records; Mind Palace only
+  convention the host application applies to its own records; Verilore only
   ever sees the corpus name that results, and checks it against the credential.
 
 A working example of all of this — two tenants, one deliberately shared
@@ -1030,7 +1030,7 @@ per confidentiality boundary.
 
 ## Every caller-supplied file path
 
-`MIND_PALACE_INGEST_ROOTS` is the deployment policy for filesystem reads. One
+`VERILORE_INGEST_ROOTS` is the deployment policy for filesystem reads. One
 resolver enforces it, `api/services.ingest_paths.require_permitted`, which
 resolves the candidate **before** comparing it, so a symlink that leaves a root
 and a `..` that climbs out of one are both caught by the same check.
@@ -1040,10 +1040,10 @@ filesystem from a caller, and whether it goes through that one resolver.
 
 | Surface | Reads | Enforced | Through `require_permitted` |
 |---|---|---|---|
-| `mindpalace ingest-repo <path>` | a directory of Markdown | yes | yes — `cli/main.py:1212` |
-| `mindpalace ingest <path>` | one file, then POSTs its contents | yes | yes — `cli/main.py:1143` |
-| `mindpalace remember --file <path>` | one file, as a statement | yes | yes — `api/services/remember.py:563` |
-| `mindpalace reindex` | no caller path; the corpus's own documents | n/a | n/a |
+| `verilore ingest-repo <path>` | a directory of Markdown | yes | yes — `cli/main.py:1212` |
+| `verilore ingest <path>` | one file, then POSTs its contents | yes | yes — `cli/main.py:1143` |
+| `verilore remember --file <path>` | one file, as a statement | yes | yes — `api/services/remember.py:563` |
+| `verilore reindex` | no caller path; the corpus's own documents | n/a | n/a |
 | `POST /api/ingest/repo` | a directory | yes | yes — `api/routers/ingest.py:76` |
 | `POST /api/ingest/file` | content in the request body, no path | n/a | n/a |
 | `POST /api/corpora/{name}/sync` | a directory | yes | yes — `api/routers/corpora.py:115` |
@@ -1051,8 +1051,8 @@ filesystem from a caller, and whether it goes through that one resolver.
 | SDK `MindPalace.remember(file=…)` | one file | yes | yes — `api/services/remember.py:563` |
 | MCP `sync(corpus, path)` | a directory | yes | yes — same `sync_repo` |
 | MCP `memory_remember(file=…)` | one file | yes | yes — `mcp_server.py:262` |
-| `mindpalace verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
-| `mindpalace receipt -o <file>` | writes; not a read | n/a | n/a |
+| `verilore verify <receipt>` | a receipt the caller produced | **no, deliberately** | n/a |
+| `verilore receipt -o <file>` | writes; not a read | n/a | n/a |
 | benchmark `--baseline <file>` | a previous report, for comparison | **no, deliberately** | n/a |
 | pack import | a pack file in the request body, no path | n/a | n/a |
 | local runtime socket | no caller-supplied path is accepted | n/a | n/a |
@@ -1067,7 +1067,7 @@ baseline is a report the caller produced.
 fixed:
 
 1. `remember --file` — the service read any path.
-2. `mindpalace ingest <path>` — a bare `open()` *before* its HTTP call, so the
+2. `verilore ingest <path>` — a bare `open()` *before* its HTTP call, so the
    read happened whether or not a server was listening.
 3. `sync_repo`, reached directly by `MindPalace.sync()` and by the MCP `sync`
    tool. The CLI and the two routes each checked the path themselves, which is
@@ -1104,8 +1104,8 @@ resolution is used. If `delete_corpus` ever moves behind a weaker role, the
 inconsistency becomes a bypass the day it does — hence written down here and not
 fixed, since a fix would be a permission the read roles still do not have.
 
-**`mindpalace eval retrieval --file` is unconfined.** It reads the benchmark
-file with a bare `open()`, outside `MIND_PALACE_INGEST_ROOTS`. It is an operator
+**`verilore eval retrieval --file` is unconfined.** It reads the benchmark
+file with a bare `open()`, outside `VERILORE_INGEST_ROOTS`. It is an operator
 command that takes an operator-supplied benchmark definition, in the same class
 as the documented `--baseline` exception above, and it reads no corpus content.
 Bounded, it would break the documented way to point the evaluator at a
@@ -1129,14 +1129,14 @@ bypass is NOT closed. Verify with:
 SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
 ```
 
-`mindpalace secret rotate` must be run as the owner role. The DB row and
-`MIND_PALACE_SCOPE_SECRET` must change together or every query returns 0 rows.
+`verilore secret rotate` must be run as the owner role. The DB row and
+`VERILORE_SCOPE_SECRET` must change together or every query returns 0 rows.
 Safe order: update the DB row first, then roll the env var, expecting a brief
 outage. Use `--out FILE` (mode 0600) to avoid terminal history.
 
 ### Server-profile refusal on mismatch (v0.10.0)
 
-A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) refuses to start
+A server-profile deployment (`VERILORE_DEPLOYMENT=server`) refuses to start
 when scope-token enforcement is on and the secret the process would send does
 not verify against the database. The startup refusal pre-existed on main; this
 release adds the readiness check, the rotation-order text in refusal messages,
@@ -1145,10 +1145,10 @@ unavailable (old schema or unreachable database). The refusal names the cause
 and the safe rotation order, and never prints any secret:
 
 ```
-refusing to start: MIND_PALACE_SCOPE_SECRET disagrees with the database row.
+refusing to start: VERILORE_SCOPE_SECRET disagrees with the database row.
 Rotate in this order: (1) set the new secret in the database with
-`mindpalace secret rotate --out FILE` as mindpalace_owner,
-(2) update MIND_PALACE_SCOPE_SECRET in the service environment to match,
+`verilore secret rotate --out FILE` as mindpalace_owner,
+(2) update VERILORE_SCOPE_SECRET in the service environment to match,
 (3) restart the service. Expect a brief outage.
 ```
 
@@ -1156,7 +1156,7 @@ The same check runs on `/health/ready`: a mismatch or an unavailable
 `mp_scope_enforcement_status` probe reports `not_ready` with
 `checks.scope_token = "mismatch"`. Enforcement off is not a mismatch — the
 server still refuses to start enforcement-off unless
-`MIND_PALACE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, a pre-existing guard.
+`VERILORE_I_UNDERSTAND_SCOPE_FORGERY=1` is set, a pre-existing guard.
 
-Local deployments (`MIND_PALACE_DEPLOYMENT=local`, the documented five-minute
+Local deployments (`VERILORE_DEPLOYMENT=local`, the documented five-minute
 path) are exempt from all of this: no refusal, no readiness impact.

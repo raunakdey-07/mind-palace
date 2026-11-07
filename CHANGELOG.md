@@ -6,6 +6,26 @@ through [`docs/release-map.md`](docs/release-map.md).
 
 ## [Unreleased]
 
+### Rename to Verilore (user-facing names only)
+
+The project is renamed from Verilore to Verilore. All user-facing names
+change: the distribution and CLI are now `verilore` (plus `verilore-mcp`,
+`verilore-proof`); modules are `verilore_sdk`, `verilore_errors`,
+`verilore_runtime`; classes are `Verilore`, `VeriloreError` (`MemoryClient`
+and `MemoryClientError` keep their names); environment variables are
+`VERILORE_*` (formerly `VERILORE_*`); API error codes are `vl_*` (formerly
+`mp_*`); the component string is `verilore`; the MCP server name is
+`verilore`; and compose service/database names are `verilore`.
+
+Database object names are unchanged: SQL functions (`mp_*`, `mindpalace_*`),
+RLS policies, session settings (`verilore.*`), and roles
+(`mindpalace_runtime`, `mindpalace_owner`) keep their original names for
+compatibility with existing databases. There is no migration 017 and no
+role-rename script.
+
+`MemoryClient` and `MemoryClientError` keep their names.
+
+
 ### Prose extraction never truncates and no longer drops prose silently
 
 A wrapped sentence is one claim, internal line break included, not a claim
@@ -30,8 +50,8 @@ in; an unknown state is `422 invalid_state`.
 
 ### Scope-token enforcement made loud (v0.10.0)
 
-A server-profile deployment (`MIND_PALACE_DEPLOYMENT=server`) now refuses to
-start on a mismatch between `MIND_PALACE_SCOPE_SECRET` and the database's
+A server-profile deployment (`VERILORE_DEPLOYMENT=server`) now refuses to
+start on a mismatch between `VERILORE_SCOPE_SECRET` and the database's
 `scope_hmac_secret` (the startup refusal pre-existed on main; this release
 adds the readiness check, the rotation-order text, and explicit fail-closed
 behaviour when the probe is unavailable). The refusal names the cause and the
@@ -45,7 +65,7 @@ deployments are unaffected.
 `POST /api/corpora` now translates row-level-security violations (SQLSTATE
 42501) to `403` `forbidden` instead of leaking a 500. Other `ProgrammingError`s
 still propagate as 500. In server mode, corpora are created by the operator
-with `mindpalace corpus create`; `POST /api/corpora` is not an operator path
+with `verilore corpus create`; `POST /api/corpora` is not an operator path
 for a brand-new corpus.
 
 ### RLS scope hoisting (migration 016)
@@ -115,7 +135,7 @@ the SDK is called; `DecisionError` keeps its code (`invalid_state`,
 
 ### Integration guide and example adapter
 
-New `docs/integration/guide.md`: wiring Mind Palace into a content-generation
+New `docs/integration/guide.md`: wiring Verilore into a content-generation
 app in one afternoon. Every python block runs in CI against a live server
 (`tests/test_integration_guide_examples.py`). New `examples/brand-memory-adapter/brand_memory.py`:
 SDK-only adapter (`load_documents`, `context_for`, `record_decision`,
@@ -157,13 +177,13 @@ M017: GitHub issues → branches → PRs → CI green → merge → tag/release,
 - Frozen-60 and Dev-202: 0 negative flips.
 
 ### Grant-bound RLS hardening (Phase 5, #55, PR #62)
-- `mindpalace.scope_token` is HMAC-SHA-256 of the tenant scope under `MIND_PALACE_SCOPE_SECRET`, set on every `after_begin`.
+- `mindpalace.scope_token` is HMAC-SHA-256 of the tenant scope under `VERILORE_SCOPE_SECRET`, set on every `after_begin`.
 - `mp_verify_scope_token()` SECURITY DEFINER verifies non-empty tokens against `memory_server_secrets` (unreadable by the runtime role); forged tokens fail closed (0 rows).
 - Migration `014` replaces the presence-only scope check with real cryptographic verification.
 
 ### 4-way agency benchmark (Phase 6, #56, PR #63)
 - 3 brand corpora (Northstar, VoltEdge, Hearth & Loom) in `.md`/`.docx`/`.pdf`/`.pptx`.
-- Conditions: A No Memory, B Static Context, C Conventional RAG, D Mind Palace.
+- Conditions: A No Memory, B Static Context, C Conventional RAG, D Verilore.
 - Acceptance metrics: critical brand-rule recall >= 95% (11/11); prohibited-claim violations = 0; superseded-policy errors = 0; unapproved brainstorming leak = 0; cross-brand leakage = 0; relevant evidence availability >= 90% (11/11).
 
 ## [v0.9.2] - 2026-10-26
@@ -199,15 +219,15 @@ real stale-fact benchmark metrics, and release documentation reconciliation.
 > SELECT * FROM mp_scope_enforcement_status('<token>', '<scope>');
 > ```
 >
-> Rotate the secret with `mindpalace secret rotate` (as the owner role, writes
-> the DB row and `--out FILE`). The DB row and `MIND_PALACE_SCOPE_SECRET` must
+> Rotate the secret with `verilore secret rotate` (as the owner role, writes
+> the DB row and `--out FILE`). The DB row and `VERILORE_SCOPE_SECRET` must
 > change together or every query returns 0 rows. Safe order: update the DB row
 > first, then roll the env var, expecting a brief outage. Use `--out FILE` (mode
 > 0600) to avoid terminal history.
 >
 > **Server mode needs a grant step.** The `server` profile requires
-> `MIND_PALACE_AUTH_MODE=required`, `MIND_PALACE_DEPLOYMENT=server`,
-> `MIND_PALACE_INGEST_ROOTS`, and a database role that is **not** a superuser
+> `VERILORE_AUTH_MODE=required`, `VERILORE_DEPLOYMENT=server`,
+> `VERILORE_INGEST_ROOTS`, and a database role that is **not** a superuser
 > and does **not** hold `BYPASSRLS`. `scripts/db/runtime_roles.sql` creates that
 > role and is **idempotent** — running it twice is safe and a second run with a
 > new password rotates it. Startup refuses, in the lifespan, before the process
@@ -234,19 +254,19 @@ Memory Pack version changed, and no benchmark input was touched.
 
 ### Added
 
-- **`mindpalace ingest-repo --delete-removed`.** A document whose source file
+- **`verilore ingest-repo --delete-removed`.** A document whose source file
   is no longer in the directory stayed active in the corpus forever: its
   claims kept answering questions and nothing reported that the source was
   gone. The service could retire a document and the CLI never asked for it,
   because `ingest-repo` hardcoded `delete_removed=False`. The flag is how the
   caller makes that decision, and the default is unchanged.
-- **`mindpalace corpus reset <name>`.** A scratch corpus that has collected a
+- **`verilore corpus reset <name>`.** A scratch corpus that has collected a
   test claim needs a clean slate, and the way out of that used to be dropping
   the whole PostgreSQL database, which took every other corpus with it. The
   corpus is erased and re-initialised under the same name and the same id,
   with its grants intact, and no other corpus is touched. It asks for `--yes`,
   because the erasure cannot be undone.
-- **`mindpalace ingest-repo --embed-chunks`.** A caller who wants the legacy
+- **`verilore ingest-repo --embed-chunks`.** A caller who wants the legacy
   chunk-level search over a whole corpus asks for the chunk vectors
   explicitly. The flag is on the CLI, on `MindPalace.sync()`, and on
   `POST /api/corpora/{name}/sync`. Without it, a document that produced claims
@@ -259,7 +279,7 @@ Memory Pack version changed, and no benchmark input was touched.
   now one `SECURITY DEFINER` function that re-checks the caller's transaction-local
   tenant scope, takes the same advisory lock every writer takes, and deletes all
   nine archive tables in dependency order plus the live projection and every
-  credential's grant. `mindpalace corpus delete` is the local equivalent.
+  credential's grant. `verilore corpus delete` is the local equivalent.
   Authorization is `manage_corpus`, and another tenant's corpus is a `404` so the
   refusal does not confirm it exists. The result reports table names and row
   counts and nothing else: an erasure audit trail that reproduced the content it
@@ -279,19 +299,19 @@ Memory Pack version changed, and no benchmark input was touched.
   roles and grants, which a memory service has no reason to be able to do. The
   identity and its corpus scope now arrive in one round trip rather than two.
   Administrative commands (`credential issue|list|grant|ungrant|revoke`,
-  `corpus create|delete`) run on `MIND_PALACE_ADMIN_DATABASE_URL`.
-- **`mindpalace credential grant` / `ungrant`**, so access can be widened or
+  `corpus create|delete`) run on `VERILORE_ADMIN_DATABASE_URL`.
+- **`verilore credential grant` / `ungrant`**, so access can be widened or
   narrowed without changing a credential's secret — reissuing breaks every running
   deployment of the caller, so it is only ever the rotation step. Removing the
   last corpus leaves a credential that resolves to nothing and is refused on every
   request, which makes `ungrant` a safe suspension.
-- **`mindpalace posture` now checks privilege shape**, not just policy flags: the
+- **`verilore posture` now checks privilege shape**, not just policy flags: the
   role's privileges beyond DML, whether it can enumerate credential hashes,
   whether it holds `DELETE` on any archive table, and whether it can `SET ROLE`
   into a privileged role. `server` mode refuses to start on any of them, in the
   application lifespan — after the process has its connection, before uvicorn
   reports itself as accepting traffic.
-- **Authorization is implemented, and off by default.** `MIND_PALACE_AUTH_MODE=required`
+- **Authorization is implemented, and off by default.** `VERILORE_AUTH_MODE=required`
   makes every request present a bearer credential bound to a role and an explicit set
   of corpora. Opaque random secrets, stored only as SHA-256 hashes; rotation is
   issue-then-revoke; revocation takes effect on the next request. `off` remains the
@@ -322,23 +342,23 @@ Memory Pack version changed, and no benchmark input was touched.
   Content generation is a deterministic stand-in, and says so.
 
 
-- **`mindpalace credential issue|list|revoke` and `mindpalace corpus create`.** The
+- **`verilore credential issue|list|revoke` and `verilore corpus create`.** The
   bootstrap was a Python snippet, which meant the first step of every deployment was
   copying code that imports internals. These are local administrative commands on
   purpose: a network route that mints a tenant boundary or a credential is the thing
   the design exists to avoid. `revoke` accepts the id prefix that `list` prints.
-- **`mindpalace posture`.** Whether the current database role actually enforces the
-  row-level policies, printed and non-zero on a problem. `MIND_PALACE_AUTH_MODE` is an
+- **`verilore posture`.** Whether the current database role actually enforces the
+  row-level policies, printed and non-zero on a problem. `VERILORE_AUTH_MODE` is an
   application switch and says nothing about the role; a service could report itself
   tenant-scoped while running as a superuser with migration `008` inert. The same
   facts appear in `/health/ready` under `database_posture`, and a check that cannot
   query `pg_roles`/`pg_class` reports the tables as unprotected rather than fine.
-- **`MIND_PALACE_DEPLOYMENT=local|server`** as an explicit setting rather than a
+- **`VERILORE_DEPLOYMENT=local|server`** as an explicit setting rather than a
   heuristic. `server` requires `required`, a set of ingest roots, and a database
   role that actually enforces the policies — checked in the application lifespan,
   before the process accepts a request. An unrecognised value is refused.
-- **`tests/test_operator_cli.py`**, which drives `mindpalace corpus` and
-  `mindpalace credential` through their real entry point. The service functions
+- **`tests/test_operator_cli.py`**, which drives `verilore corpus` and
+  `verilore credential` through their real entry point. The service functions
   they call were all tested; the wiring around them was not, and it broke.
 
 ### Changed
@@ -346,11 +366,11 @@ Memory Pack version changed, and no benchmark input was touched.
 - Benchmark metrics are computed dynamically with fair baselines.
 
 
-- **`mindpalace memory ...` no longer needs a server.** `memory pack` used to
+- **`verilore memory ...` no longer needs a server.** `memory pack` used to
   default to `http://127.0.0.1:8000` while `recall`, `explain`, `history`,
   `receipt` and `ingest-repo` ran in-process. Every `memory` subcommand now uses
-  the same local client by default. `--base-url` (or `MIND_PALACE_BASE_URL`)
-  still selects the HTTP client unchanged. `mindpalace serve --run` starts the
+  the same local client by default. `--base-url` (or `VERILORE_BASE_URL`)
+  still selects the HTTP client unchanged. `verilore serve --run` starts the
   HTTP API for clients that need one; the CLI does not. `uv.lock` is ignored, so
   `uv run` keeps the working tree clean.
 
@@ -361,8 +381,8 @@ Memory Pack version changed, and no benchmark input was touched.
   encoded twice, once as claims and once as 1,200-character chunks at 256
   tokens each, and the second half was the larger of the two. A document that
   produced no claims keeps its vectors, because the chunk index is the only
-  index such a document has. `mindpalace ingest-repo --embed-chunks` asks for
-  the vectors anyway, and `mindpalace reindex` rebuilds them from the archive.
+  index such a document has. `verilore ingest-repo --embed-chunks` asks for
+  the vectors anyway, and `verilore reindex` rebuilds them from the archive.
   Measured over two corpora, 2,097 chunks and 3,907 claims: **147.0 s to 59.7
   s**, with the chunk-embedding phase going from 72.8 s to 0.6 s. Every claim
   vector is byte-for-byte identical before and after.
@@ -377,7 +397,7 @@ Memory Pack version changed, and no benchmark input was touched.
   8-thread machine this was measured on, a batch of eight claim
   representations took 58.9 ms with the default and 38.7 ms with one thread
   per physical core. The vectors are bit-identical either way, and
-  `MIND_PALACE_ONNX_THREADS` overrides the choice.
+  `VERILORE_ONNX_THREADS` overrides the choice.
 - **Batches are formed from token lengths rather than character lengths.** A
   key like `md:cv-embed-performance-baseline-bundle-sizes-21723ee4` is a
   different number of tokens than it is characters, and sorting by characters
@@ -409,11 +429,11 @@ Memory Pack version changed, and no benchmark input was touched.
   writes into a corpus whose name begins with `_profile_` and deletes it when
   the run ends.
 
-- **A bare `mindpalace` prints where to start.** It used to print
+- **A bare `verilore` prints where to start.** It used to print
   "Missing command." and a usage line — a statement about the person's typing
   rather than about the product, on the run with the least context. It now
   prints the first three commands, in the order a newcomer needs them, and
-  points at `mindpalace --help` for the rest. `mindpalace --help` is unchanged.
+  points at `verilore --help` for the rest. `verilore --help` is unchanged.
 
 - **`/health/ready` answers `503` only in `server` mode.** In `local` there is no
   second tenant to isolate from, the documented workflow is a developer
@@ -429,7 +449,7 @@ Memory Pack version changed, and no benchmark input was touched.
   reach any corpus whose name it can obtain. `docs/security.md` states this, and
   `tests/test_scope_forgery.py` pins it so a change in either direction is
   noticed.
-- **`MIND_PALACE_INGEST_ROOTS=none`** disables the two filesystem ingestion
+- **`VERILORE_INGEST_ROOTS=none`** disables the two filesystem ingestion
   routes and satisfies the `server` profile's precondition. `server` previously
   could not start at all without a root list, which coupled *starting the
   service* to *having a filesystem ingestion surface* and blocked an API-only
@@ -439,7 +459,7 @@ Memory Pack version changed, and no benchmark input was touched.
   An unverifiable guarantee is not a guarantee.
 
 
-- **The reference integration no longer imports Mind Palace internals.** It called
+- **The reference integration no longer imports Verilore internals.** It called
   `api.services.memory_public.execute` in-process and described that as public. It was
   not: an adopter needing those imports could not be pointed at a different
   deployment. It now speaks the public REST contract over `httpx`, through the real
@@ -497,7 +517,7 @@ Memory Pack version changed, and no benchmark input was touched.
   rare each of the question's words is in the corpus. The acceptance test is
   unchanged: the thresholds are measured on the raw cosine.
 - **A question about a subject the corpus has never used was answered from the
-  corpus's own vocabulary.** "How does Mind Palace use Kubernetes?" matched
+  corpus's own vocabulary.** "How does Verilore use Kubernetes?" matched
   "Mind" and "Palace" and returned claims about the project's portability. A
   question whose subject words are all absent from the corpus abstains, and so
   does a question whose subject is in the corpus but is not what the corpus's
@@ -553,14 +573,14 @@ Memory Pack version changed, and no benchmark input was touched.
   the handler, and a driver-level connection failure is translated into the
   same `database_unavailable` advice the taxonomy already defines. The
   underlying exception is still reachable — `--verbose` adds its type and
-  message, `--debug` (or `MIND_PALACE_DEBUG=1`) adds the full traceback — but
+  message, `--debug` (or `VERILORE_DEBUG=1`) adds the full traceback — but
   it is never the only thing shown and never the first.
 - **A rejected password was reported as a dead database.** The two look alike
   to a driver and nothing alike to a person: one is fixed by changing a value,
   the other by starting a service. Telling somebody to start the database when
   the database is already running sends them the wrong way, so an
   authentication failure now says which of the two it is.
-- **`mindpalace init` could not start a local database that had been stopped.**
+- **`verilore init` could not start a local database that had been stopped.**
   After a reboot, a container in `Exited` state stayed stopped, and the
   operator had to know that `podman ps -a` was the command to run. The CLI now
   looks for a stopped local PostgreSQL container publishing the configured port
@@ -569,9 +589,9 @@ Memory Pack version changed, and no benchmark input was touched.
   stopped at the socket reported a container as ready while it was still
   starting up. `init` goes one step further and provisions a `pgvector`
   container when there is nothing to start, so it is genuinely one command on a
-  machine that has never run Mind Palace. A remote database is never touched.
+  machine that has never run Verilore. A remote database is never touched.
 - **`docker-compose.yml` could not be started by `podman-compose`.** The file
-  required `${MIND_PALACE_RUNTIME_PASSWORD:?...}`, and `podman-compose`
+  required `${VERILORE_RUNTIME_PASSWORD:?...}`, and `podman-compose`
   evaluates a required variable eagerly across every service — so the `backend`
   service's secret stopped the `postgresql` service from starting at all, even
   though that service has no secret in it. The variables now have local
@@ -604,10 +624,10 @@ Memory Pack version changed, and no benchmark input was touched.
   `PUBLIC` grant deliberately: a policy is evaluated as the querying user, so
   revoking it would break isolation for every role not named.
 - **The container image published an unauthenticated API by default.** The
-  `CMD` bound `0.0.0.0` while `MIND_PALACE_AUTH_MODE` defaults to `off`, so a
+  `CMD` bound `0.0.0.0` while `VERILORE_AUTH_MODE` defaults to `off`, so a
   bare `docker run` served an unauthenticated API to whatever network it landed
   on. It now binds `127.0.0.1`; publishing it is a deliberate act, and
-  `MIND_PALACE_DEPLOYMENT=server` still refuses to start unless authentication is
+  `VERILORE_DEPLOYMENT=server` still refuses to start unless authentication is
   on and the role enforces the policies.
 - **`scripts/db/runtime_roles.sql` did not parse.** Three `REVOKE EXECUTE ...
   FROM PUBLIC` lines were missing a closing parenthesis. It had never been run
@@ -632,17 +652,17 @@ Memory Pack version changed, and no benchmark input was touched.
   whether it could enumerate credential hashes, and which archive tables it could
   `DELETE` — to anything that could reach the port. It now reports a verdict
   (`row_level_security: enforced`, and `503` when it cannot be verified in
-  `server` mode), and the inventory is what `mindpalace posture` prints for an
+  `server` mode), and the inventory is what `verilore posture` prints for an
   operator who holds database credentials.
-- **The reference integration imported Mind Palace's internals.** `provision.py`
+- **The reference integration imported Verilore's internals.** `provision.py`
   imported `api.services.corpora`, `api.services.authz` and `api.services.db` to
   create corpora and issue credentials, and both it and `demo.py` imported
   `api.main.app` and drove it through `httpx.ASGITransport`. The suite's own
   import check carried a written exception naming exactly those four lines —
   which is a test that has already decided what it is willing to miss. Corpus
-  creation and credential issuance now go through the documented `mindpalace
-  corpus create` and `mindpalace credential issue` commands, the demo connects to
-  `MIND_PALACE_URL`, and the suite starts a real Mind Palace on a real socket for
+  creation and credential issuance now go through the documented `verilore
+  corpus create` and `verilore credential issue` commands, the demo connects to
+  `VERILORE_URL`, and the suite starts a real Verilore on a real socket for
   it to talk to. There is no exception list any more.
 - **A Markdown table was invisible to `recall`.** The primary metrics in a
   benchmark table are exactly the numbers a reader asks for, and the extractor
@@ -657,7 +677,7 @@ Memory Pack version changed, and no benchmark input was touched.
   wording is in the chunk the archive quotes it from. A table too long for one
   chunk is split by row and every chunk carries the header.
 - **A supersession reference that named nothing was written anyway.**
-  `mindpalace remember --supersedes <id>` with an id that no live claim carried
+  `verilore remember --supersedes <id>` with an id that no live claim carried
   wrote the new claim and left the old one standing, so the archive held two
   live claims about the same thing and the caller was told nothing. The write
   is refused now, and the refusal names the reference that failed. The same
@@ -670,7 +690,7 @@ Memory Pack version changed, and no benchmark input was touched.
   reference matched only whole claim keys and whole paths. A hex prefix of
   eight to sixty-four characters now matches the active claims, and more than
   one match is refused rather than resolved by taking the first.
-- **`mindpalace remember --file` dropped `--supersedes` on the floor.** The
+- **`verilore remember --file` dropped `--supersedes` on the floor.** The
   file branch of `remember` called the writer without the supersession
   argument, so the write succeeded, printed `Remembered.`, and left the claim it
   was meant to retire standing. The flag is passed through now.
@@ -699,7 +719,7 @@ Memory Pack version changed, and no benchmark input was touched.
   are the same either way: the mask zeroes the padding and the pooling divides
   by the unmasked length, and the largest difference measured across the
   strategies was 0.0.
-- **`mindpalace history` walked the supersession edges backwards only.** The
+- **`verilore history` walked the supersession edges backwards only.** The
   graph has an edge in each direction, and the reader followed only one of them.
   A question that anchored on a retired claim found nothing to walk back to, so
   the claim that replaced it never entered the timeline and the retired claim
@@ -750,23 +770,23 @@ Memory Pack version changed, and no benchmark input was touched.
 
 - **The entire administrative CLI was broken.** `_authz_session` built a context
   manager from the session helper and then called it again, so every
-  `mindpalace corpus` and `mindpalace credential` command raised
+  `verilore corpus` and `verilore credential` command raised
   `AsyncContextDecorator.__call__() missing 1 required positional argument` — which
-  the CLI's own error handler rendered as "Mind Palace could not complete that".
+  the CLI's own error handler rendered as "Verilore could not complete that".
   No service-level test noticed, because the failure was in the CLI's wiring.
   `tests/test_operator_cli.py` now drives the real entry point end to end.
 - **`credential revoke` accepted a name in the Python API but not in the
   database.** The lookup function matched only an id prefix, so an operator who
   typed the credential's own label got "no credential matched" for a credential
   that was right there in `credential list`.
-- **An unrecognised `MIND_PALACE_DEPLOYMENT` was silently treated as `server`.**
+- **An unrecognised `VERILORE_DEPLOYMENT` was silently treated as `server`.**
   That fails closed for authentication but skipped every other server-only check,
   so a typo like `prod` left the ingest-root and database-posture checks
   unenforced while the service ran normally. An unknown profile is now refused.
 - **The runtime role held more privilege than the deployment needs.** It could
   `SELECT` every credential hash, `DELETE` from every archive table, `TRUNCATE`
   them, and `EXECUTE` every function in the schema including every
-  `SECURITY DEFINER` one. `mindpalace posture` verifies the reduced shape, so a
+  `SECURITY DEFINER` one. `verilore posture` verifies the reduced shape, so a
   role script that drifts from what it claims is a startup failure rather than an
   assumption.
 - **The test harness provisioned a different role from the one it tests.** It
@@ -778,12 +798,12 @@ Memory Pack version changed, and no benchmark input was touched.
   local peer of the same user and decided nothing about which corpora that peer could
   reach, so it dispatched any corpus named on the wire — read or write — in every
   mode, including `required`. It was the default transport for the CLI. It now
-  resolves a principal from `MIND_PALACE_RUNTIME_CREDENTIAL` per dispatch and scopes
+  resolves a principal from `VERILORE_RUNTIME_CREDENTIAL` per dispatch and scopes
   every operation with it; without one, `required` mode serves nothing. The socket
   token is compared in constant time.
 - **An SDK client built without a corpus name authenticated in no mode** — the exact
   shape the CLI constructs. Its operations ran as the default local principal,
-  unrestricted, under `MIND_PALACE_AUTH_MODE=required`. Every local client now
+  unrestricted, under `VERILORE_AUTH_MODE=required`. Every local client now
   resolves its identity at construction, so one that cannot authenticate fails there
   rather than partway through a workflow.
 - **The SDK took the runtime shortcut outside the caller's scope.** The socket is a
@@ -793,7 +813,7 @@ Memory Pack version changed, and no benchmark input was touched.
   as one exception class locally and another over HTTP, and `except
   MemoryClientError` did not catch it. Including from the constructor, which runs
   outside the translation an operation gets.
-- **`MIND_PALACE_DEPLOYMENT=server` with authentication off started anyway**, which is
+- **`VERILORE_DEPLOYMENT=server` with authentication off started anyway**, which is
   what a bare `uvicorn api.main:app` and the default `docker compose up` produced
   with a published port. The application factory now refuses to start, with the
   reason. `docker-compose.yml` ships `server` + `required` and the runtime role.
@@ -857,16 +877,16 @@ Memory Pack version changed, and no benchmark input was touched.
   caller needs to know what was removed and, more importantly, what was not. An
   empty `204` would have implied that exported receipts and database backups were
   covered too. The status code for a successful deletion is now `200`.
-- Administrative CLI commands connect with `MIND_PALACE_ADMIN_DATABASE_URL` when it
+- Administrative CLI commands connect with `VERILORE_ADMIN_DATABASE_URL` when it
   is set, and fall back to `DATABASE_URL` otherwise, which is what keeps the
   single-user local workflow working with one setting.
 - `/health/ready` gained a `database_posture` object. Additive; the existing keys
   are unchanged.
-- A deployment that leaves `MIND_PALACE_AUTH_MODE` unset behaves exactly as before.
-  `MIND_PALACE_DEPLOYMENT` defaults to `local`, so no existing deployment is
+- A deployment that leaves `VERILORE_AUTH_MODE` unset behaves exactly as before.
+  `VERILORE_DEPLOYMENT` defaults to `local`, so no existing deployment is
   refused a startup it used to get. A deployment that uses a superuser or
   `BYPASSRLS` database role gets no tenant isolation from the database layer
-  whatever the mode says; `mindpalace posture` and `/health/ready` now say so,
+  whatever the mode says; `verilore posture` and `/health/ready` now say so,
   and it is stated in `docs/security.md` rather than left to be discovered.
 - `scripts/db/runtime_roles.sql` now requires `-v runtime_password=<password>` (or
   `-v runtime_password_skip=on`). Running it without either fails with the reason
@@ -901,14 +921,14 @@ a clean machine.
   129**. The repository still ships those scripts; they are where `check_versioning.py`,
   `check_evidence.py` and the benchmark harnesses run from.
 - **The wheel CI job asserted something no install could satisfy.** It ran
-  `mindpalace-mcp --help` against a *bare* `pip install dist/*.whl`, but `mcp` is a
+  `verilore-mcp --help` against a *bare* `pip install dist/*.whl`, but `mcp` is a
   declared extra, so the import raised `ModuleNotFoundError: No module named 'mcp'`.
   The step's `|| python -c "import mcp_server"` fallback could not have rescued it
   either — same missing package. MCP is now verified in its own step from an install
   that includes the extra, and the bare install's *omission* of `mcp` is asserted as
   the design it is.
 
-  `mindpalace-mcp --help` is not run there either, for a second reason worth writing
+  `verilore-mcp --help` is not run there either, for a second reason worth writing
   down: `main()` takes no arguments and goes straight to `mcp.run_stdio_async()`, so
   the process would block on stdin until the job timed out. The old step never reached
   that line, because the import failed first.
@@ -924,7 +944,7 @@ a clean machine.
   (`AttributeError: type object 'array' has no attribute 'ARRAY'`). Full table and
   reasoning in [the release map](docs/release-map.md#python-315-lazy-imports-were-evaluated-and-not-adopted).
 - **The model stack as an optional install extra.** Not done, deliberately: making
-  `sentence-transformers` optional would mean a plain `pip install mindpalace-os`
+  `sentence-transformers` optional would mean a plain `pip install verilore-os`
   stopped ranking semantically, which is a silent behaviour change for the majority
   case. What *is* guaranteed, and tested, is that nothing needs the model merely to
   import or run a command -- `tests/test_model_free_package.py` blocks the stack
@@ -950,7 +970,7 @@ ranking. It is a future-milestone candidate, not a patch.
 
 Milestones `M015.2` (five-minute memory path) and `M016` (instant recall, explicit
 model-free mode, real-project dogfooding), consolidated into one public release. They
-are one milestone for a product: `v0.9.0` is the release in which Mind Palace becomes
+are one milestone for a product: `v0.9.0` is the release in which Verilore becomes
 something a developer can install, use in five minutes, and keep.
 
 Verification still establishes integrity and recorded provenance. It does **not**
@@ -960,14 +980,14 @@ authenticity unless a digest pinned out of band is supplied.
 ### Five-minute memory workflow
 
 ```console
-$ mindpalace init
-$ mindpalace remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
+$ verilore init
+$ verilore remember "The production datastore changed from SQLite to PostgreSQL." --key datastore
 Remembered.
   version: 5aae989d3134 (new)
   corpus:  default
   path:    memory/datastore-aa7e5b234e1d.md
 
-$ mindpalace recall "What datastore does production use?"
+$ verilore recall "What datastore does production use?"
 The production datastore changed from SQLite to PostgreSQL.
    source: memory/datastore-aa7e5b234e1d.md @ 5aae989d3134
    time:   true as of 2026-10-08 03:40 UTC
@@ -997,11 +1017,11 @@ it without the user choosing to.
 
 | command | before | after |
 |---|---|---|
-| `mindpalace recall` | 6.17 s | **0.63 s** |
-| `mindpalace explain` | 6.23 s | **0.67 s** |
-| `mindpalace receipt` | 6.21 s | 0.62 s |
-| `mindpalace history` | 0.81 s | 0.61 s |
-| `mindpalace verify` | 0.56 s | 0.56 s |
+| `verilore recall` | 6.17 s | **0.63 s** |
+| `verilore explain` | 6.23 s | **0.67 s** |
+| `verilore receipt` | 6.21 s | 0.62 s |
+| `verilore history` | 0.81 s | 0.61 s |
+| `verilore verify` | 0.56 s | 0.56 s |
 | SDK `recall`, fresh process | 5.11 s | **0.51 s** (opt-in `runtime=True`) |
 
 MCP is unchanged, and correctly so: an MCP server is a long-lived process and pays the
@@ -1012,8 +1032,8 @@ The cause was measured with `-X importtime` rather than assumed. A one-shot reca
 `transformers`, 2.66 s the rest), 0.49 s was model construction, and **61 ms was the
 memory work**.
 
-- `mindpalace runtime start | stop | status`, including `--json`. Optional: every
-  command works with no runtime at all, and `MIND_PALACE_RUNTIME=0` turns it off
+- `verilore runtime start | stop | status`, including `--json`. Optional: every
+  command works with no runtime at all, and `VERILORE_RUNTIME=0` turns it off
   everywhere.
 - **Crash and stale-socket recovery.** A killed runtime leaves a socket file; the next
   command removes it and starts a fresh one. SIGTERM finishes any in-flight request,
@@ -1032,10 +1052,10 @@ memory work**.
 
 Carried forward unchanged from v0.8.0 and now reachable from every surface.
 
-- Receipts on REST, SDK, MCP and the CLI; `mindpalace receipt` writes a self-contained
+- Receipts on REST, SDK, MCP and the CLI; `verilore receipt` writes a self-contained
   file.
-- **Offline verification.** `mindpalace verify` needs no server, no database, no model
-  and no network. So does `mindpalace-proof`, on a bare `pip install mindpalace-os`
+- **Offline verification.** `verilore verify` needs no server, no database, no model
+  and no network. So does `verilore-proof`, on a bare `pip install verilore-os`
   with no CLI extra, because the receipt carries the response it describes.
 - **Cross-surface parity.** CLI, SDK, REST and MCP return the same authoritative
   memory, evidence, temporal state and receipt. The runtime path does too, asserted in
@@ -1045,10 +1065,10 @@ Carried forward unchanged from v0.8.0 and now reachable from every surface.
 
 ### Explicit model-free mode
 
-`MIND_PALACE_LEXICAL=1` reads through the lexical relevance rung that already existed
+`VERILORE_LEXICAL=1` reads through the lexical relevance rung that already existed
 as the no-model degradation, taken on purpose.
 
-| | semantic | `MIND_PALACE_LEXICAL=1` |
+| | semantic | `VERILORE_LEXICAL=1` |
 |---|---|---|
 | `recall`, cold process | 6.17 s | **0.63 s** |
 | `explain`, cold process | 6.23 s | **0.67 s** |
@@ -1082,14 +1102,14 @@ An explicit mode is honest about the trade-off; an automatic one hides it. Detai
   file did not say what a receipt is or how to write one.
 - **Deterministic JSON.** `recall`, `explain` and `history` return the public
   response contract, verified key-for-key against the SDK. `explain --json` now emits
-  the same `{response, receipt}` bundle `mindpalace receipt` writes, instead of
+  the same `{response, receipt}` bundle `verilore receipt` writes, instead of
   silently dropping the receipt the human-readable form shows.
 - **One failure, one exception class.** The in-process SDK path raised the service's
   own `MemoryError` while the runtime and HTTP paths raised `MemoryClientError`, so
   which one a caller needed depended on whether a runtime happened to be running. All
   three now raise `MemoryClientError` with the same code, message and status. A genuine
   defect is still not disguised as an API failure.
-- **`mindpalace runtime status`** when a command feels slow, without dumping internals.
+- **`verilore runtime status`** when a command feels slow, without dumping internals.
 
 ### Fixed
 
@@ -1151,7 +1171,7 @@ regression test:
 - `POST /api/memory/remember` accepted a `file` path. On an endpoint with no
   authentication, that let any caller read a file relative to the server's working
   directory and recall its contents. The field is gone from the HTTP contract;
-  `mindpalace remember --file` and the SDK's `file=` still read local files, which is a
+  `verilore remember --file` and the SDK's `file=` still read local files, which is a
   decision for a trusted operator.
 - The REST response computed the claim key and document path independently of the write,
   so a whitespace-padded statement was reported under a key the archive did not hold —
@@ -1162,7 +1182,7 @@ regression test:
   computed, so the digest it printed no longer described what it printed.
 - Two different keys that reduced to the same filename shared one document, so an
   unrelated fact could supersede another.
-- `mindpalace verify` rejected a bare receipt or proof that `mindpalace-proof verify`
+- `verilore verify` rejected a bare receipt or proof that `verilore-proof verify`
   accepts. One verification contract now.
 - `mindpalace_runtime` was not packaged, so on an installed wheel the runtime silently
   never started and every command stayed 6 seconds.
@@ -1172,7 +1192,7 @@ regression test:
   that as failure.
 - **The CLI's `explain --json` bundle shape was claimed and unasserted.** Nothing held
   that `explain --json` emits the same `{response, receipt}` document
-  `mindpalace receipt` writes, while `recall --json` and `history --json` return the
+  `verilore receipt` writes, while `recall --json` and `history --json` return the
   bare response. Now pinned, including that the receipt is verifiable against the
   response it ships with and that a rewritten answer is rejected.
 - `eval/m00675/README.md` described the stored artifact's 47/60 as the *current*-source
@@ -1222,7 +1242,7 @@ the same probe is 3 to 4× slower; compare within a condition, not across them.
   so existing v0.8.0 receipts remain verifiable and the frozen benchmark is untouched.
 - `MemoryResponse` and every existing route, SDK method and MCP tool are unchanged.
   `memory_query` is kept alongside `memory_recall`; both reach the same service.
-- The local runtime is never required: `MIND_PALACE_RUNTIME=0`, `MindPalace(runtime=…)`
+- The local runtime is never required: `VERILORE_RUNTIME=0`, `MindPalace(runtime=…)`
   defaults to off, and a platform without `AF_UNIX` runs in-process.
 - `sentence-transformers` remains a declared dependency, so a plain install keeps
   ranking semantically by default. Nothing in the package needs it merely to import or
@@ -1268,7 +1288,7 @@ answer different questions.
 - Recall grows linearly past a few hundred statements; the authoritative projection loads
   the version graph. That work is the guarantee, not overhead to be trimmed.
 - The first command in a fresh process pays a ~5.3 s model import unless a runtime is
-  already warm, or `MIND_PALACE_LEXICAL=1` is set.
+  already warm, or `VERILORE_LEXICAL=1` is set.
 - Authentication is a documented contract, not implemented code.
 - Receipts are not signed; `--trusted-digest` covers authenticity against a value the
   user pinned themselves.
@@ -1279,7 +1299,7 @@ answer different questions.
 
 ### Verifiable Memory
 
-- **Portable Memory Receipts.** A receipt records what Mind Palace actually
+- **Portable Memory Receipts.** A receipt records what Verilore actually
   returned to one application, for one query, at one historical state: the claim
   identity and version, the document version and path that carried it, its
   evidence with offsets, its validity window, its supersession lineage, the
@@ -1297,7 +1317,7 @@ answer different questions.
   authoritative then, and its receipt says which instant it describes. A claim
   that was `CURRENT` now but not yet valid at the queried instant is reported as
   a note rather than silently accepted.
-- **Offline verification.** `mindpalace-proof` gained `receipt` alongside
+- **Offline verification.** `verilore-proof` gained `receipt` alongside
   `verify`, `prove` and `explain`. Verification needs no server, database,
   embedding model, network or credentials, and `verify --json` reports integrity,
   provenance, temporal and supersession separately, never collapsed into one
@@ -1354,7 +1374,7 @@ a digest imply more than it shows.
   shipped in the distribution so a consumer can read a pack with no database,
   ORM, embedding model or server present.
 - Claim-representation cache (migration `007_claim_embedding_cache`) and a
-  `mindpalace reindex` command that rebuilds the derived layer from the archive.
+  `verilore reindex` command that rebuilds the derived layer from the archive.
 - `as_of` and explicit `intent` selectors on `GET /api/context`, and a lexical
   relevance fallback so authoritative query answers when the embedding model
   cannot load.
@@ -1579,7 +1599,7 @@ decision-provider and Jev research is intentionally unreleased.
 
 - **An error taxonomy** (`mindpalace_errors.py`, re-exported from the SDK). One
   base class, six components (`memory`, `auth`, `database`, `transport`,
-  `provider`, `mindpalace`), a stable machine-readable `code`, `retryable`,
+  `provider`, `verilore`), a stable machine-readable `code`, `retryable`,
   `request_id`, and a bounded `details` dict. The existing HTTP `detail` shape is
   preserved and the new fields were added beside it, so nothing an integrator
   already reads changes. An unrecognised exception is reported as an internal

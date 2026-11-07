@@ -1,4 +1,4 @@
-"""Shared test fixtures for Mind Palace."""
+"""Shared test fixtures for Verilore."""
 
 import hashlib
 import os

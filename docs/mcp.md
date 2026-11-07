@@ -1,8 +1,8 @@
 # Connect an agent
 
-`MIND_PALACE_QUERY_LOG: "1"` is the flight recorder. It is off by default and
+`VERILORE_QUERY_LOG: "1"` is the flight recorder. It is off by default and
 off everywhere unless you set it. Turn it on when you are dogfooding the archive
-and want `mindpalace feedback <query_id> --verdict right|wrong|abstained_wrongly`
+and want `verilore feedback <query_id> --verdict right|wrong|abstained_wrongly`
 to grade real questions; it appends one row per call to
 `~/.mind-palace/logs/queries.jsonl`, which holds the query text to 512 characters
 plus the corpus, the ranking and the returned claim ids — never claim text. The
@@ -17,11 +17,11 @@ out of a shared or deployed configuration; `docs/security.md` has the boundary.
     "servers": {
       "mind-palace": {
         "type": "local",
-        "command": ["mindpalace-mcp"],
+        "command": ["verilore-mcp"],
         "environment": {
-          "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
-          "MIND_PALACE_INGEST_ROOTS": "/home/you/projects",
-          "MIND_PALACE_QUERY_LOG": "1"
+          "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/verilore",
+          "VERILORE_INGEST_ROOTS": "/home/you/projects",
+          "VERILORE_QUERY_LOG": "1"
         }
       }
     }
@@ -35,8 +35,8 @@ and spells the environment block `environment` in both. From a shell:
 ```bash
 opencode mcp add mind-palace \
   --env DATABASE_URL="$DATABASE_URL" \
-  --env MIND_PALACE_INGEST_ROOTS="$PWD" \
-  -- mindpalace-mcp
+  --env VERILORE_INGEST_ROOTS="$PWD" \
+  -- verilore-mcp
 ```
 
 ```jsonc
@@ -44,10 +44,10 @@ opencode mcp add mind-palace \
 {
   "mcpServers": {
     "mind-palace": {
-      "command": "mindpalace-mcp",
+      "command": "verilore-mcp",
       "env": {
-        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
-        "MIND_PALACE_INGEST_ROOTS": "/home/you/projects"
+        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/verilore",
+        "VERILORE_INGEST_ROOTS": "/home/you/projects"
       }
     }
   }
@@ -59,18 +59,18 @@ opencode mcp add mind-palace \
 {
   "context_servers": {
     "mind-palace": {
-      "command": "mindpalace-mcp",
+      "command": "verilore-mcp",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace",
-        "MIND_PALACE_INGEST_ROOTS": "/home/you/projects"
+        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/verilore",
+        "VERILORE_INGEST_ROOTS": "/home/you/projects"
       }
     }
   }
 }
 ```
 
-Check the connection before trusting it. `mindpalace-mcp` speaks JSON-RPC over
+Check the connection before trusting it. `verilore-mcp` speaks JSON-RPC over
 stdio, so it prints nothing on a successful start; the client is what tells you
 whether it connected. `opencode mcp list` in OpenCode, or Settings, AI, MCP
 Servers in Zed, and a failed server usually means a `command` that is not on the
@@ -108,7 +108,7 @@ that never supersede or conflict. A `state` or `scope` that the SDK refuses
 comes back as a readable refusal (`invalid_state` / `invalid_scope`) rather than
 a broken server, and `file=` cannot be combined with `state` or `scope`.
 
-`query_id` appears on both reads and writes, and is what `mindpalace feedback`
+`query_id` appears on both reads and writes, and is what `verilore feedback`
 grades.
 
 ## The two argument mistakes

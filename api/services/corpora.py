@@ -3,7 +3,7 @@
 
 """Corpus management: explicit namespaces for isolated document collections.
 
-A corpus is the unit of tenancy in Mind Palace. Documents, chunks, and
+A corpus is the unit of tenancy in Verilore. Documents, chunks, and
 embeddings all belong to exactly one corpus; retrieval and ingestion are
 always corpus-scoped so data cannot leak across corpora.
 

@@ -1,6 +1,6 @@
-# Mind Palace Examples
+# Verilore Examples
 
-Minimal, reproducible examples of using Mind Palace as AI memory infrastructure.
+Minimal, reproducible examples of using Verilore as AI memory infrastructure.
 
 All examples assume a running PostgreSQL+pgvector database (see the README
 Quick Start) and `DATABASE_URL` set in your environment.
@@ -29,7 +29,7 @@ EOF
 
 ## Example B — Repository memory
 
-Point Mind Palace at any directory containing Markdown.
+Point Verilore at any directory containing Markdown.
 
 ```bash
 python - <<'EOF'
@@ -71,7 +71,7 @@ Connect an MCP-compatible client (Claude Desktop, any MCP host):
       "command": "/path/to/your/venv/bin/python",
       "args": ["-m", "mcp_server"],
       "env": {
-        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/mindpalace"
+        "DATABASE_URL": "postgresql://mpadmin:secret@localhost:5432/verilore"
       }
     }
   }

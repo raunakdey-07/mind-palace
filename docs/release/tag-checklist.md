@@ -54,7 +54,7 @@ Current state, measured 2026-10-13:
 ### Packaging
 
 - [ ] The wheel builds, and a **bare** install outside the source tree can run
-      `mindpalace-proof verify` on a real receipt with no database and no
+      `verilore-proof verify` on a real receipt with no database and no
       network.
 - [ ] `mindpalace_errors`, the runtime entry point and the verifier all ship.
 - [ ] The MCP extra serves a real MCP session with all tools documented.
@@ -62,7 +62,7 @@ Current state, measured 2026-10-13:
 ### The README's first command actually works
 
 - [ ] Run it, in a clean container, exactly as printed.
-- [ ] **Today it does not.** `pip install mindpalace-os` returns 404 on PyPI
+- [ ] **Today it does not.** `pip install verilore-os` returns 404 on PyPI
       (checked 2026-10-13: the JSON API and the simple index both 404). The
       README has been changed to install from the repository instead, and the
       reason is written next to it. If the distribution is published before the
@@ -75,7 +75,7 @@ Current state, measured 2026-10-13:
 
 - [ ] Every "N passed" figure in `STATUS.md` and `README.md` names the run that
       produced it.
-- [ ] No document claims Mind Palace outperforms a named system. No
+- [ ] No document claims Verilore outperforms a named system. No
       cross-vendor harness has been run, so no such comparison may exist.
 - [ ] Every figure that is development-only says so. Sealed scoring has never
       happened; held-out v1 is burned.
@@ -85,7 +85,7 @@ Current state, measured 2026-10-13:
 ## After tagging
 
 - [ ] `scripts/release/check_versioning.py` passes on the tag.
-- [ ] A clean checkout of the tag passes `mindpalace --help`, the upgrade
+- [ ] A clean checkout of the tag passes `verilore --help`, the upgrade
       fixture and the five-minute path.
 - [ ] The tag is annotated with the commit it names and nothing is force-moved
       afterwards.

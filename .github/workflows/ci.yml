@@ -483,7 +483,7 @@ jobs:
       # The step ran only the second one, so the demo tried to reach
       # 127.0.0.1:8000 and died with `httpx.ConnectError: All connection
       # attempts failed`. It is a real HTTP client by design -- it imports none
-      # of Mind Palace -- so there is nothing for it to fall back to.
+      # of Verilore -- so there is nothing for it to fall back to.
       #
       # This never showed up before because every earlier step in the job failed
       # first and this one was skipped. A skipped step is not a passing step.

@@ -1,6 +1,6 @@
 """Head-to-head stale-fact and ADR evolution benchmark.
 
-Mind Palace vs. Plain Top-k Chunk RAG, using the exact same ONNX embedding model.
+Verilore vs. Plain Top-k Chunk RAG, using the exact same ONNX embedding model.
 """
 
 from __future__ import annotations
@@ -429,7 +429,7 @@ def run_benchmark():
             scored = sorted(allowed, key=lambda i: _cosine(qv, embeddings[i]), reverse=True)
             return [chunk_list[i] for i in scored[:k]]
 
-        # Mind Palace + baseline over questions
+        # Verilore + baseline over questions
         mp_correct = 0
         base_correct = 0
         base_contam = 0
@@ -486,7 +486,7 @@ def run_benchmark():
             return max(sims) < ABSTAIN_THRESHOLD
 
         for q, gold, abstain, cat in QUESTIONS:
-            # Mind Palace
+            # Verilore
             try:
                 resp = mp.recall(q)
             except Exception:

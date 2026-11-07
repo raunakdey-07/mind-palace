@@ -448,7 +448,7 @@ def test_a_missing_container_is_provisioned_with_a_restart_policy(monkeypatch, t
     """`verilore init` is one command, so it has to be able to create the database.
 
     There is no stopped container to start on a machine that has never run
-    Mind Palace, so `init` provisions one. The `--restart unless-stopped`
+    Verilore, so `init` provisions one. The `--restart unless-stopped`
     flag is what stops the original defect from coming back after the next
     reboot, so it is asserted rather than assumed.
     """

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Mind Palace Python SDK: memory that remembers what changed, and why.
+"""Verilore Python SDK: memory that remembers what changed, and why.
 
 The intended experience is five operations:
 
@@ -1251,7 +1251,7 @@ class Verilore:
         Remembering the same ``key`` with new text supersedes the previous value,
         which is what :meth:`history` then shows.
 
-        ``key`` is how you tell Mind Palace that two statements are about the same
+        ``key`` is how you tell Verilore that two statements are about the same
         fact. Omit it and each distinct statement is its own memory.
 
         ``state`` is the decision state of the claim: "approved" (default),

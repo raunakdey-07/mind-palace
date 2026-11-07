@@ -48,7 +48,7 @@ and predecessor ID. Page sizes are 1–500.
 
 Cursors are opaque, HMAC-integrity-protected, versioned, corpus-bound, and
 usable across independent database sessions when the same
-`MIND_PALACE_CURSOR_SECRET` is configured. They are not encrypted. Malformed,
+`VERILORE_CURSOR_SECRET` is configured. They are not encrypted. Malformed,
 tampered, wrong-corpus, and semantically incompatible cursors are rejected with
 `422 invalid_cursor` or `422 cursor_corpus_mismatch`.
 
@@ -71,7 +71,7 @@ page = MindPalace(base_url="http://127.0.0.1:8000").memory.feed(
 ```
 
 ```bash
-mindpalace memory feed --corpus my-corpus --page-size 50
+verilore memory feed --corpus my-corpus --page-size 50
 ```
 
 M009 deliberately excludes `memory_feed` from MCP to avoid creating a second
@@ -233,7 +233,7 @@ calls: default validity timestamps differ, and concurrent ingestion can change
 state. Use `snapshot_id` to fix observation and validity for repeatable selection.
 Query additionally requires the same embedding model/runtime, question, and intent.
 
-### Reading a pack without Mind Palace
+### Reading a pack without Verilore
 
 A pack is an interchange format. `memory_pack.py` at the repository root reads one
 using only the standard library: no database, no model, no network, and no import from
@@ -368,7 +368,7 @@ python -m cli.main memory replay --corpus my-corpus --snapshot-id SNAPSHOT_ID
 python -m cli.main memory pack --corpus my-corpus --query streaming --budget 8000
 python -m cli.main memory query --corpus my-corpus \
   --query "What carries Dispatch events now?" --intent current --budget 8000
-mindpalace memory feed --corpus my-corpus --page-size 50
+verilore memory feed --corpus my-corpus --page-size 50
 ```
 
 CLI selector flags follow the contract table, with the SDK differences noted

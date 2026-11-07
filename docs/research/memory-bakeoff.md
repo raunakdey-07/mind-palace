@@ -2,7 +2,7 @@
 
 ## Question
 
-Mind Palace exposes two ways to ask a corpus a question. Do they answer the same
+Verilore exposes two ways to ask a corpus a question. Do they answer the same
 question, and what happens to each when the embedding model cannot load?
 
 - `context()` (SDK) and `GET /context` — documented in `api/routers/context.py` as
@@ -31,7 +31,7 @@ scored on whether the answer text is present, and its missing fields are recorde
 Reproduce:
 
 ```bash
-DATABASE_URL=postgresql://USER:PASS@localhost:5432/mindpalace \
+DATABASE_URL=postgresql://USER:PASS@localhost:5432/verilore \
   venvmp/bin/python scripts/benchmark/memory_bakeoff.py --postgres-version 15.4
 ```
 

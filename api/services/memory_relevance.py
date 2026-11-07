@@ -123,7 +123,7 @@ COMMON_TOKEN_FLOOR = 12
 #: the corpus cannot answer, however well the corpus's own vocabulary matched.
 #:
 #: The band's own value is not the test. The test is that the corpus's best
-#: answer to the question is about something else: "Mind Palace" is in the
+#: answer to the question is about something else: "Verilore" is in the
 #: corpus's vocabulary, so a question that names it matches everything, and
 #: "Kafka" is not, so the one claim that mentions Kafka is a long way down.
 SUBJECT_RATIO = 0.80
@@ -195,7 +195,7 @@ def _subject_is_absent(
 ) -> bool:
     """Whether the corpus has none of the question's subject words.
 
-    "How does Mind Palace use Kubernetes?" names one subject, and the corpus
+    "How does Verilore use Kubernetes?" names one subject, and the corpus
     has never used the word. There is nothing to answer it with, and the
     question abstains.
 
@@ -667,7 +667,7 @@ def relevance(
     # The words in the question that name a subject: neither the corpus's own
     # vocabulary nor a verb that names an action.
     #
-    # "How is Kafka configured in Mind Palace?" is not a question about the
+    # "How is Kafka configured in Verilore?" is not a question about the
     # project. The words that match are "Mind" and "Palace", which are in the
     # project's own name and in a seventh of its claims, and the claims they
     # reach say nothing about Kafka. The subject is the one word left.
@@ -851,14 +851,14 @@ def relevance(
         ):
 
             # The corpus's best answer to this question is about something else.
-            # "How is Kafka configured in Mind Palace?" matched the corpus's own
+            # "How is Kafka configured in Verilore?" matched the corpus's own
             # name, and the one claim that mentions Kafka is a long way down.
             # Answering it with the claims that matched the project's name
             # would be answering a different question, so this topic contributes
             # nothing.
             #
             # The first branch is the same question asked about a subject the
-            # corpus has never used: "How does Mind Palace use Kubernetes?"
+            # corpus has never used: "How does Verilore use Kubernetes?"
             # There is nothing to answer it with.
             continue
         if ranked_by_key:

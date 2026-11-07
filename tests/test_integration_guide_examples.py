@@ -72,7 +72,7 @@ def test_guide_shell_commands_appear_in_ci_or_readme():
             if not line or line.startswith("#"):
                 continue
             if line.startswith("verilore "):
-                # Mind Palace CLI commands are checked via --help.
+                # Verilore CLI commands are checked via --help.
                 tokens = line.split()[1:]
                 # The command path is every token before the first --flag;
                 # everything after is a flag or its value.

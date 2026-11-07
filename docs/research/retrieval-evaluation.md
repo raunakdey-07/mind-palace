@@ -167,8 +167,8 @@ frozen and were not modified by either program.
 
 ## What none of this establishes
 
-- No result here compares Mind Palace with another retrieval or memory system.
-  The comparisons in `eval/EVALUATION.md` are between Mind Palace's own
+- No result here compares Verilore with another retrieval or memory system.
+  The comparisons in `eval/EVALUATION.md` are between Verilore's own
   strategies.
 - 47/60 is a project-specific authored evaluation on one frozen corpus. It is
   not a claim of universal memory-system superiority or production readiness.

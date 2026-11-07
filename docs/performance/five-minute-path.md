@@ -23,13 +23,13 @@ exactly one thing: whether a local runtime is running.
 
 | command | in-process | with runtime |
 |---|---|---|
-| `mindpalace init` | 0.63 s | 0.62 s |
-| `mindpalace remember` | 0.65 s | 0.64 s |
-| `mindpalace recall` | 6.10 s | **0.32 s** |
-| `mindpalace explain` | 6.77 s | **0.32 s** |
-| `mindpalace history` | 0.83 s | 0.31 s |
-| `mindpalace receipt` | 6.10 s | 0.33 s |
-| `mindpalace verify` | 0.75 s | 0.55 s |
+| `verilore init` | 0.63 s | 0.62 s |
+| `verilore remember` | 0.65 s | 0.64 s |
+| `verilore recall` | 6.10 s | **0.32 s** |
+| `verilore explain` | 6.77 s | **0.32 s** |
+| `verilore history` | 0.83 s | 0.31 s |
+| `verilore receipt` | 6.10 s | 0.33 s |
+| `verilore verify` | 0.75 s | 0.55 s |
 | SDK `recall`, fresh process | 5.92 s | 0.66 s |
 | MCP `memory_recall`, fresh process | 6.47 s | 6.45 s |
 
@@ -71,7 +71,7 @@ at 50 statements). It does not help the *first* read of a process, which is the 
 in the table above.
 
 **Let `remember` fill the cache when the model is already resident.** Correct in
-principle, and it did nothing: every `mindpalace remember` is a fresh process, so a
+principle, and it did nothing: every `verilore remember` is a fresh process, so a
 residency test never fires and the read cache stays permanently cold.
 
 **Let `remember` fill the cache when the model is already on disk.** This worked and
@@ -105,7 +105,7 @@ largest single remaining item.
 # Part 2: the work
 
 ```bash
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore
 python scripts/five_minute_probe.py --statements 200  --repetitions 20
 python scripts/five_minute_probe.py --statements 1000 --repetitions 20
 ```

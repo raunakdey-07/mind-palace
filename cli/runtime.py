@@ -26,7 +26,7 @@ def start(
 ) -> None:
     """Start a background runtime, or report that one is already running.
 
-    Safe to run repeatedly. The usual way to use Mind Palace never runs this: the
+    Safe to run repeatedly. The usual way to use Verilore never runs this: the
     first command you run starts a runtime for you.
     """
     from api import runtime

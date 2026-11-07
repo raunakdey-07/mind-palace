@@ -711,7 +711,7 @@ async def test_a_read_warms_its_own_cache_and_the_next_read_is_served_from_it(st
 async def test_rest_sdk_mcp_and_the_service_agree_on_one_memory(store, surfaces):
     """Every door returns the same authoritative answer.
 
-    Mind Palace is one product with four doors. If any surface can produce a
+    Verilore is one product with four doors. If any surface can produce a
     different answer to the same question, the product claim cannot be falsified,
     so this is a permanent contract rather than a convenience.
 
@@ -1326,7 +1326,7 @@ def test_the_cli_works_from_a_clean_environment(tmp_path, recorder_path, isolate
         timeout=180,
     )
     assert init.returncode == 0, init.stderr
-    assert "Mind Palace is ready." in init.stdout
+    assert "Verilore is ready." in init.stdout
     assert "verilore remember" in init.stdout, "init must name the next command"
 
     assert "Remembered." in cli("remember", "The datastore is PostgreSQL.", "--key", "datastore")

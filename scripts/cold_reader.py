@@ -66,7 +66,7 @@ OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 
 TASKS = {
     "cli": (
-        "You have just installed Mind Palace on a machine with PostgreSQL running "
+        "You have just installed Verilore on a machine with PostgreSQL running "
         "at postgresql://mpadmin:secret@localhost:5432/verilore. Using ONLY the "
         "README you have been given, and a shell, store the statement "
         '"The production datastore changed from SQLite to PostgreSQL." and then '
@@ -77,7 +77,7 @@ TASKS = {
     ),
     "sdk": (
         "Using ONLY the README you have been given, write and run a Python script "
-        'that uses the Mind Palace Python SDK to store the statement "We will use '
+        'that uses the Verilore Python SDK to store the statement "We will use '
         'PostgreSQL as the primary datastore." and then answer "Which datastore '
         'did we choose?". Report the script and its output. If something fails, '
         "report the error verbatim. Do not read any file outside the README."

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""The error taxonomy: one vocabulary for every failure Mind Palace produces.
+"""The error taxonomy: one vocabulary for every failure Verilore produces.
 
 A memory subsystem underneath somebody else's product has one job in the failure
 path that matters more than in the success path: let the integrator tell, in one
@@ -72,7 +72,7 @@ __all__ = [
 #:
 #: ``provider`` covers the internal embedding and reranking models *and* any
 #: external generation model. Both are "a model provider we called". Keeping them
-#: under one component is honest -- Mind Palace cannot always tell which is which,
+#: under one component is honest -- Verilore cannot always tell which is which,
 #: and pretending otherwise would only move the ambiguity.
 COMPONENTS = ("memory", "auth", "database", "transport", "provider", "verilore")
 
@@ -118,7 +118,7 @@ RequestId = _RequestId()
 
 
 class VeriloreError(Exception):
-    """Base class for every failure Mind Palace raises on purpose.
+    """Base class for every failure Verilore raises on purpose.
 
     Subclasses set `default_code` and `default_component`; instances may override
     either, because "the same shape of problem in a different component" is common
@@ -135,7 +135,7 @@ class VeriloreError(Exception):
     default_component = "verilore"
     default_retryable = False
     #: The HTTP status this maps to when the failure reaches the API. Chosen so a
-    #: proxy or a load balancer makes the same decision Mind Palace does.
+    #: proxy or a load balancer makes the same decision Verilore does.
     default_status = 500
 
     def __init__(
@@ -183,7 +183,7 @@ class VeriloreError(Exception):
 
 
 # ---------------------------------------------------------------------------
-# memory -- the caller's request or Mind Palace's semantics
+# memory -- the caller's request or Verilore's semantics
 # ---------------------------------------------------------------------------
 
 
@@ -394,7 +394,7 @@ class ProviderRefusedError(ProviderError):
 
 
 class InternalError(VeriloreError):
-    """A defect in Mind Palace.
+    """A defect in Verilore.
 
     Not retryable, and deliberately not dressed as a provider outage. A caller
     needs to know that retrying will not help and that escalating is the right

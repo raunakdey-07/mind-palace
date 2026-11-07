@@ -618,7 +618,7 @@ def host_postgres_port_conflict_remediation() -> str:
     return (
         "A host or foreign PostgreSQL instance is bound to localhost:5432, so the "
         "default mpadmin credentials were rejected.\n"
-        "Either point Mind Palace at a different database:\n"
+        "Either point Verilore at a different database:\n"
         "  export DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/verilore\n"
         "Or stop the conflicting host service and re-run init:\n"
         "  sudo systemctl stop postgresql\n"

@@ -106,7 +106,7 @@ def _load_target(path: str) -> tuple[dict, str]:
     if isinstance(data, dict) and "proof_version" in data:
         return data, "proof"
     raise ProofError(
-        f"{path!r} is not a Mind Palace receipt. It is neither a response bundle "
+        f"{path!r} is not a Verilore receipt. It is neither a response bundle "
         "(written by `verilore receipt`), a receipt, nor a proof."
     )
 

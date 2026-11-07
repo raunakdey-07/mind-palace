@@ -371,7 +371,7 @@ def test_only_an_explicit_value_enables_the_mode():
 def test_a_receipt_from_lexical_mode_verifies_offline(corpus, tmp_path):
     """The trust boundary is unchanged by the mode.
 
-    A receipt proves what Mind Palace returned and how that response was represented.
+    A receipt proves what Verilore returned and how that response was represented.
     It does not prove the world is true, and choosing a different scorer does not
     weaken either half of that.
     """

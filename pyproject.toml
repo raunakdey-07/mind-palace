@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "verilore-os"
 version = "0.9.3"
-description = "Mind Palace - AI-native Research Operating System"
+description = "Verilore - AI-native Research Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

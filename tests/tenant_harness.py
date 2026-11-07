@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 #: Names are corpus names, not tenant identifiers: the application resolves them
-#: from its own records and Mind Palace treats them as opaque.
+#: from its own records and Verilore treats them as opaque.
 ALPHA = "alpha"
 BETA = "beta"
 ALPHA_CORPORA = {

@@ -290,7 +290,7 @@ def claim_key(statement: str, key: str | None = None) -> str:
         key = key.strip()
         if not key:
             raise RememberError(
-                "a claim key cannot be blank; omit it to let Mind Palace choose one"
+                "a claim key cannot be blank; omit it to let Verilore choose one"
             )
         return key
     from api.services.memory import _hash
@@ -674,7 +674,7 @@ def _read(file: str) -> str:
         raise RememberError(f"cannot read {file}: {exc.strerror or exc}") from exc
     except (UnicodeDecodeError, ValueError) as exc:
         raise RememberError(
-            f"{file} is not text Mind Palace can store: {exc}. "
+            f"{file} is not text Verilore can store: {exc}. "
             "Remember a statement, or a Markdown file."
         ) from exc
     if not content.strip():

@@ -16,7 +16,7 @@ no demo.
 
 Every memory call here goes over HTTP, through the real middleware, the real
 authorization choke point and the real database policies. Only the socket is
-missing, because the Mind Palace application is mounted in-process rather than
+missing, because the Verilore application is mounted in-process rather than
 started as a service -- so this exercises the same path a deployment would, with
 no port to configure.
 """
@@ -60,7 +60,7 @@ async def _authorization_mode(base_url: str) -> str:
     # database role is not enforcing its policies. Saying so is more useful than
     # a KeyError, and it is the one deployment mistake this demo can make.
     if response.status_code != 200:
-        raise SystemExit(f"Mind Palace at {base_url} is not ready: " f"{body.get('checks', body)}")
+        raise SystemExit(f"Verilore at {base_url} is not ready: " f"{body.get('checks', body)}")
     return body["auth"]["mode"]
 
 
@@ -69,7 +69,7 @@ async def main() -> int:
 
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-    # Where Mind Palace is running. This demo is a *client* of Mind Palace: it
+    # Where Verilore is running. This demo is a *client* of Verilore: it
     # imports none of it, not even the ASGI application object, because the thing
     # this example has to demonstrate is that an independent application can be
     # built on the documented interface and nothing else.
@@ -79,7 +79,7 @@ async def main() -> int:
     print(f"authorization mode: {mode} (at {base_url})")
 
     # The application's own database, opened here rather than imported: a host
-    # application connects to its own store and knows nothing about Mind Palace's.
+    # application connects to its own store and knows nothing about Verilore's.
     # The driver is normalised because a deployment may hand the same DSN to a
     # sync and an async process.
     url = os.environ["DATABASE_URL"].replace("postgresql://", "postgresql+asyncpg://")
@@ -161,7 +161,7 @@ async def main() -> int:
         await seeded.http.aclose()
         if mode != "required":
             print(
-                "\nNOTE: this ran with authorization off, so Mind Palace itself "
+                "\nNOTE: this ran with authorization off, so Verilore itself "
                 "answered every corpus. The refusals above are the *application's* "
                 "membership checks. Re-run with VERILORE_AUTH_MODE=required to "
                 "exercise the memory layer's own boundary too."

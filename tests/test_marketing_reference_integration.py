@@ -10,8 +10,8 @@ security claim rather than a demonstration of convenience:
 * one organisation's creator cannot read another organisation's memory.
 
 The workflow's own role matrix is asserted in both authorization modes, so it
-does not depend on Mind Palace's row-level policy being armed. The
-cross-organisation read is also asserted through Mind Palace's real HTTP
+does not depend on Verilore's row-level policy being armed. The
+cross-organisation read is also asserted through Verilore's real HTTP
 surface, which is where the deployment boundary actually is.
 """
 
@@ -43,11 +43,11 @@ PLATFORMS = ("blog", "linkedin", "facebook", "instagram")
 
 @pytest.fixture(scope="session")
 def memory_service_url():
-    """A real Mind Palace, on a real socket, in a subprocess.
+    """A real Verilore, on a real socket, in a subprocess.
 
     Deliberately not `ASGITransport(app=app)`. That transport exercises the whole
     application and skips only the socket, which made it tempting -- and it is why
-    the example used to import `api.main.app`. A consumer of Mind Palace connects
+    the example used to import `api.main.app`. A consumer of Verilore connects
     to a URL, so the example connects to a URL too, and this suite proves it.
 
     The subprocess inherits `DATABASE_URL` and `VERILORE_AUTH_MODE`, so the
@@ -434,7 +434,7 @@ async def test_one_organisations_creator_cannot_read_another_organisations_memor
     """The claim the whole example is built around.
 
     Two layers, both real. The workflow refuses because Beta is not a member of
-    Alpha; and through Mind Palace's own surface -- over a socket, as a separate
+    Alpha; and through Verilore's own surface -- over a socket, as a separate
     deployment would be -- Beta's credential is not scoped to Alpha's corpora, so
     naming one is refused there too.
     """
@@ -526,7 +526,7 @@ async def test_the_example_imports_no_mind_palace_internals_at_all():
         if hits:
             offenders[path.name] = hits
     assert not offenders, (
-        "the example must reach Mind Palace over its documented interface only: " f"{offenders}"
+        "the example must reach Verilore over its documented interface only: " f"{offenders}"
     )
 
 

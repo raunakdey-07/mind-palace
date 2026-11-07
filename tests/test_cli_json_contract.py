@@ -139,7 +139,7 @@ def test_the_explain_bundle_verifies_against_its_own_response(seeded_corpus):
     """Well-shaped is not the same as correct. Verify it the way a recipient would.
 
     Offline, with no database and no model, because that is the entire point of
-    exporting a receipt: someone who has never heard of Mind Palace must be able to
+    exporting a receipt: someone who has never heard of Verilore must be able to
     check it.
     """
     from memory_receipt import verify_response_receipt

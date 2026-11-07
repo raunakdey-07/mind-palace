@@ -5,7 +5,7 @@
 
 Nothing here imports `api.services`, a repository, a table, or an embedding
 internals. That is not tidiness -- it is the claim the example exists to
-demonstrate. An application that has to know how Mind Palace stores things
+demonstrate. An application that has to know how Verilore stores things
 cannot be moved to a different deployment of it, and would break the day the
 storage changed while the contract did not.
 
@@ -28,7 +28,7 @@ from typing import Any
 
 import httpx
 
-#: Where the Mind Palace service is. A host application sets this to its own
+#: Where the Verilore service is. A host application sets this to its own
 #: deployment; the demo leaves it unset and uses the in-process app.
 DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=5.0)
 
@@ -42,14 +42,14 @@ def base_url() -> str:
     url = os.getenv("VERILORE_BASE_URL", "").strip()
     if not url:
         raise RuntimeError(
-            "VERILORE_BASE_URL is not set. Point it at the Mind Palace service, "
-            "for example http://mindpalace.internal:8000"
+            "VERILORE_BASE_URL is not set. Point it at the Verilore service, "
+            "for example http://verilore.internal:8000"
         )
     return url.rstrip("/")
 
 
 class MemoryDenied(Exception):
-    """Mind Palace refused the request.
+    """Verilore refused the request.
 
     Carries the public `code` so the application can tell "you may not see this
     corpus" from "that corpus does not exist", without parsing prose. Both arrive
@@ -100,7 +100,7 @@ class MemoryResponse(dict):
 class MemoryClient:
     """One workspace's view of memory, bound to its own credential.
 
-    The credential belongs to the *workspace*, not to a user. Mind Palace is
+    The credential belongs to the *workspace*, not to a user. Verilore is
     therefore told which workspace this is by which corpora the credential covers,
     and never by a name in a request body.
     """
@@ -126,7 +126,7 @@ class MemoryClient:
         except httpx.HTTPError as exc:
             # Transport failures are not refusals. Saying otherwise would let an
             # application treat an outage as a permission decision.
-            raise MemoryDenied("memory_unavailable", f"cannot reach Mind Palace: {exc}", 503)
+            raise MemoryDenied("memory_unavailable", f"cannot reach Verilore: {exc}", 503)
         if response.status_code >= 400:
             raise MemoryDenied(*_refusal(response))
         return MemoryResponse(response.json())
@@ -166,7 +166,7 @@ def _refusal(response: httpx.Response) -> tuple[str, str, int]:
     fabricated one, so an application cannot branch on a shape that was never
     promised.
     """
-    code, message = "http_error", f"Mind Palace returned {response.status_code}"
+    code, message = "http_error", f"Verilore returned {response.status_code}"
     try:
         detail = response.json()
         if isinstance(detail, dict):
@@ -180,12 +180,12 @@ def _refusal(response: httpx.Response) -> tuple[str, str, int]:
 
 
 def http_client(base_url: str) -> httpx.AsyncClient:
-    """An HTTP client pointed at a running Mind Palace, over a real socket.
+    """An HTTP client pointed at a running Verilore, over a real socket.
 
     This is the whole integration surface. There is no in-process shortcut left in
     the example -- no `ASGITransport`, no import of the server's `app` object --
     because a shortcut there would mean the demo proves the example works against
     a private interface rather than against the documented one. A consumer
-    integrating with Mind Palace talks to a URL; so does this.
+    integrating with Verilore talks to a URL; so does this.
     """
     return httpx.AsyncClient(base_url=base_url.rstrip("/"), timeout=DEFAULT_TIMEOUT)

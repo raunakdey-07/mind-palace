@@ -2,7 +2,7 @@
 
 Scope: the boundary between what a source document asserts and what a model
 infers, and what the external review says about how other systems draw that
-line. Evidence for the Mind Palace side is in `api/services/memory.py`,
+line. Evidence for the Verilore side is in `api/services/memory.py`,
 `api/services/memory_public.py`, `api/services/memory_query.py`,
 `migrations/versions/004_memory.py`, and the two documents beside this one,
 [`memory-model.md`](memory-model.md) and
@@ -99,5 +99,5 @@ and is excluded from the API image. It is not a derived-memory layer and does
 not feed the released query path.
 
 The current L2 rebuild path is `api/services/rehydrate.py`, invoked by
-`mindpalace reindex`. It writes only live projection rows and never appends an
+`verilore reindex`. It writes only live projection rows and never appends an
 archive version.

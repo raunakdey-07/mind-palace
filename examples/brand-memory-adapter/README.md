@@ -1,7 +1,7 @@
 # Brand Memory Adapter
 
 SDK-only adapter for brand memory in a content-generation app. Use this adapter
-when your application uses the Python SDK to reach Mind Palace over HTTP. For a
+when your application uses the Python SDK to reach Verilore over HTTP. For a
 REST-only integration (no SDK import), see the reference example in
 `examples/marketing-campaign-memory/`.
 
@@ -20,7 +20,7 @@ REST-only integration (no SDK import), see the reference example in
 
 ## Environment
 
-- `MIND_PALACE_URL` — base URL of the Mind Palace server
+- `VERILORE_URL` — base URL of the Verilore server
 - `BRAND_MEMORY_KEY` — bearer credential for the brand's corpus
 
 All functions operate on the corpus named by the `tenant` argument, which must

@@ -74,7 +74,7 @@ def _frontmatter_error_line(raw: str) -> int | None:
 
 
 class FrontmatterSchema(BaseModel):
-    """Validated frontmatter schema for Mind Palace documents."""
+    """Validated frontmatter schema for Verilore documents."""
 
     title: str = Field(..., min_length=1)
     # Optional, and deliberately so. It was required here while every consumer

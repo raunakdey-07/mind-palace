@@ -72,7 +72,7 @@ inventing a number for them would be theatre.
 
 MemPalace reports a 96.6% R@5 on LongMemEval. That is a different dataset, task
 and metric from anything here, and it is not comparable. What can be said is
-narrower: Mind Palace's answer is a bounded object that names its own state and
+narrower: Verilore's answer is a bounded object that names its own state and
 carries an exact quote with character offsets, and the consumer above can tell
 resolved from conflicting from absent without reading the documentation. Whether
 that is worth more than a higher recall number on someone else's benchmark is

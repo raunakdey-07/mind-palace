@@ -13,7 +13,7 @@ from __future__ import annotations
 
 
 def database_hint() -> str:
-    """Where Mind Palace believes the database is, named for this process.
+    """Where Verilore believes the database is, named for this process.
 
     Read from the environment rather than hardcoded, so the advice names the
     database this command would actually use. Never raises: advice that fails is
@@ -42,7 +42,7 @@ def storage_unavailable(exc: Exception | None = None) -> str:
     """
     detail = f"\n\n{type(exc).__name__}: {exc}" if exc is not None else ""
     return (
-        "Mind Palace needs persistent storage, and it could not reach it.\n"
+        "Verilore needs persistent storage, and it could not reach it.\n"
         "\n"
         f"Why: it could not connect to PostgreSQL at {database_hint()}.\n"
         "\n"

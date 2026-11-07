@@ -1,6 +1,6 @@
 # Decision memory
 
-The smallest useful Mind Palace application: an agent that remembers decisions,
+The smallest useful Verilore application: an agent that remembers decisions,
 answers questions about them, shows its basis, and hands you a receipt you can
 verify without this program running.
 
@@ -24,12 +24,12 @@ product in one file, not as a framework to copy.
 
 ## Requirements
 
-A running Mind Palace database. `mindpalace init` prints the two commands:
+A running Verilore database. `verilore init` prints the two commands:
 
 ```bash
 docker compose up -d postgresql
 python -m alembic -c migrations/alembic.ini upgrade head
-export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/mindpalace
+export DATABASE_URL=postgresql://mpadmin:secret@localhost:5432/verilore
 ```
 
 No embedding model, no API key, no LLM.

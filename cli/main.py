@@ -18,14 +18,14 @@ import yaml
 from cli.memory import app as memory_app
 
 #: The five product commands, in the order a newcomer meets them.
-help = "Mind Palace: memory that remembers what changed, what was true when, and why to believe it."
+help = "Verilore: memory that remembers what changed, what was true when, and why to believe it."
 
 app = typer.Typer(name="verilore", help=help)
 app.add_typer(memory_app)
 
 # The local runtime. `verilore runtime status` for when a command feels slow, and
 # `verilore runtime stop` to be sure nothing is running. Neither is needed to use
-# Mind Palace: every command works with no runtime at all.
+# Verilore: every command works with no runtime at all.
 from cli.runtime import app as runtime_app  # noqa: E402
 
 app.add_typer(runtime_app)
@@ -40,7 +40,7 @@ app.add_typer(runtime_app)
 #: up, and no idea which of the twenty commands is the first one. So the empty
 #: invocation is where the first three commands go.
 WELCOME = """\
-Mind Palace: memory that remembers what changed, what was true when, and why to believe it.
+Verilore: memory that remembers what changed, what was true when, and why to believe it.
 
 Start here:
 
@@ -104,7 +104,7 @@ BaseURL = Annotated[
     typer.Option(
         "--base-url",
         help=(
-            "Use a running Mind Palace service instead of the local database, "
+            "Use a running Verilore service instead of the local database, "
             "for example http://127.0.0.1:8000"
         ),
     ),
@@ -351,7 +351,7 @@ def init(
         applied = _apply_migrations()
         if not applied.ok:
             typer.echo(
-                "Mind Palace is installed, but the memory schema is not applied yet.\n"
+                "Verilore is installed, but the memory schema is not applied yet.\n"
                 f"\n{applied.detail}\n"
                 "\nWhat to do:\n"
                 "  python -m alembic -c migrations/alembic.ini upgrade head",
@@ -370,7 +370,7 @@ def init(
 
     _run(lambda: asyncio.run(ensure()))
 
-    typer.echo("Mind Palace is ready.")
+    typer.echo("Verilore is ready.")
     typer.echo(f"  corpus: {DEFAULT_CORPUS}")
     _warm_runtime()
     typer.echo("\nRecord your first memory:\n")
@@ -696,7 +696,7 @@ def explain(
     verbose: State = False,
     debug: Debug = False,
 ) -> None:
-    """Show why Mind Palace returned that answer.
+    """Show why Verilore returned that answer.
 
     Reads the recorded provenance: the source document and version, the time the
     answer was true, the exact evidence characters, the supersession history, and
@@ -787,7 +787,7 @@ def history(
 
 
 def _client(base_url: str | None, *, runtime: bool = True):
-    """A client for local memory, or for a Mind Palace service someone else runs.
+    """A client for local memory, or for a Verilore service someone else runs.
 
     Both go through the same SDK, so the CLI cannot drift from the SDK, the REST
     API or MCP: there is one client and one service underneath all four.
@@ -2074,7 +2074,7 @@ def eval_retrieval(
 
 credentials_app = typer.Typer(
     name="credential",
-    help="Issue, list and revoke the credentials callers present to Mind Palace.",
+    help="Issue, list and revoke the credentials callers present to Verilore.",
     no_args_is_help=True,
 )
 app.add_typer(credentials_app)

@@ -132,7 +132,7 @@ def verify() -> int:
 
     Deliberately imports `api.services.embedder.Embedder` and
     `api.services.reranker.Reranker` rather than loading the files directly: the
-    question is whether Mind Palace can use the model, not whether the model exists.
+    question is whether Verilore can use the model, not whether the model exists.
 
     The embedder is checked unconditionally, because onnxruntime is a default
     dependency. The reranker is checked only when `sentence-transformers` imports,

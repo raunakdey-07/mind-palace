@@ -88,7 +88,7 @@ refuses rather than degrades, which is the only safe failure mode.
 
 Not implemented, and not implementable here with a claim of completeness. It needs
 a key provider outside the database, a migration of every plaintext column
-including vectors, and a documented answer for backups that Mind Palace does not
+including vectors, and a documented answer for backups that Verilore does not
 control. Building half of it and calling it erasure is the failure the task names
 explicitly.
 

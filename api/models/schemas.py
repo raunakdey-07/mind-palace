@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Raunak Dey
 
-"""Pydantic models for Mind Palace API request/response schemas."""
+"""Pydantic models for Verilore API request/response schemas."""
 
 from __future__ import annotations
 

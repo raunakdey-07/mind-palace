@@ -4,7 +4,7 @@
 
 Is the Memory Pack a better integration boundary than exposing chunks, claims, or
 database-specific retrieval results? Concretely: can a consumer that has never heard of
-Mind Palace understand a pack, and can the authoritative answer survive losing every
+Verilore understand a pack, and can the authoritative answer survive losing every
 derived system?
 
 ## Method

@@ -165,7 +165,7 @@ def test_the_existing_sdk_error_still_catches_everything():
 
 
 def test_status_codes_agree_with_the_classes():
-    """A proxy or load balancer makes the same decision Mind Palace does, so the
+    """A proxy or load balancer makes the same decision Verilore does, so the
     mapping has to be coherent rather than arbitrary."""
     assert ValidationError.default_status == 422
     assert taxonomy.AuthenticationError.default_status == 401

@@ -145,7 +145,7 @@ def render_recall(
             "with prose and no such lines contributes nothing here. See\n"
             "docs/authoring.md for both forms."
         )
-        lines.append("\nNothing was invented: Mind Palace records only what was remembered.")
+        lines.append("\nNothing was invented: Verilore records only what was remembered.")
         return "\n".join(lines)
 
     for index, claim in enumerate(current, 1):

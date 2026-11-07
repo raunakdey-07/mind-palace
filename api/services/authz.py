@@ -124,7 +124,7 @@ class Principal:
     scoped to a corpus id that a differently-spelled name would select.
 
     The vocabulary is deliberately not interchangeable. An ``Identity`` is a
-    human or service in the *hosting application*; Mind Palace never sees one. A
+    human or service in the *hosting application*; Verilore never sees one. A
     ``Principal`` is this credential. A ``Tenant`` is the host application's word
     for a customer, realised here as a set of granted corpora. A ``Corpus`` is
     one memory collection. A ``Resource`` is a document or claim inside one, and

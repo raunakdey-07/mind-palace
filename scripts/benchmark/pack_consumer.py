@@ -1,6 +1,6 @@
 """M011: an independent consumer that only ever sees a Memory Pack.
 
-No database, no model, no network, no Mind Palace import. The pack is handed
+No database, no model, no network, no Verilore import. The pack is handed
 over as bytes and the questions are answered from the pack alone.
 
 Each question is a different kind of consumer obligation, and each is answered

@@ -51,7 +51,7 @@ def allowed_roots() -> tuple[Path, ...]:
 
 
 #: The value that turns filesystem ingestion off entirely, for a deployment that
-#: reaches Mind Palace only over HTTP and never asks it to read a directory.
+#: reaches Verilore only over HTTP and never asks it to read a directory.
 #:
 #: Without this, `server` mode refused to start unless `VERILORE_INGEST_ROOTS`
 #: was set -- which made the filesystem-ingestion setting a precondition for

@@ -112,7 +112,7 @@ and `explain` accept `path_prefix`.
 ### SDK bounded retry and backoff
 
 The remote SDK now retries transient failures instead of failing the first time.
-`Verilore(timeout=30, retries=2, backoff=0.2)` makes at most `retries + 1`
+`MindPalace(timeout=30, retries=2, backoff=0.2)` makes at most `retries + 1`
 attempts, retrying only on `httpx.TimeoutException`, `httpx.RequestError` and
 502/503/504 responses, sleeping `backoff * 2 ** (n - 1)` before retry `n`. A
 timeout becomes `MemoryClientError("timeout", ..., 504)`, a transport error
@@ -267,7 +267,7 @@ Memory Pack version changed, and no benchmark input was touched.
   because the erasure cannot be undone.
 - **`mindpalace ingest-repo --embed-chunks`.** A caller who wants the legacy
   chunk-level search over a whole corpus asks for the chunk vectors
-  explicitly. The flag is on the CLI, on `Verilore.sync()`, and on
+  explicitly. The flag is on the CLI, on `MindPalace.sync()`, and on
   `POST /api/corpora/{name}/sync`. Without it, a document that produced claims
   is archived without chunk vectors, because the claim archive is what every
   read path queries.
@@ -564,7 +564,7 @@ Memory Pack version changed, and no benchmark input was touched.
   warm cache makes no request at all, prints no notice, and takes about half
   the time.
 - **A refused database connection bypassed the CLI's failure handling.**
-  `Verilore(...)` connects to the database in its constructor, and
+  `MindPalace(...)` connects to the database in its constructor, and
   `ingest-repo` built its client *outside* the `try` block that turns failures
   into guidance. A stopped PostgreSQL therefore produced a 130-line
   `asyncio`/`sqlalchemy`/`asyncpg` stack trace where the operator needed a
@@ -1093,7 +1093,7 @@ An explicit mode is honest about the trade-off; an automatic one hides it. Detai
 ### Developer experience
 
 - **A public-only example.** `examples/project-log/` uses this repository's own
-  decision history as memory. It imports `verilore_sdk` and nothing else: no
+  decision history as memory. It imports `mindpalace_sdk` and nothing else: no
   `api.services`, no `api.db`, no internal retrieval module, no SQL. If it needed a
   change to work, the SDK would not be usable yet.
 - **Errors answer what happened, why, and what to do.** Two were leaking internals and
@@ -1241,7 +1241,7 @@ the same probe is 3 to 4× slower; compare within a condition, not across them.
   so existing v0.8.0 receipts remain verifiable and the frozen benchmark is untouched.
 - `MemoryResponse` and every existing route, SDK method and MCP tool are unchanged.
   `memory_query` is kept alongside `memory_recall`; both reach the same service.
-- The local runtime is never required: `MIND_PALACE_RUNTIME=0`, `Verilore(runtime=…)`
+- The local runtime is never required: `MIND_PALACE_RUNTIME=0`, `MindPalace(runtime=…)`
   defaults to off, and a platform without `AF_UNIX` runs in-process.
 - `sentence-transformers` remains a declared dependency, so a plain install keeps
   ranking semantically by default. Nothing in the package needs it merely to import or
@@ -1596,7 +1596,7 @@ decision-provider and Jev research is intentionally unreleased.
 
 ### Platform readiness
 
-- **An error taxonomy** (`verilore_errors.py`, re-exported from the SDK). One
+- **An error taxonomy** (`mindpalace_errors.py`, re-exported from the SDK). One
   base class, six components (`memory`, `auth`, `database`, `transport`,
   `provider`, `mindpalace`), a stable machine-readable `code`, `retryable`,
   `request_id`, and a bounded `details` dict. The existing HTTP `detail` shape is
